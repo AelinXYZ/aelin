@@ -57,6 +57,17 @@ describe("AelinDeal", function () {
   ).toString();
 
   const nullAddress = "0x0000000000000000000000000000000000000000";
+  const mintAmountBase = 2;
+  const mintAmount = ethers.utils.parseUnits(
+    mintAmountBase.toString(),
+    poolTokenDecimals
+  );
+  const underlyingRemovedBalance =
+    Number(underlyingPerPoolExchangeRate) * mintAmountBase;
+  const remainingBalance = underlyingDealTokenTotal.sub(
+    underlyingRemovedBalance
+  );
+  const expectedClaimUnderlying = underlyingRemovedBalance;
 
   before(async () => {
     [deployer, sponsor, holder, purchaser] = await ethers.getSigners();
@@ -87,6 +98,24 @@ describe("AelinDeal", function () {
         holder.address,
         poolTokenMaxPurchaseAmount
       );
+
+  const fundDealAndMintTokens = async () => {
+    await underlyingDealToken.mock.balanceOf
+      .withArgs(holder.address)
+      .returns(underlyingDealTokenTotal);
+
+    await underlyingDealToken.mock.transferFrom
+      .withArgs(holder.address, aelinDeal.address, underlyingDealTokenTotal)
+      .returns(true);
+
+    await underlyingDealToken.mock.balanceOf
+      .withArgs(aelinDeal.address)
+      .returns(underlyingDealTokenTotal);
+
+    await aelinDeal.connect(holder).depositUnderlying(underlyingDealTokenTotal);
+
+    await aelinDeal.connect(deployer).mint(purchaser.address, mintAmount);
+  };
 
   describe("initialize", function () {
     it("should successfully initialize", async function () {
@@ -133,446 +162,495 @@ describe("AelinDeal", function () {
     });
   });
 
-  describe("depositUnderlying", function () {
-    beforeEach(async () => {
-      await underlyingDealToken.mock.balanceOf
-        .withArgs(holder.address)
-        .returns(underlyingDealTokenTotal);
-
-      await underlyingDealToken.mock.transferFrom
-        .withArgs(holder.address, aelinDeal.address, underlyingDealTokenTotal)
-        .returns(true);
-
-      await underlyingDealToken.mock.balanceOf
-        .withArgs(aelinDeal.address)
-        .returns(underlyingDealTokenTotal);
-
-      await successfullyInitializeDeal();
-    });
-
-    it("should complete the deposit when the total amount has been reached", async function () {
-      expect(await aelinDeal.DEPOSIT_COMPLETE()).to.equal(false);
-
-      const tx = await aelinDeal
-        .connect(holder)
-        .depositUnderlying(underlyingDealTokenTotal);
-
-      expect(await aelinDeal.DEPOSIT_COMPLETE()).to.equal(true);
-
-      const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
-
-      const [depositDealTokensLog] = await aelinDeal.queryFilter(
-        aelinDeal.filters.DepositDealTokens()
-      );
-      const [dealFundedLog] = await aelinDeal.queryFilter(
-        aelinDeal.filters.DealFullyFunded()
-      );
-      expect(depositDealTokensLog.args.underlyingDealTokenAddress).to.equal(
-        underlyingDealToken.address
-      );
-      expect(depositDealTokensLog.args.depositor).to.equal(holder.address);
-      expect(depositDealTokensLog.args.dealContract).to.equal(
-        aelinDeal.address
-      );
-      expect(depositDealTokensLog.args.underlyingDealTokenAmount).to.equal(
-        underlyingDealTokenTotal
-      );
-
-      expect(dealFundedLog.args.dealAddress).to.equal(aelinDeal.address);
-      expect(dealFundedLog.args.poolAddress).to.be.properAddress;
-      expect(dealFundedLog.args.redemptionStart).to.equal(timestamp);
-      expect(dealFundedLog.args.redemptionExpiry).to.equal(
-        timestamp + redemptionPeriod
-      );
-    });
-
-    it("should revert once the deposit amount has already been reached", async function () {
-      await aelinDeal
-        .connect(holder)
-        .depositUnderlying(underlyingDealTokenTotal);
-
-      await expect(
-        aelinDeal.connect(holder).depositUnderlying(underlyingDealTokenTotal)
-      ).to.be.revertedWith("deposit already complete");
-    });
-
-    it("should not finalize the deposit if the total amount has not been deposited", async function () {
-      expect(await aelinDeal.DEPOSIT_COMPLETE()).to.equal(false);
-      const lowerAmount = underlyingDealTokenTotal.sub(1);
-      await underlyingDealToken.mock.balanceOf
-        .withArgs(holder.address)
-        .returns(lowerAmount);
-
-      await underlyingDealToken.mock.transferFrom
-        .withArgs(holder.address, aelinDeal.address, lowerAmount)
-        .returns(true);
-
-      await underlyingDealToken.mock.balanceOf
-        .withArgs(aelinDeal.address)
-        .returns(ethers.BigNumber.from(0));
-
-      await aelinDeal.connect(holder).depositUnderlying(lowerAmount);
-
-      expect(await aelinDeal.DEPOSIT_COMPLETE()).to.equal(false);
-
-      const [depositDealTokensLog] = await aelinDeal.queryFilter(
-        aelinDeal.filters.DepositDealTokens()
-      );
-
-      expect(depositDealTokensLog.args.underlyingDealTokenAddress).to.equal(
-        underlyingDealToken.address
-      );
-      expect(depositDealTokensLog.args.depositor).to.equal(holder.address);
-      expect(depositDealTokensLog.args.dealContract).to.equal(
-        aelinDeal.address
-      );
-      expect(depositDealTokensLog.args.underlyingDealTokenAmount).to.equal(
-        lowerAmount
-      );
-
-      const dealFullyFundedLogs = await aelinDeal.queryFilter(
-        aelinDeal.filters.DealFullyFunded()
-      );
-      expect(dealFullyFundedLogs.length).to.equal(0);
-    });
-  });
-
-  const mintAmountBase = 2;
-  const mintAmount = ethers.utils.parseUnits(
-    mintAmountBase.toString(),
-    poolTokenDecimals
-  );
-  describe("mint", function () {
+  describe("tests needing initialize deal", function () {
     beforeEach(async () => {
       await successfullyInitializeDeal();
     });
 
-    it("should mint tokens", async function () {
-      expect(await aelinDeal.totalSupply()).to.equal(ethers.BigNumber.from(0));
-      await aelinDeal.connect(deployer).mint(purchaser.address, mintAmount);
-      expect(await aelinDeal.totalSupply()).to.equal(mintAmount);
-      expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(mintAmount);
-      const [mintLog] = await aelinDeal.queryFilter(
-        aelinDeal.filters.MintDealTokens()
-      );
-      expect(mintLog.args.dealContract).to.equal(aelinDeal.address);
-      expect(mintLog.args.recipient).to.equal(purchaser.address);
-      expect(mintLog.args.dealTokenAmount).to.equal(mintAmount);
-    });
+    describe("depositUnderlying", function () {
+      beforeEach(async () => {
+        await underlyingDealToken.mock.balanceOf
+          .withArgs(holder.address)
+          .returns(underlyingDealTokenTotal);
 
-    it("should not allow mint tokens for the wrong account (only the deployer which is enforced as the pool)", async function () {
-      await expect(
-        aelinDeal.connect(holder).mint(purchaser.address, mintAmount)
-      ).to.be.revertedWith("only AelinPool can access");
-    });
-  });
+        await underlyingDealToken.mock.transferFrom
+          .withArgs(holder.address, aelinDeal.address, underlyingDealTokenTotal)
+          .returns(true);
 
-  describe("withdraw", function () {
-    const excessAmount = ethers.utils.parseUnits(
-      "10",
-      underlyingDealTokenDecimals
-    );
-    beforeEach(async () => {
-      await successfullyInitializeDeal();
-    });
+        await underlyingDealToken.mock.balanceOf
+          .withArgs(aelinDeal.address)
+          .returns(underlyingDealTokenTotal);
+      });
 
-    it("should allow the holder to withdraw excess tokens from the pool", async function () {
-      await underlyingDealToken.mock.balanceOf
-        .withArgs(aelinDeal.address)
-        .returns(underlyingDealTokenTotal.add(excessAmount));
+      it("should complete the deposit when the total amount has been reached", async function () {
+        expect(await aelinDeal.DEPOSIT_COMPLETE()).to.equal(false);
 
-      await underlyingDealToken.mock.transfer
-        .withArgs(holder.address, excessAmount)
-        .returns(true);
+        const tx = await aelinDeal
+          .connect(holder)
+          .depositUnderlying(underlyingDealTokenTotal);
 
-      await aelinDeal.connect(holder).withdraw();
-      const [log] = await aelinDeal.queryFilter(
-        aelinDeal.filters.WithdrawUnderlyingDealTokens()
-      );
-      expect(log.args.underlyingDealTokenAddress).to.equal(
-        underlyingDealToken.address
-      );
-      expect(log.args.depositor).to.equal(holder.address);
-      expect(log.args.dealContract).to.equal(aelinDeal.address);
-      expect(log.args.underlyingDealTokenAmount).to.equal(excessAmount);
-    });
+        expect(await aelinDeal.DEPOSIT_COMPLETE()).to.equal(true);
 
-    it("should block anyone else from withdrawing excess tokens from the pool", async function () {
-      await expect(aelinDeal.connect(deployer).withdraw()).to.be.revertedWith(
-        "only holder can access"
-      );
-    });
+        const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
 
-    it("should block the holder from withdrawing when there are no excess tokens in the pool", async function () {
-      await underlyingDealToken.mock.transfer
-        .withArgs(holder.address, excessAmount)
-        .returns(true);
-
-      await underlyingDealToken.mock.balanceOf
-        .withArgs(aelinDeal.address)
-        .returns(underlyingDealTokenTotal.sub(excessAmount));
-      try {
-        await aelinDeal.connect(holder).withdraw();
-      } catch (e: any) {
-        expect(e.message).to.equal(
-          "VM Exception while processing transaction: reverted with panic code 0x11 (Arithmetic operation underflowed or overflowed outside of an unchecked block)"
+        const [depositDealTokensLog] = await aelinDeal.queryFilter(
+          aelinDeal.filters.DepositDealTokens()
         );
-      }
+        const [dealFundedLog] = await aelinDeal.queryFilter(
+          aelinDeal.filters.DealFullyFunded()
+        );
+        expect(depositDealTokensLog.args.underlyingDealTokenAddress).to.equal(
+          underlyingDealToken.address
+        );
+        expect(depositDealTokensLog.args.depositor).to.equal(holder.address);
+        expect(depositDealTokensLog.args.dealContract).to.equal(
+          aelinDeal.address
+        );
+        expect(depositDealTokensLog.args.underlyingDealTokenAmount).to.equal(
+          underlyingDealTokenTotal
+        );
+
+        expect(dealFundedLog.args.dealAddress).to.equal(aelinDeal.address);
+        expect(dealFundedLog.args.poolAddress).to.be.properAddress;
+        expect(dealFundedLog.args.redemptionStart).to.equal(timestamp);
+        expect(dealFundedLog.args.redemptionExpiry).to.equal(
+          timestamp + redemptionPeriod
+        );
+      });
+
+      it("should revert once the deposit amount has already been reached", async function () {
+        await aelinDeal
+          .connect(holder)
+          .depositUnderlying(underlyingDealTokenTotal);
+
+        await expect(
+          aelinDeal.connect(holder).depositUnderlying(underlyingDealTokenTotal)
+        ).to.be.revertedWith("deposit already complete");
+      });
+
+      it("should not finalize the deposit if the total amount has not been deposited", async function () {
+        expect(await aelinDeal.DEPOSIT_COMPLETE()).to.equal(false);
+        const lowerAmount = underlyingDealTokenTotal.sub(1);
+        await underlyingDealToken.mock.balanceOf
+          .withArgs(holder.address)
+          .returns(lowerAmount);
+
+        await underlyingDealToken.mock.transferFrom
+          .withArgs(holder.address, aelinDeal.address, lowerAmount)
+          .returns(true);
+
+        await underlyingDealToken.mock.balanceOf
+          .withArgs(aelinDeal.address)
+          .returns(ethers.BigNumber.from(0));
+
+        await aelinDeal.connect(holder).depositUnderlying(lowerAmount);
+
+        expect(await aelinDeal.DEPOSIT_COMPLETE()).to.equal(false);
+
+        const [depositDealTokensLog] = await aelinDeal.queryFilter(
+          aelinDeal.filters.DepositDealTokens()
+        );
+
+        expect(depositDealTokensLog.args.underlyingDealTokenAddress).to.equal(
+          underlyingDealToken.address
+        );
+        expect(depositDealTokensLog.args.depositor).to.equal(holder.address);
+        expect(depositDealTokensLog.args.dealContract).to.equal(
+          aelinDeal.address
+        );
+        expect(depositDealTokensLog.args.underlyingDealTokenAmount).to.equal(
+          lowerAmount
+        );
+
+        const dealFullyFundedLogs = await aelinDeal.queryFilter(
+          aelinDeal.filters.DealFullyFunded()
+        );
+        expect(dealFullyFundedLogs.length).to.equal(0);
+      });
+    });
+
+    describe("mint", function () {
+      it("should mint tokens", async function () {
+        expect(await aelinDeal.totalSupply()).to.equal(
+          ethers.BigNumber.from(0)
+        );
+        await aelinDeal.connect(deployer).mint(purchaser.address, mintAmount);
+        expect(await aelinDeal.totalSupply()).to.equal(mintAmount);
+        expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(
+          mintAmount
+        );
+        const [mintLog] = await aelinDeal.queryFilter(
+          aelinDeal.filters.MintDealTokens()
+        );
+        expect(mintLog.args.dealContract).to.equal(aelinDeal.address);
+        expect(mintLog.args.recipient).to.equal(purchaser.address);
+        expect(mintLog.args.dealTokenAmount).to.equal(mintAmount);
+      });
+
+      it("should not allow mint tokens for the wrong account (only the deployer which is enforced as the pool)", async function () {
+        await expect(
+          aelinDeal.connect(holder).mint(purchaser.address, mintAmount)
+        ).to.be.revertedWith("only AelinPool can access");
+      });
+    });
+
+    describe("withdraw", function () {
+      const excessAmount = ethers.utils.parseUnits(
+        "10",
+        underlyingDealTokenDecimals
+      );
+
+      it("should allow the holder to withdraw excess tokens from the pool", async function () {
+        await underlyingDealToken.mock.balanceOf
+          .withArgs(aelinDeal.address)
+          .returns(underlyingDealTokenTotal.add(excessAmount));
+
+        await underlyingDealToken.mock.transfer
+          .withArgs(holder.address, excessAmount)
+          .returns(true);
+
+        await aelinDeal.connect(holder).withdraw();
+        const [log] = await aelinDeal.queryFilter(
+          aelinDeal.filters.WithdrawUnderlyingDealTokens()
+        );
+        expect(log.args.underlyingDealTokenAddress).to.equal(
+          underlyingDealToken.address
+        );
+        expect(log.args.depositor).to.equal(holder.address);
+        expect(log.args.dealContract).to.equal(aelinDeal.address);
+        expect(log.args.underlyingDealTokenAmount).to.equal(excessAmount);
+      });
+
+      it("should block anyone else from withdrawing excess tokens from the pool", async function () {
+        await expect(aelinDeal.connect(deployer).withdraw()).to.be.revertedWith(
+          "only holder can access"
+        );
+      });
+
+      it("should block the holder from withdrawing when there are no excess tokens in the pool", async function () {
+        await underlyingDealToken.mock.transfer
+          .withArgs(holder.address, excessAmount)
+          .returns(true);
+
+        await underlyingDealToken.mock.balanceOf
+          .withArgs(aelinDeal.address)
+          .returns(underlyingDealTokenTotal.sub(excessAmount));
+        try {
+          await aelinDeal.connect(holder).withdraw();
+        } catch (e: any) {
+          expect(e.message).to.equal(
+            "VM Exception while processing transaction: reverted with panic code 0x11 (Arithmetic operation underflowed or overflowed outside of an unchecked block)"
+          );
+        }
+      });
+    });
+
+    describe("withdrawExpiry", function () {
+      it("should allow the holder to withdraw excess tokens in the pool after expiry", async function () {
+        await fundDealAndMintTokens();
+        // wait for redemption period to end
+        await ethers.provider.send("evm_increaseTime", [oneWeek + 1]);
+        await ethers.provider.send("evm_mine", []);
+
+        await underlyingDealToken.mock.balanceOf
+          .withArgs(aelinDeal.address)
+          .returns(underlyingDealTokenTotal);
+
+        await underlyingDealToken.mock.transfer
+          .withArgs(holder.address, remainingBalance)
+          .returns(true);
+
+        await aelinDeal.connect(holder).withdrawExpiry();
+
+        const [log] = await aelinDeal.queryFilter(
+          aelinDeal.filters.WithdrawUnderlyingDealTokens()
+        );
+        expect(log.args.underlyingDealTokenAddress).to.equal(
+          underlyingDealToken.address
+        );
+        expect(log.args.depositor).to.equal(holder.address);
+        expect(log.args.dealContract).to.equal(aelinDeal.address);
+        expect(log.args.underlyingDealTokenAmount).to.equal(remainingBalance);
+      });
+
+      it("should block the holder from withdraw excess tokens in the pool before redeem window starts", async function () {
+        // the deal is not funded so the redeem window has not started yet
+        await expect(
+          aelinDeal.connect(holder).withdrawExpiry()
+        ).to.be.revertedWith("redemption period not started");
+      });
+
+      it("should block the holder from withdraw excess tokens in the pool while redeem window is active", async function () {
+        await fundDealAndMintTokens();
+        // no waiting for redemption period to end
+        await underlyingDealToken.mock.balanceOf
+          .withArgs(aelinDeal.address)
+          .returns(remainingBalance);
+
+        await underlyingDealToken.mock.transfer
+          .withArgs(holder.address, remainingBalance)
+          .returns(true);
+        await expect(
+          aelinDeal.connect(holder).withdrawExpiry()
+        ).to.be.revertedWith("redeem window still active");
+      });
+    });
+
+    describe("claim and custom transfer", function () {
+      it("should allow the purchaser to claim their fully vested tokens only once", async function () {
+        await fundDealAndMintTokens();
+        // wait for redemption period and the vesting period to end
+        await ethers.provider.send("evm_increaseTime", [redemptionEnd + 1]);
+        await ethers.provider.send("evm_mine", []);
+
+        await underlyingDealToken.mock.transfer
+          .withArgs(purchaser.address, expectedClaimUnderlying)
+          .returns(true);
+
+        await aelinDeal.connect(purchaser).claim(purchaser.address);
+
+        const [log] = await aelinDeal.queryFilter(
+          aelinDeal.filters.ClaimedUnderlyingDealTokens()
+        );
+        expect(log.args.underlyingDealTokenAddress).to.equal(
+          underlyingDealToken.address
+        );
+        expect(log.args.from).to.equal(purchaser.address);
+        expect(log.args.recipient).to.equal(purchaser.address);
+        expect(log.args.underlyingDealTokensClaimed).to.equal(
+          expectedClaimUnderlying
+        );
+
+        expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
+      });
+
+      it("should allow the purchaser to claim their partially vested tokens", async function () {
+        // NOTE that this is deterministic and roughly half but it is hard to find
+        // the exact timestamp when calling evm_increaseTime
+        const partiallyExpectedClaimUnderlying = 202739814;
+        await fundDealAndMintTokens();
+
+        await ethers.provider.send("evm_increaseTime", [
+          redemptionEnd - oneDay * 180,
+        ]);
+        await ethers.provider.send("evm_mine", []);
+
+        await underlyingDealToken.mock.transfer
+          .withArgs(purchaser.address, partiallyExpectedClaimUnderlying)
+          .returns(true);
+
+        await aelinDeal.connect(purchaser).claim(purchaser.address);
+
+        const [log] = await aelinDeal.queryFilter(
+          aelinDeal.filters.ClaimedUnderlyingDealTokens()
+        );
+        expect(log.args.underlyingDealTokenAddress).to.equal(
+          underlyingDealToken.address
+        );
+        expect(log.args.from).to.equal(purchaser.address);
+        expect(log.args.recipient).to.equal(purchaser.address);
+        expect(log.args.underlyingDealTokensClaimed).to.equal(
+          partiallyExpectedClaimUnderlying
+        );
+      });
+
+      it("should claim their minted tokens when doing a transfer", async function () {
+        await fundDealAndMintTokens();
+        await ethers.provider.send("evm_increaseTime", [redemptionEnd + 1]);
+        await ethers.provider.send("evm_mine", []);
+
+        await underlyingDealToken.mock.transfer
+          .withArgs(purchaser.address, expectedClaimUnderlying)
+          .returns(true);
+
+        await aelinDeal
+          .connect(purchaser)
+          .transfer(deployer.address, mintAmount);
+
+        const [claimLog] = await aelinDeal.queryFilter(
+          aelinDeal.filters.ClaimedUnderlyingDealTokens()
+        );
+        const transferLogs = await aelinDeal.queryFilter(
+          aelinDeal.filters.Transfer()
+        );
+
+        expect(claimLog.args.underlyingDealTokenAddress).to.equal(
+          underlyingDealToken.address
+        );
+        expect(claimLog.args.from).to.equal(purchaser.address);
+        expect(claimLog.args.recipient).to.equal(purchaser.address);
+        expect(claimLog.args.underlyingDealTokensClaimed).to.equal(
+          expectedClaimUnderlying
+        );
+
+        expect(transferLogs[0].args.from).to.equal(nullAddress);
+        expect(transferLogs[0].args.to).to.equal(purchaser.address);
+        expect(transferLogs[0].args.amount).to.equal(mintAmount);
+
+        expect(transferLogs[1].args.from).to.equal(purchaser.address);
+        expect(transferLogs[1].args.to).to.equal(nullAddress);
+        // @NOTE I thought the safeTransfer might emit an event  with the expected claim amount?
+        expect(transferLogs[1].args.amount).to.equal(mintAmount);
+
+        expect(transferLogs[2].args.from).to.equal(purchaser.address);
+        expect(transferLogs[2].args.to).to.equal(deployer.address);
+        expect(transferLogs[2].args.amount).to.equal(mintAmount);
+
+        expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
+      });
+
+      it("should claim their minted tokens when doing a transferFrom", async function () {
+        await fundDealAndMintTokens();
+
+        await ethers.provider.send("evm_increaseTime", [redemptionEnd + 1]);
+        await ethers.provider.send("evm_mine", []);
+
+        await underlyingDealToken.mock.transferFrom
+          .withArgs(purchaser.address, holder.address, mintAmount)
+          .returns(true);
+
+        await underlyingDealToken.mock.transfer
+          .withArgs(purchaser.address, expectedClaimUnderlying)
+          .returns(true);
+
+        await aelinDeal
+          .connect(purchaser)
+          .approve(deployer.address, mintAmount);
+
+        await aelinDeal
+          .connect(deployer)
+          .transferFrom(purchaser.address, holder.address, mintAmount);
+
+        const [claimLog] = await aelinDeal.queryFilter(
+          aelinDeal.filters.ClaimedUnderlyingDealTokens()
+        );
+        const transferLogs = await aelinDeal.queryFilter(
+          aelinDeal.filters.Transfer()
+        );
+
+        expect(claimLog.args.underlyingDealTokenAddress).to.equal(
+          underlyingDealToken.address
+        );
+
+        expect(claimLog.args.from).to.equal(purchaser.address);
+        expect(claimLog.args.recipient).to.equal(purchaser.address);
+        expect(claimLog.args.underlyingDealTokensClaimed).to.equal(
+          expectedClaimUnderlying
+        );
+
+        expect(transferLogs[0].args.from).to.equal(nullAddress);
+        expect(transferLogs[0].args.to).to.equal(purchaser.address);
+        expect(transferLogs[0].args.amount).to.equal(mintAmount);
+
+        expect(transferLogs[1].args.from).to.equal(purchaser.address);
+        expect(transferLogs[1].args.to).to.equal(nullAddress);
+        expect(transferLogs[1].args.amount).to.equal(mintAmount);
+
+        expect(transferLogs[2].args.from).to.equal(purchaser.address);
+        expect(transferLogs[2].args.to).to.equal(holder.address);
+        expect(transferLogs[2].args.amount).to.equal(mintAmount);
+
+        expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
+      });
+
+      it("should not allow a random wallet with no balance to claim", async function () {
+        await fundDealAndMintTokens();
+        // wait for redemption period and the vesting period to end
+        await ethers.provider.send("evm_increaseTime", [redemptionEnd + 1]);
+        await ethers.provider.send("evm_mine", []);
+
+        await underlyingDealToken.mock.transfer
+          .withArgs(purchaser.address, expectedClaimUnderlying)
+          .returns(true);
+
+        await aelinDeal.connect(deployer).claim(deployer.address);
+        const claimedLogs = await aelinDeal.queryFilter(
+          aelinDeal.filters.ClaimedUnderlyingDealTokens()
+        );
+        expect(claimedLogs.length).to.equal(0);
+      });
+    });
+    describe("underlyingDealTokensClaimable", function () {
+      it("should return the correct amount of tokens claimable after fully vested", async function () {
+        await fundDealAndMintTokens();
+        // wait for redemption period and the vesting period to end
+        await ethers.provider.send("evm_increaseTime", [redemptionEnd + 1]);
+        await ethers.provider.send("evm_mine", []);
+
+        const result = await aelinDeal.underlyingDealTokensClaimable(
+          purchaser.address
+        );
+        expect(result).to.equal(expectedClaimUnderlying);
+      });
+      it("should return the correct amount of tokens claimable after partially vested", async function () {
+        // NOTE that this is deterministic and roughly half but it is hard to find
+        // the exact timestamp when calling evm_increaseTime
+        const partialClaimValue = 202739789;
+        await fundDealAndMintTokens();
+
+        await ethers.provider.send("evm_increaseTime", [
+          redemptionEnd - oneDay * 180,
+        ]);
+        await ethers.provider.send("evm_mine", []);
+
+        const result = await aelinDeal.underlyingDealTokensClaimable(
+          purchaser.address
+        );
+        expect(result).to.equal(partialClaimValue);
+      });
+      it("should return the correct amount of tokens claimable when not vested or with no balance", async function () {
+        const result = await aelinDeal.underlyingDealTokensClaimable(
+          deployer.address
+        );
+        expect(result).to.equal(0);
+      });
     });
   });
-
-  const underlyingRemovedBalance =
-    Number(underlyingPerPoolExchangeRate) * mintAmountBase;
-  const remainingBalance = underlyingDealTokenTotal.sub(
-    underlyingRemovedBalance
-  );
-
-  const fundDealAndMintTokens = async () => {
-    await underlyingDealToken.mock.balanceOf
-      .withArgs(holder.address)
-      .returns(underlyingDealTokenTotal);
-
-    await underlyingDealToken.mock.transferFrom
-      .withArgs(holder.address, aelinDeal.address, underlyingDealTokenTotal)
-      .returns(true);
-
-    await underlyingDealToken.mock.balanceOf
-      .withArgs(aelinDeal.address)
-      .returns(underlyingDealTokenTotal);
-
-    await aelinDeal.connect(holder).depositUnderlying(underlyingDealTokenTotal);
-
-    await aelinDeal.connect(deployer).mint(purchaser.address, mintAmount);
-  };
-
-  describe("withdrawExpiry", function () {
-    beforeEach(async () => {
-      await successfullyInitializeDeal();
-    });
-
-    it("should allow the holder to withdraw excess tokens in the pool after expiry", async function () {
-      await fundDealAndMintTokens();
-      // wait for redemption period to end
-      await ethers.provider.send("evm_increaseTime", [oneWeek + 1]);
-      await ethers.provider.send("evm_mine", []);
-
-      await underlyingDealToken.mock.balanceOf
-        .withArgs(aelinDeal.address)
-        .returns(underlyingDealTokenTotal);
-
-      await underlyingDealToken.mock.transfer
-        .withArgs(holder.address, remainingBalance)
-        .returns(true);
-
-      await aelinDeal.connect(holder).withdrawExpiry();
-
-      const [log] = await aelinDeal.queryFilter(
-        aelinDeal.filters.WithdrawUnderlyingDealTokens()
-      );
-      expect(log.args.underlyingDealTokenAddress).to.equal(
-        underlyingDealToken.address
-      );
-      expect(log.args.depositor).to.equal(holder.address);
-      expect(log.args.dealContract).to.equal(aelinDeal.address);
-      expect(log.args.underlyingDealTokenAmount).to.equal(remainingBalance);
-    });
-
-    it("should block the holder from withdraw excess tokens in the pool before redeem window starts", async function () {
-      // the deal is not funded so the redeem window has not started yet
-      await expect(
-        aelinDeal.connect(holder).withdrawExpiry()
-      ).to.be.revertedWith("redemption period not started");
-    });
-
-    it("should block the holder from withdraw excess tokens in the pool while redeem window is active", async function () {
-      await fundDealAndMintTokens();
-      // no waiting for redemption period to end
-      await underlyingDealToken.mock.balanceOf
-        .withArgs(aelinDeal.address)
-        .returns(remainingBalance);
-
-      await underlyingDealToken.mock.transfer
-        .withArgs(holder.address, remainingBalance)
-        .returns(true);
-      await expect(
-        aelinDeal.connect(holder).withdrawExpiry()
-      ).to.be.revertedWith("redeem window still active");
-    });
-  });
-
-  const expectedClaimUnderlying = underlyingRemovedBalance;
-  // NOTE that this is roughly half but it is hard to find the exact timestamp when calling evm_increaseTime
-  const partiallyExpectedClaimUnderlying = 202739814;
-
-  describe("claim and custom transfer", function () {
-    beforeEach(async () => {
-      await successfullyInitializeDeal();
-    });
-
-    it("should allow the purchaser to claim their fully vested tokens only once", async function () {
-      await fundDealAndMintTokens();
-      // wait for redemption period and the vesting period to end
-      await ethers.provider.send("evm_increaseTime", [redemptionEnd + 1]);
-      await ethers.provider.send("evm_mine", []);
-
-      await underlyingDealToken.mock.transfer
-        .withArgs(purchaser.address, expectedClaimUnderlying)
-        .returns(true);
-
-      await aelinDeal.connect(purchaser).claim(purchaser.address);
-
-      const [log] = await aelinDeal.queryFilter(
-        aelinDeal.filters.ClaimedUnderlyingDealTokens()
-      );
-      expect(log.args.underlyingDealTokenAddress).to.equal(
-        underlyingDealToken.address
-      );
-      expect(log.args.from).to.equal(purchaser.address);
-      expect(log.args.recipient).to.equal(purchaser.address);
-      expect(log.args.underlyingDealTokensClaimed).to.equal(
-        expectedClaimUnderlying
-      );
-
-      expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
-    });
-
-    it("should allow the purchaser to claim their partially vested tokens", async function () {
-      await fundDealAndMintTokens();
-
-      await ethers.provider.send("evm_increaseTime", [
-        redemptionEnd - oneDay * 180,
-      ]);
-      await ethers.provider.send("evm_mine", []);
-
-      await underlyingDealToken.mock.transfer
-        .withArgs(purchaser.address, partiallyExpectedClaimUnderlying)
-        .returns(true);
-
-      await aelinDeal.connect(purchaser).claim(purchaser.address);
-
-      const [log] = await aelinDeal.queryFilter(
-        aelinDeal.filters.ClaimedUnderlyingDealTokens()
-      );
-      expect(log.args.underlyingDealTokenAddress).to.equal(
-        underlyingDealToken.address
-      );
-      expect(log.args.from).to.equal(purchaser.address);
-      expect(log.args.recipient).to.equal(purchaser.address);
-      expect(log.args.underlyingDealTokensClaimed).to.equal(
-        partiallyExpectedClaimUnderlying
-      );
-    });
-
-    it("should claim their minted tokens when doing a transfer", async function () {
-      await fundDealAndMintTokens();
-      await ethers.provider.send("evm_increaseTime", [redemptionEnd + 1]);
-      await ethers.provider.send("evm_mine", []);
-
-      await underlyingDealToken.mock.transfer
-        .withArgs(purchaser.address, expectedClaimUnderlying)
-        .returns(true);
-
-      await aelinDeal.connect(purchaser).transfer(deployer.address, mintAmount);
-
-      const [claimLog] = await aelinDeal.queryFilter(
-        aelinDeal.filters.ClaimedUnderlyingDealTokens()
-      );
-      const transferLogs = await aelinDeal.queryFilter(
-        aelinDeal.filters.Transfer()
-      );
-
-      expect(claimLog.args.underlyingDealTokenAddress).to.equal(
-        underlyingDealToken.address
-      );
-      expect(claimLog.args.from).to.equal(purchaser.address);
-      expect(claimLog.args.recipient).to.equal(purchaser.address);
-      expect(claimLog.args.underlyingDealTokensClaimed).to.equal(
-        expectedClaimUnderlying
-      );
-
-      expect(transferLogs[0].args.from).to.equal(nullAddress);
-      expect(transferLogs[0].args.to).to.equal(purchaser.address);
-      expect(transferLogs[0].args.amount).to.equal(mintAmount);
-
-      expect(transferLogs[1].args.from).to.equal(purchaser.address);
-      expect(transferLogs[1].args.to).to.equal(nullAddress);
-      // @NOTE I thought the safeTransfer might emit an event  with the expected claim amount?
-      expect(transferLogs[1].args.amount).to.equal(mintAmount);
-
-      expect(transferLogs[2].args.from).to.equal(purchaser.address);
-      expect(transferLogs[2].args.to).to.equal(deployer.address);
-      expect(transferLogs[2].args.amount).to.equal(mintAmount);
-
-      expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
-    });
-
-    it("should claim their minted tokens when doing a transferFrom", async function () {
-      await fundDealAndMintTokens();
-
-      await ethers.provider.send("evm_increaseTime", [redemptionEnd + 1]);
-      await ethers.provider.send("evm_mine", []);
-
-      await underlyingDealToken.mock.transferFrom
-        .withArgs(purchaser.address, holder.address, mintAmount)
-        .returns(true);
-
-      await underlyingDealToken.mock.transfer
-        .withArgs(purchaser.address, expectedClaimUnderlying)
-        .returns(true);
-
-      await aelinDeal.connect(purchaser).approve(deployer.address, mintAmount);
-
-      await aelinDeal
+  describe.only("custom deal initializations", function () {
+    it("should allow a purchaser to claim their tokens right away if there is no vesting schedule", async function () {
+      aelinDeal
         .connect(deployer)
-        .transferFrom(purchaser.address, holder.address, mintAmount);
+        .initialize(
+          name,
+          symbol,
+          underlyingDealToken.address,
+          underlyingPerPurchaseExchangeRate,
+          underlyingDealTokenTotal,
+          0,
+          0,
+          redemptionPeriod,
+          holder.address,
+          poolTokenMaxPurchaseAmount
+        );
 
-      const [claimLog] = await aelinDeal.queryFilter(
-        aelinDeal.filters.ClaimedUnderlyingDealTokens()
-      );
-      const transferLogs = await aelinDeal.queryFilter(
-        aelinDeal.filters.Transfer()
-      );
-
-      expect(claimLog.args.underlyingDealTokenAddress).to.equal(
-        underlyingDealToken.address
-      );
-
-      expect(claimLog.args.from).to.equal(purchaser.address);
-      expect(claimLog.args.recipient).to.equal(purchaser.address);
-      expect(claimLog.args.underlyingDealTokensClaimed).to.equal(
-        expectedClaimUnderlying
-      );
-
-      expect(transferLogs[0].args.from).to.equal(nullAddress);
-      expect(transferLogs[0].args.to).to.equal(purchaser.address);
-      expect(transferLogs[0].args.amount).to.equal(mintAmount);
-
-      expect(transferLogs[1].args.from).to.equal(purchaser.address);
-      expect(transferLogs[1].args.to).to.equal(nullAddress);
-      expect(transferLogs[1].args.amount).to.equal(mintAmount);
-
-      expect(transferLogs[2].args.from).to.equal(purchaser.address);
-      expect(transferLogs[2].args.to).to.equal(holder.address);
-      expect(transferLogs[2].args.amount).to.equal(mintAmount);
-
-      expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
-    });
-
-    it("should not allow a random wallet with no balance to claim", async function () {
       await fundDealAndMintTokens();
-      // wait for redemption period and the vesting period to end
-      await ethers.provider.send("evm_increaseTime", [redemptionEnd + 1]);
+      await ethers.provider.send("evm_increaseTime", [redemptionPeriod + 1]);
       await ethers.provider.send("evm_mine", []);
+
+      const result = await aelinDeal.underlyingDealTokensClaimable(
+        purchaser.address
+      );
+      expect(result).to.equal(expectedClaimUnderlying);
 
       await underlyingDealToken.mock.transfer
         .withArgs(purchaser.address, expectedClaimUnderlying)
         .returns(true);
 
-      await aelinDeal.connect(deployer).claim(deployer.address);
-      const claimedLogs = await aelinDeal.queryFilter(
+      await aelinDeal.connect(purchaser).claim(purchaser.address);
+
+      const [log] = await aelinDeal.queryFilter(
         aelinDeal.filters.ClaimedUnderlyingDealTokens()
       );
-      expect(claimedLogs.length).to.equal(0);
+      expect(log.args.underlyingDealTokenAddress).to.equal(
+        underlyingDealToken.address
+      );
+      expect(log.args.from).to.equal(purchaser.address);
+      expect(log.args.recipient).to.equal(purchaser.address);
+      expect(log.args.underlyingDealTokensClaimed).to.equal(
+        expectedClaimUnderlying
+      );
+
+      expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
     });
   });
 });

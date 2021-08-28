@@ -124,16 +124,16 @@ contract AelinDeal is AelinERC20 {
     
     function underlyingDealTokensClaimable(address purchaser) external view returns (uint) {
         uint max_time = block.timestamp > VESTING_EXPIRY ? VESTING_EXPIRY : block.timestamp;
-        if (max_time > VESTING_CLIFF) {
+        if (max_time > VESTING_CLIFF || (max_time == VESTING_CLIFF && VESTING_PERIOD == 0 && lastClaim[purchaser] == 0)) {
             uint last_claimed = lastClaim[purchaser];
             if (last_claimed == 0) {
                 last_claimed = VESTING_CLIFF;
             }
-            if (last_claimed >= max_time) {
+            if (last_claimed >= max_time && VESTING_PERIOD != 0) {
                 return 0;
             } else {
                 uint time_elapsed = max_time - last_claimed;
-                uint deal_tokens_claimable = balanceOf[purchaser] * time_elapsed / VESTING_PERIOD;
+                uint deal_tokens_claimable = VESTING_PERIOD == 0 ? balanceOf[purchaser] : balanceOf[purchaser] * time_elapsed / VESTING_PERIOD;
                 return UNDERLYING_PER_POOL_EXCHANGE_RATE * deal_tokens_claimable / 1e18;
             }
         } else {
@@ -152,12 +152,12 @@ contract AelinDeal is AelinERC20 {
     function _claim(address from, address recipient) internal returns (uint deal_tokens_claimed) {
         if (balanceOf[from] > 0) {
             uint max_time = block.timestamp > VESTING_EXPIRY ? VESTING_EXPIRY : block.timestamp;
-            if (max_time > VESTING_CLIFF) {
+            if (max_time > VESTING_CLIFF || (max_time == VESTING_CLIFF && VESTING_PERIOD == 0 && lastClaim[from] == 0)) {
                 if (lastClaim[from] == 0) {
                     lastClaim[from] = VESTING_CLIFF;
                 }
                 uint time_elapsed = max_time - lastClaim[from];
-                uint deal_tokens_claimed = balanceOf[from] * time_elapsed / VESTING_PERIOD;
+                uint deal_tokens_claimed = VESTING_PERIOD == 0 ? balanceOf[from] : balanceOf[from] * time_elapsed / VESTING_PERIOD;
                 uint underlying_deal_tokens_claimed = UNDERLYING_PER_POOL_EXCHANGE_RATE * deal_tokens_claimed / 1e18;
                 if (deal_tokens_claimed > 0) {
                     _burn(from, deal_tokens_claimed);
