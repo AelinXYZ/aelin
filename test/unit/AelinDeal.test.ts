@@ -424,6 +424,35 @@ describe("AelinDeal", function () {
         expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
       });
 
+      it("should allow the purchaser to claim and allocate their fully vested tokens only once", async function () {
+        await fundDealAndMintTokens();
+        // wait for redemption period and the vesting period to end
+        await ethers.provider.send("evm_increaseTime", [redemptionEnd + 1]);
+        await ethers.provider.send("evm_mine", []);
+
+        await underlyingDealToken.mock.transfer
+          .withArgs(deployer.address, expectedClaimUnderlying)
+          .returns(true);
+
+        await aelinDeal
+          .connect(purchaser)
+          .claimAndAllocate(purchaser.address, deployer.address);
+
+        const [log] = await aelinDeal.queryFilter(
+          aelinDeal.filters.ClaimedUnderlyingDealTokens()
+        );
+        expect(log.args.underlyingDealTokenAddress).to.equal(
+          underlyingDealToken.address
+        );
+        expect(log.args.from).to.equal(purchaser.address);
+        expect(log.args.recipient).to.equal(deployer.address);
+        expect(log.args.underlyingDealTokensClaimed).to.equal(
+          expectedClaimUnderlying
+        );
+
+        expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
+      });
+
       it("should allow the purchaser to claim their partially vested tokens", async function () {
         // NOTE that this is deterministic and roughly half but it is hard to find
         // the exact timestamp when calling evm_increaseTime
@@ -606,7 +635,7 @@ describe("AelinDeal", function () {
       });
     });
   });
-  describe.only("custom deal initializations", function () {
+  describe("custom deal initializations", function () {
     it("should allow a purchaser to claim their tokens right away if there is no vesting schedule", async function () {
       aelinDeal
         .connect(deployer)
