@@ -134,10 +134,7 @@ contract AelinDeal is AelinERC20 {
             } else {
                 uint time_elapsed = max_time - last_claimed;
                 uint deal_tokens_claimable = balanceOf[purchaser] * time_elapsed / VESTING_PERIOD;
-                return convertAelinToUnderlyingAmount(
-                    UNDERLYING_PER_POOL_EXCHANGE_RATE * deal_tokens_claimable / 1e18,
-                    UNDERLYING_DEAL_TOKEN_DECIMALS
-                );
+                return UNDERLYING_PER_POOL_EXCHANGE_RATE * deal_tokens_claimable / 1e18;
             }
         } else {
             return 0;
@@ -152,7 +149,7 @@ contract AelinDeal is AelinERC20 {
         _claim(from, recipient);
     }
     
-    function _claim(address from, address recipient) internal {
+    function _claim(address from, address recipient) internal returns (uint deal_tokens_claimed) {
         if (balanceOf[from] > 0) {
             uint max_time = block.timestamp > VESTING_EXPIRY ? VESTING_EXPIRY : block.timestamp;
             if (max_time > VESTING_CLIFF) {
@@ -161,10 +158,7 @@ contract AelinDeal is AelinERC20 {
                 }
                 uint time_elapsed = max_time - lastClaim[from];
                 uint deal_tokens_claimed = balanceOf[from] * time_elapsed / VESTING_PERIOD;
-                uint underlying_deal_tokens_claimed = convertAelinToUnderlyingAmount(
-                    UNDERLYING_PER_POOL_EXCHANGE_RATE * 1e18 / deal_tokens_claimed,
-                    UNDERLYING_DEAL_TOKEN_DECIMALS
-                );
+                uint underlying_deal_tokens_claimed = UNDERLYING_PER_POOL_EXCHANGE_RATE * deal_tokens_claimed / 1e18;
 
                 if (deal_tokens_claimed > 0) {
                     _burn(from, deal_tokens_claimed);
@@ -204,13 +198,15 @@ contract AelinDeal is AelinERC20 {
 
     // @NOTE when you transfer deal tokens you have to claim your balance to that point and 
     // also claim for the receiving address in order to make sure the calculations are always
-    // accurate after the transfer
+    // accurate after the transfer. you also need to check the latest balance after the initial
+    // claim to make sure that you don't send more than you have left after claiming.
     function _transferTokens(address src, address dst, uint amount) internal override {
         _claim(src, src);
+        uint transfer_amount = balanceOf[src] > amount ? balanceOf[src] : amount;
         _claim(dst, dst);
-        balanceOf[dst] += amount;
+        balanceOf[dst] += transfer_amount;
         
-        emit Transfer(src, dst, amount);
+        emit Transfer(src, dst, transfer_amount);
     }
 
     event DealFullyFunded(address poolAddress, address dealAddress, uint redemptionStart, uint redemptionExpiry);
