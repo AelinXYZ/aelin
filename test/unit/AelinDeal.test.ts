@@ -22,6 +22,7 @@ describe("AelinDeal", function () {
 
   const purchaseTokenDecimals = 6;
   const underlyingDealTokenDecimals = 8;
+  const poolTokenDecimals = 18;
   const oneSecond = 1;
   const name = "TestName";
   const symbol = "TestSymbol";
@@ -30,7 +31,6 @@ describe("AelinDeal", function () {
     underlyingBaseAmount.toString(),
     underlyingDealTokenDecimals
   );
-  // 50:1 ratio purchase to underlying deal token
   const purchaseBaseAmount = 50;
   const dealPurchaseTokenTotal = ethers.utils.parseUnits(
     purchaseBaseAmount.toString(),
@@ -42,15 +42,15 @@ describe("AelinDeal", function () {
   const redemptionPeriod = oneSecond * 4;
   // same logic as the convertUnderlyingToAelinAmount method
   const poolTokenMaxPurchaseAmount = dealPurchaseTokenTotal.mul(
-    Math.pow(10, 18 - purchaseTokenDecimals)
+    Math.pow(10, poolTokenDecimals - purchaseTokenDecimals)
   );
   const underlyingPerPurchaseExchangeRate =
     underlyingBaseAmount / purchaseBaseAmount;
 
-  // (100 * 10^8) / (50 * 10^18) * (10^18)
   const underlyingPerPoolExchangeRate = (
-    ((100 * Math.pow(10, 8)) / (50 * Math.pow(10, 18))) *
-    Math.pow(10, 18)
+    ((underlyingBaseAmount * Math.pow(10, 8)) /
+      (purchaseBaseAmount * Math.pow(10, poolTokenDecimals))) *
+    Math.pow(10, poolTokenDecimals)
   ).toString();
 
   const nullAddress = "0x0000000000000000000000000000000000000000";
@@ -234,6 +234,11 @@ describe("AelinDeal", function () {
     });
   });
 
+  const mintAmountBase = 2;
+  const mintAmount = ethers.utils.parseUnits(
+    mintAmountBase.toString(),
+    poolTokenDecimals
+  );
   describe("mint", function () {
     beforeEach(async () => {
       await successfullyInitializeDeal();
@@ -241,7 +246,6 @@ describe("AelinDeal", function () {
 
     it("should mint tokens", async function () {
       expect(await aelinDeal.totalSupply()).to.equal(ethers.BigNumber.from(0));
-      const mintAmount = ethers.utils.parseUnits("1", purchaseTokenDecimals);
       await aelinDeal.connect(deployer).mint(purchaser.address, mintAmount);
       expect(await aelinDeal.totalSupply()).to.equal(mintAmount);
       expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(mintAmount);
@@ -255,12 +259,7 @@ describe("AelinDeal", function () {
 
     it("should not allow mint tokens for the wrong account (only the deployer which is enforced as the pool)", async function () {
       await expect(
-        aelinDeal
-          .connect(holder)
-          .mint(
-            purchaser.address,
-            ethers.utils.parseUnits("1", purchaseTokenDecimals)
-          )
+        aelinDeal.connect(holder).mint(purchaser.address, mintAmount)
       ).to.be.revertedWith("only AelinPool can access");
     });
   });
@@ -319,8 +318,12 @@ describe("AelinDeal", function () {
     });
   });
 
-  const mintAmount = ethers.utils.parseUnits("1000", purchaseTokenDecimals);
-  const remainingBalance = underlyingDealTokenTotal.sub(mintAmount);
+  const underlyingRemovedBalance =
+    Number(underlyingPerPoolExchangeRate) * mintAmountBase;
+  const remainingBalance = underlyingDealTokenTotal.sub(
+    underlyingRemovedBalance
+  );
+
   const fundMintAndExpireDeal = async () => {
     await underlyingDealToken.mock.balanceOf
       .withArgs(holder.address)
@@ -339,10 +342,8 @@ describe("AelinDeal", function () {
     await aelinDeal.connect(deployer).mint(purchaser.address, mintAmount);
   };
 
-  const timeoutToSkipRedeemWindow = async () =>
-    new Promise((resolve) =>
-      setTimeout(resolve, 1000 * (redemptionPeriod + 1))
-    );
+  const timeoutToSkip = async (time: number) =>
+    new Promise((resolve) => setTimeout(resolve, time * 1000));
 
   describe("withdrawExpiry", function () {
     beforeEach(async () => {
@@ -352,11 +353,11 @@ describe("AelinDeal", function () {
     it("should allow the holder to withdraw excess tokens in the pool after expiry", async function () {
       await fundMintAndExpireDeal();
       // wait for redemption period to end
-      await timeoutToSkipRedeemWindow();
+      await timeoutToSkip(redemptionPeriod - 2);
 
       await underlyingDealToken.mock.balanceOf
         .withArgs(aelinDeal.address)
-        .returns(remainingBalance);
+        .returns(underlyingDealTokenTotal);
 
       await underlyingDealToken.mock.transfer
         .withArgs(holder.address, remainingBalance)
@@ -398,28 +399,25 @@ describe("AelinDeal", function () {
     });
   });
 
-  const expectedClaim = ethers.BigNumber.from(
-    (Number(underlyingPerPoolExchangeRate) * Math.pow(10, 18)) /
-      mintAmount.toNumber() /
-      Math.pow(10, 18 - underlyingDealTokenDecimals)
-  );
+  const expectedClaimUnderlying = underlyingRemovedBalance;
+  const partiallyExpectedClaimUnderlying = expectedClaimUnderlying / 2;
 
   describe("claim and custom transfer", function () {
     beforeEach(async () => {
       await successfullyInitializeDeal();
     });
 
-    it("should allow the purchaser to claim their minted tokens only once", async function () {
+    it("should allow the purchaser to claim their fully vested tokens only once", async function () {
       await fundMintAndExpireDeal();
       // wait for redemption period and the vesting period to end
-      await timeoutToSkipRedeemWindow();
-      await timeoutToSkipRedeemWindow();
+      await timeoutToSkip(redemptionPeriod - 2);
 
       await underlyingDealToken.mock.transfer
-        .withArgs(purchaser.address, expectedClaim)
+        .withArgs(purchaser.address, expectedClaimUnderlying)
         .returns(true);
 
       await aelinDeal.connect(purchaser).claim(purchaser.address);
+
       const [log] = await aelinDeal.queryFilter(
         aelinDeal.filters.ClaimedUnderlyingDealTokens()
       );
@@ -428,19 +426,48 @@ describe("AelinDeal", function () {
       );
       expect(log.args.from).to.equal(purchaser.address);
       expect(log.args.recipient).to.equal(purchaser.address);
-      expect(log.args.underlyingDealTokensClaimed).to.equal(expectedClaim);
+      expect(log.args.underlyingDealTokensClaimed).to.equal(
+        expectedClaimUnderlying
+      );
 
       expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
+    });
+
+    it("should allow the purchaser to claim their partially vested tokens only once", async function () {
+      await fundMintAndExpireDeal();
+      // wait for redemption period and the vesting period to end
+      await timeoutToSkip(redemptionPeriod - 3);
+
+      await underlyingDealToken.mock.transfer
+        .withArgs(purchaser.address, partiallyExpectedClaimUnderlying)
+        .returns(true);
+
+      await aelinDeal.connect(purchaser).claim(purchaser.address);
+
+      const [log] = await aelinDeal.queryFilter(
+        aelinDeal.filters.ClaimedUnderlyingDealTokens()
+      );
+      expect(log.args.underlyingDealTokenAddress).to.equal(
+        underlyingDealToken.address
+      );
+      expect(log.args.from).to.equal(purchaser.address);
+      expect(log.args.recipient).to.equal(purchaser.address);
+      expect(log.args.underlyingDealTokensClaimed).to.equal(
+        partiallyExpectedClaimUnderlying
+      );
+
+      expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(
+        mintAmount.div(2)
+      );
     });
 
     it("should claim their minted tokens when doing a transfer", async function () {
       await fundMintAndExpireDeal();
       // wait for redemption period and the vesting period to end
-      await timeoutToSkipRedeemWindow();
-      await timeoutToSkipRedeemWindow();
+      await timeoutToSkip(redemptionPeriod - 2);
 
       await underlyingDealToken.mock.transfer
-        .withArgs(purchaser.address, expectedClaim)
+        .withArgs(purchaser.address, expectedClaimUnderlying)
         .returns(true);
 
       await aelinDeal.connect(purchaser).transfer(deployer.address, mintAmount);
@@ -457,7 +484,9 @@ describe("AelinDeal", function () {
       );
       expect(claimLog.args.from).to.equal(purchaser.address);
       expect(claimLog.args.recipient).to.equal(purchaser.address);
-      expect(claimLog.args.underlyingDealTokensClaimed).to.equal(expectedClaim);
+      expect(claimLog.args.underlyingDealTokensClaimed).to.equal(
+        expectedClaimUnderlying
+      );
 
       expect(transferLogs[0].args.from).to.equal(nullAddress);
       expect(transferLogs[0].args.to).to.equal(purchaser.address);
@@ -475,14 +504,64 @@ describe("AelinDeal", function () {
       expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
     });
 
+    it("should claim their minted tokens when doing a transferFrom", async function () {
+      await fundMintAndExpireDeal();
+
+      await timeoutToSkip(redemptionPeriod - 2);
+
+      await underlyingDealToken.mock.transferFrom
+        .withArgs(purchaser.address, holder.address, mintAmount)
+        .returns(true);
+
+      await underlyingDealToken.mock.transfer
+        .withArgs(purchaser.address, expectedClaimUnderlying)
+        .returns(true);
+
+      await aelinDeal.connect(purchaser).approve(deployer.address, mintAmount);
+
+      await aelinDeal
+        .connect(deployer)
+        .transferFrom(purchaser.address, holder.address, mintAmount);
+
+      const [claimLog] = await aelinDeal.queryFilter(
+        aelinDeal.filters.ClaimedUnderlyingDealTokens()
+      );
+      const transferLogs = await aelinDeal.queryFilter(
+        aelinDeal.filters.Transfer()
+      );
+
+      expect(claimLog.args.underlyingDealTokenAddress).to.equal(
+        underlyingDealToken.address
+      );
+
+      expect(claimLog.args.from).to.equal(purchaser.address);
+      expect(claimLog.args.recipient).to.equal(purchaser.address);
+      expect(claimLog.args.underlyingDealTokensClaimed).to.equal(
+        expectedClaimUnderlying
+      );
+
+      expect(transferLogs[0].args.from).to.equal(nullAddress);
+      expect(transferLogs[0].args.to).to.equal(purchaser.address);
+      expect(transferLogs[0].args.amount).to.equal(mintAmount);
+
+      expect(transferLogs[1].args.from).to.equal(purchaser.address);
+      expect(transferLogs[1].args.to).to.equal(nullAddress);
+      expect(transferLogs[1].args.amount).to.equal(mintAmount);
+
+      expect(transferLogs[2].args.from).to.equal(purchaser.address);
+      expect(transferLogs[2].args.to).to.equal(holder.address);
+      expect(transferLogs[2].args.amount).to.equal(mintAmount);
+
+      expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
+    });
+
     it("should not allow a random wallet with no balance to claim", async function () {
       await fundMintAndExpireDeal();
       // wait for redemption period and the vesting period to end
-      await timeoutToSkipRedeemWindow();
-      await timeoutToSkipRedeemWindow();
+      await timeoutToSkip(redemptionPeriod - 2);
 
       await underlyingDealToken.mock.transfer
-        .withArgs(purchaser.address, expectedClaim)
+        .withArgs(purchaser.address, expectedClaimUnderlying)
         .returns(true);
 
       await aelinDeal.connect(deployer).claim(deployer.address);
