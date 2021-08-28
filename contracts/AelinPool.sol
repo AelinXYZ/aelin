@@ -60,31 +60,32 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         SPONSOR = _sponsor;
 
         CALLED_INITIALIZE = true;
+        emit SetSponsor(_sponsor);
     }
 
-    modifier onlySponsorCanCreate() {
-        require(msg.sender == SPONSOR, "only sponsor can access");
+    modifier dealNotCreated() {
         require(DEAL_CREATED == false, "deal has been created");
         _;
     }
 
-    modifier initOnce () {
+    modifier initOnce() {
         require(CALLED_INITIALIZE == false, "can only initialize once");
         _;
     }
     
     modifier onlySponsor() {
-        require(msg.sender == SPONSOR);
+        require(msg.sender == SPONSOR, "only sponsor can access");
         _;
     }
     
-    function setSponsor(address _sponsor) external onlySponsor {
+    function setSponsor(address _sponsor) external onlySponsor  {
         FUTURE_SPONSOR = _sponsor;
     }
     
     function acceptSponsor() external {
-        require(msg.sender == FUTURE_SPONSOR);
+        require(msg.sender == FUTURE_SPONSOR, "only future sponsor can access");
         SPONSOR = FUTURE_SPONSOR;
+        emit SetSponsor(FUTURE_SPONSOR);
     }
 
     function createDeal(
@@ -95,7 +96,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint _vesting_cliff,
         uint _redemption_period,
         address _holder
-    ) external onlySponsorCanCreate returns (address) {
+    ) external onlySponsor dealNotCreated returns (address) {
         require(30 minutes <= _redemption_period, "30 mins is min redeem period");
         require(IERC20(PURCHASE_TOKEN).balanceOf(address(this)) > 0, "no purchase tokens in the contract");
         require(_deal_purchase_token_total <= IERC20(PURCHASE_TOKEN).balanceOf(address(this)), "not enough funds avail");
@@ -236,6 +237,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         }
     }
 
+    event SetSponsor(address sponsor);
     event PurchasePoolToken(address purchaser, address poolAddress, uint purchaseTokenAmount, uint poolTokenAmount);
     event WithdrawFromPool(address purchaser, address poolAddress, uint purchaseTokenAmount, uint poolTokenAmount);
     event AcceptDeal(address purchaser, address poolAddress, address dealAddress, uint poolTokenAmount);

@@ -120,6 +120,9 @@ describe("AelinPool", function () {
       expect(await aelinPool.purchase_expiry()).to.equal(
         expectedPurchaseExpiry
       );
+
+      const [log] = await aelinPool.queryFilter(aelinPool.filters.SetSponsor());
+      expect(log.args.sponsor).to.equal(sponsor.address);
     });
 
     it("should only allow initialization once", async function () {
@@ -268,6 +271,29 @@ describe("AelinPool", function () {
       await expect(createDealWithValidParams()).to.be.revertedWith(
         "deal has been created"
       );
+    });
+  });
+  describe("changing the sponsor", function () {
+    beforeEach(async function () {
+      await successfullyInitializePool();
+    });
+    it("should fail to let a non sponsor change the sponsor", async function () {
+      await expect(
+        aelinPool.connect(user1).setSponsor(user1.address)
+      ).to.be.revertedWith("only sponsor can access");
+    });
+    it("should change the sponsor only after the new sponsor is accepted", async function () {
+      await aelinPool.connect(sponsor).setSponsor(user1.address);
+      expect(await aelinPool.SPONSOR()).to.equal(sponsor.address);
+
+      await expect(
+        aelinPool.connect(sponsor).acceptSponsor()
+      ).to.be.revertedWith("only future sponsor can access");
+      await aelinPool.connect(user1).acceptSponsor();
+
+      expect(await aelinPool.SPONSOR()).to.equal(user1.address);
+      const [log] = await aelinPool.queryFilter(aelinPool.filters.SetSponsor());
+      expect(log.args.sponsor).to.equal(sponsor.address);
     });
   });
 });
