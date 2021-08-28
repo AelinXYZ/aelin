@@ -159,7 +159,6 @@ contract AelinDeal is AelinERC20 {
                 uint time_elapsed = max_time - lastClaim[from];
                 uint deal_tokens_claimed = balanceOf[from] * time_elapsed / VESTING_PERIOD;
                 uint underlying_deal_tokens_claimed = UNDERLYING_PER_POOL_EXCHANGE_RATE * deal_tokens_claimed / 1e18;
-
                 if (deal_tokens_claimed > 0) {
                     _burn(from, deal_tokens_claimed);
                     _safeTransfer(UNDERLYING_DEAL_TOKEN, recipient, underlying_deal_tokens_claimed);
