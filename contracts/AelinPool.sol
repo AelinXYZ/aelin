@@ -162,7 +162,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     function _acceptDealTokens(address recipient, uint pool_token_amount) internal {
         require(DEAL_CREATED == true, "deal not yet created");
-        require(block.timestamp > AELIN_DEAL.REDEMPTION_START() && block.timestamp < AELIN_DEAL.REDEMPTION_EXPIRY(), "outside of redeem window");
+        require(block.timestamp >= AELIN_DEAL.REDEMPTION_START() && block.timestamp < AELIN_DEAL.REDEMPTION_EXPIRY(), "outside of redeem window");
         require(pool_token_amount <= proRataBalance(msg.sender), "accepting more than deal share");
         _burn(msg.sender, pool_token_amount);
 
