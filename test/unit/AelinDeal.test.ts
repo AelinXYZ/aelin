@@ -23,7 +23,9 @@ describe("AelinDeal", function () {
   const purchaseTokenDecimals = 6;
   const underlyingDealTokenDecimals = 8;
   const poolTokenDecimals = 18;
-  const oneSecond = 1;
+  const oneDay = 24 * 60 * 60;
+  const oneYear = oneDay * 365;
+  const oneWeek = oneDay * 7;
   const name = "TestName";
   const symbol = "TestSymbol";
   const underlyingBaseAmount = 100;
@@ -37,9 +39,10 @@ describe("AelinDeal", function () {
     purchaseTokenDecimals
   );
 
-  const vestingPeriod = oneSecond * 2;
-  const vestingCliff = oneSecond * 2;
-  const redemptionPeriod = oneSecond * 4;
+  const vestingPeriod = oneYear;
+  const vestingCliff = oneYear;
+  const redemptionPeriod = oneWeek;
+  const redemptionEnd = oneYear * 2 + oneWeek;
   // same logic as the convertUnderlyingToAelinAmount method
   const poolTokenMaxPurchaseAmount = dealPurchaseTokenTotal.mul(
     Math.pow(10, poolTokenDecimals - purchaseTokenDecimals)
@@ -324,7 +327,7 @@ describe("AelinDeal", function () {
     underlyingRemovedBalance
   );
 
-  const fundMintAndExpireDeal = async () => {
+  const fundDealAndMintTokens = async () => {
     await underlyingDealToken.mock.balanceOf
       .withArgs(holder.address)
       .returns(underlyingDealTokenTotal);
@@ -342,18 +345,16 @@ describe("AelinDeal", function () {
     await aelinDeal.connect(deployer).mint(purchaser.address, mintAmount);
   };
 
-  const timeoutToSkip = async (time: number) =>
-    new Promise((resolve) => setTimeout(resolve, time * 1000));
-
   describe("withdrawExpiry", function () {
     beforeEach(async () => {
       await successfullyInitializeDeal();
     });
 
     it("should allow the holder to withdraw excess tokens in the pool after expiry", async function () {
-      await fundMintAndExpireDeal();
+      await fundDealAndMintTokens();
       // wait for redemption period to end
-      await timeoutToSkip(redemptionPeriod - 2);
+      await ethers.provider.send("evm_increaseTime", [oneWeek + 1]);
+      await ethers.provider.send("evm_mine", []);
 
       await underlyingDealToken.mock.balanceOf
         .withArgs(aelinDeal.address)
@@ -377,14 +378,14 @@ describe("AelinDeal", function () {
     });
 
     it("should block the holder from withdraw excess tokens in the pool before redeem window starts", async function () {
-      // not funding the deal so the redeem window has not started yet
+      // the deal is not funded so the redeem window has not started yet
       await expect(
         aelinDeal.connect(holder).withdrawExpiry()
       ).to.be.revertedWith("redemption period not started");
     });
 
     it("should block the holder from withdraw excess tokens in the pool while redeem window is active", async function () {
-      await fundMintAndExpireDeal();
+      await fundDealAndMintTokens();
       // no waiting for redemption period to end
       await underlyingDealToken.mock.balanceOf
         .withArgs(aelinDeal.address)
@@ -400,7 +401,8 @@ describe("AelinDeal", function () {
   });
 
   const expectedClaimUnderlying = underlyingRemovedBalance;
-  const partiallyExpectedClaimUnderlying = expectedClaimUnderlying / 2;
+  // NOTE that this is roughly half but it is hard to find the exact timestamp when calling evm_increaseTime
+  const partiallyExpectedClaimUnderlying = 202739814;
 
   describe("claim and custom transfer", function () {
     beforeEach(async () => {
@@ -408,9 +410,10 @@ describe("AelinDeal", function () {
     });
 
     it("should allow the purchaser to claim their fully vested tokens only once", async function () {
-      await fundMintAndExpireDeal();
+      await fundDealAndMintTokens();
       // wait for redemption period and the vesting period to end
-      await timeoutToSkip(redemptionPeriod - 2);
+      await ethers.provider.send("evm_increaseTime", [redemptionEnd + 1]);
+      await ethers.provider.send("evm_mine", []);
 
       await underlyingDealToken.mock.transfer
         .withArgs(purchaser.address, expectedClaimUnderlying)
@@ -433,10 +436,13 @@ describe("AelinDeal", function () {
       expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
     });
 
-    it("should allow the purchaser to claim their partially vested tokens only once", async function () {
-      await fundMintAndExpireDeal();
-      // wait for redemption period and the vesting period to end
-      await timeoutToSkip(redemptionPeriod - 3);
+    it("should allow the purchaser to claim their partially vested tokens", async function () {
+      await fundDealAndMintTokens();
+
+      await ethers.provider.send("evm_increaseTime", [
+        redemptionEnd - oneDay * 180,
+      ]);
+      await ethers.provider.send("evm_mine", []);
 
       await underlyingDealToken.mock.transfer
         .withArgs(purchaser.address, partiallyExpectedClaimUnderlying)
@@ -455,16 +461,12 @@ describe("AelinDeal", function () {
       expect(log.args.underlyingDealTokensClaimed).to.equal(
         partiallyExpectedClaimUnderlying
       );
-
-      expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(
-        mintAmount.div(2)
-      );
     });
 
     it("should claim their minted tokens when doing a transfer", async function () {
-      await fundMintAndExpireDeal();
-      // wait for redemption period and the vesting period to end
-      await timeoutToSkip(redemptionPeriod - 2);
+      await fundDealAndMintTokens();
+      await ethers.provider.send("evm_increaseTime", [redemptionEnd + 1]);
+      await ethers.provider.send("evm_mine", []);
 
       await underlyingDealToken.mock.transfer
         .withArgs(purchaser.address, expectedClaimUnderlying)
@@ -505,9 +507,10 @@ describe("AelinDeal", function () {
     });
 
     it("should claim their minted tokens when doing a transferFrom", async function () {
-      await fundMintAndExpireDeal();
+      await fundDealAndMintTokens();
 
-      await timeoutToSkip(redemptionPeriod - 2);
+      await ethers.provider.send("evm_increaseTime", [redemptionEnd + 1]);
+      await ethers.provider.send("evm_mine", []);
 
       await underlyingDealToken.mock.transferFrom
         .withArgs(purchaser.address, holder.address, mintAmount)
@@ -556,9 +559,10 @@ describe("AelinDeal", function () {
     });
 
     it("should not allow a random wallet with no balance to claim", async function () {
-      await fundMintAndExpireDeal();
+      await fundDealAndMintTokens();
       // wait for redemption period and the vesting period to end
-      await timeoutToSkip(redemptionPeriod - 2);
+      await ethers.provider.send("evm_increaseTime", [redemptionEnd + 1]);
+      await ethers.provider.send("evm_mine", []);
 
       await underlyingDealToken.mock.transfer
         .withArgs(purchaser.address, expectedClaimUnderlying)
