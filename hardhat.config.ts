@@ -23,6 +23,11 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       initialBaseFeePerGas: 0,
+      forking: {
+        url: process.env.ALCHEMY_URL || "",
+        blockNumber: 13123510,
+        enabled: !!process.env.ALCHEMY_URL,
+      }
     },
   },
 };
