@@ -11,7 +11,10 @@
     "build": "waffle",
     "coverage": "hardhat coverage",
     "clean": "hardhat clean",
-		"lint:sarif": "node lint.js . --ext js,ts,tsx"
+    "lint:sarif": "node lint.js . --ext js,ts,tsx",
+    "deploy-deal:kovan": "hardhat run scripts/deploy-deal.js --network kovan",
+    "deploy-pool:kovan": "hardhat run scripts/deploy-pool.js --network kovan",
+    "deploy-pool-factory:kovan": "hardhat run scripts/deploy-pool-factory.js --network kovan"
   },
   "repository": {
     "type": "git",

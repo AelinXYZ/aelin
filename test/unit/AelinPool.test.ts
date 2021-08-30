@@ -5,7 +5,6 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 import ERC20Artifact from "../../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json";
 import AelinPoolArtifact from "../../artifacts/contracts/AelinPool.sol/AelinPool.json";
-import AelinDealArtifact from "../../artifacts/contracts/AelinDeal.sol/AelinDeal.json";
 import { AelinPool } from "../../typechain";
 import { BigNumber } from "ethers";
 
