@@ -185,13 +185,14 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     function _purchasePoolTokens(address recipient, uint purchase_token_amount) internal {
         require(DEAL_CREATED == false && block.timestamp < purchase_expiry, "not in purchase window");
-        _safeTransferFrom(PURCHASE_TOKEN, msg.sender, address(this), purchase_token_amount);
         uint contract_purchase_balance = IERC20(PURCHASE_TOKEN).balanceOf(address(this));
         require(PURCHASE_TOKEN_CAP == 0 || contract_purchase_balance < PURCHASE_TOKEN_CAP, "the cap has been reached");
+
         if (PURCHASE_TOKEN_CAP > 0) {
             purchase_token_amount = (purchase_token_amount + contract_purchase_balance) <= PURCHASE_TOKEN_CAP ? purchase_token_amount : PURCHASE_TOKEN_CAP - contract_purchase_balance;
         }
         uint pool_token_amount = convertUnderlyingToAelinAmount(purchase_token_amount, PURCHASE_TOKEN_DECIMALS);
+        _safeTransferFrom(PURCHASE_TOKEN, msg.sender, address(this), purchase_token_amount);
         _mint(recipient, pool_token_amount);
         emit PurchasePoolToken(recipient, address(this), purchase_token_amount, pool_token_amount);
     }
@@ -217,10 +218,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     }
 
     function maxAcceptDealTokens(address pool_token_owner) external view returns (uint) {
-        if (DEAL_CREATED == false) {
-            return 0;
-        }
-        if (AELIN_DEAL.REDEMPTION_START() == 0 || block.timestamp > AELIN_DEAL.REDEMPTION_EXPIRY()) {
+        if (DEAL_CREATED == false || AELIN_DEAL.REDEMPTION_START() == 0 || block.timestamp > AELIN_DEAL.REDEMPTION_EXPIRY()) {
             return 0;
         }
         return proRataBalance(pool_token_owner);
