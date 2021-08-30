@@ -4,7 +4,9 @@
   "description": "A protocol for fundraising",
   "main": "index.js",
   "scripts": {
-    "test": "TS_NODE_FILES=true hardhat test",
+    "test": "hardhat test",
+    "test:unit": "hardhat test ./test/unit/*.test.ts",
+    "test:integ": "hardhat test ./test/integration/*.test.ts",
     "compile": "hardhat compile",
     "build": "waffle",
     "coverage": "hardhat coverage",
