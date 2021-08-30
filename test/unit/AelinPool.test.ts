@@ -274,7 +274,7 @@ describe("AelinPool", function () {
         (dealPurchaseTokenTotalBase / userPurchaseBaseAmt) *
         10 ** 18
       ).toString();
-      console.log("expectedProRataResult", expectedProRataResult);
+
       expect(await aelinPool.PRO_RATA_CONVERSION()).to.equal(
         expectedProRataResult
       );
@@ -418,8 +418,11 @@ describe("AelinPool", function () {
     });
   });
 
+  // NOTE that most of the tests for this method will be in the
+  // integration tests section since it needs to call a method
+  // on the deal first in order to properly test
   describe("accept deal tokens", function () {
-    beforeEach(async function () {
+    it("should require the deal to be created", async function () {
       await purchaseToken.mock.balanceOf
         .withArgs(user1.address)
         .returns(userPurchaseAmt);
@@ -433,66 +436,14 @@ describe("AelinPool", function () {
         .returns(userPurchaseAmt);
 
       await successfullyInitializePool();
-    });
 
-    it("should require the deal to be created", async function () {
       await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
       await expect(
         aelinPool.connect(user1).acceptMaxDealTokens()
       ).to.be.revertedWith("deal not yet created");
     });
-
-    // technically these should probably be in integration tests. they are not working with
-    // this setup. need to find a way to fund the deal via a mock
-    describe.skip("deal ready", function () {
-      beforeEach(async function () {
-        await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
-        await createDealWithValidParams();
-
-        const [log] = await aelinPool.queryFilter(
-          aelinPool.filters.CreateDeal()
-        );
-        const aelinDealAddress = log.args.dealContract;
-
-        await underlyingDealToken.mock.balanceOf
-          .withArgs(holder.address)
-          .returns(underlyingDealTokenTotal);
-
-        await underlyingDealToken.mock.transferFrom
-          .withArgs(holder.address, aelinDealAddress, underlyingDealTokenTotal)
-          .returns(true);
-
-        await underlyingDealToken.mock.balanceOf
-          .withArgs(aelinDealAddress)
-          .returns(underlyingDealTokenTotal);
-
-        const aelinDeal = new ethers.Contract(
-          aelinDealAddress,
-          AelinDealArtifact.abi
-        );
-
-        // NOTE this sort of makes this an integration test as you need the depositUnderlying
-        // method to be called in order to finish funding the deal so you can test accepting deal tokens
-        await aelinDeal
-          .connect(holder)
-          .depositUnderlying(underlyingDealTokenTotal);
-      });
-
-      it("should fail outside of the redeem window", async function () {
-        await ethers.provider.send("evm_increaseTime", [redemptionPeriod + 1]);
-        await ethers.provider.send("evm_mine", []);
-        await expect(
-          aelinPool.connect(user1).acceptMaxDealTokens()
-        ).to.be.revertedWith("outside of redeem window");
-      });
-
-      it("should fail when the purchaser accepts more than their deal share", async function () {
-        await expect(
-          aelinPool.connect(user1).acceptDealTokens(poolTokenAmount.add(1))
-        ).to.be.revertedWith("accepting more than deal share");
-      });
-    });
   });
+
   describe("withdraw pool tokens", function () {
     beforeEach(async function () {
       // setup so that a user can purchase pool tokens
