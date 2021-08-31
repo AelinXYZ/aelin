@@ -13,7 +13,7 @@ const { deployContract } = waffle;
 
 chai.use(solidity);
 
-describe("integration test", () => {
+describe.only("integration test", () => {
   let deployer: SignerWithAddress;
   let sponsor: SignerWithAddress;
   let user1: SignerWithAddress;
@@ -145,27 +145,27 @@ describe("integration test", () => {
       AelinPoolArtifact.abi
     ) as AelinPool;
 
-    // purchasers buy pool tokens
-    await aelinPool
+    const purchaseAmount = ethers.utils.parseUnits("5000", usdcDecimals);
+    // purchasers get approval to buy pool tokens
+    await usdcContract
       .connect(user1)
-      .purchasePoolTokens(ethers.utils.parseUnits("5000", usdcDecimals));
-    await aelinPool
+      .approve(aelinPool.address, purchaseAmount);
+    await usdcContract
       .connect(user2)
-      .purchasePoolTokens(ethers.utils.parseUnits("5000", usdcDecimals));
-    await aelinPool
+      .approve(aelinPool.address, purchaseAmount);
+    await usdcContract
       .connect(user3)
-      .purchasePoolTokens(ethers.utils.parseUnits("5000", usdcDecimals));
-    // user 4 only gets 2500 at the end
-    await aelinPool
+      .approve(aelinPool.address, purchaseAmount);
+    await usdcContract
       .connect(user4)
-      .purchasePoolTokens(ethers.utils.parseUnits("5000", usdcDecimals));
+      .approve(aelinPool.address, purchaseAmount);
 
-    await aelinPool
-      .connect(user4)
-      .withdrawFromPool(
-        ethers.utils.parseUnits("500", dealOrPoolTokenDecimals)
-      );
-    await aelinPool.connect(user4).withdrawMaxFromPool();
+    // purchasers buy pool tokens
+    await aelinPool.connect(user1).purchasePoolTokens(purchaseAmount);
+    await aelinPool.connect(user2).purchasePoolTokens(purchaseAmount);
+    await aelinPool.connect(user3).purchasePoolTokens(purchaseAmount);
+    // user 4 only gets 2500 at the end
+    await aelinPool.connect(user4).purchasePoolTokens(purchaseAmount);
 
     await aelinPool
       .connect(sponsor)
@@ -190,6 +190,13 @@ describe("integration test", () => {
       createDealLog.args.dealContract,
       AelinDealArtifact.abi
     ) as AelinDeal;
+
+    await aelinPool
+      .connect(user4)
+      .withdrawFromPool(
+        ethers.utils.parseUnits("500", dealOrPoolTokenDecimals)
+      );
+    await aelinPool.connect(user4).withdrawMaxFromPool();
 
     // deposits double by mistake
     await aelinDeal
