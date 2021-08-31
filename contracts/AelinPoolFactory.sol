@@ -41,8 +41,8 @@ contract AelinPoolFactory is MinimalProxyFactory {
 
         emit CreatePool(
             address(aelin_pool),
-            _name,
-            _symbol,
+            string(abi.encodePacked("aePool-", _name)),
+            string(abi.encodePacked("aeP-", _name)),
             _purchase_token_cap,
             _purchase_token,
             _duration,

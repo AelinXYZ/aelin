@@ -3,6 +3,7 @@ pragma solidity 0.8.6;
 
 import "./AelinERC20.sol";
 import "./AelinPool.sol";
+import "hardhat/console.sol";
 
 contract AelinDeal is AelinERC20 {
     address public HOLDER;
@@ -78,8 +79,12 @@ contract AelinDeal is AelinERC20 {
     // NOTE if the deposit was completed with a transfer instead of this method, 
     // the deposit can be finalized by calling this method with amount 0;
     function depositUnderlying(uint _underlying_deal_token_amount) external finalizeDepositOnce returns (bool) {
+        console.log("_underlying_deal_token_amount: %s", _underlying_deal_token_amount);
+        console.log("UNDERLYING_DEAL_TOKENS_TOTAL: %s", UNDERLYING_DEAL_TOKENS_TOTAL);
+        console.log("IERC20(UNDERLYING_DEAL_TOKEN).balanceOf(address(this)): %s", IERC20(UNDERLYING_DEAL_TOKEN).balanceOf(address(this)));
         if (IERC20(UNDERLYING_DEAL_TOKEN).balanceOf(address(this)) + _underlying_deal_token_amount >= UNDERLYING_DEAL_TOKENS_TOTAL) {
             DEPOSIT_COMPLETE = true;
+            console.log("DEPOSIT_COMPLETE");
         }
         if (_underlying_deal_token_amount > 0) {
             _safeTransferFrom(UNDERLYING_DEAL_TOKEN, msg.sender, address(this), _underlying_deal_token_amount);

@@ -4,7 +4,7 @@ pragma solidity 0.8.6;
 import "./AelinERC20.sol";
 import "./AelinDeal.sol";
 import "./MinimalProxyFactory.sol";
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 contract AelinPool is AelinERC20, MinimalProxyFactory {
     address public PURCHASE_TOKEN;
@@ -23,11 +23,14 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     uint public PURCHASE_EXPIRY;
     uint public POOL_EXPIRY;
 
-    bool CALLED_INITIALIZE = false;
-    bool DEAL_CREATED = false;
+    bool public CALLED_INITIALIZE = false;
+    bool public DEAL_CREATED = false;
 
     AelinDeal public AELIN_DEAL;
     address public HOLDER;
+
+    string private stored_name;
+    string private stored_symbol;
 
     // @TODO update with correct addresses
     // address constant AELIN_DEAL_ADDRESS = 0x0000000000000000000000000000000000000000;
@@ -54,6 +57,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         address _sponsor,
         uint _purchase_expiry
     ) external initOnce {
+        stored_name = _name;
+        stored_symbol = _symbol;
         _setNameAndSymbol(
             string(abi.encodePacked("aePool-", _name)),
             string(abi.encodePacked("aeP-", _symbol))
@@ -125,8 +130,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
         AelinDeal AELIN_DEAL = AelinDeal(_cloneAsMinimalProxy(AELIN_DEAL_ADDRESS, "Could not create new deal"));
         AELIN_DEAL.initialize(
-            name,
-            symbol,
+            stored_name,
+            stored_symbol,
             _underlying_deal_token,
             _underlying_per_purchase_exchange_rate,
             _underlying_deal_token_total,
@@ -138,8 +143,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         );
 
         emit CreateDeal(
-            name,
-            symbol,
+            string(abi.encodePacked("aeDeal-", stored_name)),
+            string(abi.encodePacked("aeD-", stored_symbol)),
             address(AELIN_DEAL),
             _underlying_deal_token,
             _deal_purchase_token_total,
@@ -194,7 +199,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     }
 
     function _purchasePoolTokens(address recipient, uint purchase_token_amount) internal {
-        console.log("DEAL_CREATED: %s, block.timestamp: %s, PURCHASE_EXPIRY: %s", DEAL_CREATED, block.timestamp, PURCHASE_EXPIRY);
         require(DEAL_CREATED == false && block.timestamp < PURCHASE_EXPIRY, "not in purchase window");
         uint contract_purchase_balance = IERC20(PURCHASE_TOKEN).balanceOf(address(this));
         require(PURCHASE_TOKEN_CAP == 0 || contract_purchase_balance < PURCHASE_TOKEN_CAP, "the cap has been reached");

@@ -37,9 +37,8 @@ describe.only("integration test", () => {
   const usdcWhaleAddress = "0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503";
   let usdcWhaleSigner: SignerWithAddress;
 
-  // AAVE DAO is the holder
-  const aaveDAOAddress = "0xc697051d1c6296c24ae3bcef39aca743861d9a81";
-  let aaveDAO: SignerWithAddress;
+  const aaveWhaleAddress = "0x73f9B272aBda7A97CB1b237D85F9a7236EDB6F16";
+  let aaveWhale: SignerWithAddress;
 
   const fundUsdcToUsers = async (users: SignerWithAddress[]) => {
     const amount = ethers.utils.parseUnits("5000", usdcDecimals);
@@ -75,7 +74,7 @@ describe.only("integration test", () => {
     )) as ERC20;
 
     usdcWhaleSigner = await getImpersonatedSigner(usdcWhaleAddress);
-    aaveDAO = await getImpersonatedSigner(aaveDAOAddress);
+    aaveWhale = await getImpersonatedSigner(aaveWhaleAddress);
     aelinDealBaseLogic = (await deployContract(
       deployer,
       AelinDealArtifact
@@ -138,7 +137,7 @@ describe.only("integration test", () => {
 
     // partial check of logs. already testing all logs in unit tests
     expect(createPoolLog.args.poolAddress).to.be.properAddress;
-    expect(createPoolLog.args.name).to.equal(name);
+    expect(createPoolLog.args.name).to.equal("aePool-" + name);
 
     const aelinPool = new ethers.Contract(
       createPoolLog.args.poolAddress,
@@ -176,15 +175,15 @@ describe.only("integration test", () => {
         vestingPeriod,
         vestingCliff,
         redemptionPeriod,
-        aaveDAO.address
+        aaveWhale.address
       );
 
-    const [createDealLog] = await aelinPool.queryFilter(
-      aelinPool.filters.CreateDeal()
-    );
+    const [createDealLog] = await aelinPool
+      .connect(sponsor)
+      .queryFilter(aelinPool.filters.CreateDeal());
 
     expect(createDealLog.args.dealContract).to.be.properAddress;
-    expect(createDealLog.args.name).to.equal(name);
+    expect(createDealLog.args.name).to.equal("aeDeal-" + name);
 
     const aelinDeal = new ethers.Contract(
       createDealLog.args.dealContract,
@@ -198,29 +197,27 @@ describe.only("integration test", () => {
       );
     await aelinPool.connect(user4).withdrawMaxFromPool();
 
-    // deposits double by mistake
     await aelinDeal
-      .connect(aaveDAO)
-      .depositUnderlying(underlyingDealTokenTotal.mul(2));
+      .connect(aaveWhale)
+      .depositUnderlying(underlyingDealTokenTotal.add(1));
 
-    // withdraws the extra amount
-    await aelinDeal.connect(aaveDAO).withdraw();
-
-    expect(await usdcContract.balanceOf(aaveDAO.address)).to.equal(0);
+    // withdraws the extra 1
+    await aelinDeal.connect(aaveWhale).withdraw();
+    expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(0);
 
     // 5000 + 5000 + 2500 + 100 = 12600 USDC will be available to the holder
-    await aelinPool.connect(user1.address).acceptMaxDealTokens();
+    await aelinPool.connect(user1).acceptMaxDealTokens();
     await aelinPool
-      .connect(user2.address)
+      .connect(user2)
       .acceptMaxDealTokensAndAllocate(user1.address);
     await aelinPool
-      .connect(user3.address)
+      .connect(user3)
       .acceptDealTokensAndAllocate(
         user4.address,
         ethers.utils.parseUnits("2500", dealOrPoolTokenDecimals)
       );
     await aelinPool
-      .connect(user4.address)
+      .connect(user4)
       .acceptDealTokens(
         ethers.utils.parseUnits("100", dealOrPoolTokenDecimals)
       );
@@ -228,7 +225,7 @@ describe.only("integration test", () => {
     await ethers.provider.send("evm_increaseTime", [redemptionPeriod + 1]);
     await ethers.provider.send("evm_mine", []);
 
-    await aelinDeal.connect(aaveDAO).withdrawExpiry();
+    await aelinDeal.connect(aaveWhale).withdrawExpiry();
 
     await ethers.provider.send("evm_increaseTime", [
       vestingCliff + vestingPeriod + 1,
@@ -265,7 +262,7 @@ describe.only("integration test", () => {
     expect(await aaveContract.balanceOf(user5.address)).to.equal(
       log1.args.underlyingDealTokensClaimed
     );
-    expect(await usdcContract.balanceOf(aaveDAO.address)).to.equal(
+    expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
       ethers.utils.parseUnits("126000", usdcDecimals)
     );
   });
