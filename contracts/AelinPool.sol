@@ -29,11 +29,20 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     address public holder;
 
     // @TODO update with correct addresses
-    address constant AELIN_DEAL_ADDRESS = 0x0000000000000000000000000000000000000000;
+    // address constant AELIN_DEAL_ADDRESS = 0x0000000000000000000000000000000000000000;
     address constant AELIN_REWARDS = 0x0000000000000000000000000000000000000000;
 
     constructor () {}
 
+    // @NOTE for integration testing we are going to add a setter for this until we launch the contract
+    // on mainnet and can run using the mainnet address on a hardhat fork and can keep it hardcoded and remove the setter
+    address AELIN_DEAL_ADDRESS;
+
+    // @TODO delete this before using on prod or sending for audits. Just for pre mainnet deploy integration tests
+    function setAelinDealAddress(address _aelin_deal_address) external {
+        AELIN_DEAL_ADDRESS = _aelin_deal_address;
+    }
+    
     function initialize (
         string memory _name,
         string memory _symbol,

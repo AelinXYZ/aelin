@@ -8,7 +8,15 @@ contract AelinPoolFactory is MinimalProxyFactory {
     constructor() {}
 
     // @TODO update with correct address
-    address constant AELIN_POOL_ADDRESS = 0x0000000000000000000000000000000000000000;
+    // address constant AELIN_POOL_ADDRESS = 0x0000000000000000000000000000000000000000;
+    // @NOTE for integration testing we are going to add a setter for this until we launch the contract
+    // on mainnet and can run using the mainnet address on a hardhat fork and can keep it hardcoded and remove the setter
+    address AELIN_POOL_ADDRESS;
+
+    // @TODO delete this before using on prod or sending for audits. Just for pre mainnet deploy integration tests
+    function setAelinPoolAddress(address _aelin_pool_address) external {
+        AELIN_POOL_ADDRESS = _aelin_pool_address;
+    }
 
     function createPool(
         string memory _name,
