@@ -42,7 +42,7 @@ describe.only("integration test", () => {
   let aaveDAO: SignerWithAddress;
 
   const fundUsdcToUsers = async (users: SignerWithAddress[]) => {
-    const amount = ethers.utils.parseUnits("50000000", usdcDecimals);
+    const amount = ethers.utils.parseUnits("5000", usdcDecimals);
 
     users.forEach((user) => {
       usdcContract.connect(usdcWhaleSigner).transfer(user.address, amount);
@@ -132,6 +132,23 @@ describe.only("integration test", () => {
         purchaseExpiry
       );
 
+    const [log] = await aelinPoolFactory.queryFilter(
+      aelinPoolFactory.filters.CreatePool()
+    );
+
+    expect(log.args.poolAddress).to.be.properAddress;
+    expect(log.args.name).to.equal(name);
+    expect(log.args.symbol).to.equal(symbol);
+    expect(log.args.purchaseTokenCap).to.equal(purchaseTokenCap);
+    expect(log.args.purchaseToken.toUpperCase()).to.equal(
+      usdcContract.address.toUpperCase()
+    );
+    expect(log.args.duration).to.equal(duration);
+    expect(log.args.sponsorFee).to.equal(sponsorFee);
+    expect(log.args.sponsor).to.equal(sponsor.address);
+    expect(log.args.purchaseExpiry).to.equal(purchaseExpiry);
+    console.log("a");
+
     // purchasers buy pool tokens
     await aelinPool
       .connect(user1)
@@ -146,6 +163,8 @@ describe.only("integration test", () => {
     await aelinPool
       .connect(user4)
       .purchasePoolTokens(ethers.utils.parseUnits("5000", usdcDecimals));
+
+    console.log("b");
 
     await aelinPool
       .connect(user4)
