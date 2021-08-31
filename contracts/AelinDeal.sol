@@ -146,6 +146,7 @@ contract AelinDeal is AelinERC20 {
     }
     
     function claimAndAllocate(address from, address recipient) external {
+        require(from == msg.sender, "only claimant can allocate");
         _claim(from, recipient);
     }
     
@@ -180,12 +181,14 @@ contract AelinDeal is AelinERC20 {
         return true;
     }
 
+    // from a to b with amount
     function transferFrom(address src, address dst, uint amount) external override returns (bool) {
         address spender = msg.sender;
         uint spenderAllowance = allowance[src][spender];
 
         if (spender != src && spenderAllowance != type(uint).max) {
             uint newAllowance = spenderAllowance - amount;
+            // NOTE does the newAllowance have to be greater than 0 or else the transaction will fail? Do we need to add a check for that?
             allowance[src][spender] = newAllowance;
 
             emit Approval(src, spender, newAllowance);
