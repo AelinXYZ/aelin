@@ -4,6 +4,7 @@ pragma solidity 0.8.6;
 import "./AelinERC20.sol";
 import "./AelinDeal.sol";
 import "./MinimalProxyFactory.sol";
+import "hardhat/console.sol";
 
 contract AelinPool is AelinERC20, MinimalProxyFactory {
     address public PURCHASE_TOKEN;
@@ -19,14 +20,14 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     uint constant MAX_SPONSOR_FEE = 98000;
     uint constant AELIN_FEE = 2000;
 
-    uint public purchase_expiry;
-    uint public pool_expiry;
+    uint public PURCHASE_EXPIRY;
+    uint public POOL_EXPIRY;
 
     bool CALLED_INITIALIZE = false;
     bool DEAL_CREATED = false;
 
     AelinDeal public AELIN_DEAL;
-    address public holder;
+    address public HOLDER;
 
     // @TODO update with correct addresses
     // address constant AELIN_DEAL_ADDRESS = 0x0000000000000000000000000000000000000000;
@@ -61,9 +62,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         PURCHASE_TOKEN = _purchase_token;
         PURCHASE_TOKEN_DECIMALS = IERC20(_purchase_token).decimals();
         require(365 days >= _duration, "max 1 year duration");
-        pool_expiry = block.timestamp + _duration;
+        POOL_EXPIRY = block.timestamp + _duration;
         require(30 minutes <= _purchase_expiry, "min 30 minutes purchase expiry");
-        purchase_expiry = block.timestamp + _purchase_expiry;
+        PURCHASE_EXPIRY = block.timestamp + _purchase_expiry;
         require(_sponsor_fee <= MAX_SPONSOR_FEE, "exceeds max sponsor fee");
         SPONSOR_FEE = _sponsor_fee;
         SPONSOR = _sponsor;
@@ -110,8 +111,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         require(IERC20(PURCHASE_TOKEN).balanceOf(address(this)) > 0, "no purchase tokens in the contract");
         require(_deal_purchase_token_total <= IERC20(PURCHASE_TOKEN).balanceOf(address(this)), "not enough funds avail");
 
-        pool_expiry = block.timestamp;
-        holder = _holder;
+        POOL_EXPIRY = block.timestamp;
+        HOLDER = _holder;
         DEAL_CREATED = true;
 
         uint _pool_token_max_purchase_amount = convertUnderlyingToAelinAmount(
@@ -180,7 +181,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         AELIN_DEAL.mint(SPONSOR, sponsor_fee);
         AELIN_DEAL.mint(AELIN_REWARDS, aelin_fee);
         AELIN_DEAL.mint(recipient, pool_token_amount - (sponsor_fee + aelin_fee));
-        _safeTransfer(PURCHASE_TOKEN, holder, convertAelinToUnderlyingAmount(pool_token_amount, PURCHASE_TOKEN_DECIMALS));
+        _safeTransfer(PURCHASE_TOKEN, HOLDER, convertAelinToUnderlyingAmount(pool_token_amount, PURCHASE_TOKEN_DECIMALS));
         emit AcceptDeal(recipient, address(this), address(AELIN_DEAL), pool_token_amount);
     }
 
@@ -193,7 +194,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     }
 
     function _purchasePoolTokens(address recipient, uint purchase_token_amount) internal {
-        require(DEAL_CREATED == false && block.timestamp < purchase_expiry, "not in purchase window");
+        console.log("DEAL_CREATED: %s, block.timestamp: %s, PURCHASE_EXPIRY: %s", DEAL_CREATED, block.timestamp, PURCHASE_EXPIRY);
+        require(DEAL_CREATED == false && block.timestamp < PURCHASE_EXPIRY, "not in purchase window");
         uint contract_purchase_balance = IERC20(PURCHASE_TOKEN).balanceOf(address(this));
         require(PURCHASE_TOKEN_CAP == 0 || contract_purchase_balance < PURCHASE_TOKEN_CAP, "the cap has been reached");
 
@@ -215,7 +217,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     }
 
     function _withdraw(uint pool_token_amount) internal {
-        require(block.timestamp > pool_expiry, "not yet withdraw period");
+        require(block.timestamp > POOL_EXPIRY, "not yet withdraw period");
         _burn(msg.sender, pool_token_amount);
         uint purchase_withdraw_amount = convertAelinToUnderlyingAmount(pool_token_amount, PURCHASE_TOKEN_DECIMALS);
         _safeTransfer(PURCHASE_TOKEN, msg.sender, purchase_withdraw_amount);
@@ -234,7 +236,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     }
 
     function maxPurchase() external view returns (uint) {
-        if (DEAL_CREATED == true || block.timestamp >= purchase_expiry) {
+        if (DEAL_CREATED == true || block.timestamp >= PURCHASE_EXPIRY) {
             return 0;
         }
         if (PURCHASE_TOKEN_CAP == 0) {

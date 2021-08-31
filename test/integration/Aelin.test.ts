@@ -13,7 +13,7 @@ const { deployContract } = waffle;
 
 chai.use(solidity);
 
-describe.only("integration test", () => {
+describe("integration test", () => {
   let deployer: SignerWithAddress;
   let sponsor: SignerWithAddress;
   let user1: SignerWithAddress;
@@ -21,9 +21,9 @@ describe.only("integration test", () => {
   let user3: SignerWithAddress;
   let user4: SignerWithAddress;
   let user5: SignerWithAddress;
-  let aelinPool: AelinPool;
+  let aelinPoolBaseLogic: AelinPool;
   let aelinPoolFactory: AelinPoolFactory;
-  let aelinDeal: AelinDeal;
+  let aelinDealBaseLogic: AelinDeal;
   const dealOrPoolTokenDecimals = 18;
 
   const usdcContractAddress = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
@@ -76,11 +76,11 @@ describe.only("integration test", () => {
 
     usdcWhaleSigner = await getImpersonatedSigner(usdcWhaleAddress);
     aaveDAO = await getImpersonatedSigner(aaveDAOAddress);
-    aelinDeal = (await deployContract(
+    aelinDealBaseLogic = (await deployContract(
       deployer,
       AelinDealArtifact
     )) as AelinDeal;
-    aelinPool = (await deployContract(
+    aelinPoolBaseLogic = (await deployContract(
       deployer,
       AelinPoolArtifact
     )) as AelinPool;
@@ -90,8 +90,8 @@ describe.only("integration test", () => {
     )) as AelinPoolFactory;
     // TODO delete these setters once we have a fork of mainnet running a deployed version of
     // the pool and deal logic contracts where we can hardcode the right addresses
-    aelinPool.setAelinDealAddress(aelinDeal.address);
-    aelinPoolFactory.setAelinPoolAddress(aelinPool.address);
+    aelinPoolBaseLogic.setAelinDealAddress(aelinDealBaseLogic.address);
+    aelinPoolFactory.setAelinPoolAddress(aelinPoolBaseLogic.address);
 
     await fundUsdcToUsers([user1, user2, user3, user4, user5]);
   });
@@ -132,22 +132,18 @@ describe.only("integration test", () => {
         purchaseExpiry
       );
 
-    const [log] = await aelinPoolFactory.queryFilter(
+    const [createPoolLog] = await aelinPoolFactory.queryFilter(
       aelinPoolFactory.filters.CreatePool()
     );
 
-    expect(log.args.poolAddress).to.be.properAddress;
-    expect(log.args.name).to.equal(name);
-    expect(log.args.symbol).to.equal(symbol);
-    expect(log.args.purchaseTokenCap).to.equal(purchaseTokenCap);
-    expect(log.args.purchaseToken.toUpperCase()).to.equal(
-      usdcContract.address.toUpperCase()
-    );
-    expect(log.args.duration).to.equal(duration);
-    expect(log.args.sponsorFee).to.equal(sponsorFee);
-    expect(log.args.sponsor).to.equal(sponsor.address);
-    expect(log.args.purchaseExpiry).to.equal(purchaseExpiry);
-    console.log("a");
+    // partial check of logs. already testing all logs in unit tests
+    expect(createPoolLog.args.poolAddress).to.be.properAddress;
+    expect(createPoolLog.args.name).to.equal(name);
+
+    const aelinPool = new ethers.Contract(
+      createPoolLog.args.poolAddress,
+      AelinPoolArtifact.abi
+    ) as AelinPool;
 
     // purchasers buy pool tokens
     await aelinPool
@@ -163,8 +159,6 @@ describe.only("integration test", () => {
     await aelinPool
       .connect(user4)
       .purchasePoolTokens(ethers.utils.parseUnits("5000", usdcDecimals));
-
-    console.log("b");
 
     await aelinPool
       .connect(user4)
@@ -184,6 +178,18 @@ describe.only("integration test", () => {
         redemptionPeriod,
         aaveDAO.address
       );
+
+    const [createDealLog] = await aelinPool.queryFilter(
+      aelinPool.filters.CreateDeal()
+    );
+
+    expect(createDealLog.args.dealContract).to.be.properAddress;
+    expect(createDealLog.args.name).to.equal(name);
+
+    const aelinDeal = new ethers.Contract(
+      createDealLog.args.dealContract,
+      AelinDealArtifact.abi
+    ) as AelinDeal;
 
     // deposits double by mistake
     await aelinDeal

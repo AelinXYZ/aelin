@@ -165,10 +165,10 @@ describe("AelinPool", function () {
 
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
       const expectedPoolExpiry = timestamp + duration;
-      expect(await aelinPool.pool_expiry()).to.equal(expectedPoolExpiry);
+      expect(await aelinPool.POOL_EXPIRY()).to.equal(expectedPoolExpiry);
 
       const expectedPurchaseExpiry = timestamp + purchaseExpiry;
-      expect(await aelinPool.purchase_expiry()).to.equal(
+      expect(await aelinPool.PURCHASE_EXPIRY()).to.equal(
         expectedPurchaseExpiry
       );
 
@@ -266,8 +266,8 @@ describe("AelinPool", function () {
       const tx = await createDealWithValidParams();
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
 
-      expect(await aelinPool.pool_expiry()).to.equal(timestamp);
-      expect(await aelinPool.holder()).to.equal(holder.address);
+      expect(await aelinPool.POOL_EXPIRY()).to.equal(timestamp);
+      expect(await aelinPool.HOLDER()).to.equal(holder.address);
 
       const expectedProRataResult = (
         (dealPurchaseTokenTotalBase / userPurchaseBaseAmt) *
