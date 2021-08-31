@@ -203,7 +203,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint pool_token_amount = convertUnderlyingToAelinAmount(purchase_token_amount, PURCHASE_TOKEN_DECIMALS);
         _safeTransferFrom(PURCHASE_TOKEN, msg.sender, address(this), purchase_token_amount);
         _mint(recipient, pool_token_amount);
-        emit PurchasePoolToken(recipient, address(this), purchase_token_amount, pool_token_amount);
+        emit PurchasePoolToken(recipient, msg.sender, address(this), purchase_token_amount, pool_token_amount);
     }
 
     function withdrawMaxFromPool() external {
@@ -245,7 +245,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     }
 
     event SetSponsor(address sponsor);
-    event PurchasePoolToken(address purchaser, address poolAddress, uint purchaseTokenAmount, uint poolTokenAmount);
+    event PurchasePoolToken(address recipient, address purchaser, address poolAddress, uint purchaseTokenAmount, uint poolTokenAmount);
     event WithdrawFromPool(address purchaser, address poolAddress, uint purchaseTokenAmount, uint poolTokenAmount);
     event AcceptDeal(address purchaser, address poolAddress, address dealAddress, uint poolTokenAmount);
     event CreateDeal(
