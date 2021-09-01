@@ -52,8 +52,6 @@ contract AelinERC20 {
     function _burn(address from, uint amount) internal {
         totalSupply -= amount;
         balanceOf[from] -= amount;
-        require(balanceOf[from] >= 0, "balance cant be negative");
-        require(totalSupply >= 0, "cant burn more than supply");
         emit Transfer(from, address(0), amount);
     }
 

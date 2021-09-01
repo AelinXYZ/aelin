@@ -4,16 +4,25 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { solidity } from "ethereum-waffle";
 
 import ERC20Artifact from "../../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json";
-import AelinDealArtifact from "../../artifacts/contracts/AelinDeal.sol/AelinDeal.json";
-import AelinPoolArtifact from "../../artifacts/contracts/AelinPool.sol/AelinPool.json";
+import FixedCompileAelinDealArtifact from "../../FixedCompileAelinDeal.sol/AelinDeal.json";
+import FixedCompileAelinPoolArtifact from "../../FixedCompileAelinPool.sol/AelinPool.json";
 import AelinPoolFactoryArtifact from "../../artifacts/contracts/AelinPoolFactory.sol/AelinPoolFactory.json";
-import { AelinPool, AelinDeal, AelinPoolFactory, ERC20 } from "../../typechain";
+import Create2FactoryArtifact from "../../artifacts/contracts/Create2Factory.sol/Create2Factory.json";
+import { salt } from "../../scripts/constants";
+
+import {
+  AelinPool,
+  AelinDeal,
+  AelinPoolFactory,
+  ERC20,
+  Create2Factory,
+} from "../../typechain";
 
 const { deployContract } = waffle;
 
 chai.use(solidity);
 
-describe.only("integration test", () => {
+describe("integration test", () => {
   let deployer: SignerWithAddress;
   let sponsor: SignerWithAddress;
   let user1: SignerWithAddress;
@@ -21,9 +30,10 @@ describe.only("integration test", () => {
   let user3: SignerWithAddress;
   let user4: SignerWithAddress;
   let user5: SignerWithAddress;
-  let aelinPoolBaseLogic: AelinPool;
+  let aelinPool: AelinPool;
+  let aelinDeal: AelinDeal;
   let aelinPoolFactory: AelinPoolFactory;
-  let aelinDealBaseLogic: AelinDeal;
+  let create2Factory: Create2Factory;
   const dealOrPoolTokenDecimals = 18;
 
   const usdcContractAddress = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
@@ -73,24 +83,44 @@ describe.only("integration test", () => {
       aaveContractAddress
     )) as ERC20;
 
+    create2Factory = (await ethers.getContractAt(
+      Create2FactoryArtifact.abi,
+      process.env.CREATE2 as string
+    )) as Create2Factory;
+
     usdcWhaleSigner = await getImpersonatedSigner(usdcWhaleAddress);
     aaveWhale = await getImpersonatedSigner(aaveWhaleAddress);
-    aelinDealBaseLogic = (await deployContract(
-      deployer,
-      AelinDealArtifact
-    )) as AelinDeal;
-    aelinPoolBaseLogic = (await deployContract(
-      deployer,
-      AelinPoolArtifact
-    )) as AelinPool;
+
+    // NOTE that the deploy method for aelin pool exceeds the default hardhat 3M gas limit
+    // and aelin deal is close to the limit
+    await ethers.provider.send("evm_setBlockGasLimit", [
+      `0x${ethers.BigNumber.from(6000000)}`,
+    ]);
+    await ethers.provider.send("evm_mine", []);
+
+    // NOTE the output of these deployments are deterministic and already hardcoded into
+    // the contracts as addresses for the underlying deal and pool logic
+    await create2Factory.deploy(FixedCompileAelinDealArtifact.bytecode, salt);
+    const dealDeployedLogs = await create2Factory.queryFilter(
+      create2Factory.filters.Deployed()
+    );
+    console.log(
+      "deterministic deal address:",
+      dealDeployedLogs[dealDeployedLogs.length - 1].args.addr
+    );
+    await create2Factory.deploy(FixedCompileAelinPoolArtifact.bytecode, salt);
+    const poolDeployedLogs = await create2Factory.queryFilter(
+      create2Factory.filters.Deployed()
+    );
+    console.log(
+      "deterministic pool address:",
+      poolDeployedLogs[poolDeployedLogs.length - 1].args.addr
+    );
+
     aelinPoolFactory = (await deployContract(
       deployer,
       AelinPoolFactoryArtifact
     )) as AelinPoolFactory;
-    // TODO delete these setters once we have a fork of mainnet running a deployed version of
-    // the pool and deal logic contracts where we can hardcode the right addresses
-    aelinPoolBaseLogic.setAelinDealAddress(aelinDealBaseLogic.address);
-    aelinPoolFactory.setAelinPoolAddress(aelinPoolBaseLogic.address);
 
     await fundUsdcToUsers([user1, user2, user3, user4, user5]);
   });
@@ -118,7 +148,6 @@ describe.only("integration test", () => {
     5. the holder withdraws unaccepted tokens
     6. the tokens fully vest and are claimed
   `, async () => {
-    // capped pool is created
     await aelinPoolFactory
       .connect(sponsor)
       .createPool(
@@ -139,10 +168,10 @@ describe.only("integration test", () => {
     expect(createPoolLog.args.poolAddress).to.be.properAddress;
     expect(createPoolLog.args.name).to.equal("aePool-" + name);
 
-    const aelinPool = new ethers.Contract(
-      createPoolLog.args.poolAddress,
-      AelinPoolArtifact.abi
-    ) as AelinPool;
+    aelinPool = (await ethers.getContractAt(
+      FixedCompileAelinPoolArtifact.abi,
+      createPoolLog.args.poolAddress
+    )) as AelinPool;
 
     const purchaseAmount = ethers.utils.parseUnits("5000", usdcDecimals);
     // purchasers get approval to buy pool tokens
@@ -178,17 +207,17 @@ describe.only("integration test", () => {
         aaveWhale.address
       );
 
-    const [createDealLog] = await aelinPool
-      .connect(sponsor)
-      .queryFilter(aelinPool.filters.CreateDeal());
+    const [createDealLog] = await aelinPool.queryFilter(
+      aelinPool.filters.CreateDeal()
+    );
 
     expect(createDealLog.args.dealContract).to.be.properAddress;
     expect(createDealLog.args.name).to.equal("aeDeal-" + name);
 
-    const aelinDeal = new ethers.Contract(
-      createDealLog.args.dealContract,
-      AelinDealArtifact.abi
-    ) as AelinDeal;
+    aelinDeal = (await ethers.getContractAt(
+      FixedCompileAelinDealArtifact.abi,
+      createDealLog.args.dealContract
+    )) as AelinDeal;
 
     await aelinPool
       .connect(user4)
@@ -197,12 +226,17 @@ describe.only("integration test", () => {
       );
     await aelinPool.connect(user4).withdrawMaxFromPool();
 
+    await aaveContract
+      .connect(aaveWhale)
+      .approve(aelinDeal.address, underlyingDealTokenTotal.add(1));
+
     await aelinDeal
       .connect(aaveWhale)
       .depositUnderlying(underlyingDealTokenTotal.add(1));
 
     // withdraws the extra 1
     await aelinDeal.connect(aaveWhale).withdraw();
+
     expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(0);
 
     // 5000 + 5000 + 2500 + 100 = 12600 USDC will be available to the holder
@@ -210,17 +244,30 @@ describe.only("integration test", () => {
     await aelinPool
       .connect(user2)
       .acceptMaxDealTokensAndAllocate(user1.address);
+
+    const user3ProRataBalance = await aelinPool.proRataBalance(user3.address);
+    const user4ProRataBalance = await aelinPool.proRataBalance(user4.address);
     await aelinPool
       .connect(user3)
-      .acceptDealTokensAndAllocate(
-        user4.address,
-        ethers.utils.parseUnits("2500", dealOrPoolTokenDecimals)
-      );
-    await aelinPool
-      .connect(user4)
-      .acceptDealTokens(
-        ethers.utils.parseUnits("100", dealOrPoolTokenDecimals)
-      );
+      .acceptDealTokensAndAllocate(user4.address, user3ProRataBalance);
+
+    await aelinPool.connect(user4).acceptDealTokens(user4ProRataBalance);
+    const acceptLogs = await aelinPool.queryFilter(
+      aelinPool.filters.AcceptDeal()
+    );
+    expect(acceptLogs.length).to.equal(4);
+
+    const mintLogs = await aelinDeal.queryFilter(
+      aelinDeal.filters.MintDealTokens()
+    );
+    const totalToHolder = acceptLogs.reduce(
+      (acc, log) => acc.add(log.args.underlyingToHolderAmt),
+      ethers.BigNumber.from(0)
+    );
+    expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
+      totalToHolder
+    );
+    expect(mintLogs.length).to.equal(4 * 3);
 
     await ethers.provider.send("evm_increaseTime", [redemptionPeriod + 1]);
     await ethers.provider.send("evm_mine", []);
@@ -241,29 +288,23 @@ describe.only("integration test", () => {
     await aelinDeal
       .connect(user1)
       .claimAndAllocate(user1.address, user5.address);
-    await aelinDeal.connect(user2).claim(user2.address);
-    await aelinDeal.connect(user5).claim(user3.address);
-    await aelinDeal.connect(user4).claim(user4.address);
+    await aelinDeal.connect(user5).claim(user4.address);
 
-    const [log1, log2, log3, log4] = await aelinDeal.queryFilter(
+    const logs = await aelinDeal.queryFilter(
       aelinDeal.filters.ClaimedUnderlyingDealTokens()
     );
 
     expect(await aaveContract.balanceOf(user1.address)).to.equal(0);
-    expect(await aaveContract.balanceOf(user2.address)).to.equal(
-      log2.args.underlyingDealTokensClaimed
-    );
-    expect(await aaveContract.balanceOf(user3.address)).to.equal(
-      log3.args.underlyingDealTokensClaimed
+    expect(await aaveContract.balanceOf(user2.address)).to.equal(0);
+    expect(await aaveContract.balanceOf(user3.address)).to.equal(0);
+    expect(await aaveContract.balanceOf(user4.address)).to.not.equal(0);
+    expect(await aaveContract.balanceOf(user5.address)).to.not.equal(0);
+
+    expect(await aaveContract.balanceOf(user5.address)).to.equal(
+      logs[0].args.underlyingDealTokensClaimed
     );
     expect(await aaveContract.balanceOf(user4.address)).to.equal(
-      log4.args.underlyingDealTokensClaimed
-    );
-    expect(await aaveContract.balanceOf(user5.address)).to.equal(
-      log1.args.underlyingDealTokensClaimed
-    );
-    expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
-      ethers.utils.parseUnits("126000", usdcDecimals)
+      logs[1].args.underlyingDealTokensClaimed
     );
   });
 });

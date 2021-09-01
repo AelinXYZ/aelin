@@ -4,7 +4,6 @@ pragma solidity 0.8.6;
 import "./AelinERC20.sol";
 import "./AelinDeal.sol";
 import "./MinimalProxyFactory.sol";
-// import "hardhat/console.sol";
 
 contract AelinPool is AelinERC20, MinimalProxyFactory {
     address public PURCHASE_TOKEN;
@@ -26,26 +25,18 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     bool public CALLED_INITIALIZE = false;
     bool public DEAL_CREATED = false;
 
-    AelinDeal public AELIN_DEAL;
+    address public AELIN_DEAL_STORAGE_PROXY;
     address public HOLDER;
 
     string private stored_name;
     string private stored_symbol;
 
     // @TODO update with correct addresses
-    // address constant AELIN_DEAL_ADDRESS = 0x0000000000000000000000000000000000000000;
     address constant AELIN_REWARDS = 0x0000000000000000000000000000000000000000;
+    // NOTE this is created with create2
+    address constant AELIN_DEAL_ADDRESS = 0xbcA4E7065BAE69Bb30A34D21Fb99464c81b600Ab;
 
     constructor () {}
-
-    // @NOTE for integration testing we are going to add a setter for this until we launch the contract
-    // on mainnet and can run using the mainnet address on a hardhat fork and can keep it hardcoded and remove the setter
-    address AELIN_DEAL_ADDRESS;
-
-    // @TODO delete this before using on prod or sending for audits. Just for pre mainnet deploy integration tests
-    function setAelinDealAddress(address _aelin_deal_address) external {
-        AELIN_DEAL_ADDRESS = _aelin_deal_address;
-    }
     
     function initialize (
         string memory _name,
@@ -141,6 +132,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             _holder,
             _pool_token_max_purchase_amount
         );
+        AELIN_DEAL_STORAGE_PROXY = address(AELIN_DEAL);
 
         emit CreateDeal(
             string(abi.encodePacked("aeDeal-", stored_name)),
@@ -156,7 +148,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             _pool_token_max_purchase_amount
         );
 
-        return address(AELIN_DEAL);
+        return AELIN_DEAL_STORAGE_PROXY;
     }
 
     function acceptMaxDealTokens() external {
@@ -177,6 +169,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     function _acceptDealTokens(address recipient, uint pool_token_amount) internal {
         require(DEAL_CREATED == true, "deal not yet created");
+        AelinDeal AELIN_DEAL = AelinDeal(AELIN_DEAL_STORAGE_PROXY);
         require(block.timestamp >= AELIN_DEAL.REDEMPTION_START() && block.timestamp < AELIN_DEAL.REDEMPTION_EXPIRY(), "outside of redeem window");
         require(pool_token_amount <= proRataBalance(msg.sender), "accepting more than deal share");
         _burn(msg.sender, pool_token_amount);
@@ -186,8 +179,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         AELIN_DEAL.mint(SPONSOR, sponsor_fee);
         AELIN_DEAL.mint(AELIN_REWARDS, aelin_fee);
         AELIN_DEAL.mint(recipient, pool_token_amount - (sponsor_fee + aelin_fee));
-        _safeTransfer(PURCHASE_TOKEN, HOLDER, convertAelinToUnderlyingAmount(pool_token_amount, PURCHASE_TOKEN_DECIMALS));
-        emit AcceptDeal(recipient, address(this), address(AELIN_DEAL), pool_token_amount);
+        uint underlyingToHolderAmt = convertAelinToUnderlyingAmount(pool_token_amount, PURCHASE_TOKEN_DECIMALS);
+        _safeTransfer(PURCHASE_TOKEN, HOLDER, underlyingToHolderAmt);
+        emit AcceptDeal(recipient, address(this), AELIN_DEAL_STORAGE_PROXY, pool_token_amount, underlyingToHolderAmt);
     }
 
     function purchasePoolTokens(uint purchase_token_amount) external {
@@ -228,15 +222,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         emit WithdrawFromPool(msg.sender, address(this), purchase_withdraw_amount, pool_token_amount);
     }
 
-    function proRataBalance(address purchaser) internal view returns (uint) {
-        return PRO_RATA_CONVERSION / 1e18 * balanceOf[purchaser];
-    }
-
-    function maxAcceptDealTokens(address pool_token_owner) external view returns (uint) {
-        if (DEAL_CREATED == false || AELIN_DEAL.REDEMPTION_START() == 0 || block.timestamp > AELIN_DEAL.REDEMPTION_EXPIRY()) {
-            return 0;
-        }
-        return proRataBalance(pool_token_owner);
+    function proRataBalance(address purchaser) public view returns (uint) {
+        return PRO_RATA_CONVERSION * balanceOf[purchaser] / 1e18;
     }
 
     function maxPurchase() external view returns (uint) {
@@ -253,7 +240,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     event SetSponsor(address sponsor);
     event PurchasePoolToken(address recipient, address purchaser, address poolAddress, uint purchaseTokenAmount, uint poolTokenAmount);
     event WithdrawFromPool(address purchaser, address poolAddress, uint purchaseTokenAmount, uint poolTokenAmount);
-    event AcceptDeal(address purchaser, address poolAddress, address dealAddress, uint poolTokenAmount);
+    event AcceptDeal(address purchaser, address poolAddress, address dealAddress, uint poolTokenAmount, uint underlyingToHolderAmt);
     event CreateDeal(
         string name,
         string symbol,

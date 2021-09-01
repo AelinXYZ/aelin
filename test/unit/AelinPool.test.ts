@@ -280,8 +280,8 @@ describe("AelinPool", function () {
 
       const [log] = await aelinPool.queryFilter(aelinPool.filters.CreateDeal());
 
-      expect(log.args.name).to.equal(aelinPoolName);
-      expect(log.args.symbol).to.equal(aelinPoolSymbol);
+      expect(log.args.name).to.equal(aelinPoolName.replace("Pool", "Deal"));
+      expect(log.args.symbol).to.equal(aelinPoolSymbol.replace("P-", "D-"));
       expect(log.args.dealContract).to.be.properAddress;
       expect(log.args.underlyingDealToken).to.equal(
         underlyingDealToken.address

@@ -1,5 +1,6 @@
 const { ethers } = require("hardhat");
 
+// NOTE a mainnet version of this contract is already deployed here: 0x4a27c059FD7E383854Ea7DE6Be9c390a795f6eE3
 async function main() {
   const [deployer] = await ethers.getSigners();
 
@@ -7,10 +8,10 @@ async function main() {
 
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
-  const AelinDeal = await ethers.getContractFactory("AelinDeal");
-  const aelinDeal = await AelinDeal.deploy();
+  const Create2Factory = await ethers.getContractFactory("Create2Factory");
+  const create2Factory = await Create2Factory.deploy();
 
-  console.log("AelinDeal address:", aelinDeal.address);
+  console.log("Create2Factory address:", create2Factory.address);
 }
 
 main()

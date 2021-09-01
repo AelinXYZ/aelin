@@ -3,14 +3,13 @@ pragma solidity 0.8.6;
 
 import "./AelinERC20.sol";
 import "./AelinPool.sol";
-import "hardhat/console.sol";
 
 contract AelinDeal is AelinERC20 {
     address public HOLDER;
     address public UNDERLYING_DEAL_TOKEN;
     uint public UNDERLYING_DEAL_TOKEN_DECIMALS;
     uint public UNDERLYING_DEAL_TOKENS_TOTAL;
-    uint public UNDERLYING_DEAL_TOKENS_CLAIMED;
+    uint public TOTAL_UNDERLYING_CLAIMED;
 
     uint public UNDERLYING_PER_POOL_EXCHANGE_RATE;
     uint public UNDERLYING_PER_PURCHASE_EXCHANGE_RATE;
@@ -61,7 +60,7 @@ contract AelinDeal is AelinERC20 {
         DEPOSIT_COMPLETE = false;
 
         // calculate the amount of underlying deal tokens you get per wrapped pool token accepted
-        // 1 wrapped pool token = 1 wrapped deal token
+        // NOTE 1 wrapped pool token = 1 wrapped deal token
         UNDERLYING_PER_POOL_EXCHANGE_RATE = _underlying_deal_token_total * 1e18 / _pool_token_max_purchase_amount;
         UNDERLYING_PER_PURCHASE_EXCHANGE_RATE = _underlying_per_purchase_exchange_rate;
     }
@@ -79,12 +78,8 @@ contract AelinDeal is AelinERC20 {
     // NOTE if the deposit was completed with a transfer instead of this method, 
     // the deposit can be finalized by calling this method with amount 0;
     function depositUnderlying(uint _underlying_deal_token_amount) external finalizeDepositOnce returns (bool) {
-        console.log("_underlying_deal_token_amount: %s", _underlying_deal_token_amount);
-        console.log("UNDERLYING_DEAL_TOKENS_TOTAL: %s", UNDERLYING_DEAL_TOKENS_TOTAL);
-        console.log("IERC20(UNDERLYING_DEAL_TOKEN).balanceOf(address(this)): %s", IERC20(UNDERLYING_DEAL_TOKEN).balanceOf(address(this)));
         if (IERC20(UNDERLYING_DEAL_TOKEN).balanceOf(address(this)) + _underlying_deal_token_amount >= UNDERLYING_DEAL_TOKENS_TOTAL) {
             DEPOSIT_COMPLETE = true;
-            console.log("DEPOSIT_COMPLETE");
         }
         if (_underlying_deal_token_amount > 0) {
             _safeTransferFrom(UNDERLYING_DEAL_TOKEN, msg.sender, address(this), _underlying_deal_token_amount);
@@ -102,7 +97,7 @@ contract AelinDeal is AelinERC20 {
     
     // @NOTE the holder can withdraw any amount accidentally deposited over the amount needed to fulfill the deal
     function withdraw() external onlyHolder {
-        uint withdraw_amount = IERC20(UNDERLYING_DEAL_TOKEN).balanceOf(address(this)) - UNDERLYING_DEAL_TOKENS_TOTAL - UNDERLYING_DEAL_TOKENS_CLAIMED;
+        uint withdraw_amount = IERC20(UNDERLYING_DEAL_TOKEN).balanceOf(address(this)) - UNDERLYING_DEAL_TOKENS_TOTAL - TOTAL_UNDERLYING_CLAIMED;
         _safeTransfer(UNDERLYING_DEAL_TOKEN, HOLDER, withdraw_amount);
         emit WithdrawUnderlyingDealTokens(UNDERLYING_DEAL_TOKEN, HOLDER, address(this), withdraw_amount);
     }
@@ -156,6 +151,7 @@ contract AelinDeal is AelinERC20 {
     }
     
     function _claim(address from, address recipient) internal returns (uint deal_tokens_claimed) {
+
         if (balanceOf[from] > 0) {
             uint max_time = block.timestamp > VESTING_EXPIRY ? VESTING_EXPIRY : block.timestamp;
             if (max_time > VESTING_CLIFF || (max_time == VESTING_CLIFF && VESTING_PERIOD == 0 && lastClaim[from] == 0)) {
@@ -165,10 +161,11 @@ contract AelinDeal is AelinERC20 {
                 uint time_elapsed = max_time - lastClaim[from];
                 uint deal_tokens_claimed = VESTING_PERIOD == 0 ? balanceOf[from] : balanceOf[from] * time_elapsed / VESTING_PERIOD;
                 uint underlying_deal_tokens_claimed = UNDERLYING_PER_POOL_EXCHANGE_RATE * deal_tokens_claimed / 1e18;
+
                 if (deal_tokens_claimed > 0) {
                     _burn(from, deal_tokens_claimed);
                     _safeTransfer(UNDERLYING_DEAL_TOKEN, recipient, underlying_deal_tokens_claimed);
-                    UNDERLYING_DEAL_TOKENS_CLAIMED += underlying_deal_tokens_claimed;
+                    TOTAL_UNDERLYING_CLAIMED += underlying_deal_tokens_claimed;
                     emit ClaimedUnderlyingDealTokens(UNDERLYING_DEAL_TOKEN, from, recipient, underlying_deal_tokens_claimed);
                 }
                 lastClaim[from] = max_time;
