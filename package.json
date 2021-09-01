@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/samhagan/aelin#readme",
   "devDependencies": {
+    "@microsoft/eslint-formatter-sarif": "2.1.5",
     "@nomiclabs/hardhat-ethers": "2.0.2",
     "@nomiclabs/hardhat-waffle": "2.0.1",
     "@typechain/ethers-v5": "7.0.1",
