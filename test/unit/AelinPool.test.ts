@@ -5,7 +5,6 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 import ERC20Artifact from "../../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json";
 import AelinPoolArtifact from "../../artifacts/contracts/AelinPool.sol/AelinPool.json";
-import AelinDealArtifact from "../../artifacts/contracts/AelinDeal.sol/AelinDeal.json";
 import { AelinPool } from "../../typechain";
 import { BigNumber } from "ethers";
 
@@ -166,10 +165,10 @@ describe("AelinPool", function () {
 
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
       const expectedPoolExpiry = timestamp + duration;
-      expect(await aelinPool.pool_expiry()).to.equal(expectedPoolExpiry);
+      expect(await aelinPool.POOL_EXPIRY()).to.equal(expectedPoolExpiry);
 
       const expectedPurchaseExpiry = timestamp + purchaseExpiry;
-      expect(await aelinPool.purchase_expiry()).to.equal(
+      expect(await aelinPool.PURCHASE_EXPIRY()).to.equal(
         expectedPurchaseExpiry
       );
 
@@ -267,8 +266,8 @@ describe("AelinPool", function () {
       const tx = await createDealWithValidParams();
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
 
-      expect(await aelinPool.pool_expiry()).to.equal(timestamp);
-      expect(await aelinPool.holder()).to.equal(holder.address);
+      expect(await aelinPool.POOL_EXPIRY()).to.equal(timestamp);
+      expect(await aelinPool.HOLDER()).to.equal(holder.address);
 
       const expectedProRataResult = (
         (dealPurchaseTokenTotalBase / userPurchaseBaseAmt) *
@@ -281,8 +280,8 @@ describe("AelinPool", function () {
 
       const [log] = await aelinPool.queryFilter(aelinPool.filters.CreateDeal());
 
-      expect(log.args.name).to.equal(aelinPoolName);
-      expect(log.args.symbol).to.equal(aelinPoolSymbol);
+      expect(log.args.name).to.equal(aelinPoolName.replace("Pool", "Deal"));
+      expect(log.args.symbol).to.equal(aelinPoolSymbol.replace("P-", "D-"));
       expect(log.args.dealContract).to.be.properAddress;
       expect(log.args.underlyingDealToken).to.equal(
         underlyingDealToken.address

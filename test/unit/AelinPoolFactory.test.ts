@@ -2,16 +2,22 @@ import chai, { expect } from "chai";
 import { ethers, waffle } from "hardhat";
 import { solidity } from "ethereum-waffle";
 
+import ERC20Artifact from "../../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json";
 import AelinPoolFactoryArtifact from "../../artifacts/contracts/AelinPoolFactory.sol/AelinPoolFactory.json";
 import { AelinPoolFactory } from "../../typechain";
 
-const { deployContract } = waffle;
+const { deployContract, deployMockContract } = waffle;
 
 chai.use(solidity);
 
 describe("AelinPoolFactory", function () {
   it("Should call the createPool method", async function () {
     const signers = await ethers.getSigners();
+    const purchaseToken = await deployMockContract(
+      signers[0],
+      ERC20Artifact.abi
+    );
+    await purchaseToken.mock.decimals.returns(6);
     const aelinPoolFactory = (await deployContract(
       signers[0],
       AelinPoolFactoryArtifact
@@ -20,8 +26,7 @@ describe("AelinPoolFactory", function () {
     const sponsor = signers[1];
     const name = "Test token";
     const symbol = "AMA";
-    const purchaseTokenCap = 100;
-    const purchaseTokenAddress = "0x99C85bb64564D9eF9A99621301f22C9993Cb89E3";
+    const purchaseTokenCap = 1000000;
     const duration = 29388523;
     const sponsorFee = 3000;
     const purchaseExpiry = 9388523;
@@ -32,7 +37,7 @@ describe("AelinPoolFactory", function () {
         name,
         symbol,
         purchaseTokenCap,
-        purchaseTokenAddress,
+        purchaseToken.address,
         duration,
         sponsorFee,
         purchaseExpiry
@@ -45,10 +50,10 @@ describe("AelinPoolFactory", function () {
     );
 
     expect(log.args.poolAddress).to.be.properAddress;
-    expect(log.args.name).to.equal(name);
-    expect(log.args.symbol).to.equal(symbol);
+    expect(log.args.name).to.equal("aePool-" + name);
+    expect(log.args.symbol).to.equal("aeP-" + symbol);
     expect(log.args.purchaseTokenCap).to.equal(purchaseTokenCap);
-    expect(log.args.purchaseToken).to.equal(purchaseTokenAddress);
+    expect(log.args.purchaseToken).to.equal(purchaseToken.address);
     expect(log.args.duration).to.equal(duration);
     expect(log.args.sponsorFee).to.equal(sponsorFee);
     expect(log.args.sponsor).to.equal(sponsor.address);
