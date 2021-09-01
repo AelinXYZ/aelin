@@ -8,7 +8,8 @@
     "compile": "hardhat compile",
     "build": "waffle",
     "coverage": "hardhat coverage",
-    "clean": "hardhat clean"
+    "clean": "hardhat clean",
+		"lint:sarif": "node lint.js . --ext js,ts,tsx"
   },
   "repository": {
     "type": "git",
