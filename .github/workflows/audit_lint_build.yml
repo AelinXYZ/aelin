@@ -8,8 +8,7 @@ on:
 jobs:
   audit:
     # run only on main/dev branch and pull requests
-    # if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.event_name == 'pull_request'
-    if: always()
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
 
     container:
@@ -31,8 +30,7 @@ jobs:
   build:
     needs: audit
     # run only on audit success or audit skipped
-    # if: always() && (needs.audit.result == 'success' || needs.audit.result == 'skipped')
-    if: always()
+    if: always() && (needs.audit.result == 'success' || needs.audit.result == 'skipped')
     runs-on: ubuntu-latest
 
     container:
@@ -66,39 +64,36 @@ jobs:
         run: npm run compile
 
       - name: Lint
-        # run only on main/dev branch and pull requests
-        # if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.event_name == 'pull_request'
-        if: always()
         run: npm run lint:sarif
 
       - name: Upload lint results
-        # run if lint failed and only on main/dev branch and pull requests
-        # if: always() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.event_name == 'pull_request')
         if: always()
         uses: github/codeql-action/upload-sarif@21830ef0c1f0f06f2d82ba3f1f07cb3ffe543ed7 # pin@codeql-bundle-20210517
         with:
           sarif_file: lint-results.sarif
         continue-on-error: true
 
-      - name: Cache next.js build cache
+      - name: Cache build cache
         uses: actions/cache@c64c572235d810460d0d6876e9c705ad5002b353 # pin@v2
         with:
-          path: .next/cache
-          key: ${{ runner.os }}-alpine-next-cache-${{ hashFiles('**/package-lock.json') }}
+          path: cache
+          key: ${{ runner.os }}-alpine-cache-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-alpine-next-cache-
+            ${{ runner.os }}-alpine-cache-
         continue-on-error: true
 
       - name: Build
         run: npm run build
 
       - name: Compress build
-        run: tar -zcvf build.tar.gz .next
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.event_name == 'pull_request'
+        run: tar -zcvf build.tar.gz build
+        continue-on-error: true
 
       - name: Archive build
-        # if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.event_name == 'pull_request'
-        if: always()
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.event_name == 'pull_request'
         uses: actions/upload-artifact@27121b0bdffd731efa15d66772be8dc71245d074 # pin@v2
         with:
           name: build
           path: build.tar.gz
+        continue-on-error: true
