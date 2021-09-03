@@ -22,7 +22,7 @@ const { deployContract } = waffle;
 
 chai.use(solidity);
 
-describe("integration test", () => {
+describe.skip("integration test", () => {
   let deployer: SignerWithAddress;
   let sponsor: SignerWithAddress;
   let user1: SignerWithAddress;
@@ -51,7 +51,7 @@ describe("integration test", () => {
   let aaveWhale: SignerWithAddress;
 
   const fundUsdcToUsers = async (users: SignerWithAddress[]) => {
-    const amount = ethers.utils.parseUnits("5000", usdcDecimals);
+    const amount = ethers.utils.parseUnits("100000", usdcDecimals);
 
     users.forEach((user) => {
       usdcContract.connect(usdcWhaleSigner).transfer(user.address, amount);
@@ -154,6 +154,176 @@ describe("integration test", () => {
         name,
         symbol,
         purchaseTokenCap,
+        usdcContract.address,
+        duration,
+        sponsorFee,
+        purchaseExpiry
+      );
+
+    const [createPoolLog] = await aelinPoolFactory.queryFilter(
+      aelinPoolFactory.filters.CreatePool()
+    );
+
+    // partial check of logs. already testing all logs in unit tests
+    expect(createPoolLog.args.poolAddress).to.be.properAddress;
+    expect(createPoolLog.args.name).to.equal("aePool-" + name);
+
+    aelinPool = (await ethers.getContractAt(
+      FixedCompileAelinPoolArtifact.abi,
+      createPoolLog.args.poolAddress
+    )) as AelinPool;
+
+    const purchaseAmount = ethers.utils.parseUnits("5000", usdcDecimals);
+    // purchasers get approval to buy pool tokens
+    await usdcContract
+      .connect(user1)
+      .approve(aelinPool.address, purchaseAmount);
+    await usdcContract
+      .connect(user2)
+      .approve(aelinPool.address, purchaseAmount);
+    await usdcContract
+      .connect(user3)
+      .approve(aelinPool.address, purchaseAmount);
+    await usdcContract
+      .connect(user4)
+      .approve(aelinPool.address, purchaseAmount);
+
+    // purchasers buy pool tokens
+    await aelinPool.connect(user1).purchasePoolTokens(purchaseAmount);
+    await aelinPool.connect(user2).purchasePoolTokens(purchaseAmount);
+    await aelinPool.connect(user3).purchasePoolTokens(purchaseAmount);
+    // user 4 only gets 2500 at the end
+    await aelinPool.connect(user4).purchasePoolTokens(purchaseAmount);
+
+    await aelinPool
+      .connect(sponsor)
+      .createDeal(
+        aaveContract.address,
+        dealPurchaseTokenTotal,
+        underlyingDealTokenTotal,
+        vestingPeriod,
+        vestingCliff,
+        redemptionPeriod,
+        aaveWhale.address
+      );
+
+    const [createDealLog] = await aelinPool.queryFilter(
+      aelinPool.filters.CreateDeal()
+    );
+
+    expect(createDealLog.args.dealContract).to.be.properAddress;
+    expect(createDealLog.args.name).to.equal("aeDeal-" + name);
+
+    aelinDeal = (await ethers.getContractAt(
+      FixedCompileAelinDealArtifact.abi,
+      createDealLog.args.dealContract
+    )) as AelinDeal;
+
+    await aelinPool
+      .connect(user4)
+      .withdrawFromPool(
+        ethers.utils.parseUnits("500", dealOrPoolTokenDecimals)
+      );
+    await aelinPool.connect(user4).withdrawMaxFromPool();
+
+    await aaveContract
+      .connect(aaveWhale)
+      .approve(aelinDeal.address, underlyingDealTokenTotal.add(1));
+
+    await aelinDeal
+      .connect(aaveWhale)
+      .depositUnderlying(underlyingDealTokenTotal.add(1));
+
+    // withdraws the extra 1
+    await aelinDeal.connect(aaveWhale).withdraw();
+
+    expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(0);
+
+    // 5000 + 5000 + 2500 + 100 = 12600 USDC will be available to the holder
+    await aelinPool.connect(user1).acceptMaxDealTokens();
+    await aelinPool
+      .connect(user2)
+      .acceptMaxDealTokensAndAllocate(user1.address);
+
+    const user3ProRataBalance = await aelinPool.proRataBalance(user3.address);
+    const user4ProRataBalance = await aelinPool.proRataBalance(user4.address);
+    await aelinPool
+      .connect(user3)
+      .acceptDealTokensAndAllocate(user4.address, user3ProRataBalance);
+
+    await aelinPool.connect(user4).acceptDealTokens(user4ProRataBalance);
+    const acceptLogs = await aelinPool.queryFilter(
+      aelinPool.filters.AcceptDeal()
+    );
+    expect(acceptLogs.length).to.equal(4);
+
+    const mintLogs = await aelinDeal.queryFilter(
+      aelinDeal.filters.MintDealTokens()
+    );
+    const totalToHolder = acceptLogs.reduce(
+      (acc, log) => acc.add(log.args.underlyingToHolderAmt),
+      ethers.BigNumber.from(0)
+    );
+    expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
+      totalToHolder
+    );
+    expect(mintLogs.length).to.equal(4 * 3);
+
+    await ethers.provider.send("evm_increaseTime", [redemptionPeriod + 1]);
+    await ethers.provider.send("evm_mine", []);
+
+    await aelinDeal.connect(aaveWhale).withdrawExpiry();
+
+    await ethers.provider.send("evm_increaseTime", [
+      vestingCliff + vestingPeriod + 1,
+    ]);
+    await ethers.provider.send("evm_mine", []);
+
+    expect(await aaveContract.balanceOf(user1.address)).to.equal(0);
+    expect(await aaveContract.balanceOf(user2.address)).to.equal(0);
+    expect(await aaveContract.balanceOf(user3.address)).to.equal(0);
+    expect(await aaveContract.balanceOf(user4.address)).to.equal(0);
+    expect(await aaveContract.balanceOf(user5.address)).to.equal(0);
+
+    await aelinDeal
+      .connect(user1)
+      .claimAndAllocate(user1.address, user5.address);
+    await aelinDeal.connect(user5).claim(user4.address);
+
+    const logs = await aelinDeal.queryFilter(
+      aelinDeal.filters.ClaimedUnderlyingDealTokens()
+    );
+
+    expect(await aaveContract.balanceOf(user1.address)).to.equal(0);
+    expect(await aaveContract.balanceOf(user2.address)).to.equal(0);
+    expect(await aaveContract.balanceOf(user3.address)).to.equal(0);
+    expect(await aaveContract.balanceOf(user4.address)).to.not.equal(0);
+    expect(await aaveContract.balanceOf(user5.address)).to.not.equal(0);
+
+    expect(await aaveContract.balanceOf(user5.address)).to.equal(
+      logs[0].args.underlyingDealTokensClaimed
+    );
+    expect(await aaveContract.balanceOf(user4.address)).to.equal(
+      logs[1].args.underlyingDealTokensClaimed
+    );
+  });
+
+  it(`
+    1. creates an uncapped pool
+    2. gets funded with $100M by purchasers
+    3. the deal is created for $50M
+    4. $30M of the pool accepts during the proRata period
+    5. the remaining $20M is taken in the open period before deal expires
+    5. the holder withdraws unaccepted tokens
+    6. the tokens fully vest and are claimed
+  `, async () => {
+    const uncappedPool = 0;
+    await aelinPoolFactory
+      .connect(sponsor)
+      .createPool(
+        name,
+        symbol,
+        uncappedPool,
         usdcContract.address,
         duration,
         sponsorFee,

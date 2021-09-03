@@ -46,14 +46,14 @@ contract AelinPoolFactory is MinimalProxyFactory {
     }
 
     event CreatePool(
-        address poolAddress,
+        address indexed poolAddress,
         string name,
         string symbol,
         uint purchaseTokenCap,
-        address purchaseToken,
+        address indexed purchaseToken,
         uint duration,
         uint sponsorFee,
-        address sponsor,
+        address indexed sponsor,
         uint purchaseExpiry
     );
 }

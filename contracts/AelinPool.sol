@@ -27,9 +27,11 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     address public AELIN_DEAL_STORAGE_PROXY;
     address public HOLDER;
+    mapping(address => bool) public OPEN_PERIOD_ELIGIBLE;
 
     string private stored_name;
     string private stored_symbol;
+
 
     // @TODO update with correct addresses
     address constant AELIN_REWARDS = 0x0000000000000000000000000000000000000000;
@@ -83,6 +85,11 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         require(msg.sender == SPONSOR, "only sponsor can access");
         _;
     }
+
+    modifier dealCreated() {
+        require(DEAL_CREATED == true, "deal not yet created");
+        _;
+    }
     
     function setSponsor(address _sponsor) external onlySponsor  {
         FUTURE_SPONSOR = _sponsor;
@@ -100,23 +107,28 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint _underlying_deal_token_total,
         uint _vesting_period,
         uint _vesting_cliff,
-        uint _redemption_period,
+        uint _pro_rata_redemption_period,
+        uint _open_redemption_period,
         address _holder
     ) external onlySponsor dealNotCreated returns (address) {
-        require(30 minutes <= _redemption_period, "30 mins is min redeem period");
-        require(IERC20(PURCHASE_TOKEN).balanceOf(address(this)) > 0, "no purchase tokens in the contract");
-        require(_deal_purchase_token_total <= IERC20(PURCHASE_TOKEN).balanceOf(address(this)), "not enough funds avail");
+        require(30 minutes <= _pro_rata_redemption_period, "30 mins is min prorata period");
+        uint _pool_token_max_purchase_amount = convertUnderlyingToAelinAmount(
+            _deal_purchase_token_total,
+            PURCHASE_TOKEN_DECIMALS
+        );
+        require(_pool_token_max_purchase_amount <= totalSupply, "not enough funds avail");
+        PRO_RATA_CONVERSION = _pool_token_max_purchase_amount * 1e18 / totalSupply;
+
+        if (PRO_RATA_CONVERSION == 1e18) {
+            require(0 minutes == _open_redemption_period, "deal is 1:1, set open to 0");
+        } else {
+            require(30 minutes <= _open_redemption_period, "30 mins is min open period");
+        }
 
         POOL_EXPIRY = block.timestamp;
         HOLDER = _holder;
         DEAL_CREATED = true;
 
-        uint _pool_token_max_purchase_amount = convertUnderlyingToAelinAmount(
-            _deal_purchase_token_total,
-            PURCHASE_TOKEN_DECIMALS
-        );
-
-        PRO_RATA_CONVERSION = _pool_token_max_purchase_amount * 1e18 / totalSupply;
         uint _underlying_per_purchase_exchange_rate = _underlying_deal_token_total * 10**PURCHASE_TOKEN_DECIMALS / _deal_purchase_token_total; 
 
         AelinDeal AELIN_DEAL = AelinDeal(_cloneAsMinimalProxy(AELIN_DEAL_ADDRESS, "Could not create new deal"));
@@ -128,7 +140,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             _underlying_deal_token_total,
             _vesting_period,
             _vesting_cliff,
-            _redemption_period,
+            _pro_rata_redemption_period,
+            _open_redemption_period,
             _holder,
             _pool_token_max_purchase_amount
         );
@@ -137,13 +150,16 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         emit CreateDeal(
             string(abi.encodePacked("aeDeal-", stored_name)),
             string(abi.encodePacked("aeD-", stored_symbol)),
+            SPONSOR,
+            address(this),
             address(AELIN_DEAL),
             _underlying_deal_token,
             _deal_purchase_token_total,
             _underlying_deal_token_total,
             _vesting_period,
             _vesting_cliff,
-            _redemption_period,
+            _pro_rata_redemption_period,
+            _open_redemption_period,
             _holder,
             _pool_token_max_purchase_amount
         );
@@ -152,26 +168,53 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     }
 
     function acceptMaxDealTokens() external {
-        _acceptDealTokens(msg.sender, proRataBalance(msg.sender));
+        _acceptDealTokens(msg.sender, 0, true);
     }
 
     function acceptMaxDealTokensAndAllocate(address recipient) external {
-        _acceptDealTokens(recipient, proRataBalance(msg.sender));
+        _acceptDealTokens(recipient, 0, true);
     }
 
     function acceptDealTokens(uint pool_token_amount) external {
-        _acceptDealTokens(msg.sender, pool_token_amount);
+        _acceptDealTokens(msg.sender, pool_token_amount, false);
     }
 
     function acceptDealTokensAndAllocate(address recipient, uint pool_token_amount) external {
-        _acceptDealTokens(recipient, pool_token_amount);
+        _acceptDealTokens(recipient, pool_token_amount, false);
     }
 
-    function _acceptDealTokens(address recipient, uint pool_token_amount) internal {
-        require(DEAL_CREATED == true, "deal not yet created");
+    function maxProRataAvail(address purchaser) internal returns (uint) {
+        return proRataBalance(purchaser) - AELIN_DEAL.balanceOf(purchaser);
+    }
+
+    function maxOpenAvail(address purchaser) internal returns (uint) {
+        return balanceOf[purchaser] + AELIN_DEAL.totalSupply() <= AELIN_DEAL.MAX_TOTAL_SUPPLY() ?
+            balanceOf[purchaser] :
+            AELIN_DEAL.MAX_TOTAL_SUPPLY() - AELIN_DEAL.totalSupply();
+    }
+
+    function _acceptDealTokens(address recipient, uint pool_token_amount, bool useMax) internal dealCreated dealOpen {
         AelinDeal AELIN_DEAL = AelinDeal(AELIN_DEAL_STORAGE_PROXY);
-        require(block.timestamp >= AELIN_DEAL.REDEMPTION_START() && block.timestamp < AELIN_DEAL.REDEMPTION_EXPIRY(), "outside of redeem window");
-        require(pool_token_amount <= proRataBalance(msg.sender), "accepting more than deal share");
+        require(
+            AELIN_DEAL.OPEN_REDEMPTION_START() > 0 ?
+                block.timestamp >= AELIN_DEAL.PRO_RATA_REDEMPTION_START() &&
+                block.timestamp < AELIN_DEAL.OPEN_REDEMPTION_EXPIRY() :
+                block.timestamp >= AELIN_DEAL.PRO_RATA_REDEMPTION_START() &&
+                block.timestamp < AELIN_DEAL.PRO_RATA_REDEMPTION_EXPIRY(),
+            "outside of redeem window"
+        );
+
+        bool open_window_active = AELIN_DEAL.OPEN_REDEMPTION_START() > 0 && block.timestamp >= AELIN_DEAL.OPEN_REDEMPTION_START();
+        uint max_pro_rata_avail = maxProRataAvail(msg.sender);
+        uint max_open_avail = maxOpenAvail(msg.sender);
+        uint amount_to_use = useMax ? open_window_active ? max_open_avail : max_pro_rata_avail : pool_token_amount;
+
+        require(
+            open_window_active ?
+                OPEN_PERIOD_ELIGIBLE[msg.sender] && amount_to_use <= max_open_avail :
+                amount_to_use <= max_pro_rata_avail,
+            "accept > share or ineligible open window"
+        );
         _burn(msg.sender, pool_token_amount);
 
         uint aelin_fee = pool_token_amount * AELIN_FEE / BASE;
@@ -181,6 +224,14 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         AELIN_DEAL.mint(recipient, pool_token_amount - (sponsor_fee + aelin_fee));
         uint underlyingToHolderAmt = convertAelinToUnderlyingAmount(pool_token_amount, PURCHASE_TOKEN_DECIMALS);
         _safeTransfer(PURCHASE_TOKEN, HOLDER, underlyingToHolderAmt);
+        
+        if (
+            !open_window_active &&
+            proRataBalance(msg.sender) == AELIN_DEAL.balanceOf[msg.sender] &&
+            !OPEN_PERIOD_ELIGIBLE[msg.sender]
+        ) {
+            OPEN_PERIOD_ELIGIBLE[msg.sender] = true;
+        }
         emit AcceptDeal(recipient, address(this), AELIN_DEAL_STORAGE_PROXY, pool_token_amount, underlyingToHolderAmt);
     }
 
@@ -223,10 +274,28 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     }
 
     function proRataBalance(address purchaser) public view returns (uint) {
-        return PRO_RATA_CONVERSION * balanceOf[purchaser] / 1e18;
+        return (PRO_RATA_CONVERSION * balanceOf[purchaser] / 1e18) + (PRO_RATA_CONVERSION * AelinDeal(AELIN_DEAL_STORAGE_PROXY).balanceOf[purchaser] / 1e18);
     }
 
-    function maxPurchase() external view returns (uint) {
+    function maxDealAccept(address purchaser) external view returns (uint) {
+        AelinDeal AELIN_DEAL = AelinDeal(AELIN_DEAL_STORAGE_PROXY);
+        if (
+            DEAL_CREATED == false ||
+            (block.timstamp > AELIN_DEAL.OPEN_REDEMPTION_EXPIRY() && AELIN_DEAL.OPEN_REDEMPTION_START() == 0) ||
+            block.timestamp > AELIN_DEAL.OPEN_REDEMPTION_EXPIRY()
+        ) {
+            return 0;
+        } else if (block.timestamp < AELIN_DEAL.PRO_RATA_REDEMPTION_EXPIRY()) {
+            return maxProRataAvail(purchaser);
+        } else if (!OPEN_PERIOD_ELIGIBLE[purchaser]) {
+            return 0;
+        } else {
+            // TODO wrong logic
+            return balanceOf[purchaser] + AELIN_DEAL.totalSupply() <= MAX_TOTAL_SUPPLY ? balanceOf[purchaser] : MAX_TOTAL_SUPPLY - AELIN_DEAL.totalSupply();
+        }
+    }
+
+    function maxPoolPurchase() external view returns (uint) {
         if (DEAL_CREATED == true || block.timestamp >= PURCHASE_EXPIRY) {
             return 0;
         }
@@ -237,21 +306,24 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         }
     }
 
-    event SetSponsor(address sponsor);
-    event PurchasePoolToken(address recipient, address purchaser, address poolAddress, uint purchaseTokenAmount, uint poolTokenAmount);
-    event WithdrawFromPool(address purchaser, address poolAddress, uint purchaseTokenAmount, uint poolTokenAmount);
-    event AcceptDeal(address purchaser, address poolAddress, address dealAddress, uint poolTokenAmount, uint underlyingToHolderAmt);
+    event SetSponsor(address indexed sponsor);
+    event PurchasePoolToken(address indexed recipient, address indexed purchaser, address indexed poolAddress, uint purchaseTokenAmount, uint poolTokenAmount);
+    event WithdrawFromPool(address indexed purchaser, address indexed poolAddress, uint purchaseTokenAmount, uint poolTokenAmount);
+    event AcceptDeal(address indexed purchaser, address indexed poolAddress, address indexed dealAddress, uint poolTokenAmount, uint underlyingToHolderAmt);
     event CreateDeal(
         string name,
         string symbol,
-        address dealContract,
+        address indexed sponsor,
+        address indexed poolAddress,
+        address indexed dealContract,
         address underlyingDealToken,
         uint dealPurchaseTokenTotal,
         uint underlyingDealTokenTotal,
         uint vestingPeriod,
         uint vestingCliff,
-        uint redemptionPeriod,
-        address holder,
+        uint proRataRedemptionPeriod,
+        uint openRedemptionPeriod,
+        address indexed holder,
         uint poolTokenMaxPurchaseAmount
     );
 }
