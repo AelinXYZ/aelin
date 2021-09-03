@@ -14,7 +14,6 @@ contract AelinDeal is AelinERC20 {
     address public HOLDER;
 
     uint public UNDERLYING_PER_POOL_EXCHANGE_RATE;
-    uint public UNDERLYING_PER_PURCHASE_EXCHANGE_RATE;
 
     address public AELIN_POOL_ADDRESS;
     uint public VESTING_CLIFF;
@@ -38,7 +37,6 @@ contract AelinDeal is AelinERC20 {
         string memory _name, 
         string memory _symbol, 
         address _underlying_deal_token,
-        uint _underlying_per_purchase_exchange_rate,
         uint _underlying_deal_token_total,
         uint _vesting_period, 
         uint _vesting_cliff,
@@ -71,7 +69,6 @@ contract AelinDeal is AelinERC20 {
         // calculate the amount of underlying deal tokens you get per wrapped pool token accepted
         // NOTE 1 wrapped pool token = 1 wrapped deal token
         UNDERLYING_PER_POOL_EXCHANGE_RATE = _underlying_deal_token_total * 1e18 / _pool_token_max_purchase_amount;
-        UNDERLYING_PER_PURCHASE_EXCHANGE_RATE = _underlying_per_purchase_exchange_rate;
     }
 
     modifier initOnce () {
@@ -102,7 +99,14 @@ contract AelinDeal is AelinERC20 {
                 OPEN_REDEMPTION_START = PRO_RATA_REDEMPTION_EXPIRY;
                 OPEN_REDEMPTION_EXPIRY = PRO_RATA_REDEMPTION_EXPIRY + OPEN_REDEMPTION_PERIOD;
             }
-            emit DealFullyFunded(AELIN_POOL_ADDRESS, address(this), REDEMPTION_START, REDEMPTION_EXPIRY);
+            emit DealFullyFunded(
+                AELIN_POOL_ADDRESS,
+                address(this),
+                PRO_RATA_REDEMPTION_START,
+                PRO_RATA_REDEMPTION_EXPIRY,
+                OPEN_REDEMPTION_START,
+                PRO_RATA_REDEMPTION_EXPIRY
+            );
             return true;
         }
         return false;
@@ -117,7 +121,7 @@ contract AelinDeal is AelinERC20 {
 
     function withdrawExpiry() external onlyHolder {
         require(PRO_RATA_REDEMPTION_EXPIRY > 0, "redemption period not started");
-        require(OPEN_REDEMPTION_EXPIRY > 0 ? block.timestamp > OPEN_REDEMPTION_EXPIRY : block.timestamp > REDEMPTION_EXPIRY, "redeem window still active");
+        require(OPEN_REDEMPTION_EXPIRY > 0 ? block.timestamp > OPEN_REDEMPTION_EXPIRY : block.timestamp > PRO_RATA_REDEMPTION_EXPIRY, "redeem window still active");
         uint withdraw_amount = IERC20(UNDERLYING_DEAL_TOKEN).balanceOf(address(this)) - (UNDERLYING_PER_POOL_EXCHANGE_RATE * totalSupply / 1e18);
         _safeTransfer(UNDERLYING_DEAL_TOKEN, HOLDER, withdraw_amount);
         emit WithdrawUnderlyingDealTokens(UNDERLYING_DEAL_TOKEN, HOLDER, address(this), withdraw_amount);
@@ -226,7 +230,7 @@ contract AelinDeal is AelinERC20 {
         emit Transfer(src, dst, transfer_amount);
     }
 
-    event DealFullyFunded(address indexed poolAddress, address indexed dealAddress, uint redemptionStart, uint redemptionExpiry);
+    event DealFullyFunded(address indexed poolAddress, address indexed dealAddress, uint proRataRedemptionStart, uint proRataRedemptionExpiry, uint openRedemptionStart, uint openRedemptionExpiry);
     event DepositDealTokens(address indexed underlyingDealTokenAddress, address indexed depositor, address indexed dealContract, uint underlyingDealTokenAmount);
     event WithdrawUnderlyingDealTokens(address indexed underlyingDealTokenAddress, address indexed depositor, address indexed dealContract, uint underlyingDealTokenAmount);
     event ClaimedUnderlyingDealTokens(address indexed underlyingDealTokenAddress, address indexed from, address indexed recipient, uint underlyingDealTokensClaimed);

@@ -129,14 +129,11 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         HOLDER = _holder;
         DEAL_CREATED = true;
 
-        uint _underlying_per_purchase_exchange_rate = _underlying_deal_token_total * 10**PURCHASE_TOKEN_DECIMALS / _deal_purchase_token_total; 
-
         AelinDeal AELIN_DEAL = AelinDeal(_cloneAsMinimalProxy(AELIN_DEAL_ADDRESS, "Could not create new deal"));
         AELIN_DEAL.initialize(
             stored_name,
             stored_symbol,
             _underlying_deal_token,
-            _underlying_per_purchase_exchange_rate,
             _underlying_deal_token_total,
             _vesting_period,
             _vesting_cliff,
@@ -152,6 +149,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             string(abi.encodePacked("aeD-", stored_symbol)),
             SPONSOR,
             address(this),
+            address(AELIN_DEAL)
+        );
+
+        emit DealDetails(
             address(AELIN_DEAL),
             _underlying_deal_token,
             _deal_purchase_token_total,
@@ -160,8 +161,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             _vesting_cliff,
             _pro_rata_redemption_period,
             _open_redemption_period,
-            _holder,
-            _pool_token_max_purchase_amount
+            _holder
         );
 
         return AELIN_DEAL_STORAGE_PROXY;
@@ -183,17 +183,18 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         _acceptDealTokens(recipient, pool_token_amount, false);
     }
 
-    function maxProRataAvail(address purchaser) internal returns (uint) {
-        return proRataBalance(purchaser) - AELIN_DEAL.balanceOf(purchaser);
+    function maxProRataAvail(address purchaser) internal view returns (uint) {
+        return proRataBalance(purchaser) - AelinDeal(AELIN_DEAL_STORAGE_PROXY).balanceOf(purchaser);
     }
 
-    function maxOpenAvail(address purchaser) internal returns (uint) {
+    function maxOpenAvail(address purchaser) internal view returns (uint) {
+        AelinDeal AELIN_DEAL = AelinDeal(AELIN_DEAL_STORAGE_PROXY);
         return balanceOf[purchaser] + AELIN_DEAL.totalSupply() <= AELIN_DEAL.MAX_TOTAL_SUPPLY() ?
             balanceOf[purchaser] :
             AELIN_DEAL.MAX_TOTAL_SUPPLY() - AELIN_DEAL.totalSupply();
     }
 
-    function _acceptDealTokens(address recipient, uint pool_token_amount, bool useMax) internal dealCreated dealOpen {
+    function _acceptDealTokens(address recipient, uint pool_token_amount, bool useMax) internal dealCreated {
         AelinDeal AELIN_DEAL = AelinDeal(AELIN_DEAL_STORAGE_PROXY);
         require(
             AELIN_DEAL.OPEN_REDEMPTION_START() > 0 ?
@@ -224,10 +225,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         AELIN_DEAL.mint(recipient, pool_token_amount - (sponsor_fee + aelin_fee));
         uint underlyingToHolderAmt = convertAelinToUnderlyingAmount(pool_token_amount, PURCHASE_TOKEN_DECIMALS);
         _safeTransfer(PURCHASE_TOKEN, HOLDER, underlyingToHolderAmt);
-        
+
         if (
             !open_window_active &&
-            proRataBalance(msg.sender) == AELIN_DEAL.balanceOf[msg.sender] &&
+            proRataBalance(msg.sender) == AELIN_DEAL.balanceOf(msg.sender) &&
             !OPEN_PERIOD_ELIGIBLE[msg.sender]
         ) {
             OPEN_PERIOD_ELIGIBLE[msg.sender] = true;
@@ -274,14 +275,14 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     }
 
     function proRataBalance(address purchaser) public view returns (uint) {
-        return (PRO_RATA_CONVERSION * balanceOf[purchaser] / 1e18) + (PRO_RATA_CONVERSION * AelinDeal(AELIN_DEAL_STORAGE_PROXY).balanceOf[purchaser] / 1e18);
+        return (PRO_RATA_CONVERSION * balanceOf[purchaser] / 1e18) + (PRO_RATA_CONVERSION * AelinDeal(AELIN_DEAL_STORAGE_PROXY).balanceOf(purchaser) / 1e18);
     }
 
     function maxDealAccept(address purchaser) external view returns (uint) {
         AelinDeal AELIN_DEAL = AelinDeal(AELIN_DEAL_STORAGE_PROXY);
         if (
             DEAL_CREATED == false ||
-            (block.timstamp > AELIN_DEAL.OPEN_REDEMPTION_EXPIRY() && AELIN_DEAL.OPEN_REDEMPTION_START() == 0) ||
+            (block.timestamp > AELIN_DEAL.OPEN_REDEMPTION_EXPIRY() && AELIN_DEAL.OPEN_REDEMPTION_START() == 0) ||
             block.timestamp > AELIN_DEAL.OPEN_REDEMPTION_EXPIRY()
         ) {
             return 0;
@@ -290,8 +291,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         } else if (!OPEN_PERIOD_ELIGIBLE[purchaser]) {
             return 0;
         } else {
-            // TODO wrong logic
-            return balanceOf[purchaser] + AELIN_DEAL.totalSupply() <= MAX_TOTAL_SUPPLY ? balanceOf[purchaser] : MAX_TOTAL_SUPPLY - AELIN_DEAL.totalSupply();
+            return maxOpenAvail(purchaser);
         }
     }
 
@@ -315,15 +315,17 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         string symbol,
         address indexed sponsor,
         address indexed poolAddress,
+        address indexed dealContract
+    );
+    event DealDetails(
         address indexed dealContract,
-        address underlyingDealToken,
+        address indexed underlyingDealToken,
         uint dealPurchaseTokenTotal,
         uint underlyingDealTokenTotal,
         uint vestingPeriod,
         uint vestingCliff,
         uint proRataRedemptionPeriod,
         uint openRedemptionPeriod,
-        address indexed holder,
-        uint poolTokenMaxPurchaseAmount
+        address indexed holder
     );
 }
