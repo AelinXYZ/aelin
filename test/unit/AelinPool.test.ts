@@ -89,7 +89,8 @@ describe("AelinPool", function () {
 
   const vestingPeriod = 1; // value doesn't matter for pool
   const vestingCliff = 1; // value doesn't matter for pool
-  const redemptionPeriod = 30 * 60 + 1; // 1 second greater than minimum
+  const proRataRedemptionPeriod = 30 * 60 + 1; // 1 second greater than minimum
+  const openRedemptionPeriod = 30 * 60 + 1; // 1 second greater than minimum
 
   const createDealWithValidParams = () =>
     aelinPool
@@ -100,7 +101,8 @@ describe("AelinPool", function () {
         underlyingDealTokenTotal,
         vestingPeriod,
         vestingCliff,
-        redemptionPeriod,
+        proRataRedemptionPeriod,
+        openRedemptionPeriod,
         holder.address
       );
 
@@ -194,17 +196,18 @@ describe("AelinPool", function () {
           underlyingDealTokenTotal,
           vestingPeriod,
           vestingCliff,
-          30 * 60 - 1, // 1 second less than minimum
+          proRataRedemptionPeriod - 2, // 1 second less than minimum
+          openRedemptionPeriod,
           holder.address
         )
-      ).to.be.revertedWith("30 mins is min redeem period");
+      ).to.be.revertedWith("30 mins is min prorata period");
     });
 
     it("should revert if the pool has no purchase tokens", async function () {
       await successfullyInitializePool();
       await purchaseToken.mock.balanceOf.withArgs(aelinPool.address).returns(0);
       await expect(createDealWithValidParams()).to.be.revertedWith(
-        "no purchase tokens in the contract"
+        "not enough funds available"
       );
     });
 
@@ -215,7 +218,7 @@ describe("AelinPool", function () {
         .returns(dealPurchaseTokenTotal.sub(1));
 
       await expect(createDealWithValidParams()).to.be.revertedWith(
-        "not enough funds avail"
+        "not enough funds available"
       );
     });
 
@@ -236,7 +239,8 @@ describe("AelinPool", function () {
             underlyingDealTokenTotal,
             vestingPeriod,
             vestingCliff,
-            redemptionPeriod,
+            proRataRedemptionPeriod,
+            openRedemptionPeriod,
             holder.address
           )
       ).to.be.revertedWith("only sponsor can access");
@@ -278,27 +282,42 @@ describe("AelinPool", function () {
         expectedProRataResult
       );
 
-      const [log] = await aelinPool.queryFilter(aelinPool.filters.CreateDeal());
+      const [createDealLog] = await aelinPool.queryFilter(
+        aelinPool.filters.CreateDeal()
+      );
+      const [dealDetailsLog] = await aelinPool.queryFilter(
+        aelinPool.filters.DealDetails()
+      );
 
-      expect(log.args.name).to.equal(aelinPoolName.replace("Pool", "Deal"));
-      expect(log.args.symbol).to.equal(aelinPoolSymbol.replace("P-", "D-"));
-      expect(log.args.dealContract).to.be.properAddress;
-      expect(log.args.underlyingDealToken).to.equal(
+      expect(createDealLog.args.name).to.equal(
+        aelinPoolName.replace("Pool", "Deal")
+      );
+      expect(createDealLog.args.symbol).to.equal(
+        aelinPoolSymbol.replace("P-", "D-")
+      );
+      expect(createDealLog.args.dealContract).to.be.properAddress;
+      expect(createDealLog.args.sponsor).to.equal(sponsor.address);
+      expect(createDealLog.args.poolAddress).to.equal(aelinPool.address);
+
+      expect(dealDetailsLog.args.dealContract).to.be.properAddress;
+      expect(dealDetailsLog.args.underlyingDealToken).to.equal(
         underlyingDealToken.address
       );
-      expect(log.args.dealPurchaseTokenTotal).to.equal(dealPurchaseTokenTotal);
-      expect(log.args.underlyingDealTokenTotal).to.equal(
+      expect(dealDetailsLog.args.dealPurchaseTokenTotal).to.equal(
+        dealPurchaseTokenTotal
+      );
+      expect(dealDetailsLog.args.underlyingDealTokenTotal).to.equal(
         underlyingDealTokenTotal
       );
-      expect(log.args.vestingPeriod).to.equal(vestingPeriod);
-      expect(log.args.vestingCliff).to.equal(vestingCliff);
-      expect(log.args.redemptionPeriod).to.equal(redemptionPeriod);
-      expect(log.args.holder).to.equal(holder.address);
-      expect(log.args.poolTokenMaxPurchaseAmount).to.equal(
-        BigNumber.from(dealPurchaseTokenTotal).mul(
-          10 ** (18 - purchaseTokenDecimals)
-        )
+      expect(dealDetailsLog.args.vestingPeriod).to.equal(vestingPeriod);
+      expect(dealDetailsLog.args.vestingCliff).to.equal(vestingCliff);
+      expect(dealDetailsLog.args.proRataRedemptionPeriod).to.equal(
+        proRataRedemptionPeriod
       );
+      expect(dealDetailsLog.args.openRedemptionPeriod).to.equal(
+        openRedemptionPeriod
+      );
+      expect(dealDetailsLog.args.holder).to.equal(holder.address);
 
       await expect(createDealWithValidParams()).to.be.revertedWith(
         "deal has been created"
@@ -348,9 +367,9 @@ describe("AelinPool", function () {
     });
 
     it("should successfully purchase pool tokens for the user", async function () {
-      const maxPurchase = await aelinPool.maxPurchase();
+      const maxPoolPurchase = await aelinPool.maxPoolPurchase();
       // we are mocking the contract has the user balance already
-      expect(maxPurchase).to.equal(purchaseTokenCap.sub(userPurchaseAmt));
+      expect(maxPoolPurchase).to.equal(purchaseTokenCap.sub(userPurchaseAmt));
       await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
       const [log] = await aelinPool.queryFilter(
         aelinPool.filters.PurchasePoolToken()
@@ -404,8 +423,8 @@ describe("AelinPool", function () {
       await expect(
         aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt)
       ).to.be.revertedWith("not in purchase window");
-      const maxPurchase = await aelinPool.maxPurchase();
-      expect(maxPurchase).to.equal(0);
+      const maxPoolPurchase = await aelinPool.maxPoolPurchase();
+      expect(maxPoolPurchase).to.equal(0);
     });
 
     it("should require the pool to be in the purchase expiry window", async function () {

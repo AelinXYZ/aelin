@@ -116,7 +116,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             _deal_purchase_token_total,
             PURCHASE_TOKEN_DECIMALS
         );
-        require(_pool_token_max_purchase_amount <= totalSupply, "not enough funds avail");
+        require(_pool_token_max_purchase_amount <= totalSupply, "not enough funds available");
         PRO_RATA_CONVERSION = _pool_token_max_purchase_amount * 1e18 / totalSupply;
 
         if (PRO_RATA_CONVERSION == 1e18) {

@@ -138,7 +138,9 @@ describe.skip("integration test", () => {
   const underlyingDealTokenTotal = ethers.utils.parseUnits("50", aaveDecimals);
   const vestingPeriod = oneYear;
   const vestingCliff = oneYear;
-  const redemptionPeriod = 7 * 24 * 60 * 60;
+  const proRataRedemptionPeriod = 7 * 24 * 60 * 60; // one week
+  const openRedemptionPeriod = 24 * 60 * 60; // one day
+  const redemptionPeriod = proRataRedemptionPeriod + openRedemptionPeriod;
 
   it(`
     1. creates a capped pool
@@ -203,7 +205,8 @@ describe.skip("integration test", () => {
         underlyingDealTokenTotal,
         vestingPeriod,
         vestingCliff,
-        redemptionPeriod,
+        proRataRedemptionPeriod,
+        openRedemptionPeriod,
         aaveWhale.address
       );
 
@@ -373,7 +376,8 @@ describe.skip("integration test", () => {
         underlyingDealTokenTotal,
         vestingPeriod,
         vestingCliff,
-        redemptionPeriod,
+        proRataRedemptionPeriod,
+        openRedemptionPeriod,
         aaveWhale.address
       );
 
