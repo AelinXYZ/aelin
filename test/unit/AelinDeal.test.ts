@@ -192,7 +192,7 @@ describe("AelinDeal", function () {
           .returns(underlyingDealTokenTotal);
       });
 
-      it.only("should complete the deposit when the total amount has been reached", async function () {
+      it("should complete the deposit when the total amount has been reached", async function () {
         expect(await aelinDeal.DEPOSIT_COMPLETE()).to.equal(false);
 
         const tx = await aelinDeal
@@ -202,7 +202,6 @@ describe("AelinDeal", function () {
         expect(await aelinDeal.DEPOSIT_COMPLETE()).to.equal(true);
 
         const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
-        console.log("js time", timestamp);
 
         const [depositDealTokensLog] = await aelinDeal.queryFilter(
           aelinDeal.filters.DepositDealTokens()

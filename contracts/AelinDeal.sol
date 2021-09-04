@@ -3,7 +3,6 @@ pragma solidity 0.8.6;
 
 import "./AelinERC20.sol";
 import "./AelinPool.sol";
-import "hardhat/console.sol";
 
 contract AelinDeal is AelinERC20 {
     uint public MAX_TOTAL_SUPPLY;
@@ -100,14 +99,13 @@ contract AelinDeal is AelinERC20 {
                 OPEN_REDEMPTION_START = PRO_RATA_REDEMPTION_EXPIRY;
                 OPEN_REDEMPTION_EXPIRY = PRO_RATA_REDEMPTION_EXPIRY + OPEN_REDEMPTION_PERIOD;
             }
-            console.log('time pro open %s, %s, %s', block.timestamp, PRO_RATA_REDEMPTION_PERIOD, OPEN_REDEMPTION_EXPIRY);
             emit DealFullyFunded(
                 AELIN_POOL_ADDRESS,
                 address(this),
                 PRO_RATA_REDEMPTION_START,
                 PRO_RATA_REDEMPTION_EXPIRY,
                 OPEN_REDEMPTION_START,
-                PRO_RATA_REDEMPTION_EXPIRY
+                OPEN_REDEMPTION_EXPIRY
             );
             return true;
         }
