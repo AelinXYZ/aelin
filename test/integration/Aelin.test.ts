@@ -38,7 +38,7 @@ describe.only("integration test", () => {
 
   const usdcContractAddress = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
   let usdcContract: ERC20;
-  const usdcDecimals = 8;
+  const usdcDecimals = 6;
 
   const aaveContractAddress = "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9";
   let aaveContract: ERC20;
@@ -328,6 +328,7 @@ describe.only("integration test", () => {
     await aelinPool.connect(user1).acceptMaxDealTokens();
 
     // checks holder USDC balance
+    // TODO it wont equal purchase amount it will be the max pro rata avail for the user :)
     expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
       purchaseAmount
     );
@@ -339,11 +340,9 @@ describe.only("integration test", () => {
       .connect(user2)
       .acceptMaxDealTokensAndAllocate(user1.address);
 
-    // checks holder USDC balance
     expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
       purchaseAmount.mul(2)
     );
-    // checks user 1 deal balance
     expect(await aelinDeal.balanceOf(user1.address)).to.equal(
       poolAmount.mul(2)
     );
@@ -359,9 +358,24 @@ describe.only("integration test", () => {
       .connect(user4)
       .acceptDealTokensAndAllocate(user5.address, user4ProRataAvail);
 
+    expect(await aelinDeal.balanceOf(user5.address)).to.equal(
+      user4ProRataAvail
+    );
+    expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
+      purchaseAmount.mul(2).add(user4ProRataAvail)
+    );
+
     const user5ProRataAvail = await aelinPool.maxProRataAvail(user5.address);
+    // TODO figure out the math and do it in big number here and add an expect for this value
     console.log("user5ProRataAvail", user5ProRataAvail);
     await aelinPool.connect(user5).acceptDealTokens(user5ProRataAvail);
+
+    expect(await aelinDeal.balanceOf(user5.address)).to.equal(
+      user4ProRataAvail.add(user5ProRataAvail)
+    );
+    expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
+      purchaseAmount.mul(2).add(user4ProRataAvail).add(user5ProRataAvail)
+    );
 
     const acceptLogs = await aelinPool.queryFilter(
       aelinPool.filters.AcceptDeal()
@@ -382,6 +396,7 @@ describe.only("integration test", () => {
     );
     expect(mintLogs.length).to.equal(4 * 3);
 
+    // TODO add in increase to the open redemption period and have the users claim the rest
     await ethers.provider.send("evm_increaseTime", [redemptionPeriod + 1]);
     await ethers.provider.send("evm_mine", []);
 

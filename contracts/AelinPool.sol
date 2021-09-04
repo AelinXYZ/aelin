@@ -38,7 +38,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     // @TODO update with correct addresses
     address constant AELIN_REWARDS = 0x0000000000000000000000000000000000000000;
     // NOTE this is created with create2
-    address constant AELIN_DEAL_ADDRESS = 0x18fe64CF4D7E37cB59343Bd7176FF3c2F2978f96;
+    address constant AELIN_DEAL_ADDRESS = 0x1400bF8f0d10792Bf2701a80ed8EEad2e17637FD;
 
     constructor () {}
     
@@ -269,11 +269,15 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         require(DEAL_CREATED == false && block.timestamp < PURCHASE_EXPIRY, "not in purchase window");
         uint contract_purchase_balance = IERC20(PURCHASE_TOKEN).balanceOf(address(this));
         require(PURCHASE_TOKEN_CAP == 0 || contract_purchase_balance < PURCHASE_TOKEN_CAP, "the cap has been reached");
-
+        console.log("first purchase_token_amount: %s", purchase_token_amount);
         if (PURCHASE_TOKEN_CAP > 0) {
             purchase_token_amount = (purchase_token_amount + contract_purchase_balance) <= PURCHASE_TOKEN_CAP ? purchase_token_amount : PURCHASE_TOKEN_CAP - contract_purchase_balance;
+            console.log("optional purchase_token_amount: %s", purchase_token_amount);
         }
+        console.log("last purchase_token_amount: %s", purchase_token_amount);
+        console.log("PURCHASE_TOKEN_DECIMALS: %s", PURCHASE_TOKEN_DECIMALS);
         uint pool_token_amount = convertUnderlyingToAelinAmount(purchase_token_amount, PURCHASE_TOKEN_DECIMALS);
+        console.log("pool_token_amount: %s", pool_token_amount);
         _safeTransferFrom(PURCHASE_TOKEN, msg.sender, address(this), purchase_token_amount);
         _mint(recipient, pool_token_amount);
         emit PurchasePoolToken(recipient, msg.sender, address(this), purchase_token_amount, pool_token_amount);
