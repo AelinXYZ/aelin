@@ -324,27 +324,33 @@ describe.only("integration test", () => {
     expect(await aelinDeal.balanceOf(user4.address)).to.equal(0);
     expect(await aelinDeal.balanceOf(user5.address)).to.equal(0);
 
+    const user1ProRataAvail = await aelinPool.maxProRataAvail(user1.address);
     // 5000 is transferred to the holder
     await aelinPool.connect(user1).acceptMaxDealTokens();
 
     // checks holder USDC balance
     // TODO it wont equal purchase amount it will be the max pro rata avail for the user :)
     expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
-      purchaseAmount
+      user1ProRataAvail.div(10 ^ (dealOrPoolTokenDecimals - usdcDecimals))
     );
     // checks user 1 deal balance
-    expect(await aelinDeal.balanceOf(user1.address)).to.equal(poolAmount);
+    expect(await aelinDeal.balanceOf(user1.address)).to.equal(
+      user1ProRataAvail
+    );
 
+    const user2ProRataAvail = await aelinPool.maxProRataAvail(user2.address);
     // user 1 now has all of user 2s deal tokens as well
     await aelinPool
       .connect(user2)
       .acceptMaxDealTokensAndAllocate(user1.address);
 
     expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
-      purchaseAmount.mul(2)
+      user2ProRataAvail
+        .add(user1ProRataAvail)
+        .div(10 ^ (dealOrPoolTokenDecimals - usdcDecimals))
     );
     expect(await aelinDeal.balanceOf(user1.address)).to.equal(
-      poolAmount.mul(2)
+      user2ProRataAvail.add(user1ProRataAvail)
     );
 
     // confirm user 3 has no balance left
@@ -362,19 +368,24 @@ describe.only("integration test", () => {
       user4ProRataAvail
     );
     expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
-      purchaseAmount.mul(2).add(user4ProRataAvail)
+      user2ProRataAvail
+        .add(user1ProRataAvail)
+        .add(user4ProRataAvail)
+        .div(10 ^ (dealOrPoolTokenDecimals - usdcDecimals))
     );
 
     const user5ProRataAvail = await aelinPool.maxProRataAvail(user5.address);
-    // TODO figure out the math and do it in big number here and add an expect for this value
-    console.log("user5ProRataAvail", user5ProRataAvail);
     await aelinPool.connect(user5).acceptDealTokens(user5ProRataAvail);
 
     expect(await aelinDeal.balanceOf(user5.address)).to.equal(
       user4ProRataAvail.add(user5ProRataAvail)
     );
     expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
-      purchaseAmount.mul(2).add(user4ProRataAvail).add(user5ProRataAvail)
+      user2ProRataAvail
+        .add(user1ProRataAvail)
+        .add(user4ProRataAvail)
+        .add(user5ProRataAvail)
+        .div(10 ^ (dealOrPoolTokenDecimals - usdcDecimals))
     );
 
     const acceptLogs = await aelinPool.queryFilter(
@@ -387,12 +398,12 @@ describe.only("integration test", () => {
       aelinDeal.filters.MintDealTokens()
     );
 
-    const totalToHolder = acceptLogs.reduce(
+    const totalToHolderFromEvents = acceptLogs.reduce(
       (acc, log) => acc.add(log.args.underlyingToHolderAmt),
       ethers.BigNumber.from(0)
     );
     expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
-      totalToHolder
+      totalToHolderFromEvents
     );
     expect(mintLogs.length).to.equal(4 * 3);
 
