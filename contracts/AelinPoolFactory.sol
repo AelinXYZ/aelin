@@ -7,7 +7,7 @@ import "./AelinPool.sol";
 contract AelinPoolFactory is MinimalProxyFactory {
     constructor() {}
 
-    address constant AELIN_POOL_ADDRESS = 0x4D0fB26Dab7D98d900ec7D4D17113C9C94aC0C28;
+    address constant AELIN_POOL_ADDRESS = 0xfcBb66235275F16741366234a5f937f961Dc4a46;
 
     function createPool(
         string memory _name,

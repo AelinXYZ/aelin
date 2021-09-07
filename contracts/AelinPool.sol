@@ -5,8 +5,6 @@ import "./AelinERC20.sol";
 import "./AelinDeal.sol";
 import "./MinimalProxyFactory.sol";
 
-import "hardhat/console.sol";
-
 contract AelinPool is AelinERC20, MinimalProxyFactory {
     address public PURCHASE_TOKEN;
     uint public PURCHASE_TOKEN_CAP;
@@ -39,7 +37,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     // @TODO update with correct addresses
     address constant AELIN_REWARDS = 0x0000000000000000000000000000000000000000;
     // NOTE this is created with create2
-    address constant AELIN_DEAL_ADDRESS = 0x9e641c7155d72Ee9EF1f383B74117647aeD3006A;
+    address constant AELIN_DEAL_ADDRESS = 0xade4D77cD687b0ecbd7A8AF2c83a8B8029A04fD9;
 
     constructor () {}
     
@@ -121,7 +119,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         );
         require(_pool_token_max_purchase_amount <= totalSupply, "not enough funds available");
         PRO_RATA_CONVERSION = _pool_token_max_purchase_amount * 1e18 / totalSupply;
-        console.log("PRO_RATA_CONVERSION: %s", PRO_RATA_CONVERSION);
         if (PRO_RATA_CONVERSION == 1e18) {
             require(0 minutes == _open_redemption_period, "deal is 1:1, set open to 0");
         } else {
@@ -191,21 +188,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         if (balanceOf[purchaser] == 0 || DEAL_CREATED == false || block.timestamp >= AELIN_DEAL.PRO_RATA_REDEMPTION_EXPIRY()) {
             return 0;
         }
-        console.log("maxProRataAvail");
-        console.log("PRO_RATA_CONVERSION", PRO_RATA_CONVERSION);
-        console.log("purchaser", purchaser);
-        console.log("balanceOf[purchaser]", balanceOf[purchaser]);
-        console.log("DEAL_AMT_ALLOCATED[purchaser]", DEAL_AMT_ALLOCATED[purchaser]);
-        console.log("AELIN_DEAL.balanceOf(purchaser)", AELIN_DEAL.balanceOf(purchaser));
-        console.log("(PRO_RATA_CONVERSION * balanceOf[purchaser] / 1e18)", (PRO_RATA_CONVERSION * balanceOf[purchaser] / 1e18));
-        console.log('end maxProRataAvail');
-        uint higher_base = AELIN_DEAL.balanceOf(purchaser) * BASE / (BASE - AELIN_FEE - SPONSOR_FEE);
-        console.log("higher_base: %s", higher_base);
         uint amount_accepted = AELIN_DEAL.balanceOf(purchaser) * BASE / (BASE - AELIN_FEE - SPONSOR_FEE) - DEAL_AMT_ALLOCATED[purchaser];
-        console.log("(PRO_RATA_CONVERSION * amount_accepted / 1e18)", (PRO_RATA_CONVERSION * amount_accepted / 1e18));
-        console.log("summation: %s", ((PRO_RATA_CONVERSION * (balanceOf[purchaser] + amount_accepted) / 1e18)));
-        console.log("amount_accepted: %s", amount_accepted);
-
         return PRO_RATA_CONVERSION * (balanceOf[purchaser] + amount_accepted) / 1e18 - amount_accepted;
     }
 
@@ -229,16 +212,12 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     function _acceptDealTokensProRata(address recipient, uint pool_token_amount, bool use_max, bool is_allocated) internal {
         uint max_pro_rata_avail = maxProRataAvail(msg.sender);
-        console.log('initial max pro rata avail: %s', max_pro_rata_avail);
         if (!use_max) {
             require(pool_token_amount <= max_pro_rata_avail, "accepting more than share");
         }
         uint accept_amount = use_max ? max_pro_rata_avail : pool_token_amount;
         acceptDealLogic(recipient, accept_amount, is_allocated);
-        uint end_max_avail = maxProRataAvail(msg.sender);
-        console.log('ending max pro rata avail: %s', end_max_avail);
-        if (PRO_RATA_CONVERSION != 1e18 && end_max_avail == 0) {
-            console.log('eligible');
+        if (PRO_RATA_CONVERSION != 1e18 && maxProRataAvail(msg.sender) == 0) {
             OPEN_PERIOD_ELIGIBLE[msg.sender] = true;
         }
     }
@@ -256,7 +235,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     function acceptDealLogic(address recipient, uint pool_token_amount, bool is_allocated) internal {
         AelinDeal AELIN_DEAL = AelinDeal(AELIN_DEAL_STORAGE_PROXY);
         if (is_allocated) {
-            console.log('allocating: %s to recipient: %s', pool_token_amount, recipient);
             DEAL_AMT_ALLOCATED[recipient] += pool_token_amount;
         }
         _burn(msg.sender, pool_token_amount);
@@ -284,15 +262,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         require(DEAL_CREATED == false && block.timestamp < PURCHASE_EXPIRY, "not in purchase window");
         uint contract_purchase_balance = IERC20(PURCHASE_TOKEN).balanceOf(address(this));
         require(PURCHASE_TOKEN_CAP == 0 || contract_purchase_balance < PURCHASE_TOKEN_CAP, "the cap has been reached");
-        console.log("first purchase_token_amount: %s", purchase_token_amount);
         if (PURCHASE_TOKEN_CAP > 0) {
             purchase_token_amount = (purchase_token_amount + contract_purchase_balance) <= PURCHASE_TOKEN_CAP ? purchase_token_amount : PURCHASE_TOKEN_CAP - contract_purchase_balance;
-            console.log("optional purchase_token_amount: %s", purchase_token_amount);
         }
-        console.log("last purchase_token_amount: %s", purchase_token_amount);
-        console.log("PURCHASE_TOKEN_DECIMALS: %s", PURCHASE_TOKEN_DECIMALS);
         uint pool_token_amount = convertUnderlyingToAelinAmount(purchase_token_amount, PURCHASE_TOKEN_DECIMALS);
-        console.log("pool_token_amount: %s", pool_token_amount);
         _safeTransferFrom(PURCHASE_TOKEN, msg.sender, address(this), purchase_token_amount);
         _mint(recipient, pool_token_amount);
         emit PurchasePoolToken(recipient, msg.sender, address(this), purchase_token_amount, pool_token_amount);

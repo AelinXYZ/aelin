@@ -22,7 +22,7 @@ const { deployContract } = waffle;
 
 chai.use(solidity);
 
-describe.only("integration test", () => {
+describe("integration test", () => {
   let deployer: SignerWithAddress;
   let sponsor: SignerWithAddress;
   let user1: SignerWithAddress;
@@ -177,12 +177,8 @@ describe.only("integration test", () => {
       createPoolLog.args.poolAddress
     )) as AelinPool;
 
-    const feesBase = ethers.utils.parseUnits("1", dealOrPoolTokenDecimals);
-
-    const totalAfterFees = ethers.utils.parseUnits(
-      String(base - (sponsorFee + aelinFee)),
-      dealOrPoolTokenDecimals
-    );
+    const feesNumerator = ethers.BigNumber.from(base - (aelinFee + sponsorFee));
+    const feesDenominator = ethers.BigNumber.from(base);
 
     const purchaseAmount = ethers.utils.parseUnits("5000", usdcDecimals);
     const poolAmount = ethers.utils.parseUnits("5000", dealOrPoolTokenDecimals);
@@ -348,9 +344,9 @@ describe.only("integration test", () => {
       poolAmount.sub(user1ProRataAvail)
     );
 
-    // expect(await aelinDeal.balanceOf(user1.address)).to.equal(
-    //   user1ProRataAvail.mul(totalAfterFees).div(feesBase)
-    // );
+    expect(await aelinDeal.balanceOf(user1.address)).to.equal(
+      user1ProRataAvail.mul(feesNumerator).div(feesDenominator)
+    );
 
     const user2ProRataAvail = await aelinPool.maxProRataAvail(user2.address);
     // user 1 now has all of user 2s deal tokens as well
@@ -363,9 +359,12 @@ describe.only("integration test", () => {
         .add(user1ProRataAvail)
         .div(Math.pow(10, dealOrPoolTokenDecimals - usdcDecimals))
     );
-    // expect(await aelinDeal.balanceOf(user1.address)).to.equal(
-    //   user2ProRataAvail.add(user1ProRataAvail).mul(totalAfterFees).div(feesBase)
-    // );
+    expect(await aelinDeal.balanceOf(user1.address)).to.equal(
+      user2ProRataAvail
+        .add(user1ProRataAvail)
+        .mul(feesNumerator)
+        .div(feesDenominator)
+    );
 
     // confirm user 3 has no balance left
     const user3ProRataAvail = await aelinPool.maxProRataAvail(user3.address);
@@ -378,9 +377,9 @@ describe.only("integration test", () => {
       .acceptDealTokensAndAllocate(user5.address, user4ProRataAvail);
 
     expect(await aelinDeal.balanceOf(user4.address)).to.equal(0);
-    // expect(await aelinDeal.balanceOf(user5.address)).to.equal(
-    //   user4ProRataAvail.mul(totalAfterFees).div(feesBase)
-    // );
+    expect(await aelinDeal.balanceOf(user5.address)).to.equal(
+      user4ProRataAvail.mul(feesNumerator).div(feesDenominator)
+    );
 
     // WARNING sub 1
     expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
@@ -393,9 +392,13 @@ describe.only("integration test", () => {
     const user5ProRataAvail = await aelinPool.maxProRataAvail(user5.address);
     await aelinPool.connect(user5).acceptDealTokens(user5ProRataAvail);
 
-    // expect(await aelinDeal.balanceOf(user5.address)).to.equal(
-    //   user4ProRataAvail.add(user5ProRataAvail).mul(totalAfterFees).div(feesBase)
-    // );
+    expect(await aelinDeal.balanceOf(user5.address)).to.equal(
+      user4ProRataAvail
+        .add(user5ProRataAvail)
+        .mul(feesNumerator)
+        .div(feesDenominator)
+    );
+
     // WARNING - sub 1 here
     expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
       user2ProRataAvail
