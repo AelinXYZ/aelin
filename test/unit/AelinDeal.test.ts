@@ -41,14 +41,18 @@ describe("AelinDeal", function () {
 
   const vestingPeriod = oneYear;
   const vestingCliff = oneYear;
-  const redemptionPeriod = oneWeek;
-  const redemptionEnd = oneYear * 2 + oneWeek;
+  const proRataRedemptionPeriod = oneWeek;
+  const openRedemptionPeriod = oneDay;
+  const redmeptionPeriod = proRataRedemptionPeriod + openRedemptionPeriod;
+  const redemptionEnd =
+    vestingCliff +
+    vestingPeriod +
+    proRataRedemptionPeriod +
+    openRedemptionPeriod;
   // same logic as the convertUnderlyingToAelinAmount method
   const poolTokenMaxPurchaseAmount = dealPurchaseTokenTotal.mul(
     Math.pow(10, poolTokenDecimals - purchaseTokenDecimals)
   );
-  const underlyingPerPurchaseExchangeRate =
-    underlyingBaseAmount / purchaseBaseAmount;
 
   const underlyingPerPoolExchangeRate = (
     ((underlyingBaseAmount * Math.pow(10, 8)) /
@@ -90,11 +94,11 @@ describe("AelinDeal", function () {
         name,
         symbol,
         underlyingDealToken.address,
-        underlyingPerPurchaseExchangeRate,
         underlyingDealTokenTotal,
         vestingPeriod,
         vestingCliff,
-        redemptionPeriod,
+        proRataRedemptionPeriod,
+        openRedemptionPeriod,
         holder.address,
         poolTokenMaxPurchaseAmount
       );
@@ -139,15 +143,21 @@ describe("AelinDeal", function () {
       expect(await aelinDeal.UNDERLYING_DEAL_TOKENS_TOTAL()).to.equal(
         underlyingDealTokenTotal.toString()
       );
-      const actualVestingCliff = timestamp + redemptionPeriod + vestingCliff;
+      const actualVestingCliff =
+        timestamp +
+        proRataRedemptionPeriod +
+        openRedemptionPeriod +
+        vestingCliff;
       expect(await aelinDeal.VESTING_CLIFF()).to.equal(actualVestingCliff);
       expect(await aelinDeal.VESTING_PERIOD()).to.equal(vestingPeriod);
       expect(await aelinDeal.VESTING_EXPIRY()).to.equal(
         actualVestingCliff + vestingPeriod
       );
-      expect(await aelinDeal.REDEMPTION_PERIOD()).to.equal(redemptionPeriod);
-      expect(await aelinDeal.UNDERLYING_PER_PURCHASE_EXCHANGE_RATE()).to.equal(
-        underlyingPerPurchaseExchangeRate
+      expect(await aelinDeal.PRO_RATA_REDEMPTION_PERIOD()).to.equal(
+        proRataRedemptionPeriod
+      );
+      expect(await aelinDeal.OPEN_REDEMPTION_PERIOD()).to.equal(
+        openRedemptionPeriod
       );
       expect(await aelinDeal.UNDERLYING_PER_POOL_EXCHANGE_RATE()).to.equal(
         underlyingPerPoolExchangeRate
@@ -212,9 +222,15 @@ describe("AelinDeal", function () {
 
         expect(dealFundedLog.args.dealAddress).to.equal(aelinDeal.address);
         expect(dealFundedLog.args.poolAddress).to.be.properAddress;
-        expect(dealFundedLog.args.redemptionStart).to.equal(timestamp);
-        expect(dealFundedLog.args.redemptionExpiry).to.equal(
-          timestamp + redemptionPeriod
+        expect(dealFundedLog.args.proRataRedemptionStart).to.equal(timestamp);
+        expect(dealFundedLog.args.proRataRedemptionExpiry).to.equal(
+          timestamp + proRataRedemptionPeriod
+        );
+        expect(dealFundedLog.args.openRedemptionStart).to.equal(
+          timestamp + proRataRedemptionPeriod
+        );
+        expect(dealFundedLog.args.openRedemptionExpiry).to.equal(
+          timestamp + redmeptionPeriod
         );
       });
 
@@ -349,7 +365,7 @@ describe("AelinDeal", function () {
       it("should allow the holder to withdraw excess tokens in the pool after expiry", async function () {
         await fundDealAndMintTokens();
         // wait for redemption period to end
-        await ethers.provider.send("evm_increaseTime", [oneWeek + 1]);
+        await ethers.provider.send("evm_increaseTime", [redmeptionPeriod + 1]);
         await ethers.provider.send("evm_mine", []);
 
         await underlyingDealToken.mock.balanceOf
@@ -648,17 +664,19 @@ describe("AelinDeal", function () {
           name,
           symbol,
           underlyingDealToken.address,
-          underlyingPerPurchaseExchangeRate,
           underlyingDealTokenTotal,
           0,
           0,
-          redemptionPeriod,
+          proRataRedemptionPeriod,
+          openRedemptionPeriod,
           holder.address,
           poolTokenMaxPurchaseAmount
         );
 
       await fundDealAndMintTokens();
-      await ethers.provider.send("evm_increaseTime", [redemptionPeriod + 1]);
+      await ethers.provider.send("evm_increaseTime", [
+        proRataRedemptionPeriod + openRedemptionPeriod + 1,
+      ]);
       await ethers.provider.send("evm_mine", []);
 
       const result = await aelinDeal.underlyingDealTokensClaimable(

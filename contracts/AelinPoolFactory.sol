@@ -7,7 +7,7 @@ import "./AelinPool.sol";
 contract AelinPoolFactory is MinimalProxyFactory {
     constructor() {}
 
-    address constant AELIN_POOL_ADDRESS = 0x491a5068ef5c0E9e317807e86B6a7Dfa6bC7f953;
+    address constant AELIN_POOL_ADDRESS = 0xfcBb66235275F16741366234a5f937f961Dc4a46;
 
     function createPool(
         string memory _name,
@@ -46,14 +46,14 @@ contract AelinPoolFactory is MinimalProxyFactory {
     }
 
     event CreatePool(
-        address poolAddress,
+        address indexed poolAddress,
         string name,
         string symbol,
         uint purchaseTokenCap,
-        address purchaseToken,
+        address indexed purchaseToken,
         uint duration,
         uint sponsorFee,
-        address sponsor,
+        address indexed sponsor,
         uint purchaseExpiry
     );
 }

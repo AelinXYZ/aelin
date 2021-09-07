@@ -5,23 +5,28 @@ import "./AelinERC20.sol";
 import "./AelinPool.sol";
 
 contract AelinDeal is AelinERC20 {
-    address public HOLDER;
+    uint public MAX_TOTAL_SUPPLY;
+
     address public UNDERLYING_DEAL_TOKEN;
     uint public UNDERLYING_DEAL_TOKEN_DECIMALS;
     uint public UNDERLYING_DEAL_TOKENS_TOTAL;
     uint public TOTAL_UNDERLYING_CLAIMED;
+    address public HOLDER;
 
     uint public UNDERLYING_PER_POOL_EXCHANGE_RATE;
-    uint public UNDERLYING_PER_PURCHASE_EXCHANGE_RATE;
 
     address public AELIN_POOL_ADDRESS;
     uint public VESTING_CLIFF;
     uint public VESTING_PERIOD;
     uint public VESTING_EXPIRY;
 
-    uint public REDEMPTION_PERIOD;
-    uint public REDEMPTION_START;
-    uint public REDEMPTION_EXPIRY;
+    uint public PRO_RATA_REDEMPTION_PERIOD;
+    uint public PRO_RATA_REDEMPTION_START;
+    uint public PRO_RATA_REDEMPTION_EXPIRY;
+
+    uint public OPEN_REDEMPTION_PERIOD;
+    uint public OPEN_REDEMPTION_START;
+    uint public OPEN_REDEMPTION_EXPIRY;
     
     bool public CALLED_INITIALIZE = false;
     bool public DEPOSIT_COMPLETE = false;
@@ -32,11 +37,11 @@ contract AelinDeal is AelinERC20 {
         string memory _name, 
         string memory _symbol, 
         address _underlying_deal_token,
-        uint _underlying_per_purchase_exchange_rate,
         uint _underlying_deal_token_total,
         uint _vesting_period, 
         uint _vesting_cliff,
-        uint _redemption_period,
+        uint _pro_rata_redemption_period,
+        uint _open_redemption_period,
         address _holder,
         uint _pool_token_max_purchase_amount
     ) external initOnce {
@@ -49,12 +54,14 @@ contract AelinDeal is AelinERC20 {
         UNDERLYING_DEAL_TOKEN = _underlying_deal_token;
         UNDERLYING_DEAL_TOKEN_DECIMALS = IERC20(_underlying_deal_token).decimals();
         UNDERLYING_DEAL_TOKENS_TOTAL = _underlying_deal_token_total;
+        MAX_TOTAL_SUPPLY = _pool_token_max_purchase_amount;
         
         AELIN_POOL_ADDRESS = msg.sender;
-        VESTING_CLIFF = block.timestamp + _redemption_period + _vesting_cliff;
+        VESTING_CLIFF = block.timestamp + _pro_rata_redemption_period + _open_redemption_period + _vesting_cliff;
         VESTING_PERIOD = _vesting_period;
         VESTING_EXPIRY = VESTING_CLIFF + _vesting_period;
-        REDEMPTION_PERIOD = _redemption_period;
+        PRO_RATA_REDEMPTION_PERIOD = _pro_rata_redemption_period;
+        OPEN_REDEMPTION_PERIOD = _open_redemption_period;
 
         CALLED_INITIALIZE = true;
         DEPOSIT_COMPLETE = false;
@@ -62,7 +69,6 @@ contract AelinDeal is AelinERC20 {
         // calculate the amount of underlying deal tokens you get per wrapped pool token accepted
         // NOTE 1 wrapped pool token = 1 wrapped deal token
         UNDERLYING_PER_POOL_EXCHANGE_RATE = _underlying_deal_token_total * 1e18 / _pool_token_max_purchase_amount;
-        UNDERLYING_PER_PURCHASE_EXCHANGE_RATE = _underlying_per_purchase_exchange_rate;
     }
 
     modifier initOnce () {
@@ -86,15 +92,26 @@ contract AelinDeal is AelinERC20 {
             emit DepositDealTokens(UNDERLYING_DEAL_TOKEN, msg.sender, address(this), _underlying_deal_token_amount);
         }
         if (DEPOSIT_COMPLETE == true) {
-            REDEMPTION_START = block.timestamp;
-            REDEMPTION_EXPIRY = block.timestamp + REDEMPTION_PERIOD;
+            PRO_RATA_REDEMPTION_START = block.timestamp;
+            PRO_RATA_REDEMPTION_EXPIRY = block.timestamp + PRO_RATA_REDEMPTION_PERIOD;
 
-            emit DealFullyFunded(AELIN_POOL_ADDRESS, address(this), REDEMPTION_START, REDEMPTION_EXPIRY);
+            if (OPEN_REDEMPTION_PERIOD > 0) {
+                OPEN_REDEMPTION_START = PRO_RATA_REDEMPTION_EXPIRY;
+                OPEN_REDEMPTION_EXPIRY = PRO_RATA_REDEMPTION_EXPIRY + OPEN_REDEMPTION_PERIOD;
+            }
+            emit DealFullyFunded(
+                AELIN_POOL_ADDRESS,
+                address(this),
+                PRO_RATA_REDEMPTION_START,
+                PRO_RATA_REDEMPTION_EXPIRY,
+                OPEN_REDEMPTION_START,
+                OPEN_REDEMPTION_EXPIRY
+            );
             return true;
         }
         return false;
     }
-    
+
     // @NOTE the holder can withdraw any amount accidentally deposited over the amount needed to fulfill the deal
     function withdraw() external onlyHolder {
         uint withdraw_amount = IERC20(UNDERLYING_DEAL_TOKEN).balanceOf(address(this)) - UNDERLYING_DEAL_TOKENS_TOTAL - TOTAL_UNDERLYING_CLAIMED;
@@ -103,8 +120,8 @@ contract AelinDeal is AelinERC20 {
     }
 
     function withdrawExpiry() external onlyHolder {
-        require(REDEMPTION_EXPIRY > 0, "redemption period not started");
-        require(block.timestamp > REDEMPTION_EXPIRY, "redeem window still active");
+        require(PRO_RATA_REDEMPTION_EXPIRY > 0, "redemption period not started");
+        require(OPEN_REDEMPTION_EXPIRY > 0 ? block.timestamp > OPEN_REDEMPTION_EXPIRY : block.timestamp > PRO_RATA_REDEMPTION_EXPIRY, "redeem window still active");
         uint withdraw_amount = IERC20(UNDERLYING_DEAL_TOKEN).balanceOf(address(this)) - (UNDERLYING_PER_POOL_EXCHANGE_RATE * totalSupply / 1e18);
         _safeTransfer(UNDERLYING_DEAL_TOKEN, HOLDER, withdraw_amount);
         emit WithdrawUnderlyingDealTokens(UNDERLYING_DEAL_TOKEN, HOLDER, address(this), withdraw_amount);
@@ -213,9 +230,9 @@ contract AelinDeal is AelinERC20 {
         emit Transfer(src, dst, transfer_amount);
     }
 
-    event DealFullyFunded(address poolAddress, address dealAddress, uint redemptionStart, uint redemptionExpiry);
-    event DepositDealTokens(address underlyingDealTokenAddress, address depositor, address dealContract, uint underlyingDealTokenAmount);
-    event WithdrawUnderlyingDealTokens(address underlyingDealTokenAddress, address depositor, address dealContract, uint underlyingDealTokenAmount);
-    event ClaimedUnderlyingDealTokens(address underlyingDealTokenAddress, address from, address recipient, uint underlyingDealTokensClaimed);
-    event MintDealTokens(address dealContract, address recipient, uint dealTokenAmount);
+    event DealFullyFunded(address indexed poolAddress, address indexed dealAddress, uint proRataRedemptionStart, uint proRataRedemptionExpiry, uint openRedemptionStart, uint openRedemptionExpiry);
+    event DepositDealTokens(address indexed underlyingDealTokenAddress, address indexed depositor, address indexed dealContract, uint underlyingDealTokenAmount);
+    event WithdrawUnderlyingDealTokens(address indexed underlyingDealTokenAddress, address indexed depositor, address indexed dealContract, uint underlyingDealTokenAmount);
+    event ClaimedUnderlyingDealTokens(address indexed underlyingDealTokenAddress, address indexed from, address indexed recipient, uint underlyingDealTokensClaimed);
+    event MintDealTokens(address indexed dealContract, address indexed recipient, uint dealTokenAmount);
 }
