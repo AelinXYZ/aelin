@@ -64,7 +64,7 @@ describe("AelinPool", function () {
   const symbol = "TestSymbol";
 
   const duration = 100;
-  const sponsorFee = 10;
+  const sponsorFee = 1000;
   const purchaseExpiry = 30 * 60 + 1; // 30min and 1sec
   const aelinPoolName = `aePool-${name}`;
   const aelinPoolSymbol = `aeP-${symbol}`;

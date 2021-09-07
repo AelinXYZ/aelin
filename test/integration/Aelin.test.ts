@@ -131,7 +131,9 @@ describe.only("integration test", () => {
   const symbol = "POOL";
   const purchaseTokenCap = ethers.utils.parseUnits("22500", usdcDecimals);
   const duration = oneYear;
-  const sponsorFee = 3000; // 0 to 98000 represents 0 to 98%
+  const sponsorFee = 3000; // 0 to 98 represents 0 to 98%
+  const base = 100000; // hardcoded in the contracts
+  const aelinFee = 2000; // hardcoded in the contracts
   const purchaseExpiry = 30 * 24 * 60 * 60; // one month
 
   const dealPurchaseTokenTotal = ethers.utils.parseUnits("20000", usdcDecimals);
@@ -141,7 +143,6 @@ describe.only("integration test", () => {
   const vestingCliff = oneYear;
   const proRataRedemptionPeriod = 7 * 24 * 60 * 60; // one week
   const openRedemptionPeriod = 24 * 60 * 60; // one day
-  const redemptionPeriod = proRataRedemptionPeriod + openRedemptionPeriod;
 
   it(`
     1. creates a capped pool
@@ -175,6 +176,13 @@ describe.only("integration test", () => {
       FixedCompileAelinPoolArtifact.abi,
       createPoolLog.args.poolAddress
     )) as AelinPool;
+
+    const feesBase = ethers.utils.parseUnits("1", dealOrPoolTokenDecimals);
+
+    const totalAfterFees = ethers.utils.parseUnits(
+      String(base - (sponsorFee + aelinFee)),
+      dealOrPoolTokenDecimals
+    );
 
     const purchaseAmount = ethers.utils.parseUnits("5000", usdcDecimals);
     const poolAmount = ethers.utils.parseUnits("5000", dealOrPoolTokenDecimals);
@@ -331,12 +339,18 @@ describe.only("integration test", () => {
     // checks holder USDC balance
     // TODO it wont equal purchase amount it will be the max pro rata avail for the user :)
     expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
-      user1ProRataAvail.div(10 ^ (dealOrPoolTokenDecimals - usdcDecimals))
+      user1ProRataAvail.div(
+        Math.pow(10, dealOrPoolTokenDecimals - usdcDecimals)
+      )
     );
-    // checks user 1 deal balance
-    expect(await aelinDeal.balanceOf(user1.address)).to.equal(
-      user1ProRataAvail
+    // checks user 1 pool balance
+    expect(await aelinPool.balanceOf(user1.address)).to.equal(
+      poolAmount.sub(user1ProRataAvail)
     );
+
+    // expect(await aelinDeal.balanceOf(user1.address)).to.equal(
+    //   user1ProRataAvail.mul(totalAfterFees).div(feesBase)
+    // );
 
     const user2ProRataAvail = await aelinPool.maxProRataAvail(user2.address);
     // user 1 now has all of user 2s deal tokens as well
@@ -347,11 +361,11 @@ describe.only("integration test", () => {
     expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
       user2ProRataAvail
         .add(user1ProRataAvail)
-        .div(10 ^ (dealOrPoolTokenDecimals - usdcDecimals))
+        .div(Math.pow(10, dealOrPoolTokenDecimals - usdcDecimals))
     );
-    expect(await aelinDeal.balanceOf(user1.address)).to.equal(
-      user2ProRataAvail.add(user1ProRataAvail)
-    );
+    // expect(await aelinDeal.balanceOf(user1.address)).to.equal(
+    //   user2ProRataAvail.add(user1ProRataAvail).mul(totalAfterFees).div(feesBase)
+    // );
 
     // confirm user 3 has no balance left
     const user3ProRataAvail = await aelinPool.maxProRataAvail(user3.address);
@@ -359,44 +373,48 @@ describe.only("integration test", () => {
 
     const user4ProRataAvail = await aelinPool.maxProRataAvail(user4.address);
     // TODO figure out the math and do it in big number here and add an expect for this value
-    console.log("user4ProRataAvail", user4ProRataAvail);
     await aelinPool
       .connect(user4)
       .acceptDealTokensAndAllocate(user5.address, user4ProRataAvail);
 
-    expect(await aelinDeal.balanceOf(user5.address)).to.equal(
-      user4ProRataAvail
-    );
+    expect(await aelinDeal.balanceOf(user4.address)).to.equal(0);
+    // expect(await aelinDeal.balanceOf(user5.address)).to.equal(
+    //   user4ProRataAvail.mul(totalAfterFees).div(feesBase)
+    // );
+
+    // WARNING sub 1
     expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
       user2ProRataAvail
         .add(user1ProRataAvail)
         .add(user4ProRataAvail)
-        .div(10 ^ (dealOrPoolTokenDecimals - usdcDecimals))
+        .div(Math.pow(10, dealOrPoolTokenDecimals - usdcDecimals))
+        .sub(1)
     );
-
     const user5ProRataAvail = await aelinPool.maxProRataAvail(user5.address);
     await aelinPool.connect(user5).acceptDealTokens(user5ProRataAvail);
 
-    expect(await aelinDeal.balanceOf(user5.address)).to.equal(
-      user4ProRataAvail.add(user5ProRataAvail)
-    );
+    // expect(await aelinDeal.balanceOf(user5.address)).to.equal(
+    //   user4ProRataAvail.add(user5ProRataAvail).mul(totalAfterFees).div(feesBase)
+    // );
+    // WARNING - sub 1 here
     expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
       user2ProRataAvail
         .add(user1ProRataAvail)
         .add(user4ProRataAvail)
         .add(user5ProRataAvail)
-        .div(10 ^ (dealOrPoolTokenDecimals - usdcDecimals))
+        .div(Math.pow(10, dealOrPoolTokenDecimals - usdcDecimals))
+        .sub(1)
     );
 
     const acceptLogs = await aelinPool.queryFilter(
       aelinPool.filters.AcceptDeal()
     );
-
     expect(acceptLogs.length).to.equal(4);
 
     const mintLogs = await aelinDeal.queryFilter(
       aelinDeal.filters.MintDealTokens()
     );
+    expect(mintLogs.length).to.equal(4 * 3);
 
     const totalToHolderFromEvents = acceptLogs.reduce(
       (acc, log) => acc.add(log.args.underlyingToHolderAmt),
@@ -405,10 +423,19 @@ describe.only("integration test", () => {
     expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
       totalToHolderFromEvents
     );
-    expect(mintLogs.length).to.equal(4 * 3);
 
     // TODO add in increase to the open redemption period and have the users claim the rest
-    await ethers.provider.send("evm_increaseTime", [redemptionPeriod + 1]);
+    await ethers.provider.send("evm_increaseTime", [
+      proRataRedemptionPeriod + 1,
+    ]);
+    await ethers.provider.send("evm_mine", []);
+
+    expect(await aelinPool.balanceOf(user1.address)).to.not.equal(0);
+    await aelinPool.connect(user1).acceptMaxDealTokens();
+
+    expect(await aelinPool.balanceOf(user1.address)).to.equal(0);
+
+    await ethers.provider.send("evm_increaseTime", [openRedemptionPeriod + 1]);
     await ethers.provider.send("evm_mine", []);
 
     await aelinDeal.connect(aaveWhale).withdrawExpiry();
@@ -426,23 +453,24 @@ describe.only("integration test", () => {
 
     await aelinDeal
       .connect(user1)
-      .claimAndAllocate(user1.address, user5.address);
-    await aelinDeal.connect(user5).claim(user4.address);
+      .claimAndAllocate(user1.address, user2.address);
+    await aelinDeal.connect(user4).claim(user5.address);
 
     const logs = await aelinDeal.queryFilter(
       aelinDeal.filters.ClaimedUnderlyingDealTokens()
     );
 
+    // TODO calculate exact claim amount
     expect(await aaveContract.balanceOf(user1.address)).to.equal(0);
-    expect(await aaveContract.balanceOf(user2.address)).to.equal(0);
+    expect(await aaveContract.balanceOf(user2.address)).to.not.equal(0);
     expect(await aaveContract.balanceOf(user3.address)).to.equal(0);
-    expect(await aaveContract.balanceOf(user4.address)).to.not.equal(0);
+    expect(await aaveContract.balanceOf(user4.address)).to.equal(0);
     expect(await aaveContract.balanceOf(user5.address)).to.not.equal(0);
 
-    expect(await aaveContract.balanceOf(user5.address)).to.equal(
+    expect(await aaveContract.balanceOf(user2.address)).to.equal(
       logs[0].args.underlyingDealTokensClaimed
     );
-    expect(await aaveContract.balanceOf(user4.address)).to.equal(
+    expect(await aaveContract.balanceOf(user5.address)).to.equal(
       logs[1].args.underlyingDealTokensClaimed
     );
   });
