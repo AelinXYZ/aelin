@@ -32,6 +32,10 @@ jobs:
     # run only on audit success or audit skipped
     if: always() && (needs.audit.result == 'success' || needs.audit.result == 'skipped')
     runs-on: ubuntu-latest
+    env:
+      KOVAN_PRIVATE_KEY: ${{ secrets.KOVAN_PRIVATE_KEY }}
+      ALCHEMY_URL: ${{ secrets.ALCHEMY_URL }}
+      ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
 
     container:
       image: ghcr.io/synthetixio/docker-node/alpine:14.17
@@ -62,21 +66,12 @@ jobs:
 
       - name: Compile
         run: npm run compile
-        env: KOVAN_PRIVATE_KEY=${{ secrets.KOVAN_PRIVATE_KEY }}
-          ALCHEMY_URL=${{ secrets.ALCHEMY_URL }}
-          ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}
 
       - name: Test
         run: npm run test
-        env: KOVAN_PRIVATE_KEY=${{ secrets.KOVAN_PRIVATE_KEY }}
-          ALCHEMY_URL=${{ secrets.ALCHEMY_URL }}
-          ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}
 
       - name: Lint
         run: npm run lint:sarif
-        env: KOVAN_PRIVATE_KEY=${{ secrets.KOVAN_PRIVATE_KEY }}
-          ALCHEMY_URL=${{ secrets.ALCHEMY_URL }}
-          ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}
 
       - name: Upload lint results
         if: always()
@@ -96,9 +91,6 @@ jobs:
 
       - name: Build
         run: npm run build
-        env: KOVAN_PRIVATE_KEY=${{ secrets.KOVAN_PRIVATE_KEY }}
-          ALCHEMY_URL=${{ secrets.ALCHEMY_URL }}
-          ALCHEMY_API_KEY=${{ secrets.ALCHEMY_API_KEY }}
 
       - name: Compress build
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.event_name == 'pull_request'
