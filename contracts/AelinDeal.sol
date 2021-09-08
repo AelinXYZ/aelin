@@ -167,10 +167,6 @@ contract AelinDeal is AelinERC20 {
         _claim(from, from);
     }
     
-    function claimAndAllocate(address recipient) external {
-        _claim(msg.sender, recipient);
-    }
-    
     function _claim(address from, address recipient) internal returns (uint dealTokensClaimed) {
         require(balanceOf[from] > 0, "nothing to claim");
         uint maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
@@ -197,6 +193,7 @@ contract AelinDeal is AelinERC20 {
         emit MintDealTokens(address(this), dst, dealTokenAmount);
     }
 
+    // double and triple check the logic for these 3 methods
     function transfer(address dst, uint dealTokenAmount) external override returns (bool) {
         _transferTokens(msg.sender, dst, dealTokenAmount);
         return true;

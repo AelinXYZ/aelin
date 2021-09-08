@@ -217,7 +217,7 @@ describe("integration test", () => {
     // NOTE do we want them to get the remaining or nothing at all if they don't pass the exact amount???
     await aelinPoolProxyStorage
       .connect(user5)
-      .purchasePoolTokens(purchaseAmount);
+      .purchasePoolTokens(purchaseAmount.div(2));
 
     // checks pool balance is accurate
     expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
@@ -356,20 +356,15 @@ describe("integration test", () => {
       user2.address
     );
     // user 1 now has all of user 2s deal tokens as well
-    await aelinPoolProxyStorage
-      .connect(user2)
-      .acceptMaxDealTokensAndAllocate(user1.address);
+    await aelinPoolProxyStorage.connect(user2).acceptMaxDealTokens();
 
     expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
       user2ProRataAvail
         .add(user1ProRataAvail)
         .div(Math.pow(10, dealOrPoolTokenDecimals - usdcDecimals))
     );
-    expect(await aelinDealProxyStorage.balanceOf(user1.address)).to.equal(
-      user2ProRataAvail
-        .add(user1ProRataAvail)
-        .mul(feesNumerator)
-        .div(feesDenominator)
+    expect(await aelinDealProxyStorage.balanceOf(user2.address)).to.equal(
+      user2ProRataAvail.mul(feesNumerator).div(feesDenominator)
     );
 
     // confirm user 3 has no balance left
@@ -384,10 +379,10 @@ describe("integration test", () => {
     // TODO figure out the math and do it in big number here and add an expect for this value
     await aelinPoolProxyStorage
       .connect(user4)
-      .acceptDealTokensAndAllocate(user5.address, user4ProRataAvail);
+      .acceptDealTokens(user4ProRataAvail);
 
-    expect(await aelinDealProxyStorage.balanceOf(user4.address)).to.equal(0);
-    expect(await aelinDealProxyStorage.balanceOf(user5.address)).to.equal(
+    expect(await aelinDealProxyStorage.balanceOf(user5.address)).to.equal(0);
+    expect(await aelinDealProxyStorage.balanceOf(user4.address)).to.equal(
       user4ProRataAvail.mul(feesNumerator).div(feesDenominator)
     );
 
@@ -407,10 +402,7 @@ describe("integration test", () => {
       .acceptDealTokens(user5ProRataAvail);
 
     expect(await aelinDealProxyStorage.balanceOf(user5.address)).to.equal(
-      user4ProRataAvail
-        .add(user5ProRataAvail)
-        .mul(feesNumerator)
-        .div(feesDenominator)
+      user5ProRataAvail.mul(feesNumerator).div(feesDenominator)
     );
 
     // WARNING - sub 1 here
@@ -470,7 +462,8 @@ describe("integration test", () => {
     expect(await aaveContract.balanceOf(user4.address)).to.equal(0);
     expect(await aaveContract.balanceOf(user5.address)).to.equal(0);
 
-    await aelinDealProxyStorage.connect(user1).claimAndAllocate(user2.address);
+    await aelinDealProxyStorage.connect(user2).claim(user1.address);
+    await aelinDealProxyStorage.connect(user2).claim(user2.address);
     await aelinDealProxyStorage.connect(user4).claim(user5.address);
 
     const logs = await aelinDealProxyStorage.queryFilter(
@@ -478,10 +471,10 @@ describe("integration test", () => {
     );
 
     // TODO calculate exact claim amount
-    expect(await aaveContract.balanceOf(user1.address)).to.equal(0);
+    expect(await aaveContract.balanceOf(user1.address)).to.not.equal(0);
     expect(await aaveContract.balanceOf(user2.address)).to.not.equal(0);
     expect(await aaveContract.balanceOf(user3.address)).to.equal(0);
-    expect(await aaveContract.balanceOf(user4.address)).to.equal(0);
+    expect(await aaveContract.balanceOf(user4.address)).to.not.equal(0);
     expect(await aaveContract.balanceOf(user5.address)).to.not.equal(0);
 
     expect(await aaveContract.balanceOf(user2.address)).to.equal(
