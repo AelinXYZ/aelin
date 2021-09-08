@@ -34,7 +34,7 @@ describe("AelinDeal", function () {
     underlyingDealTokenDecimals
   );
   const purchaseBaseAmount = 50;
-  const dealPurchaseTokenTotal = ethers.utils.parseUnits(
+  const purchaseTokenTotalForDeal = ethers.utils.parseUnits(
     purchaseBaseAmount.toString(),
     purchaseTokenDecimals
   );
@@ -50,7 +50,7 @@ describe("AelinDeal", function () {
     proRataRedemptionPeriod +
     openRedemptionPeriod;
   // same logic as the convertUnderlyingToAelinAmount method
-  const poolTokenMaxPurchaseAmount = dealPurchaseTokenTotal.mul(
+  const poolTokenMaxPurchaseAmount = purchaseTokenTotalForDeal.mul(
     Math.pow(10, poolTokenDecimals - purchaseTokenDecimals)
   );
 

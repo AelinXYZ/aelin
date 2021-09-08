@@ -3,6 +3,8 @@ import { ethers, waffle } from "hardhat";
 import { solidity } from "ethereum-waffle";
 
 import ERC20Artifact from "../../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json";
+import AelinDealArtifact from "../../artifacts/contracts/AelinDeal.sol/AelinDeal.json";
+import AelinPoolArtifact from "../../artifacts/contracts/AelinPool.sol/AelinPool.json";
 import AelinPoolFactoryArtifact from "../../artifacts/contracts/AelinPoolFactory.sol/AelinPoolFactory.json";
 import { AelinPoolFactory } from "../../typechain";
 
@@ -16,6 +18,14 @@ describe("AelinPoolFactory", function () {
     const purchaseToken = await deployMockContract(
       signers[0],
       ERC20Artifact.abi
+    );
+    const aelinDealLogic = await deployMockContract(
+      signers[0],
+      AelinDealArtifact.abi
+    );
+    const aelinPoolLogic = await deployMockContract(
+      signers[0],
+      AelinPoolArtifact.abi
     );
     await purchaseToken.mock.decimals.returns(6);
     const aelinPoolFactory = (await deployContract(
@@ -40,7 +50,9 @@ describe("AelinPoolFactory", function () {
         purchaseToken.address,
         duration,
         sponsorFee,
-        purchaseExpiry
+        purchaseExpiry,
+        aelinPoolLogic.address,
+        aelinDealLogic.address
       );
 
     expect(result.value).to.equal(0);

@@ -4,6 +4,7 @@ import { MockContract, solidity } from "ethereum-waffle";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 import ERC20Artifact from "../../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json";
+import AelinDealArtifact from "../../artifacts/contracts/AelinDeal.sol/AelinDeal.json";
 import AelinPoolArtifact from "../../artifacts/contracts/AelinPool.sol/AelinPool.json";
 import { AelinPool } from "../../typechain";
 
@@ -17,6 +18,7 @@ describe("AelinPool", function () {
   let holder: SignerWithAddress;
   let nonsponsor: SignerWithAddress;
   let user1: SignerWithAddress;
+  let aelinDealLogic: MockContract;
   let aelinPool: AelinPool;
   let purchaseToken: MockContract;
   let underlyingDealToken: MockContract;
@@ -33,9 +35,9 @@ describe("AelinPool", function () {
   const poolTokenAmount = userPurchaseAmt.mul(
     Math.pow(10, poolTokenDecimals - purchaseTokenDecimals)
   );
-  const dealPurchaseTokenTotalBase = 100;
-  const dealPurchaseTokenTotal = ethers.utils.parseUnits(
-    dealPurchaseTokenTotalBase.toString(),
+  const purchaseTokenTotalForDealBase = 100;
+  const purchaseTokenTotalForDeal = ethers.utils.parseUnits(
+    purchaseTokenTotalForDealBase.toString(),
     purchaseTokenDecimals
   );
 
@@ -48,6 +50,7 @@ describe("AelinPool", function () {
   before(async () => {
     [deployer, sponsor, holder, nonsponsor, user1] = await ethers.getSigners();
     purchaseToken = await deployMockContract(deployer, ERC20Artifact.abi);
+    aelinDealLogic = await deployMockContract(deployer, AelinDealArtifact.abi);
     await purchaseToken.mock.decimals.returns(purchaseTokenDecimals);
     underlyingDealToken = await deployMockContract(holder, ERC20Artifact.abi);
     await underlyingDealToken.mock.decimals.returns(
@@ -77,7 +80,8 @@ describe("AelinPool", function () {
       duration,
       sponsorFee,
       sponsor.address,
-      purchaseExpiry
+      purchaseExpiry,
+      aelinDealLogic.address
     );
 
   const underlyingDealTokenTotalBase = 1000;
@@ -96,7 +100,7 @@ describe("AelinPool", function () {
       .connect(sponsor)
       .createDeal(
         underlyingDealToken.address,
-        dealPurchaseTokenTotal,
+        purchaseTokenTotalForDeal,
         underlyingDealTokenTotal,
         vestingPeriod,
         vestingCliff,
@@ -116,7 +120,8 @@ describe("AelinPool", function () {
           365 * 24 * 60 * 60 + 1, // 1 second greater than 365 days
           sponsorFee,
           sponsor.address,
-          purchaseExpiry
+          purchaseExpiry,
+          aelinDealLogic.address
         )
       ).to.be.revertedWith("max 1 year duration");
     });
@@ -131,7 +136,8 @@ describe("AelinPool", function () {
           duration,
           sponsorFee,
           sponsor.address,
-          30 * 60 - 1 // 1 second less than 30min
+          30 * 60 - 1, // 1 second less than 30min,
+          aelinDealLogic.address
         )
       ).to.be.revertedWith("min 30 minutes purchase expiry");
     });
@@ -146,7 +152,8 @@ describe("AelinPool", function () {
           duration,
           98001,
           sponsor.address,
-          purchaseExpiry
+          purchaseExpiry,
+          aelinDealLogic.address
         )
       ).to.be.revertedWith("exceeds max sponsor fee");
     });
@@ -189,7 +196,7 @@ describe("AelinPool", function () {
       await expect(
         aelinPool.createDeal(
           underlyingDealToken.address,
-          dealPurchaseTokenTotal,
+          purchaseTokenTotalForDeal,
           underlyingDealTokenTotal,
           vestingPeriod,
           vestingCliff,
@@ -212,7 +219,7 @@ describe("AelinPool", function () {
       await successfullyInitializePool();
       await purchaseToken.mock.balanceOf
         .withArgs(aelinPool.address)
-        .returns(dealPurchaseTokenTotal.sub(1));
+        .returns(purchaseTokenTotalForDeal.sub(1));
 
       await expect(createDealWithValidParams()).to.be.revertedWith(
         "not enough funds available"
@@ -232,7 +239,7 @@ describe("AelinPool", function () {
           .connect(nonsponsor)
           .createDeal(
             underlyingDealToken.address,
-            dealPurchaseTokenTotal,
+            purchaseTokenTotalForDeal,
             underlyingDealTokenTotal,
             vestingPeriod,
             vestingCliff,
@@ -262,7 +269,7 @@ describe("AelinPool", function () {
 
       await purchaseToken.mock.balanceOf
         .withArgs(aelinPool.address)
-        .returns(dealPurchaseTokenTotal.add(1));
+        .returns(purchaseTokenTotalForDeal.add(1));
 
       const tx = await createDealWithValidParams();
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
@@ -271,7 +278,7 @@ describe("AelinPool", function () {
       expect(await aelinPool.holder()).to.equal(holder.address);
 
       const expectedProRataResult = (
-        (dealPurchaseTokenTotalBase / userPurchaseBaseAmt) *
+        (purchaseTokenTotalForDealBase / userPurchaseBaseAmt) *
         10 ** 18
       ).toString();
 
@@ -300,8 +307,8 @@ describe("AelinPool", function () {
       expect(dealDetailsLog.args.underlyingDealToken).to.equal(
         underlyingDealToken.address
       );
-      expect(dealDetailsLog.args.dealPurchaseTokenTotal).to.equal(
-        dealPurchaseTokenTotal
+      expect(dealDetailsLog.args.purchaseTokenTotalForDeal).to.equal(
+        purchaseTokenTotalForDeal
       );
       expect(dealDetailsLog.args.underlyingDealTokenTotal).to.equal(
         underlyingDealTokenTotal
