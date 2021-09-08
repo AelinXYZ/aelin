@@ -424,9 +424,7 @@ describe("AelinDeal", function () {
           .returns(true);
 
         await expect(
-          aelinDeal
-            .connect(sponsor)
-            .claimAndAllocate(purchaser.address, sponsor.address)
+          aelinDeal.connect(purchaser).claimAndAllocate(sponsor.address)
         ).to.be.revertedWith("only claimant can allocate");
         await aelinDeal.connect(purchaser).claim(purchaser.address);
 
@@ -455,9 +453,7 @@ describe("AelinDeal", function () {
           .withArgs(deployer.address, expectedClaimUnderlying)
           .returns(true);
 
-        await aelinDeal
-          .connect(purchaser)
-          .claimAndAllocate(purchaser.address, deployer.address);
+        await aelinDeal.connect(purchaser).claimAndAllocate(deployer.address);
 
         const [log] = await aelinDeal.queryFilter(
           aelinDeal.filters.ClaimedUnderlyingDealTokens()
