@@ -16,7 +16,7 @@ contract AelinERC20 {
     string public name;
     string public symbol;
     uint8 public constant decimals = 18;
-    bool SET_INFO = false;
+    bool setInfo;
     
     uint public totalSupply = 0;
     
@@ -32,14 +32,14 @@ contract AelinERC20 {
     constructor () {}
 
     modifier initInfoOnce () {
-        require(SET_INFO == false, "can only initialize once");
+        require(setInfo == false, "can only initialize once");
         _;
     }
 
     function _setNameAndSymbol(string memory _name, string memory _symbol) internal initInfoOnce returns (bool) {
         name = _name;
         symbol = _symbol;
-        SET_INFO = true;
+        setInfo = true;
         return true;
     }
     

@@ -3,6 +3,8 @@ import { ethers, waffle } from "hardhat";
 import { solidity } from "ethereum-waffle";
 
 import ERC20Artifact from "../../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json";
+import AelinDealArtifact from "../../artifacts/contracts/AelinDeal.sol/AelinDeal.json";
+import AelinPoolArtifact from "../../artifacts/contracts/AelinPool.sol/AelinPool.json";
 import AelinPoolFactoryArtifact from "../../artifacts/contracts/AelinPoolFactory.sol/AelinPoolFactory.json";
 import { AelinPoolFactory } from "../../typechain";
 
@@ -17,6 +19,14 @@ describe("AelinPoolFactory", function () {
       signers[0],
       ERC20Artifact.abi
     );
+    const aelinDealLogic = await deployMockContract(
+      signers[0],
+      AelinDealArtifact.abi
+    );
+    // NOTE that the test will fail if this is a mock contract due to the
+    // minimal proxy and initialize pattern. Technically this sort of
+    // makes this an integration test but I am leaving it since it adds value
+    const aelinPoolLogic = await deployContract(signers[0], AelinPoolArtifact);
     await purchaseToken.mock.decimals.returns(6);
     const aelinPoolFactory = (await deployContract(
       signers[0],
@@ -40,7 +50,9 @@ describe("AelinPoolFactory", function () {
         purchaseToken.address,
         duration,
         sponsorFee,
-        purchaseExpiry
+        purchaseExpiry,
+        aelinPoolLogic.address,
+        aelinDealLogic.address
       );
 
     expect(result.value).to.equal(0);

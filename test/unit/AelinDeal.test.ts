@@ -34,7 +34,7 @@ describe("AelinDeal", function () {
     underlyingDealTokenDecimals
   );
   const purchaseBaseAmount = 50;
-  const dealPurchaseTokenTotal = ethers.utils.parseUnits(
+  const purchaseTokenTotalForDeal = ethers.utils.parseUnits(
     purchaseBaseAmount.toString(),
     purchaseTokenDecimals
   );
@@ -50,7 +50,7 @@ describe("AelinDeal", function () {
     proRataRedemptionPeriod +
     openRedemptionPeriod;
   // same logic as the convertUnderlyingToAelinAmount method
-  const poolTokenMaxPurchaseAmount = dealPurchaseTokenTotal.mul(
+  const poolTokenMaxPurchaseAmount = purchaseTokenTotalForDeal.mul(
     Math.pow(10, poolTokenDecimals - purchaseTokenDecimals)
   );
 
@@ -128,19 +128,16 @@ describe("AelinDeal", function () {
       // TODO test the aelinDeal.AELIN_POOL() variable
       expect(await aelinDeal.name()).to.equal(`aeDeal-${name}`);
       expect(await aelinDeal.symbol()).to.equal(`aeD-${symbol}`);
-      expect(await aelinDeal.HOLDER()).to.equal(holder.address);
-      expect(await aelinDeal.UNDERLYING_DEAL_TOKEN()).to.equal(
+      expect(await aelinDeal.holder()).to.equal(holder.address);
+      expect(await aelinDeal.underlyingDealToken()).to.equal(
         underlyingDealToken.address
       );
-      expect(await aelinDeal.AELIN_POOL_ADDRESS()).to.equal(deployer.address);
-      expect(await aelinDeal.UNDERLYING_DEAL_TOKEN()).to.equal(
-        underlyingDealToken.address
-      );
-      expect(await aelinDeal.UNDERLYING_DEAL_TOKEN_DECIMALS()).to.equal(
+      expect(await aelinDeal.aelinPool()).to.equal(deployer.address);
+      expect(await aelinDeal.underlyingDealTokenDecimals()).to.equal(
         underlyingDealTokenDecimals
       );
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
-      expect(await aelinDeal.UNDERLYING_DEAL_TOKENS_TOTAL()).to.equal(
+      expect(await aelinDeal.underlyingDealTokenTotal()).to.equal(
         underlyingDealTokenTotal.toString()
       );
       const actualVestingCliff =
@@ -148,18 +145,18 @@ describe("AelinDeal", function () {
         proRataRedemptionPeriod +
         openRedemptionPeriod +
         vestingCliff;
-      expect(await aelinDeal.VESTING_CLIFF()).to.equal(actualVestingCliff);
-      expect(await aelinDeal.VESTING_PERIOD()).to.equal(vestingPeriod);
-      expect(await aelinDeal.VESTING_EXPIRY()).to.equal(
+      expect(await aelinDeal.vestingCliff()).to.equal(actualVestingCliff);
+      expect(await aelinDeal.vestingPeriod()).to.equal(vestingPeriod);
+      expect(await aelinDeal.vestingExpiry()).to.equal(
         actualVestingCliff + vestingPeriod
       );
-      expect(await aelinDeal.PRO_RATA_REDEMPTION_PERIOD()).to.equal(
+      expect(await aelinDeal.proRataRedemptionPeriod()).to.equal(
         proRataRedemptionPeriod
       );
-      expect(await aelinDeal.OPEN_REDEMPTION_PERIOD()).to.equal(
+      expect(await aelinDeal.openRedemptionPeriod()).to.equal(
         openRedemptionPeriod
       );
-      expect(await aelinDeal.UNDERLYING_PER_POOL_EXCHANGE_RATE()).to.equal(
+      expect(await aelinDeal.underlyingPerPoolExchangeRate()).to.equal(
         underlyingPerPoolExchangeRate
       );
     });
@@ -193,13 +190,13 @@ describe("AelinDeal", function () {
       });
 
       it("should complete the deposit when the total amount has been reached", async function () {
-        expect(await aelinDeal.DEPOSIT_COMPLETE()).to.equal(false);
+        expect(await aelinDeal.depositComplete()).to.equal(false);
 
         const tx = await aelinDeal
           .connect(holder)
           .depositUnderlying(underlyingDealTokenTotal);
 
-        expect(await aelinDeal.DEPOSIT_COMPLETE()).to.equal(true);
+        expect(await aelinDeal.depositComplete()).to.equal(true);
 
         const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
 
@@ -245,7 +242,7 @@ describe("AelinDeal", function () {
       });
 
       it("should not finalize the deposit if the total amount has not been deposited", async function () {
-        expect(await aelinDeal.DEPOSIT_COMPLETE()).to.equal(false);
+        expect(await aelinDeal.depositComplete()).to.equal(false);
         const lowerAmount = underlyingDealTokenTotal.sub(1);
         await underlyingDealToken.mock.balanceOf
           .withArgs(holder.address)
@@ -261,7 +258,7 @@ describe("AelinDeal", function () {
 
         await aelinDeal.connect(holder).depositUnderlying(lowerAmount);
 
-        expect(await aelinDeal.DEPOSIT_COMPLETE()).to.equal(false);
+        expect(await aelinDeal.depositComplete()).to.equal(false);
 
         const [depositDealTokensLog] = await aelinDeal.queryFilter(
           aelinDeal.filters.DepositDealTokens()
@@ -423,9 +420,6 @@ describe("AelinDeal", function () {
           .withArgs(purchaser.address, expectedClaimUnderlying)
           .returns(true);
 
-        await expect(
-          aelinDeal.connect(purchaser).claimAndAllocate(sponsor.address)
-        ).to.be.revertedWith("only claimant can allocate");
         await aelinDeal.connect(purchaser).claim(purchaser.address);
 
         const [log] = await aelinDeal.queryFilter(
@@ -434,35 +428,7 @@ describe("AelinDeal", function () {
         expect(log.args.underlyingDealTokenAddress).to.equal(
           underlyingDealToken.address
         );
-        expect(log.args.from).to.equal(purchaser.address);
         expect(log.args.recipient).to.equal(purchaser.address);
-        expect(log.args.underlyingDealTokensClaimed).to.equal(
-          expectedClaimUnderlying
-        );
-
-        expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
-      });
-
-      it("should allow the purchaser to claim and allocate their fully vested tokens only once", async function () {
-        await fundDealAndMintTokens();
-        // wait for redemption period and the vesting period to end
-        await ethers.provider.send("evm_increaseTime", [redemptionEnd + 1]);
-        await ethers.provider.send("evm_mine", []);
-
-        await underlyingDealToken.mock.transfer
-          .withArgs(deployer.address, expectedClaimUnderlying)
-          .returns(true);
-
-        await aelinDeal.connect(purchaser).claimAndAllocate(deployer.address);
-
-        const [log] = await aelinDeal.queryFilter(
-          aelinDeal.filters.ClaimedUnderlyingDealTokens()
-        );
-        expect(log.args.underlyingDealTokenAddress).to.equal(
-          underlyingDealToken.address
-        );
-        expect(log.args.from).to.equal(purchaser.address);
-        expect(log.args.recipient).to.equal(deployer.address);
         expect(log.args.underlyingDealTokensClaimed).to.equal(
           expectedClaimUnderlying
         );
@@ -493,7 +459,6 @@ describe("AelinDeal", function () {
         expect(log.args.underlyingDealTokenAddress).to.equal(
           underlyingDealToken.address
         );
-        expect(log.args.from).to.equal(purchaser.address);
         expect(log.args.recipient).to.equal(purchaser.address);
         expect(log.args.underlyingDealTokensClaimed).to.equal(
           partiallyExpectedClaimUnderlying
@@ -523,7 +488,6 @@ describe("AelinDeal", function () {
         expect(claimLog.args.underlyingDealTokenAddress).to.equal(
           underlyingDealToken.address
         );
-        expect(claimLog.args.from).to.equal(purchaser.address);
         expect(claimLog.args.recipient).to.equal(purchaser.address);
         expect(claimLog.args.underlyingDealTokensClaimed).to.equal(
           expectedClaimUnderlying
@@ -578,7 +542,6 @@ describe("AelinDeal", function () {
           underlyingDealToken.address
         );
 
-        expect(claimLog.args.from).to.equal(purchaser.address);
         expect(claimLog.args.recipient).to.equal(purchaser.address);
         expect(claimLog.args.underlyingDealTokensClaimed).to.equal(
           expectedClaimUnderlying
@@ -692,7 +655,6 @@ describe("AelinDeal", function () {
       expect(log.args.underlyingDealTokenAddress).to.equal(
         underlyingDealToken.address
       );
-      expect(log.args.from).to.equal(purchaser.address);
       expect(log.args.recipient).to.equal(purchaser.address);
       expect(log.args.underlyingDealTokensClaimed).to.equal(
         expectedClaimUnderlying
