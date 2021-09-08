@@ -6,16 +6,6 @@ TODO add license and update README with more info about how the protocol works
 
 ### Development workflow and Integration Test Setup
 
-DUE TO THE USAGE OF CREATE2 (https://docs.openzeppelin.com/cli/2.8/deploying-with-create2)
-Every time there is a contract change and you want the integration tests to work you need to do the following
-
-1. `npm run deploy-deal:mainnet-fork`
-2. take the address of the deployed deal from the CLI and paste it in AelinPool.sol under `AELIN_DEAL_ADDRESS`
-3. `npm run deploy-pool:mainnet-fork`
-4. take the address of the deployed pool from the CLI and paste it in AelinPool.sol under `AELIN_POOL_ADDRESS`
-5. `npm run compile`
-6. `npm test` should work now
-
 The integration tests require that hardhat run a fork of mainnet (see [docs](https://hardhat.org/hardhat-network/guides/mainnet-forking.html)). For this to work you must do the following:
 
 1. setup an [Alchemy](https://www.alchemy.com/) account (it is free)

@@ -128,19 +128,16 @@ describe("AelinDeal", function () {
       // TODO test the aelinDeal.AELIN_POOL() variable
       expect(await aelinDeal.name()).to.equal(`aeDeal-${name}`);
       expect(await aelinDeal.symbol()).to.equal(`aeD-${symbol}`);
-      expect(await aelinDeal.HOLDER()).to.equal(holder.address);
-      expect(await aelinDeal.UNDERLYING_DEAL_TOKEN()).to.equal(
+      expect(await aelinDeal.holder()).to.equal(holder.address);
+      expect(await aelinDeal.underlyingDealToken()).to.equal(
         underlyingDealToken.address
       );
-      expect(await aelinDeal.AELIN_POOL_ADDRESS()).to.equal(deployer.address);
-      expect(await aelinDeal.UNDERLYING_DEAL_TOKEN()).to.equal(
-        underlyingDealToken.address
-      );
-      expect(await aelinDeal.UNDERLYING_DEAL_TOKEN_DECIMALS()).to.equal(
+      expect(await aelinDeal.aelinPool()).to.equal(deployer.address);
+      expect(await aelinDeal.underlyingDealTokenDecimals()).to.equal(
         underlyingDealTokenDecimals
       );
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
-      expect(await aelinDeal.UNDERLYING_DEAL_TOKENS_TOTAL()).to.equal(
+      expect(await aelinDeal.underlyingDealTokenTotal()).to.equal(
         underlyingDealTokenTotal.toString()
       );
       const actualVestingCliff =
@@ -148,18 +145,18 @@ describe("AelinDeal", function () {
         proRataRedemptionPeriod +
         openRedemptionPeriod +
         vestingCliff;
-      expect(await aelinDeal.VESTING_CLIFF()).to.equal(actualVestingCliff);
-      expect(await aelinDeal.VESTING_PERIOD()).to.equal(vestingPeriod);
-      expect(await aelinDeal.VESTING_EXPIRY()).to.equal(
+      expect(await aelinDeal.vestingCliff()).to.equal(actualVestingCliff);
+      expect(await aelinDeal.vestingPeriod()).to.equal(vestingPeriod);
+      expect(await aelinDeal.vestingExpiry()).to.equal(
         actualVestingCliff + vestingPeriod
       );
-      expect(await aelinDeal.PRO_RATA_REDEMPTION_PERIOD()).to.equal(
+      expect(await aelinDeal.proRataRedemptionPeriod()).to.equal(
         proRataRedemptionPeriod
       );
-      expect(await aelinDeal.OPEN_REDEMPTION_PERIOD()).to.equal(
+      expect(await aelinDeal.openRedemptionPeriod()).to.equal(
         openRedemptionPeriod
       );
-      expect(await aelinDeal.UNDERLYING_PER_POOL_EXCHANGE_RATE()).to.equal(
+      expect(await aelinDeal.underlyingPerPoolExchangeRate()).to.equal(
         underlyingPerPoolExchangeRate
       );
     });
@@ -193,13 +190,13 @@ describe("AelinDeal", function () {
       });
 
       it("should complete the deposit when the total amount has been reached", async function () {
-        expect(await aelinDeal.DEPOSIT_COMPLETE()).to.equal(false);
+        expect(await aelinDeal.depositComplete()).to.equal(false);
 
         const tx = await aelinDeal
           .connect(holder)
           .depositUnderlying(underlyingDealTokenTotal);
 
-        expect(await aelinDeal.DEPOSIT_COMPLETE()).to.equal(true);
+        expect(await aelinDeal.depositComplete()).to.equal(true);
 
         const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
 
@@ -245,7 +242,7 @@ describe("AelinDeal", function () {
       });
 
       it("should not finalize the deposit if the total amount has not been deposited", async function () {
-        expect(await aelinDeal.DEPOSIT_COMPLETE()).to.equal(false);
+        expect(await aelinDeal.depositComplete()).to.equal(false);
         const lowerAmount = underlyingDealTokenTotal.sub(1);
         await underlyingDealToken.mock.balanceOf
           .withArgs(holder.address)
@@ -261,7 +258,7 @@ describe("AelinDeal", function () {
 
         await aelinDeal.connect(holder).depositUnderlying(lowerAmount);
 
-        expect(await aelinDeal.DEPOSIT_COMPLETE()).to.equal(false);
+        expect(await aelinDeal.depositComplete()).to.equal(false);
 
         const [depositDealTokensLog] = await aelinDeal.queryFilter(
           aelinDeal.filters.DepositDealTokens()

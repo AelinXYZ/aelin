@@ -5,107 +5,107 @@ import "./AelinERC20.sol";
 import "./AelinPool.sol";
 
 contract AelinDeal is AelinERC20 {
-    uint public MAX_TOTAL_SUPPLY;
+    uint public maxTotalSupply;
 
-    address public UNDERLYING_DEAL_TOKEN;
-    uint public UNDERLYING_DEAL_TOKEN_DECIMALS;
-    uint public UNDERLYING_DEAL_TOKENS_TOTAL;
-    uint public TOTAL_UNDERLYING_CLAIMED;
-    address public HOLDER;
+    address public underlyingDealToken;
+    uint public underlyingDealTokenDecimals;
+    uint public underlyingDealTokenTotal;
+    uint public totalUnderlyingClaimed;
+    address public holder;
 
-    uint public UNDERLYING_PER_POOL_EXCHANGE_RATE;
+    uint public underlyingPerPoolExchangeRate;
 
-    address public AELIN_POOL_ADDRESS;
-    uint public VESTING_CLIFF;
-    uint public VESTING_PERIOD;
-    uint public VESTING_EXPIRY;
+    address public aelinPool;
+    uint public vestingCliff;
+    uint public vestingPeriod;
+    uint public vestingExpiry;
 
-    uint public PRO_RATA_REDEMPTION_PERIOD;
-    uint public PRO_RATA_REDEMPTION_START;
-    uint public PRO_RATA_REDEMPTION_EXPIRY;
+    uint public proRataRedemptionPeriod;
+    uint public proRataRedemptionStart;
+    uint public proRataRedemptionExpiry;
 
-    uint public OPEN_REDEMPTION_PERIOD;
-    uint public OPEN_REDEMPTION_START;
-    uint public OPEN_REDEMPTION_EXPIRY;
+    uint public openRedemptionPeriod;
+    uint public openRedemptionStart;
+    uint public openRedemptionExpiry;
     
-    bool public CALLED_INITIALIZE = false;
-    bool public DEPOSIT_COMPLETE = false;
+    bool public calledInitialize;
+    bool public depositComplete;
 
     constructor () {}
     
     function initialize (
         string memory _name, 
         string memory _symbol, 
-        address _underlying_deal_token,
-        uint _underlying_deal_token_total,
-        uint _vesting_period, 
-        uint _vesting_cliff,
-        uint _pro_rata_redemption_period,
-        uint _open_redemption_period,
+        address _underlyingDealToken,
+        uint _underlyingDealTokenTotal,
+        uint _vestingPeriod, 
+        uint _vestingCliff,
+        uint _proRataRedemptionPeriod,
+        uint _openRedemptionPeriod,
         address _holder,
-        uint _pool_token_max_purchase_amount
+        uint _poolTokenMaxPurchaseAmount
     ) external initOnce {
         _setNameAndSymbol(
             string(abi.encodePacked("aeDeal-", _name)),
             string(abi.encodePacked("aeD-", _symbol))
         );
 
-        HOLDER = _holder;
-        UNDERLYING_DEAL_TOKEN = _underlying_deal_token;
-        UNDERLYING_DEAL_TOKEN_DECIMALS = IERC20(_underlying_deal_token).decimals();
-        UNDERLYING_DEAL_TOKENS_TOTAL = _underlying_deal_token_total;
-        MAX_TOTAL_SUPPLY = _pool_token_max_purchase_amount;
+        holder = _holder;
+        underlyingDealToken = _underlyingDealToken;
+        underlyingDealTokenDecimals = IERC20(_underlyingDealToken).decimals();
+        underlyingDealTokenTotal = _underlyingDealTokenTotal;
+        maxTotalSupply = _poolTokenMaxPurchaseAmount;
         
-        AELIN_POOL_ADDRESS = msg.sender;
-        VESTING_CLIFF = block.timestamp + _pro_rata_redemption_period + _open_redemption_period + _vesting_cliff;
-        VESTING_PERIOD = _vesting_period;
-        VESTING_EXPIRY = VESTING_CLIFF + _vesting_period;
-        PRO_RATA_REDEMPTION_PERIOD = _pro_rata_redemption_period;
-        OPEN_REDEMPTION_PERIOD = _open_redemption_period;
+        aelinPool = msg.sender;
+        vestingCliff = block.timestamp + _proRataRedemptionPeriod + _openRedemptionPeriod + _vestingCliff;
+        vestingPeriod = _vestingPeriod;
+        vestingExpiry = vestingCliff + _vestingPeriod;
+        proRataRedemptionPeriod = _proRataRedemptionPeriod;
+        openRedemptionPeriod = _openRedemptionPeriod;
 
-        CALLED_INITIALIZE = true;
-        DEPOSIT_COMPLETE = false;
+        calledInitialize = true;
+        depositComplete = false;
 
-        // calculate the amount of underlying deal tokens you get per wrapped pool token accepted
-        // NOTE 1 wrapped pool token = 1 wrapped deal token
-        UNDERLYING_PER_POOL_EXCHANGE_RATE = _underlying_deal_token_total * 1e18 / _pool_token_max_purchase_amount;
+        // NOTE calculate the amount of underlying deal tokens you get per wrapped pool token accepted
+        // Also, 1 wrapped pool token = 1 wrapped deal token
+        underlyingPerPoolExchangeRate = _underlyingDealTokenTotal * 1e18 / _poolTokenMaxPurchaseAmount;
     }
 
     modifier initOnce () {
-        require(CALLED_INITIALIZE == false, "can only initialize once");
+        require(calledInitialize == false, "can only initialize once");
         _;
     }
 
     modifier finalizeDepositOnce () {
-        require(DEPOSIT_COMPLETE == false, "deposit already complete");
+        require(depositComplete == false, "deposit already complete");
         _;
     }
 
     // NOTE if the deposit was completed with a transfer instead of this method, 
     // the deposit can be finalized by calling this method with amount 0;
-    function depositUnderlying(uint _underlying_deal_token_amount) external finalizeDepositOnce returns (bool) {
-        if (IERC20(UNDERLYING_DEAL_TOKEN).balanceOf(address(this)) + _underlying_deal_token_amount >= UNDERLYING_DEAL_TOKENS_TOTAL) {
-            DEPOSIT_COMPLETE = true;
+    function depositUnderlying(uint _underlyingDealTokenAmount) external finalizeDepositOnce returns (bool) {
+        if (IERC20(underlyingDealToken).balanceOf(address(this)) + _underlyingDealTokenAmount >= underlyingDealTokenTotal) {
+            depositComplete = true;
         }
-        if (_underlying_deal_token_amount > 0) {
-            _safeTransferFrom(UNDERLYING_DEAL_TOKEN, msg.sender, address(this), _underlying_deal_token_amount);
-            emit DepositDealTokens(UNDERLYING_DEAL_TOKEN, msg.sender, address(this), _underlying_deal_token_amount);
+        if (_underlyingDealTokenAmount > 0) {
+            _safeTransferFrom(underlyingDealToken, msg.sender, address(this), _underlyingDealTokenAmount);
+            emit DepositDealTokens(underlyingDealToken, msg.sender, address(this), _underlyingDealTokenAmount);
         }
-        if (DEPOSIT_COMPLETE == true) {
-            PRO_RATA_REDEMPTION_START = block.timestamp;
-            PRO_RATA_REDEMPTION_EXPIRY = block.timestamp + PRO_RATA_REDEMPTION_PERIOD;
+        if (depositComplete == true) {
+            proRataRedemptionStart = block.timestamp;
+            proRataRedemptionExpiry = block.timestamp + proRataRedemptionPeriod;
 
-            if (OPEN_REDEMPTION_PERIOD > 0) {
-                OPEN_REDEMPTION_START = PRO_RATA_REDEMPTION_EXPIRY;
-                OPEN_REDEMPTION_EXPIRY = PRO_RATA_REDEMPTION_EXPIRY + OPEN_REDEMPTION_PERIOD;
+            if (openRedemptionPeriod > 0) {
+                openRedemptionStart = proRataRedemptionExpiry;
+                openRedemptionExpiry = proRataRedemptionExpiry + openRedemptionPeriod;
             }
             emit DealFullyFunded(
-                AELIN_POOL_ADDRESS,
+                aelinPool,
                 address(this),
-                PRO_RATA_REDEMPTION_START,
-                PRO_RATA_REDEMPTION_EXPIRY,
-                OPEN_REDEMPTION_START,
-                OPEN_REDEMPTION_EXPIRY
+                proRataRedemptionStart,
+                proRataRedemptionExpiry,
+                openRedemptionStart,
+                openRedemptionExpiry
             );
             return true;
         }
@@ -114,44 +114,49 @@ contract AelinDeal is AelinERC20 {
 
     // @NOTE the holder can withdraw any amount accidentally deposited over the amount needed to fulfill the deal
     function withdraw() external onlyHolder {
-        uint withdraw_amount = IERC20(UNDERLYING_DEAL_TOKEN).balanceOf(address(this)) - UNDERLYING_DEAL_TOKENS_TOTAL - TOTAL_UNDERLYING_CLAIMED;
-        _safeTransfer(UNDERLYING_DEAL_TOKEN, HOLDER, withdraw_amount);
-        emit WithdrawUnderlyingDealTokens(UNDERLYING_DEAL_TOKEN, HOLDER, address(this), withdraw_amount);
+        uint withdrawAmount = IERC20(underlyingDealToken).balanceOf(address(this)) - underlyingDealTokenTotal - totalUnderlyingClaimed;
+        _safeTransfer(underlyingDealToken, holder, withdrawAmount);
+        emit WithdrawUnderlyingDealTokens(underlyingDealToken, holder, address(this), withdrawAmount);
     }
 
     function withdrawExpiry() external onlyHolder {
-        require(PRO_RATA_REDEMPTION_EXPIRY > 0, "redemption period not started");
-        require(OPEN_REDEMPTION_EXPIRY > 0 ? block.timestamp > OPEN_REDEMPTION_EXPIRY : block.timestamp > PRO_RATA_REDEMPTION_EXPIRY, "redeem window still active");
-        uint withdraw_amount = IERC20(UNDERLYING_DEAL_TOKEN).balanceOf(address(this)) - (UNDERLYING_PER_POOL_EXCHANGE_RATE * totalSupply / 1e18);
-        _safeTransfer(UNDERLYING_DEAL_TOKEN, HOLDER, withdraw_amount);
-        emit WithdrawUnderlyingDealTokens(UNDERLYING_DEAL_TOKEN, HOLDER, address(this), withdraw_amount);
+        require(proRataRedemptionExpiry > 0, "redemption period not started");
+        require(
+            openRedemptionExpiry > 0 ?
+                block.timestamp > openRedemptionExpiry :
+                block.timestamp > proRataRedemptionExpiry,
+            "redeem window still active"
+        );
+        uint withdrawAmount = IERC20(underlyingDealToken).balanceOf(address(this)) - (underlyingPerPoolExchangeRate * totalSupply / 1e18);
+        _safeTransfer(underlyingDealToken, holder, withdrawAmount);
+        emit WithdrawUnderlyingDealTokens(underlyingDealToken, holder, address(this), withdrawAmount);
     }
     
     modifier onlyHolder() {
-        require(msg.sender == HOLDER, "only holder can access");
+        require(msg.sender == holder, "only holder can access");
         _;
     }
     
     modifier onlyPool() {
-        require(msg.sender == AELIN_POOL_ADDRESS, "only AelinPool can access");
+        require(msg.sender == aelinPool, "only AelinPool can access");
         _;
     }
     
     mapping(address => uint) public lastClaim;
     
     function underlyingDealTokensClaimable(address purchaser) external view returns (uint) {
-        uint max_time = block.timestamp > VESTING_EXPIRY ? VESTING_EXPIRY : block.timestamp;
-        if (max_time > VESTING_CLIFF || (max_time == VESTING_CLIFF && VESTING_PERIOD == 0 && lastClaim[purchaser] == 0)) {
-            uint last_claimed = lastClaim[purchaser];
-            if (last_claimed == 0) {
-                last_claimed = VESTING_CLIFF;
+        uint maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        if (maxTime > vestingCliff || (maxTime == vestingCliff && vestingPeriod == 0 && lastClaim[purchaser] == 0)) {
+            uint lastClaimed = lastClaim[purchaser];
+            if (lastClaimed == 0) {
+                lastClaimed = vestingCliff;
             }
-            if (last_claimed >= max_time && VESTING_PERIOD != 0) {
+            if (lastClaimed >= maxTime && vestingPeriod != 0) {
                 return 0;
             } else {
-                uint time_elapsed = max_time - last_claimed;
-                uint deal_tokens_claimable = VESTING_PERIOD == 0 ? balanceOf[purchaser] : balanceOf[purchaser] * time_elapsed / VESTING_PERIOD;
-                return UNDERLYING_PER_POOL_EXCHANGE_RATE * deal_tokens_claimable / 1e18;
+                uint timeElapsed = maxTime - lastClaimed;
+                uint dealTokensClaimable = vestingPeriod == 0 ? balanceOf[purchaser] : balanceOf[purchaser] * timeElapsed / vestingPeriod;
+                return underlyingPerPoolExchangeRate * dealTokensClaimable / 1e18;
             }
         } else {
             return 0;
@@ -166,26 +171,24 @@ contract AelinDeal is AelinERC20 {
         _claim(msg.sender, recipient);
     }
     
-    function _claim(address from, address recipient) internal returns (uint deal_tokens_claimed) {
-
-        if (balanceOf[from] > 0) {
-            uint max_time = block.timestamp > VESTING_EXPIRY ? VESTING_EXPIRY : block.timestamp;
-            if (max_time > VESTING_CLIFF || (max_time == VESTING_CLIFF && VESTING_PERIOD == 0 && lastClaim[from] == 0)) {
-                if (lastClaim[from] == 0) {
-                    lastClaim[from] = VESTING_CLIFF;
-                }
-                uint time_elapsed = max_time - lastClaim[from];
-                uint deal_tokens_claimed = VESTING_PERIOD == 0 ? balanceOf[from] : balanceOf[from] * time_elapsed / VESTING_PERIOD;
-                uint underlying_deal_tokens_claimed = UNDERLYING_PER_POOL_EXCHANGE_RATE * deal_tokens_claimed / 1e18;
-
-                if (deal_tokens_claimed > 0) {
-                    _burn(from, deal_tokens_claimed);
-                    _safeTransfer(UNDERLYING_DEAL_TOKEN, recipient, underlying_deal_tokens_claimed);
-                    TOTAL_UNDERLYING_CLAIMED += underlying_deal_tokens_claimed;
-                    emit ClaimedUnderlyingDealTokens(UNDERLYING_DEAL_TOKEN, from, recipient, underlying_deal_tokens_claimed);
-                }
-                lastClaim[from] = max_time;
+    function _claim(address from, address recipient) internal returns (uint dealTokensClaimed) {
+        require(balanceOf[from] > 0, "nothing to claim");
+        uint maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        if (maxTime > vestingCliff || (maxTime == vestingCliff && vestingPeriod == 0 && lastClaim[from] == 0)) {
+            if (lastClaim[from] == 0) {
+                lastClaim[from] = vestingCliff;
             }
+            uint timeElapsed = maxTime - lastClaim[from];
+            uint dealTokensClaimed = vestingPeriod == 0 ? balanceOf[from] : balanceOf[from] * timeElapsed / vestingPeriod;
+            uint underlyingDealTokensClaimed = underlyingPerPoolExchangeRate * dealTokensClaimed / 1e18;
+
+            if (dealTokensClaimed > 0) {
+                _burn(from, dealTokensClaimed);
+                _safeTransfer(underlyingDealToken, recipient, underlyingDealTokensClaimed);
+                totalUnderlyingClaimed += underlyingDealTokensClaimed;
+                emit ClaimedUnderlyingDealTokens(underlyingDealToken, from, recipient, underlyingDealTokensClaimed);
+            }
+            lastClaim[from] = maxTime;
         }
     }
     
@@ -199,14 +202,12 @@ contract AelinDeal is AelinERC20 {
         return true;
     }
 
-    // from a to b with amount
     function transferFrom(address src, address dst, uint amount) external override returns (bool) {
         address spender = msg.sender;
         uint spenderAllowance = allowance[src][spender];
 
         if (spender != src && spenderAllowance != type(uint).max) {
             uint newAllowance = spenderAllowance - amount;
-            // NOTE does the newAllowance have to be greater than 0 or else the transaction will fail? Do we need to add a check for that?
             allowance[src][spender] = newAllowance;
 
             emit Approval(src, spender, newAllowance);
@@ -221,12 +222,12 @@ contract AelinDeal is AelinERC20 {
     // accurate after the transfer. you also need to check the latest balance after the initial
     // claim to make sure that you don't send more than you have left after claiming.
     function _transferTokens(address src, address dst, uint amount) internal override {
+        require(balanceOf[src] >= amount, "not enough to transfer");
         _claim(src, src);
-        uint transfer_amount = balanceOf[src] > amount ? balanceOf[src] : amount;
         _claim(dst, dst);
-        balanceOf[dst] += transfer_amount;
+        balanceOf[dst] += amount;
         
-        emit Transfer(src, dst, transfer_amount);
+        emit Transfer(src, dst, amount);
     }
 
     event DealFullyFunded(address indexed poolAddress, address indexed dealAddress, uint proRataRedemptionStart, uint proRataRedemptionExpiry, uint openRedemptionStart, uint openRedemptionExpiry);

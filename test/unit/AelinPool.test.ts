@@ -6,7 +6,6 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import ERC20Artifact from "../../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json";
 import AelinPoolArtifact from "../../artifacts/contracts/AelinPool.sol/AelinPool.json";
 import { AelinPool } from "../../typechain";
-import { BigNumber } from "ethers";
 
 const { deployContract, deployMockContract } = waffle;
 
@@ -157,22 +156,20 @@ describe("AelinPool", function () {
 
       expect(await aelinPool.name()).to.equal(aelinPoolName);
       expect(await aelinPool.symbol()).to.equal(aelinPoolSymbol);
-      expect(await aelinPool.PURCHASE_TOKEN_CAP()).to.equal(purchaseTokenCap);
-      expect(await aelinPool.PURCHASE_TOKEN()).to.equal(purchaseToken.address);
-      expect(await aelinPool.PURCHASE_TOKEN_DECIMALS()).to.equal(
+      expect(await aelinPool.purchaseTokenCap()).to.equal(purchaseTokenCap);
+      expect(await aelinPool.purchaseToken()).to.equal(purchaseToken.address);
+      expect(await aelinPool.purchaseTokenDecimals()).to.equal(
         purchaseTokenDecimals
       );
-      expect(await aelinPool.SPONSOR_FEE()).to.equal(sponsorFee);
-      expect(await aelinPool.SPONSOR()).to.equal(sponsor.address);
+      expect(await aelinPool.sponsorFee()).to.equal(sponsorFee);
+      expect(await aelinPool.sponsor()).to.equal(sponsor.address);
 
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
       const expectedPoolExpiry = timestamp + duration;
-      expect(await aelinPool.POOL_EXPIRY()).to.equal(expectedPoolExpiry);
+      expect(await aelinPool.poolExpiry()).to.equal(expectedPoolExpiry);
 
       const expectedPurchaseExpiry = timestamp + purchaseExpiry;
-      expect(await aelinPool.PURCHASE_EXPIRY()).to.equal(
-        expectedPurchaseExpiry
-      );
+      expect(await aelinPool.purchaseExpiry()).to.equal(expectedPurchaseExpiry);
 
       const [log] = await aelinPool.queryFilter(aelinPool.filters.SetSponsor());
       expect(log.args.sponsor).to.equal(sponsor.address);
@@ -270,15 +267,15 @@ describe("AelinPool", function () {
       const tx = await createDealWithValidParams();
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
 
-      expect(await aelinPool.POOL_EXPIRY()).to.equal(timestamp);
-      expect(await aelinPool.HOLDER()).to.equal(holder.address);
+      expect(await aelinPool.poolExpiry()).to.equal(timestamp);
+      expect(await aelinPool.holder()).to.equal(holder.address);
 
       const expectedProRataResult = (
         (dealPurchaseTokenTotalBase / userPurchaseBaseAmt) *
         10 ** 18
       ).toString();
 
-      expect(await aelinPool.PRO_RATA_CONVERSION()).to.equal(
+      expect(await aelinPool.proRataConversion()).to.equal(
         expectedProRataResult
       );
 
@@ -336,14 +333,14 @@ describe("AelinPool", function () {
     });
     it("should change the sponsor only after the new sponsor is accepted", async function () {
       await aelinPool.connect(sponsor).setSponsor(user1.address);
-      expect(await aelinPool.SPONSOR()).to.equal(sponsor.address);
+      expect(await aelinPool.sponsor()).to.equal(sponsor.address);
 
       await expect(
         aelinPool.connect(sponsor).acceptSponsor()
       ).to.be.revertedWith("only future sponsor can access");
       await aelinPool.connect(user1).acceptSponsor();
 
-      expect(await aelinPool.SPONSOR()).to.equal(user1.address);
+      expect(await aelinPool.sponsor()).to.equal(user1.address);
       const [log] = await aelinPool.queryFilter(aelinPool.filters.SetSponsor());
       expect(log.args.sponsor).to.equal(sponsor.address);
     });
