@@ -474,14 +474,17 @@ describe("integration test", () => {
     expect(await aaveContract.balanceOf(user1.address)).to.not.equal(0);
     expect(await aaveContract.balanceOf(user2.address)).to.not.equal(0);
     expect(await aaveContract.balanceOf(user3.address)).to.equal(0);
-    expect(await aaveContract.balanceOf(user4.address)).to.not.equal(0);
+    expect(await aaveContract.balanceOf(user4.address)).to.equal(0);
     expect(await aaveContract.balanceOf(user5.address)).to.not.equal(0);
 
-    expect(await aaveContract.balanceOf(user2.address)).to.equal(
+    expect(await aaveContract.balanceOf(user1.address)).to.equal(
       logs[0].args.underlyingDealTokensClaimed
     );
-    expect(await aaveContract.balanceOf(user5.address)).to.equal(
+    expect(await aaveContract.balanceOf(user2.address)).to.equal(
       logs[1].args.underlyingDealTokensClaimed
+    );
+    expect(await aaveContract.balanceOf(user5.address)).to.equal(
+      logs[2].args.underlyingDealTokensClaimed
     );
   });
 });

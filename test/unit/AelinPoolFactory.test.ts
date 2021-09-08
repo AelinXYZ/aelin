@@ -23,10 +23,10 @@ describe("AelinPoolFactory", function () {
       signers[0],
       AelinDealArtifact.abi
     );
-    const aelinPoolLogic = await deployMockContract(
-      signers[0],
-      AelinPoolArtifact.abi
-    );
+    // NOTE that the test will fail if this is a mock contract due to the
+    // minimal proxy and initialize pattern. Technically this sort of
+    // makes this an integration test but I am leaving it since it adds value
+    const aelinPoolLogic = await deployContract(signers[0], AelinPoolArtifact);
     await purchaseToken.mock.decimals.returns(6);
     const aelinPoolFactory = (await deployContract(
       signers[0],

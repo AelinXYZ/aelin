@@ -420,9 +420,6 @@ describe("AelinDeal", function () {
           .withArgs(purchaser.address, expectedClaimUnderlying)
           .returns(true);
 
-        await expect(
-          aelinDeal.connect(deployer).claim(sponsor.address)
-        ).to.be.revertedWith("nothing to claim");
         await aelinDeal.connect(purchaser).claim(purchaser.address);
 
         const [log] = await aelinDeal.queryFilter(
@@ -431,35 +428,7 @@ describe("AelinDeal", function () {
         expect(log.args.underlyingDealTokenAddress).to.equal(
           underlyingDealToken.address
         );
-        expect(log.args.from).to.equal(purchaser.address);
         expect(log.args.recipient).to.equal(purchaser.address);
-        expect(log.args.underlyingDealTokensClaimed).to.equal(
-          expectedClaimUnderlying
-        );
-
-        expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
-      });
-
-      it("should allow the purchaser to claim and allocate their fully vested tokens only once", async function () {
-        await fundDealAndMintTokens();
-        // wait for redemption period and the vesting period to end
-        await ethers.provider.send("evm_increaseTime", [redemptionEnd + 1]);
-        await ethers.provider.send("evm_mine", []);
-
-        await underlyingDealToken.mock.transfer
-          .withArgs(deployer.address, expectedClaimUnderlying)
-          .returns(true);
-
-        await aelinDeal.connect(purchaser).claim(deployer.address);
-
-        const [log] = await aelinDeal.queryFilter(
-          aelinDeal.filters.ClaimedUnderlyingDealTokens()
-        );
-        expect(log.args.underlyingDealTokenAddress).to.equal(
-          underlyingDealToken.address
-        );
-        expect(log.args.from).to.equal(purchaser.address);
-        expect(log.args.recipient).to.equal(deployer.address);
         expect(log.args.underlyingDealTokensClaimed).to.equal(
           expectedClaimUnderlying
         );
@@ -490,7 +459,6 @@ describe("AelinDeal", function () {
         expect(log.args.underlyingDealTokenAddress).to.equal(
           underlyingDealToken.address
         );
-        expect(log.args.from).to.equal(purchaser.address);
         expect(log.args.recipient).to.equal(purchaser.address);
         expect(log.args.underlyingDealTokensClaimed).to.equal(
           partiallyExpectedClaimUnderlying
@@ -520,7 +488,6 @@ describe("AelinDeal", function () {
         expect(claimLog.args.underlyingDealTokenAddress).to.equal(
           underlyingDealToken.address
         );
-        expect(claimLog.args.from).to.equal(purchaser.address);
         expect(claimLog.args.recipient).to.equal(purchaser.address);
         expect(claimLog.args.underlyingDealTokensClaimed).to.equal(
           expectedClaimUnderlying
@@ -575,7 +542,6 @@ describe("AelinDeal", function () {
           underlyingDealToken.address
         );
 
-        expect(claimLog.args.from).to.equal(purchaser.address);
         expect(claimLog.args.recipient).to.equal(purchaser.address);
         expect(claimLog.args.underlyingDealTokensClaimed).to.equal(
           expectedClaimUnderlying
@@ -689,7 +655,6 @@ describe("AelinDeal", function () {
       expect(log.args.underlyingDealTokenAddress).to.equal(
         underlyingDealToken.address
       );
-      expect(log.args.from).to.equal(purchaser.address);
       expect(log.args.recipient).to.equal(purchaser.address);
       expect(log.args.underlyingDealTokensClaimed).to.equal(
         expectedClaimUnderlying

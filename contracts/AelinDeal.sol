@@ -163,28 +163,25 @@ contract AelinDeal is AelinERC20 {
         }
     }
     
-    function claim(address from) external {
-        _claim(from, from);
-    }
-    
-    function _claim(address from, address recipient) internal returns (uint dealTokensClaimed) {
-        require(balanceOf[from] > 0, "nothing to claim");
-        uint maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
-        if (maxTime > vestingCliff || (maxTime == vestingCliff && vestingPeriod == 0 && lastClaim[from] == 0)) {
-            if (lastClaim[from] == 0) {
-                lastClaim[from] = vestingCliff;
-            }
-            uint timeElapsed = maxTime - lastClaim[from];
-            uint dealTokensClaimed = vestingPeriod == 0 ? balanceOf[from] : balanceOf[from] * timeElapsed / vestingPeriod;
-            uint underlyingDealTokensClaimed = underlyingPerPoolExchangeRate * dealTokensClaimed / 1e18;
+    function claim(address recipient) public returns (uint dealTokensClaimed) {
+        if (balanceOf[recipient] > 0) {
+            uint maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+            if (maxTime > vestingCliff || (maxTime == vestingCliff && vestingPeriod == 0 && lastClaim[recipient] == 0)) {
+                if (lastClaim[recipient] == 0) {
+                    lastClaim[recipient] = vestingCliff;
+                }
+                uint timeElapsed = maxTime - lastClaim[recipient];
+                uint dealTokensClaimed = vestingPeriod == 0 ? balanceOf[recipient] : balanceOf[recipient] * timeElapsed / vestingPeriod;
+                uint underlyingDealTokensClaimed = underlyingPerPoolExchangeRate * dealTokensClaimed / 1e18;
 
-            if (dealTokensClaimed > 0) {
-                _burn(from, dealTokensClaimed);
-                _safeTransfer(underlyingDealToken, recipient, underlyingDealTokensClaimed);
-                totalUnderlyingClaimed += underlyingDealTokensClaimed;
-                emit ClaimedUnderlyingDealTokens(underlyingDealToken, from, recipient, underlyingDealTokensClaimed);
+                if (dealTokensClaimed > 0) {
+                    _burn(recipient, dealTokensClaimed);
+                    _safeTransfer(underlyingDealToken, recipient, underlyingDealTokensClaimed);
+                    totalUnderlyingClaimed += underlyingDealTokensClaimed;
+                    emit ClaimedUnderlyingDealTokens(underlyingDealToken, recipient, underlyingDealTokensClaimed);
+                }
+                lastClaim[recipient] = maxTime;
             }
-            lastClaim[from] = maxTime;
         }
     }
     
@@ -220,8 +217,8 @@ contract AelinDeal is AelinERC20 {
     // claim to make sure that you don't send more than you have left after claiming.
     function _transferTokens(address src, address dst, uint amount) internal override {
         require(balanceOf[src] >= amount, "not enough to transfer");
-        _claim(src, src);
-        _claim(dst, dst);
+        claim(src);
+        claim(dst);
         balanceOf[dst] += amount;
         
         emit Transfer(src, dst, amount);
@@ -230,6 +227,6 @@ contract AelinDeal is AelinERC20 {
     event DealFullyFunded(address indexed poolAddress, address indexed dealAddress, uint proRataRedemptionStart, uint proRataRedemptionExpiry, uint openRedemptionStart, uint openRedemptionExpiry);
     event DepositDealTokens(address indexed underlyingDealTokenAddress, address indexed depositor, address indexed dealContract, uint underlyingDealTokenAmount);
     event WithdrawUnderlyingDealTokens(address indexed underlyingDealTokenAddress, address indexed depositor, address indexed dealContract, uint underlyingDealTokenAmount);
-    event ClaimedUnderlyingDealTokens(address indexed underlyingDealTokenAddress, address indexed from, address indexed recipient, uint underlyingDealTokensClaimed);
+    event ClaimedUnderlyingDealTokens(address indexed underlyingDealTokenAddress, address indexed recipient, uint underlyingDealTokensClaimed);
     event MintDealTokens(address indexed dealContract, address indexed recipient, uint dealTokenAmount);
 }
