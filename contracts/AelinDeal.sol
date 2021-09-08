@@ -162,9 +162,8 @@ contract AelinDeal is AelinERC20 {
         _claim(from, from);
     }
     
-    function claimAndAllocate(address from, address recipient) external {
-        require(from == msg.sender, "only claimant can allocate");
-        _claim(from, recipient);
+    function claimAndAllocate(address recipient) external {
+        _claim(msg.sender, recipient);
     }
     
     function _claim(address from, address recipient) internal returns (uint deal_tokens_claimed) {

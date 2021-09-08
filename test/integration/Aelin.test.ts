@@ -454,9 +454,7 @@ describe("integration test", () => {
     expect(await aaveContract.balanceOf(user4.address)).to.equal(0);
     expect(await aaveContract.balanceOf(user5.address)).to.equal(0);
 
-    await aelinDeal
-      .connect(user1)
-      .claimAndAllocate(user1.address, user2.address);
+    await aelinDeal.connect(user1).claimAndAllocate(user2.address);
     await aelinDeal.connect(user4).claim(user5.address);
 
     const logs = await aelinDeal.queryFilter(
