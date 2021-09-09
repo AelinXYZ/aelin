@@ -76,6 +76,12 @@ Arguments:
 - `uint _proRataRedemptionPeriod` the time a purchaser has to redeem their pro rata share of the deal. E.g. if the `_purchaseTokenTotalForDeal` is only 8M sUSD but the pool has 10M sUSD (4:5) in it then for every $1 the purchaser invested they get to redeem $0.80 for deal tokens during this period. If the proRataConversion rate is 1:1 there is no open redemption period
 - `uint _openRedemptionPeriod` is a period after the `_proRataRedemptionPeriod` when anyone who maxxed out their redemption in the `_proRataRedemptionPeriod` can use their remaining purchase tokens to buy any leftover deal tokens if some other purchasers did not redeem some or all of their pool tokens for deal tokens
 
+Requirements:
+
+- the `block.timestamp >= purchaseExpiry` (revert)
+- the `_proRataRedemptionPeriod` must be >= 30 minutes and <= 30 days (revert)
+- the `_purchaseTokenTotalForDeal` converted to 18 decimals must be <= totalSupply of pool tokens (revert)
+
 NOTE the sponsor journey has ended. From here the next step is `HOLDER step 1`
 
 **`EXTRA_METHODS`**: only the sponsor may also call `setSponsor()` followed by `acceptSponsor()` from the new address at any time to update the sponsor address for a deal

@@ -148,6 +148,22 @@ describe("AelinPool", function () {
       ).to.be.revertedWith("outside purchase expiry window");
     });
 
+    it("should revert if purchase expiry greater than 30 days", async function () {
+      await expect(
+        aelinPool.initialize(
+          name,
+          symbol,
+          purchaseTokenCap,
+          purchaseToken.address,
+          duration,
+          sponsorFee,
+          sponsor.address,
+          30 * 24 * 60 * 60 + 1, // 1 second more than 30 days
+          aelinDealLogic.address
+        )
+      ).to.be.revertedWith("outside purchase expiry window");
+    });
+
     it("should revert if sponsor fee is too high", async function () {
       await expect(
         aelinPool.initialize(
@@ -206,7 +222,7 @@ describe("AelinPool", function () {
           underlyingDealTokenTotal,
           vestingPeriod,
           vestingCliff,
-          proRataRedemptionPeriod, // 1 second less than minimum
+          proRataRedemptionPeriod,
           openRedemptionPeriod,
           holder.address
         )
@@ -229,7 +245,26 @@ describe("AelinPool", function () {
           openRedemptionPeriod,
           holder.address
         )
-      ).to.be.revertedWith("30 mins is min prorata period");
+      ).to.be.revertedWith("30 mins - 30 days for prorata");
+    });
+
+    it("should revert if redemption period is too long", async function () {
+      await successfullyInitializePool();
+      await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await expect(
+        aelinPool.createDeal(
+          underlyingDealToken.address,
+          purchaseTokenTotalForDeal,
+          underlyingDealTokenTotal,
+          vestingPeriod,
+          vestingCliff,
+          30 * 24 * 60 * 60 + 1, // 1 second more than 30 days
+          openRedemptionPeriod,
+          holder.address
+        )
+      ).to.be.revertedWith("30 mins - 30 days for prorata");
     });
 
     it("should revert if the pool has no purchase tokens", async function () {
@@ -279,6 +314,84 @@ describe("AelinPool", function () {
             holder.address
           )
       ).to.be.revertedWith("only sponsor can access");
+    });
+
+    it("should fail when the open redemption period is too short", async function () {
+      // setup so that a user can purchase pool tokens
+      await purchaseToken.mock.balanceOf
+        .withArgs(user1.address)
+        .returns(userPurchaseAmt);
+
+      await purchaseToken.mock.transferFrom
+        .withArgs(user1.address, aelinPool.address, userPurchaseAmt)
+        .returns(true);
+
+      await purchaseToken.mock.balanceOf
+        .withArgs(aelinPool.address)
+        .returns(userPurchaseAmt);
+
+      await successfullyInitializePool();
+      await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
+      await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await purchaseToken.mock.balanceOf
+        .withArgs(aelinPool.address)
+        .returns(purchaseTokenTotalForDeal.add(1));
+
+      await expect(
+        aelinPool.connect(sponsor).createDeal(
+          underlyingDealToken.address,
+          purchaseTokenTotalForDeal,
+          underlyingDealTokenTotal,
+          vestingPeriod,
+          vestingCliff,
+          proRataRedemptionPeriod,
+          openRedemptionPeriod - 2, // 1 second less than minimum
+          holder.address
+        )
+      ).to.be.revertedWith("30 mins is min open period");
+    });
+
+    it("should fail when the open redemption period is set when the totalSupply equals the deal purchase amount", async function () {
+      // setup so that a user can purchase pool tokens
+      await purchaseToken.mock.balanceOf
+        .withArgs(user1.address)
+        .returns(userPurchaseAmt);
+
+      await purchaseToken.mock.transferFrom
+        .withArgs(user1.address, aelinPool.address, userPurchaseAmt)
+        .returns(true);
+
+      await purchaseToken.mock.balanceOf
+        .withArgs(aelinPool.address)
+        .returns(userPurchaseAmt);
+
+      await successfullyInitializePool();
+      await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
+      await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      // note it doesn't check the balanceOf so no one can mess with the logic by sending
+      // small amounts of tokens
+      await purchaseToken.mock.balanceOf
+        .withArgs(aelinPool.address)
+        .returns(purchaseTokenTotalForDeal.add(1));
+
+      await expect(
+        aelinPool
+          .connect(sponsor)
+          .createDeal(
+            underlyingDealToken.address,
+            userPurchaseAmt,
+            underlyingDealTokenTotal,
+            vestingPeriod,
+            vestingCliff,
+            proRataRedemptionPeriod,
+            openRedemptionPeriod,
+            holder.address
+          )
+      ).to.be.revertedWith("deal is 1:1, set open to 0");
     });
 
     it("should successfully create a deal", async function () {
@@ -381,8 +494,11 @@ describe("AelinPool", function () {
       await aelinPool.connect(user1).acceptSponsor();
 
       expect(await aelinPool.sponsor()).to.equal(user1.address);
-      const [log] = await aelinPool.queryFilter(aelinPool.filters.SetSponsor());
+      const [log, log2] = await aelinPool.queryFilter(
+        aelinPool.filters.SetSponsor()
+      );
       expect(log.args.sponsor).to.equal(sponsor.address);
+      expect(log2.args.sponsor).to.equal(user1.address);
     });
   });
 
