@@ -97,8 +97,6 @@ contract AelinERC20 {
     function _transferTokens(address src, address dst, uint amount) internal virtual {
         balanceOf[src] -= amount;
         balanceOf[dst] += amount;
-        // @NOTE I added this here as a security measure although not sure it is needed.
-        require(balanceOf[src] >= 0, "balance cant be negative");
         
         emit Transfer(src, dst, amount);
     }

@@ -174,6 +174,30 @@ describe("AelinDeal", function () {
       await successfullyInitializeDeal();
     });
 
+    describe("changing the holder", function () {
+      it("should fail to let a non holder change the holder", async function () {
+        await expect(
+          aelinDeal.connect(sponsor).setHolder(sponsor.address)
+        ).to.be.revertedWith("only holder can access");
+      });
+      it("should change the holder only after the new holder is accepted", async function () {
+        await aelinDeal.connect(holder).setHolder(sponsor.address);
+        expect(await aelinDeal.holder()).to.equal(holder.address);
+
+        await expect(
+          aelinDeal.connect(holder).acceptHolder()
+        ).to.be.revertedWith("only future holder can access");
+        await aelinDeal.connect(sponsor).acceptHolder();
+
+        expect(await aelinDeal.holder()).to.equal(sponsor.address);
+        const [log, log2] = await aelinDeal.queryFilter(
+          aelinDeal.filters.SetHolder()
+        );
+        expect(log.args.holder).to.equal(holder.address);
+        expect(log2.args.holder).to.equal(sponsor.address);
+      });
+    });
+
     describe("depositUnderlying", function () {
       beforeEach(async () => {
         await underlyingDealToken.mock.balanceOf

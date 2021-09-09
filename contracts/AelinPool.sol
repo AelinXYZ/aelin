@@ -114,7 +114,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         address _holder
     ) external onlySponsor dealNotCreated returns (address) {
         require(block.timestamp >= purchaseExpiry, "pool still in purchase mode");
-        require(30 minutes <= _proRataRedemptionPeriod, "30 mins is min prorata period");
+        require(
+            30 minutes <= _proRataRedemptionPeriod && 30 days >= _proRataRedemptionPeriod,
+            "30 mins - 30 days for prorata"
+        );
         uint poolTokenMaxPurchaseAmount = convertUnderlyingToAelinAmount(
             _purchaseTokenTotalForDeal,
             purchaseTokenDecimals
@@ -260,14 +263,14 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             poolTokenAmount = poolTokenCap - totalSupply;
             purchaseAmount = convertAelinToUnderlyingAmount(poolTokenAmount, purchaseTokenDecimals);
         }
-        uint totalAfterPurchase = totalSupply + poolTokenAmount;
-
+        uint totalPoolAfter = totalSupply + poolTokenAmount;
         require(
-            purchaseTokenCap == 0 ||
-            (!usePartialFill && totalAfterPurchase <= poolTokenCap),
+            purchaseTokenCap == 0 || 
+            !usePartialFill && totalPoolAfter <= poolTokenCap,
             "cap has been exceeded"
         );
-        if (totalAfterPurchase == poolTokenCap) {
+
+        if (totalPoolAfter == poolTokenCap) {
             purchaseExpiry = block.timestamp;
         }
         _safeTransferFrom(purchaseToken, msg.sender, address(this), purchaseAmount);
