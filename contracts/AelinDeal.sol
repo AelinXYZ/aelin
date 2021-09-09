@@ -12,6 +12,7 @@ contract AelinDeal is AelinERC20 {
     uint public underlyingDealTokenTotal;
     uint public totalUnderlyingClaimed;
     address public holder;
+    address public futureHolder;
 
     uint public underlyingPerPoolExchangeRate;
 
@@ -69,6 +70,7 @@ contract AelinDeal is AelinERC20 {
         // NOTE calculate the amount of underlying deal tokens you get per wrapped pool token accepted
         // Also, 1 wrapped pool token = 1 wrapped deal token
         underlyingPerPoolExchangeRate = _underlyingDealTokenTotal * 1e18 / _poolTokenMaxPurchaseAmount;
+        emit SetHolder(_holder);
     }
 
     modifier initOnce () {
@@ -79,6 +81,16 @@ contract AelinDeal is AelinERC20 {
     modifier finalizeDepositOnce () {
         require(depositComplete == false, "deposit already complete");
         _;
+    }
+
+    function setHolder(address _holder) external onlyHolder  {
+        futureHolder = _holder;
+    }
+    
+    function acceptHolder() external {
+        require(msg.sender == futureHolder, "only future holder can access");
+        holder = futureHolder;
+        emit SetHolder(futureHolder);
     }
 
     // NOTE if the deposit was completed with a transfer instead of this method, 
@@ -224,9 +236,31 @@ contract AelinDeal is AelinERC20 {
         emit Transfer(src, dst, amount);
     }
 
-    event DealFullyFunded(address indexed poolAddress, address indexed dealAddress, uint proRataRedemptionStart, uint proRataRedemptionExpiry, uint openRedemptionStart, uint openRedemptionExpiry);
-    event DepositDealTokens(address indexed underlyingDealTokenAddress, address indexed depositor, address indexed dealContract, uint underlyingDealTokenAmount);
-    event WithdrawUnderlyingDealTokens(address indexed underlyingDealTokenAddress, address indexed depositor, address indexed dealContract, uint underlyingDealTokenAmount);
-    event ClaimedUnderlyingDealTokens(address indexed underlyingDealTokenAddress, address indexed recipient, uint underlyingDealTokensClaimed);
+    event SetHolder(address indexed holder);
+    event DealFullyFunded(
+        address indexed poolAddress,
+        address indexed dealAddress,
+        uint proRataRedemptionStart,
+        uint proRataRedemptionExpiry,
+        uint openRedemptionStart,
+        uint openRedemptionExpiry
+    );
+    event DepositDealTokens(
+        address indexed underlyingDealTokenAddress,
+        address indexed depositor,
+        address indexed dealContract,
+        uint underlyingDealTokenAmount
+    );
+    event WithdrawUnderlyingDealTokens(
+        address indexed underlyingDealTokenAddress,
+        address indexed depositor,
+        address indexed dealContract,
+        uint underlyingDealTokenAmount
+    );
+    event ClaimedUnderlyingDealTokens(
+        address indexed underlyingDealTokenAddress,
+        address indexed recipient,
+        uint underlyingDealTokensClaimed
+    );
     event MintDealTokens(address indexed dealContract, address indexed recipient, uint dealTokenAmount);
 }

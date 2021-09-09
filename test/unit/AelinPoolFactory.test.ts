@@ -39,7 +39,7 @@ describe("AelinPoolFactory", function () {
     const purchaseTokenCap = 1000000;
     const duration = 29388523;
     const sponsorFee = 3000;
-    const purchaseExpiry = 9388523;
+    const purchaseExpiry = 30 * 60 + 1; // 30min and 1sec
 
     const result = await aelinPoolFactory
       .connect(sponsor)

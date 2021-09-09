@@ -56,11 +56,15 @@ contract AelinERC20 {
     }
 
     function convertUnderlyingToAelinAmount(uint underlyingAmount, uint underlyingDecimals) pure internal returns (uint) {
-        return underlyingAmount * 10**(18-underlyingDecimals);
+        return underlyingDecimals == decimals ? 
+            underlyingAmount :
+            underlyingAmount * 10**(decimals-underlyingDecimals);
     }
 
     function convertAelinToUnderlyingAmount(uint aelinTokenAmount, uint underlyingDecimals) pure internal returns (uint) {
-        return aelinTokenAmount / 10**(18-underlyingDecimals);
+        return underlyingDecimals == decimals ? 
+            aelinTokenAmount :
+            aelinTokenAmount / 10**(decimals-underlyingDecimals);
     }
 
     function approve(address spender, uint amount) external returns (bool) {
