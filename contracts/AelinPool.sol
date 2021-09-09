@@ -35,7 +35,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
 
     // @TODO update with correct addresses
-    address constant AELIN_REWARDS = 0x0000000000000000000000000000000000000000;
+    // HOW to manage the aelin rewards address???
+    address public AELIN_REWARDS = 0x0000000000000000000000000000000000000000;
 
     constructor () {}
     
@@ -61,7 +62,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         purchaseTokenDecimals = IERC20(_purchaseToken).decimals();
         require(365 days >= _duration, "max 1 year duration");
         poolExpiry = block.timestamp + _duration;
-        require(30 minutes <= _purchaseExpiry, "min 30 minutes purchase expiry");
+        require(30 minutes <= _purchaseExpiry && 30 days >= _purchaseExpiry, "outside purchase expiry window");
         purchaseExpiry = block.timestamp + _purchaseExpiry;
         require(_sponsorFee <= MAX_SPONSOR_FEE, "exceeds max sponsor fee");
         sponsorFee = _sponsorFee;
@@ -112,7 +113,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint _openRedemptionPeriod,
         address _holder
     ) external onlySponsor dealNotCreated returns (address) {
-        // enforce called after purchase expiry??
+        require(block.timestamp >= purchaseExpiry, "pool still in purchase mode");
         require(30 minutes <= _proRataRedemptionPeriod, "30 mins is min prorata period");
         uint poolTokenMaxPurchaseAmount = convertUnderlyingToAelinAmount(
             _purchaseTokenTotalForDeal,
@@ -241,17 +242,37 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         emit AcceptDeal(recipient, address(this), aelinDealStorageProxy, poolTokenAmount, sponsorFee, aelinFee, underlyingToHolderAmt);
     }
 
-    // NOTE you have to enter the precise amount which can get precarious as a deal fills
-    // maybe we should add another method to just take whatever is left?
-    function purchasePoolTokens(uint purchaseTokenAmount) external {
-        require(dealCreated == false && block.timestamp < purchaseExpiry, "not in purchase window");
-        uint poolTokenAmount = convertUnderlyingToAelinAmount(purchaseTokenAmount, purchaseTokenDecimals);
-        uint poolTokenCap = convertUnderlyingToAelinAmount(purchaseTokenCap, purchaseTokenDecimals);
-        require(purchaseTokenCap == 0 || (totalSupply + poolTokenAmount) <= poolTokenCap, "cap has been exceeded");
+    function purchasePoolTokens(uint _purchaseTokenAmount) external {
+        _purchasePoolTokens(_purchaseTokenAmount, false);
+    }
 
-        _safeTransferFrom(purchaseToken, msg.sender, address(this), purchaseTokenAmount);
+    function purchasePoolTokensUpToAmount(uint _purchaseTokenAmount) external {
+        _purchasePoolTokens(_purchaseTokenAmount, true);
+    }
+
+    function _purchasePoolTokens(uint _purchaseTokenAmount, bool usePartialFill) internal {
+        require(dealCreated == false && block.timestamp < purchaseExpiry, "not in purchase window");
+        uint purchaseAmount = _purchaseTokenAmount;
+        uint poolTokenAmount = convertUnderlyingToAelinAmount(purchaseAmount, purchaseTokenDecimals);
+        uint poolTokenCap = convertUnderlyingToAelinAmount(purchaseTokenCap, purchaseTokenDecimals);
+
+        if (usePartialFill && (totalSupply + poolTokenAmount) > poolTokenCap) {
+            poolTokenAmount = poolTokenCap - totalSupply;
+            purchaseAmount = convertAelinToUnderlyingAmount(poolTokenAmount, purchaseTokenDecimals);
+        }
+        uint totalAfterPurchase = totalSupply + poolTokenAmount;
+
+        require(
+            purchaseTokenCap == 0 ||
+            (!usePartialFill && totalAfterPurchase <= poolTokenCap),
+            "cap has been exceeded"
+        );
+        if (totalAfterPurchase == poolTokenCap) {
+            purchaseExpiry = block.timestamp;
+        }
+        _safeTransferFrom(purchaseToken, msg.sender, address(this), purchaseAmount);
         _mint(msg.sender, poolTokenAmount);
-        emit PurchasePoolToken(msg.sender, address(this), purchaseTokenAmount, poolTokenAmount);
+        emit PurchasePoolToken(msg.sender, address(this), purchaseAmount, poolTokenAmount);
     }
 
     function withdrawMaxFromPool() external {
