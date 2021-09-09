@@ -263,14 +263,14 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             poolTokenAmount = poolTokenCap - totalSupply;
             purchaseAmount = convertAelinToUnderlyingAmount(poolTokenAmount, purchaseTokenDecimals);
         }
-        uint totalAfterPurchase = totalSupply + poolTokenAmount;
-
+        uint totalPoolAfter = totalSupply + poolTokenAmount;
         require(
-            purchaseTokenCap == 0 ||
-            (!usePartialFill && totalAfterPurchase <= poolTokenCap),
+            purchaseTokenCap == 0 || 
+            !usePartialFill && totalPoolAfter <= poolTokenCap,
             "cap has been exceeded"
         );
-        if (totalAfterPurchase == poolTokenCap) {
+
+        if (totalPoolAfter == poolTokenCap) {
             purchaseExpiry = block.timestamp;
         }
         _safeTransferFrom(purchaseToken, msg.sender, address(this), purchaseAmount);

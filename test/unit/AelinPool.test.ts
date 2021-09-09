@@ -521,9 +521,6 @@ describe("AelinPool", function () {
 
     it("should successfully purchase pool tokens for the user", async function () {
       const maxPoolPurchase = await aelinPool.maxPoolPurchase();
-      // we are mocking the contract has the user balance already
-      // but since we do the check on the pool token allocation
-      // the user can purchase up to the cap
       expect(maxPoolPurchase).to.equal(purchaseTokenCap);
       await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
       const [log] = await aelinPool.queryFilter(
@@ -550,6 +547,28 @@ describe("AelinPool", function () {
       ).to.be.revertedWith("cap has been exceeded");
     });
 
+    it("should fail when the pool is full and thus the purchase window is expired", async function () {
+      const excess = 100;
+      const maxPoolPurchase = await aelinPool.maxPoolPurchase();
+      await purchaseToken.mock.balanceOf
+        .withArgs(user1.address)
+        .returns(maxPoolPurchase.add(excess));
+
+      await purchaseToken.mock.transferFrom
+        .withArgs(user1.address, aelinPool.address, maxPoolPurchase)
+        .returns(true);
+
+      await purchaseToken.mock.balanceOf
+        .withArgs(aelinPool.address)
+        .returns(maxPoolPurchase);
+
+      expect(maxPoolPurchase).to.equal(purchaseTokenCap);
+      await aelinPool.connect(user1).purchasePoolTokens(purchaseTokenCap);
+      await expect(
+        aelinPool.connect(user1).purchasePoolTokens(excess)
+      ).to.be.revertedWith("not in purchase window");
+    });
+
     it("should fail when the deal has been created", async function () {
       await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
@@ -570,7 +589,36 @@ describe("AelinPool", function () {
         aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt)
       ).to.be.revertedWith("not in purchase window");
     });
-  });
+
+  //   it.only("should purchase a partial amount of tokens using upToAmount", async function () {
+  //     const excess = 100;
+  //     const maxPoolPurchase = await aelinPool.maxPoolPurchase();
+  //     await purchaseToken.mock.balanceOf
+  //       .withArgs(user1.address)
+  //       .returns(maxPoolPurchase.add(excess));
+
+  //     await purchaseToken.mock.transferFrom
+  //       .withArgs(user1.address, aelinPool.address, maxPoolPurchase.sub(1))
+  //       .returns(true);
+
+  //     expect(maxPoolPurchase).to.equal(purchaseTokenCap);
+  //     await aelinPool
+  //       .connect(user1)
+  //       .purchasePoolTokens(purchaseTokenCap.sub(1));
+
+  //     await purchaseToken.mock.transferFrom
+  //       .withArgs(user1.address, aelinPool.address, maxPoolPurchase.sub(1))
+  //       .returns(true);
+
+  //     const secondMaxPoolPurchase = await aelinPool.maxPoolPurchase();
+  //     expect(secondMaxPoolPurchase).to.equal(1);
+  //     await purchaseToken.mock.transferFrom
+  //       .withArgs(user1.address, aelinPool.address, 1)
+  //       .returns(true);
+  //     // NOTE there should only be 1 left and this should not revert
+  //     await aelinPool.connect(user1).purchasePoolTokensUpToAmount(excess);
+  //   });
+  // });
 
   // NOTE that most of the tests for this method will be in the
   // integration tests section since it needs to call a method
