@@ -4,6 +4,7 @@ pragma solidity 0.8.6;
 import "./AelinERC20.sol";
 import "./AelinDeal.sol";
 import "./MinimalProxyFactory.sol";
+import "hardhat/console.sol";
 
 contract AelinPool is AelinERC20, MinimalProxyFactory {
     address public purchaseToken;
@@ -235,7 +236,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     function acceptDealLogic(address recipient, uint poolTokenAmount) internal {
         AelinDeal aelinDeal = AelinDeal(aelinDealStorageProxy);
-
         _burn(msg.sender, poolTokenAmount);
         uint aelinFee = poolTokenAmount * AELIN_FEE / BASE;
         uint sponsorFee = poolTokenAmount * sponsorFee / BASE;
@@ -257,20 +257,22 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         _purchasePoolTokens(_purchaseTokenAmount, true);
     }
 
-    function _purchasePoolTokens(uint _purchaseTokenAmount, bool usePartialFill) internal {
+    function _purchasePoolTokens(uint _purchaseTokenAmount, bool _usePartialFill) internal {
         require(dealCreated == false && block.timestamp < purchaseExpiry, "not in purchase window");
         uint purchaseAmount = _purchaseTokenAmount;
         uint poolTokenAmount = convertUnderlyingToAelinAmount(purchaseAmount, purchaseTokenDecimals);
         uint poolTokenCap = convertUnderlyingToAelinAmount(purchaseTokenCap, purchaseTokenDecimals);
 
-        if (usePartialFill && (totalSupply + poolTokenAmount) > poolTokenCap) {
+        if (_usePartialFill && (totalSupply + poolTokenAmount) > poolTokenCap) {
             poolTokenAmount = poolTokenCap - totalSupply;
             purchaseAmount = convertAelinToUnderlyingAmount(poolTokenAmount, purchaseTokenDecimals);
         }
+
         uint totalPoolAfter = totalSupply + poolTokenAmount;
         require(
-            purchaseTokenCap == 0 || 
-            !usePartialFill && totalPoolAfter <= poolTokenCap,
+            purchaseTokenCap == 0 ||
+            _usePartialFill ||
+            !_usePartialFill && totalPoolAfter <= poolTokenCap,
             "cap has been exceeded"
         );
 
@@ -326,6 +328,35 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             uint remainingAmount = poolTokenCap - totalSupply;
             return convertAelinToUnderlyingAmount(remainingAmount, purchaseTokenDecimals);
         }
+    }
+
+    modifier transferWindow() {
+        require(
+            AelinDeal(aelinDealStorageProxy).proRataRedemptionStart() == 0,
+            "no transfers after redeem starts"
+        );
+        _;
+    }
+
+    function transfer(address dst, uint amount) external transferWindow override returns (bool) {
+        _transferTokens(msg.sender, dst, amount);
+        return true;
+    }
+
+    function transferFrom(address src, address dst, uint amount) external transferWindow override returns (bool) {
+        require(AelinDeal(aelinDealStorageProxy).proRataRedemptionStart() == 0, "no transfers after redeem starts");
+        address spender = msg.sender;
+        uint spenderAllowance = allowance[src][spender];
+
+        if (spender != src && spenderAllowance != type(uint).max) {
+            uint newAllowance = spenderAllowance - amount;
+            allowance[src][spender] = newAllowance;
+
+            emit Approval(src, spender, newAllowance);
+        }
+
+        _transferTokens(src, dst, amount);
+        return true;
     }
 
     event SetSponsor(address indexed sponsor);
