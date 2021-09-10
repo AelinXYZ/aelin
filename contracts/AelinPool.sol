@@ -28,6 +28,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     address public aelinDealLogicAddress;
     address public aelinDealStorageProxy;
     address public holder;
+    mapping(address => uint) public amountAccepted;
     mapping(address => bool) public openPeriodEligible;
 
     string private storedName;
@@ -181,12 +182,14 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     }
 
     function maxProRataAvail(address purchaser) public view returns (uint) {
-        AelinDeal aelinDeal = AelinDeal(aelinDealStorageProxy);
-        if (balanceOf[purchaser] == 0 || dealCreated == false || block.timestamp >= aelinDeal.proRataRedemptionExpiry()) {
+        if (
+            balanceOf[purchaser] == 0 ||
+            dealCreated == false ||
+            block.timestamp >= AelinDeal(aelinDealStorageProxy).proRataRedemptionExpiry()
+        ) {
             return 0;
         }
-        uint amountAccepted = aelinDeal.balanceOf(purchaser) * BASE / (BASE - AELIN_FEE - sponsorFee);
-        return proRataConversion * (balanceOf[purchaser] + amountAccepted) / 1e18 - amountAccepted;
+        return proRataConversion * (balanceOf[purchaser] + amountAccepted[purchaser]) / 1e18 - amountAccepted[purchaser];
     }
 
     function maxOpenAvail(address purchaser) internal view returns (uint) {
@@ -213,6 +216,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             require(poolTokenAmount <= maxProRata, "accepting more than share");
         }
         uint acceptAmount = useMax ? maxProRata : poolTokenAmount;
+        amountAccepted[recipient] += acceptAmount;
         acceptDealLogic(recipient, acceptAmount);
         if (proRataConversion != 1e18 && maxProRataAvail(msg.sender) == 0) {
             openPeriodEligible[msg.sender] = true;
