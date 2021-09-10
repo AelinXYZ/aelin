@@ -125,6 +125,7 @@ contract AelinDeal is AelinERC20 {
     }
 
     // @NOTE the holder can withdraw any amount accidentally deposited over the amount needed to fulfill the deal
+    // TODO the holder can deposit less if people withdraw after the deal is created but before the deal is funded.
     function withdraw() external onlyHolder {
         uint withdrawAmount = IERC20(underlyingDealToken).balanceOf(address(this)) - underlyingDealTokenTotal - totalUnderlyingClaimed;
         _safeTransfer(underlyingDealToken, holder, withdrawAmount);

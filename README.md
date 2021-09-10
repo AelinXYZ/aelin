@@ -2,7 +2,7 @@
 
 Aelin is a fundraising protocol built on Ethereum. A sponsor goes out and announces they are raising a pool of capital with a purchase expiry period. Anyone with an internet connection, aka the purchaser, can contribute funds (e.g. sUSD) to the pool during the purchase expiry period; the funds are locked for a time duration period while the sponsor searches for a deal.
 
-If the sponsor finds a deal with the holder of a tokenized asset after the purchase expiry period, the sponsor announces the deal terms to the purchasers and the holder sends the underlying deal tokens/ tokenized assets to the contract. At this point in time the purchaers can convert their pool tokens (or a partial amount) to deal tokens, which represent a claim on the underlying deal token.
+If the sponsor finds a deal with the holder of a tokenized asset after the purchase expiry period, the sponsor announces the deal terms to the purchasers and the holder sends the underlying deal tokens/ tokenized assets to the contract. At this point in time the purchaers can convert their pool tokens (or a partial amount) to deal tokens, which represent a claim on the underlying deal token. Pool tokens are transferrable until the deal is created and fully funded. After the deal is funded, pool tokens must be either accpeted or withdrawn for the purchase token.
 
 The deal token is an ERC20 that might include a vesting schedule or not to claim the underlying deal token, depending upon the deal. Since the underlying deal tokens vesting are wrapped as an ERC20 they may be sold or traded before the vesting period is over. However, all vested tokens will be claimed and the respective deal tokens burned before any transfer occurs.
 
@@ -101,7 +101,7 @@ Requirements:
 
 NOTE after `PURCHASER step 1` is `SPONSOR step 2 and then HOLDER step 1` followed by `PURCHASER step 2`. NOTE if a sponsor never creates a deal the purchaser can withdraw their funds the same way as if they reject the deal
 
-**PURCHASER STEP 2**: At step two the purchaser has 2 options: reject or accept the deal<space><space>
+**PURCHASER STEP 2**: At step two the purchaser has 2 options: reject or accept the deal. At this point they can no longer transfer their pool tokens.<space><space>
 
 **OPTION 1 - REJECT**: Rejects a portion of or all of the deal offered by calling `AelinPool.withdrawMaxFromPool()` or `withdrawFromPool(uint poolTokenAmount)`
 

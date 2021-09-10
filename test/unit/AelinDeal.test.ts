@@ -434,7 +434,7 @@ describe("AelinDeal", function () {
     });
 
     describe("claim and custom transfer", function () {
-      it("should allow the purchaser to claim their fully vested tokens only once", async function () {
+      it("should allow the purchaser to claim their fully vested tokens", async function () {
         await fundDealAndMintTokens();
         // wait for redemption period and the vesting period to end
         await ethers.provider.send("evm_increaseTime", [redemptionEnd + 1]);

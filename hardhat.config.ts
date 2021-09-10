@@ -20,6 +20,9 @@ const config: HardhatUserConfig = {
     },
   },
   defaultNetwork: "hardhat",
+  mocha: {
+    timeout: 100000,
+  },
   networks: {
     kovan: {
       url: `https://eth-kovan.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
