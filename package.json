@@ -49,6 +49,7 @@
     "ethers": "5.4.5",
     "ganache-time-traveler": "1.0.16",
     "hardhat": "2.6.0",
+    "hardhat-gas-reporter": "^1.0.4",
     "mocha": "7.2.0",
     "prettier": "2.3.2",
     "solidity-coverage": "0.7.16",
