@@ -1214,7 +1214,7 @@ describe("integration test", () => {
       ).to.be.revertedWith("ineligible: didn't max pro rata");
     });
 
-    it.only("should revert with accepting more than share in open period", async function () {
+    it("should revert with accepting more than share in open period", async function () {
       expect(await aelinDealProxyStorage.balanceOf(user11.address)).to.equal(0);
       await aelinPoolProxyStorage.connect(user11).acceptMaxDealTokens();
       expect(await aelinDealProxyStorage.balanceOf(user11.address)).to.equal(
