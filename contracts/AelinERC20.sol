@@ -8,7 +8,7 @@ interface IERC20Decimals {
     function decimals() external view returns (uint8);
 }
 
-abstract contract AelinERC20 is ERC20 {
+contract AelinERC20 is ERC20 {
     bool setInfo;
     mapping(address => mapping(address => uint256)) public _allowances;
     

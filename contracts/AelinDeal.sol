@@ -5,7 +5,7 @@ import "./AelinERC20.sol";
 import "./AelinPool.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-abstract contract AelinDeal is AelinERC20 {
+contract AelinDeal is AelinERC20 {
     uint public maxTotalSupply;
 
     address public underlyingDealToken;

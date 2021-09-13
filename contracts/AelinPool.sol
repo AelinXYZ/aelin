@@ -5,7 +5,7 @@ import "./AelinERC20.sol";
 import "./AelinDeal.sol";
 import "./MinimalProxyFactory.sol";
 
-abstract contract AelinPool is AelinERC20, MinimalProxyFactory {
+contract AelinPool is AelinERC20, MinimalProxyFactory {
     address public purchaseToken;
     uint public purchaseTokenCap;
     uint public purchaseTokenDecimals;
