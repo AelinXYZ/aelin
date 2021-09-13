@@ -10,15 +10,20 @@ contract AelinPoolFactory is MinimalProxyFactory {
     function createPool(
         string memory _name,
         string memory _symbol,
-        uint _purchaseTokenCap,
+        uint256 _purchaseTokenCap,
         address _purchaseToken,
-        uint _duration,
-        uint _sponsorFee,
-        uint _purchaseExpiry,
+        uint256 _duration,
+        uint256 _sponsorFee,
+        uint256 _purchaseExpiry,
         address _aelinPoolLogicAddress,
         address _aelinDealLogicAddress
     ) external returns (address) {
-        AelinPool aelin_pool = AelinPool(_cloneAsMinimalProxy(_aelinPoolLogicAddress, "Could not create new deal"));
+        AelinPool aelin_pool = AelinPool(
+            _cloneAsMinimalProxy(
+                _aelinPoolLogicAddress,
+                "Could not create new deal"
+            )
+        );
         aelin_pool.initialize(
             _name,
             _symbol,
@@ -51,11 +56,11 @@ contract AelinPoolFactory is MinimalProxyFactory {
         address indexed poolAddress,
         string name,
         string symbol,
-        uint purchaseTokenCap,
+        uint256 purchaseTokenCap,
         address indexed purchaseToken,
-        uint duration,
-        uint sponsorFee,
+        uint256 duration,
+        uint256 sponsorFee,
         address indexed sponsor,
-        uint purchaseExpiry
+        uint256 purchaseExpiry
     );
 }
