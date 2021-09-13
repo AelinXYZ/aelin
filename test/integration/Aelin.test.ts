@@ -191,7 +191,7 @@ describe("integration test", () => {
         deployer,
         AelinPoolFactoryArtifact
       )) as AelinPoolFactory;
-      console.log("a");
+
       await aelinPoolFactory
         .connect(sponsor)
         .createPool(
@@ -526,6 +526,7 @@ describe("integration test", () => {
       await aelinDealProxyStorage.connect(user1).claim();
       await aelinDealProxyStorage.connect(user2).claim();
       await aelinDealProxyStorage.connect(user4).claim();
+      await aelinDealProxyStorage.connect(user5).claim();
 
       const logs = await aelinDealProxyStorage.queryFilter(
         aelinDealProxyStorage.filters.ClaimedUnderlyingDealTokens()
@@ -535,7 +536,7 @@ describe("integration test", () => {
       expect(await aaveContract.balanceOf(user1.address)).to.not.equal(0);
       expect(await aaveContract.balanceOf(user2.address)).to.not.equal(0);
       expect(await aaveContract.balanceOf(user3.address)).to.equal(0);
-      expect(await aaveContract.balanceOf(user4.address)).to.equal(0);
+      expect(await aaveContract.balanceOf(user4.address)).to.not.equal(0);
       expect(await aaveContract.balanceOf(user5.address)).to.not.equal(0);
 
       expect(await aaveContract.balanceOf(user1.address)).to.equal(
@@ -544,8 +545,11 @@ describe("integration test", () => {
       expect(await aaveContract.balanceOf(user2.address)).to.equal(
         logs[1].args.underlyingDealTokensClaimed
       );
-      expect(await aaveContract.balanceOf(user5.address)).to.equal(
+      expect(await aaveContract.balanceOf(user4.address)).to.equal(
         logs[2].args.underlyingDealTokensClaimed
+      );
+      expect(await aaveContract.balanceOf(user5.address)).to.equal(
+        logs[3].args.underlyingDealTokensClaimed
       );
     });
 
@@ -901,6 +905,7 @@ describe("integration test", () => {
       await aelinDealProxyStorage.connect(user6).claim();
       await aelinDealProxyStorage.connect(user7).claim();
       await aelinDealProxyStorage.connect(user9).claim();
+      await aelinDealProxyStorage.connect(user10).claim();
 
       const logs = await aelinDealProxyStorage.queryFilter(
         aelinDealProxyStorage.filters.ClaimedUnderlyingDealTokens()
@@ -910,7 +915,7 @@ describe("integration test", () => {
       expect(await aaveContract.balanceOf(user6.address)).to.not.equal(0);
       expect(await aaveContract.balanceOf(user7.address)).to.not.equal(0);
       expect(await aaveContract.balanceOf(user8.address)).to.equal(0);
-      expect(await aaveContract.balanceOf(user9.address)).to.equal(0);
+      expect(await aaveContract.balanceOf(user9.address)).to.not.equal(0);
       expect(await aaveContract.balanceOf(user10.address)).to.not.equal(0);
 
       expect(await aaveContract.balanceOf(user6.address)).to.equal(
@@ -919,8 +924,11 @@ describe("integration test", () => {
       expect(await aaveContract.balanceOf(user7.address)).to.equal(
         logs[1].args.underlyingDealTokensClaimed
       );
-      expect(await aaveContract.balanceOf(user10.address)).to.equal(
+      expect(await aaveContract.balanceOf(user9.address)).to.equal(
         logs[2].args.underlyingDealTokensClaimed
+      );
+      expect(await aaveContract.balanceOf(user10.address)).to.equal(
+        logs[3].args.underlyingDealTokensClaimed
       );
     });
   });

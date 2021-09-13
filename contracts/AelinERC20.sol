@@ -11,6 +11,8 @@ interface IERC20Decimals {
 contract AelinERC20 is ERC20 {
     bool setInfo;
     mapping(address => mapping(address => uint256)) public _allowances;
+    string private _custom_name;
+    string private _custom_symbol;
 
     constructor() ERC20("", "") {}
 
@@ -19,13 +21,25 @@ contract AelinERC20 is ERC20 {
         _;
     }
 
+    function name() public view virtual override returns (string memory) {
+        return _custom_name;
+    }
+
+    /**
+     * @dev Returns the symbol of the token, usually a shorter version of the
+     * name.
+     */
+    function symbol() public view virtual override returns (string memory) {
+        return _custom_symbol;
+    }
+
     function _setNameAndSymbol(string memory _name, string memory _symbol)
         internal
         initInfoOnce
         returns (bool)
     {
-        _name = _name;
-        _symbol = _symbol;
+        _custom_name = _name;
+        _custom_symbol = _symbol;
         setInfo = true;
         return true;
     }

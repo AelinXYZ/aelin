@@ -498,9 +498,13 @@ describe("AelinDeal", function () {
           .withArgs(purchaser.address, expectedClaimUnderlying)
           .returns(true);
 
+        await underlyingDealToken.mock.transfer
+          .withArgs(purchaser.address, mintAmount.sub(expectedClaimUnderlying))
+          .returns(true);
+
         await aelinDeal
           .connect(purchaser)
-          .transfer(deployer.address, mintAmount);
+          .transfer(deployer.address, mintAmount.sub(expectedClaimUnderlying));
 
         const [claimLog] = await aelinDeal.queryFilter(
           aelinDeal.filters.ClaimedUnderlyingDealTokens()
@@ -519,18 +523,39 @@ describe("AelinDeal", function () {
 
         expect(transferLogs[0].args.from).to.equal(nullAddress);
         expect(transferLogs[0].args.to).to.equal(purchaser.address);
-        expect(transferLogs[0].args.value).to.equal(mintAmount);
+        expect(transferLogs[0].args.value).to.equal(
+          mintAmount.sub(expectedClaimUnderlying)
+        );
 
         expect(transferLogs[1].args.from).to.equal(purchaser.address);
         expect(transferLogs[1].args.to).to.equal(nullAddress);
         // @NOTE I thought the safeTransfer might emit an event  with the expected claim value?
-        expect(transferLogs[1].args.value).to.equal(mintAmount);
+        expect(transferLogs[1].args.value).to.equal(
+          mintAmount.sub(expectedClaimUnderlying)
+        );
 
         expect(transferLogs[2].args.from).to.equal(purchaser.address);
         expect(transferLogs[2].args.to).to.equal(deployer.address);
-        expect(transferLogs[2].args.value).to.equal(mintAmount);
+        expect(transferLogs[2].args.value).to.equal(
+          mintAmount.sub(expectedClaimUnderlying)
+        );
 
         expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
+      });
+
+      it("should error when the purchaser transfers more than they have after claiming", async function () {
+        await fundDealAndMintTokens();
+        await ethers.provider.send("evm_increaseTime", [redemptionEnd + 1]);
+        await ethers.provider.send("evm_mine", []);
+
+        await underlyingDealToken.mock.transfer
+          .withArgs(purchaser.address, expectedClaimUnderlying)
+          .returns(true);
+
+        // TODO add a method
+        await expect(
+          aelinDeal.connect(purchaser).transfer(deployer.address, mintAmount)
+        ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
       });
 
       it("should claim their minted tokens when doing a transferFrom", async function () {
@@ -584,6 +609,31 @@ describe("AelinDeal", function () {
         expect(transferLogs[2].args.value).to.equal(mintAmount);
 
         expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
+      });
+
+      it("should error when transferFrom is called with too many tokens after claiming", async function () {
+        await fundDealAndMintTokens();
+
+        await ethers.provider.send("evm_increaseTime", [redemptionEnd + 1]);
+        await ethers.provider.send("evm_mine", []);
+
+        await underlyingDealToken.mock.transferFrom
+          .withArgs(purchaser.address, holder.address, mintAmount)
+          .returns(true);
+
+        await underlyingDealToken.mock.transfer
+          .withArgs(purchaser.address, expectedClaimUnderlying)
+          .returns(true);
+
+        await aelinDeal
+          .connect(purchaser)
+          .approve(deployer.address, mintAmount);
+
+        await expect(
+          aelinDeal
+            .connect(deployer)
+            .transferFrom(purchaser.address, holder.address, mintAmount)
+        ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
       });
 
       it("should not allow a random wallet with no balance to claim", async function () {
