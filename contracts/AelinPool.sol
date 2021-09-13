@@ -37,7 +37,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     // @TODO update with correct addresses
     // HOW to manage the aelin rewards address???
-    address public AELIN_REWARDS = 0x0000000000000000000000000000000000000000;
+    address constant AELIN_REWARDS = 0x5A0b54D5dc17e0AadC383d2db43B0a0D3E029c4c;
 
     constructor () {}
     
@@ -211,21 +211,21 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     }
 
     function _acceptDealTokensProRata(address recipient, uint poolTokenAmount, bool useMax) internal {
-        uint maxProRata = maxProRataAvail(msg.sender);
+        uint maxProRata = maxProRataAvail(recipient);
         if (!useMax) {
             require(poolTokenAmount <= maxProRata, "accepting more than share");
         }
         uint acceptAmount = useMax ? maxProRata : poolTokenAmount;
         amountAccepted[recipient] += acceptAmount;
         acceptDealLogic(recipient, acceptAmount);
-        if (proRataConversion != 1e18 && maxProRataAvail(msg.sender) == 0) {
-            openPeriodEligible[msg.sender] = true;
+        if (proRataConversion != 1e18 && maxProRataAvail(recipient) == 0) {
+            openPeriodEligible[recipient] = true;
         }
     }
 
     function _acceptDealTokensOpen(address recipient, uint poolTokenAmount, bool useMax) internal {
-        require(openPeriodEligible[msg.sender], "ineligible: didn't max pro rata");
-        uint maxOpen = maxOpenAvail(msg.sender);
+        require(openPeriodEligible[recipient], "ineligible: didn't max pro rata");
+        uint maxOpen = maxOpenAvail(recipient);
         uint acceptAmount = useMax ? maxOpen : poolTokenAmount;
         if (!useMax) {
             require(acceptAmount <= maxOpen, "accepting more than share");
@@ -235,10 +235,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     function acceptDealLogic(address recipient, uint poolTokenAmount) internal {
         AelinDeal aelinDeal = AelinDeal(aelinDealStorageProxy);
-        _burn(msg.sender, poolTokenAmount);
+        _burn(recipient, poolTokenAmount);
         uint aelinFeeAmt = poolTokenAmount * AELIN_FEE / BASE;
         uint sponsorFeeAmt = poolTokenAmount * sponsorFee / BASE;
-
         aelinDeal.mint(sponsor, sponsorFeeAmt);
         aelinDeal.mint(AELIN_REWARDS, aelinFeeAmt);
         aelinDeal.mint(recipient, poolTokenAmount - (sponsorFeeAmt + aelinFeeAmt));

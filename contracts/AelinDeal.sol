@@ -177,7 +177,11 @@ contract AelinDeal is AelinERC20 {
         }
     }
     
-    function claim(address recipient) public returns (uint) {
+    function claim() public returns (uint) {
+        _claim(msg.sender);
+    }
+
+    function _claim(address recipient) internal returns (uint) {
         if (balanceOf(recipient) > 0) {
             uint maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
             if (maxTime > vestingCliff || (maxTime == vestingCliff && vestingPeriod == 0 && lastClaim[recipient] == 0)) {
@@ -208,8 +212,8 @@ contract AelinDeal is AelinERC20 {
 
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
         super._beforeTokenTransfer(from, to, amount);
-        claim(from);
-        claim(to);
+        _claim(from);
+        _claim(to);
     }
 
     event SetHolder(address indexed holder);
