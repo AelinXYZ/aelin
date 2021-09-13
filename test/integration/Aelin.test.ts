@@ -22,17 +22,31 @@ describe("integration test", () => {
   let user3: SignerWithAddress;
   let user4: SignerWithAddress;
   let user5: SignerWithAddress;
+  let user6: SignerWithAddress;
+  let user7: SignerWithAddress;
+  let user8: SignerWithAddress;
+  let user9: SignerWithAddress;
+  let user10: SignerWithAddress;
+  let user11: SignerWithAddress;
+  let user12: SignerWithAddress;
   let aelinPoolProxyStorage: AelinPool;
   let aelinDealProxyStorage: AelinDeal;
   let aelinPoolLogic: AelinPool;
   let aelinDealLogic: AelinDeal;
-  let aelinPoolFactory: AelinPoolFactory;
   const dealOrPoolTokenDecimals = 18;
 
   const usdcContractAddress = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
   let usdcContract: ERC20;
   const usdcDecimals = 6;
 
+  const uncappedPurchaseAmount = ethers.utils.parseUnits(
+    "100000",
+    usdcDecimals
+  );
+  const uncappedPoolAmount = ethers.utils.parseUnits(
+    "100000",
+    dealOrPoolTokenDecimals
+  );
   const purchaseAmount = ethers.utils.parseUnits("5000", usdcDecimals);
   const poolAmount = ethers.utils.parseUnits("5000", dealOrPoolTokenDecimals);
 
@@ -43,8 +57,10 @@ describe("integration test", () => {
   const usdcWhaleAddress = "0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503";
   let usdcWhaleSigner: SignerWithAddress;
 
-  const aaveWhaleAddress = "0x73f9B272aBda7A97CB1b237D85F9a7236EDB6F16";
-  let aaveWhale: SignerWithAddress;
+  const aaveWhaleAddressOne = "0x73f9B272aBda7A97CB1b237D85F9a7236EDB6F16";
+  const aaveWhaleAddressTwo = "0xAd18FC2cfB141BF64Dd64B9eB99616b5b2b92AbD";
+  let aaveWhaleOne: SignerWithAddress;
+  let aaveWhaleTwo: SignerWithAddress;
 
   const fundUSDCAmount = ethers.utils.parseUnits("100000", usdcDecimals);
   const fundUsdcToUsers = async (users: SignerWithAddress[]) => {
@@ -67,8 +83,22 @@ describe("integration test", () => {
   };
 
   before(async () => {
-    [deployer, sponsor, user1, user2, user3, user4, user5] =
-      await ethers.getSigners();
+    [
+      deployer,
+      sponsor,
+      user1,
+      user2,
+      user3,
+      user4,
+      user5,
+      user6,
+      user7,
+      user8,
+      user9,
+      user10,
+      user11,
+      user12,
+    ] = await ethers.getSigners();
 
     usdcContract = (await ethers.getContractAt(
       ERC20Artifact.abi,
@@ -81,7 +111,8 @@ describe("integration test", () => {
     )) as ERC20;
 
     usdcWhaleSigner = await getImpersonatedSigner(usdcWhaleAddress);
-    aaveWhale = await getImpersonatedSigner(aaveWhaleAddress);
+    aaveWhaleOne = await getImpersonatedSigner(aaveWhaleAddressOne);
+    aaveWhaleTwo = await getImpersonatedSigner(aaveWhaleAddressTwo);
 
     // NOTE that the deploy method for aelin pool exceeds the default hardhat 3M gas limit
     // and aelin deal is close to the limit
@@ -99,13 +130,20 @@ describe("integration test", () => {
       deployer,
       AelinPoolArtifact
     )) as AelinPool;
-
-    aelinPoolFactory = (await deployContract(
-      deployer,
-      AelinPoolFactoryArtifact
-    )) as AelinPoolFactory;
-
-    await fundUsdcToUsers([user1, user2, user3, user4, user5]);
+    await fundUsdcToUsers([
+      user1,
+      user2,
+      user3,
+      user4,
+      user5,
+      user6,
+      user7,
+      user8,
+      user9,
+      user10,
+      user11,
+      user12,
+    ]);
   });
 
   const oneYear = 365 * 24 * 60 * 60; // one year
@@ -117,19 +155,30 @@ describe("integration test", () => {
   const base = 100000; // hardcoded in the contracts
   const aelinFee = 2000; // hardcoded in the contracts
   const purchaseExpiry = 30 * 24 * 60 * 60; // one month
+  const feesNumerator = ethers.BigNumber.from(base - (aelinFee + sponsorFee));
+  const feesDenominator = ethers.BigNumber.from(base);
+
+  const purchaseTokenTotalForUncappedDeal = ethers.utils.parseUnits(
+    "225000",
+    usdcDecimals
+  );
 
   const purchaseTokenTotalForDeal = ethers.utils.parseUnits(
     "20000",
     usdcDecimals
   );
   // one AAVE is $300
+  const underlyingDealTokenUncappedTotal = ethers.utils.parseUnits(
+    "225",
+    aaveDecimals
+  );
   const underlyingDealTokenTotal = ethers.utils.parseUnits("50", aaveDecimals);
   const vestingPeriod = oneYear;
   const vestingCliff = oneYear;
   const proRataRedemptionPeriod = 7 * 24 * 60 * 60; // one week
   const openRedemptionPeriod = 24 * 60 * 60; // one day
 
-  describe("capped pool success workflow", function () {
+  describe("test capped and uncapped pools", function () {
     it(`
     1. creates a capped pool
     2. gets fully funded by purchasers
@@ -138,6 +187,10 @@ describe("integration test", () => {
     5. the holder withdraws unaccepted tokens
     6. the tokens fully vest and are claimed
   `, async () => {
+      const aelinPoolFactory = (await deployContract(
+        deployer,
+        AelinPoolFactoryArtifact
+      )) as AelinPoolFactory;
       await aelinPoolFactory
         .connect(sponsor)
         .createPool(
@@ -164,11 +217,6 @@ describe("integration test", () => {
         AelinPoolArtifact.abi,
         createPoolLog.args.poolAddress
       )) as AelinPool;
-
-      const feesNumerator = ethers.BigNumber.from(
-        base - (aelinFee + sponsorFee)
-      );
-      const feesDenominator = ethers.BigNumber.from(base);
 
       expect(await usdcContract.balanceOf(user1.address)).to.equal(
         fundUSDCAmount
@@ -256,6 +304,9 @@ describe("integration test", () => {
         fundUSDCAmount.sub(purchaseAmount.div(2))
       );
 
+      await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
       await aelinPoolProxyStorage
         .connect(sponsor)
         .createDeal(
@@ -266,7 +317,7 @@ describe("integration test", () => {
           vestingCliff,
           proRataRedemptionPeriod,
           openRedemptionPeriod,
-          aaveWhale.address
+          aaveWhaleOne.address
         );
 
       const [createDealLog] = await aelinPoolProxyStorage.queryFilter(
@@ -306,14 +357,14 @@ describe("integration test", () => {
       );
 
       await aaveContract
-        .connect(aaveWhale)
+        .connect(aaveWhaleOne)
         .approve(
           aelinDealProxyStorage.address,
           underlyingDealTokenTotal.add(1)
         );
 
       await aelinDealProxyStorage
-        .connect(aaveWhale)
+        .connect(aaveWhaleOne)
         .depositUnderlying(underlyingDealTokenTotal.add(1));
 
       // checks deal underlying balance
@@ -322,14 +373,14 @@ describe("integration test", () => {
       ).to.equal(underlyingDealTokenTotal.add(1));
 
       // withdraws the extra 1
-      await aelinDealProxyStorage.connect(aaveWhale).withdraw();
+      await aelinDealProxyStorage.connect(aaveWhaleOne).withdraw();
 
       // checks updated deal underlying balance
       expect(
         await aaveContract.balanceOf(aelinDealProxyStorage.address)
       ).to.equal(underlyingDealTokenTotal);
 
-      expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(0);
+      expect(await usdcContract.balanceOf(aaveWhaleOne.address)).to.equal(0);
       expect(await aelinDealProxyStorage.balanceOf(user1.address)).to.equal(0);
       expect(await aelinDealProxyStorage.balanceOf(user2.address)).to.equal(0);
       expect(await aelinDealProxyStorage.balanceOf(user3.address)).to.equal(0);
@@ -344,7 +395,7 @@ describe("integration test", () => {
 
       // checks holder USDC balance
       // TODO it wont equal purchase amount it will be the max pro rata avail for the user :)
-      expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
+      expect(await usdcContract.balanceOf(aaveWhaleOne.address)).to.equal(
         user1ProRataAvail.div(
           Math.pow(10, dealOrPoolTokenDecimals - usdcDecimals)
         )
@@ -364,7 +415,7 @@ describe("integration test", () => {
 
       await aelinPoolProxyStorage.connect(user2).acceptMaxDealTokens();
 
-      expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
+      expect(await usdcContract.balanceOf(aaveWhaleOne.address)).to.equal(
         user2ProRataAvail
           .add(user1ProRataAvail)
           .div(Math.pow(10, dealOrPoolTokenDecimals - usdcDecimals))
@@ -393,7 +444,7 @@ describe("integration test", () => {
       );
 
       // NOTE the sub 1 is accurate and due to precision loss during conversion
-      expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
+      expect(await usdcContract.balanceOf(aaveWhaleOne.address)).to.equal(
         user2ProRataAvail
           .add(user1ProRataAvail)
           .add(user4ProRataAvail)
@@ -413,7 +464,7 @@ describe("integration test", () => {
       );
 
       // NOTE the sub 1 is accurate and due to precision loss during conversion
-      expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
+      expect(await usdcContract.balanceOf(aaveWhaleOne.address)).to.equal(
         user2ProRataAvail
           .add(user1ProRataAvail)
           .add(user4ProRataAvail)
@@ -436,7 +487,7 @@ describe("integration test", () => {
         (acc, log) => acc.add(log.args.underlyingToHolderAmt),
         ethers.BigNumber.from(0)
       );
-      expect(await usdcContract.balanceOf(aaveWhale.address)).to.equal(
+      expect(await usdcContract.balanceOf(aaveWhaleOne.address)).to.equal(
         totalToHolderFromEvents
       );
 
@@ -458,7 +509,7 @@ describe("integration test", () => {
       ]);
       await ethers.provider.send("evm_mine", []);
 
-      await aelinDealProxyStorage.connect(aaveWhale).withdrawExpiry();
+      await aelinDealProxyStorage.connect(aaveWhaleOne).withdrawExpiry();
 
       await ethers.provider.send("evm_increaseTime", [
         vestingCliff + vestingPeriod + 1,
@@ -496,29 +547,391 @@ describe("integration test", () => {
         logs[2].args.underlyingDealTokensClaimed
       );
     });
-  });
 
-  // describe("uncapped pool success workflow", function () {
-  //   it(`
-  //   1. creates an uncapped pool
-  //   2. gets funded by purchasers
-  //   3. the deal is created and then funded
-  //   4. some, but not all, of the pool accepts and the deal expires
-  //   5. the holder withdraws unaccepted tokens
-  //   6. the tokens fully vest and are claimed
-  // `, async () => {});
-  // });
-
-  describe("transfer blocked in redeem window", function () {
-    let poolFactory: AelinPoolFactory;
-
-    beforeEach(async function () {
-      poolFactory = (await deployContract(
+    it(`
+    1. creates an uncapped pool
+    2. gets funded by purchasers
+    3. the deal is created and then funded
+    4. some, but not all, of the pool accepts and the deal expires
+    5. the holder withdraws unaccepted tokens
+    6. the tokens fully vest and are claimed
+  `, async () => {
+      const aelinPoolFactory = (await deployContract(
         deployer,
         AelinPoolFactoryArtifact
       )) as AelinPoolFactory;
 
-      await poolFactory
+      await aelinPoolFactory
+        .connect(sponsor)
+        .createPool(
+          name,
+          symbol,
+          0,
+          usdcContract.address,
+          duration,
+          sponsorFee,
+          purchaseExpiry,
+          aelinPoolLogic.address,
+          aelinDealLogic.address
+        );
+
+      const [createPoolLog] = await aelinPoolFactory.queryFilter(
+        aelinPoolFactory.filters.CreatePool()
+      );
+
+      // partial check of logs. already testing all logs in unit tests
+      expect(createPoolLog.args.poolAddress).to.be.properAddress;
+      expect(createPoolLog.args.name).to.equal("aePool-" + name);
+
+      aelinPoolProxyStorage = (await ethers.getContractAt(
+        AelinPoolArtifact.abi,
+        createPoolLog.args.poolAddress
+      )) as AelinPool;
+
+      const feesNumerator = ethers.BigNumber.from(
+        base - (aelinFee + sponsorFee)
+      );
+      const feesDenominator = ethers.BigNumber.from(base);
+
+      expect(await usdcContract.balanceOf(user6.address)).to.equal(
+        fundUSDCAmount
+      );
+      expect(await usdcContract.balanceOf(user7.address)).to.equal(
+        fundUSDCAmount
+      );
+      expect(await usdcContract.balanceOf(user8.address)).to.equal(
+        fundUSDCAmount
+      );
+      expect(await usdcContract.balanceOf(user9.address)).to.equal(
+        fundUSDCAmount
+      );
+      expect(await usdcContract.balanceOf(user10.address)).to.equal(
+        fundUSDCAmount
+      );
+
+      // purchasers get approval to buy pool tokens
+      await usdcContract
+        .connect(user6)
+        .approve(aelinPoolProxyStorage.address, uncappedPurchaseAmount);
+      await usdcContract
+        .connect(user7)
+        .approve(aelinPoolProxyStorage.address, uncappedPurchaseAmount);
+      await usdcContract
+        .connect(user8)
+        .approve(aelinPoolProxyStorage.address, uncappedPurchaseAmount);
+      await usdcContract
+        .connect(user9)
+        .approve(aelinPoolProxyStorage.address, uncappedPurchaseAmount);
+      await usdcContract
+        .connect(user10)
+        .approve(aelinPoolProxyStorage.address, uncappedPurchaseAmount);
+
+      // purchasers buy pool tokens
+      await aelinPoolProxyStorage
+        .connect(user6)
+        .purchasePoolTokens(uncappedPurchaseAmount);
+      await aelinPoolProxyStorage
+        .connect(user7)
+        .purchasePoolTokens(uncappedPurchaseAmount);
+      await aelinPoolProxyStorage
+        .connect(user8)
+        .purchasePoolTokens(uncappedPurchaseAmount);
+      await aelinPoolProxyStorage
+        .connect(user9)
+        .purchasePoolTokens(uncappedPurchaseAmount);
+      await aelinPoolProxyStorage
+        .connect(user10)
+        .purchasePoolTokens(uncappedPurchaseAmount.div(2));
+
+      // checks pool balance is accurate
+      expect(await aelinPoolProxyStorage.balanceOf(user6.address)).to.equal(
+        uncappedPoolAmount
+      );
+      expect(await aelinPoolProxyStorage.balanceOf(user7.address)).to.equal(
+        uncappedPoolAmount
+      );
+      expect(await aelinPoolProxyStorage.balanceOf(user8.address)).to.equal(
+        uncappedPoolAmount
+      );
+      expect(await aelinPoolProxyStorage.balanceOf(user9.address)).to.equal(
+        uncappedPoolAmount
+      );
+      expect(await aelinPoolProxyStorage.balanceOf(user10.address)).to.equal(
+        uncappedPoolAmount.div(2)
+      );
+
+      // checks USDC balance is accurate
+      expect(await usdcContract.balanceOf(user6.address)).to.equal(0);
+      expect(await usdcContract.balanceOf(user7.address)).to.equal(0);
+      expect(await usdcContract.balanceOf(user8.address)).to.equal(0);
+      expect(await usdcContract.balanceOf(user9.address)).to.equal(0);
+      expect(await usdcContract.balanceOf(user10.address)).to.equal(
+        fundUSDCAmount.div(2)
+      );
+
+      await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      // 50% conversion rate - 450K but only 225K allowed
+      // gets 225 aave all in
+      await aelinPoolProxyStorage
+        .connect(sponsor)
+        .createDeal(
+          aaveContract.address,
+          purchaseTokenTotalForUncappedDeal,
+          underlyingDealTokenUncappedTotal,
+          vestingPeriod,
+          vestingCliff,
+          proRataRedemptionPeriod,
+          openRedemptionPeriod,
+          aaveWhaleTwo.address
+        );
+
+      const [createDealLog] = await aelinPoolProxyStorage.queryFilter(
+        aelinPoolProxyStorage.filters.CreateDeal()
+      );
+
+      expect(createDealLog.args.dealContract).to.be.properAddress;
+      expect(createDealLog.args.name).to.equal("aeDeal-" + name);
+
+      aelinDealProxyStorage = (await ethers.getContractAt(
+        AelinDealArtifact.abi,
+        createDealLog.args.dealContract
+      )) as AelinDeal;
+
+      // user 8 withdraws 50000 from the pool leaving 50000 remaining
+      await aelinPoolProxyStorage
+        .connect(user8)
+        .withdrawFromPool(
+          ethers.utils.parseUnits("50000", dealOrPoolTokenDecimals)
+        );
+      // checks pool balance
+      expect(await aelinPoolProxyStorage.balanceOf(user8.address)).to.equal(
+        uncappedPoolAmount.div(2)
+      );
+      // checks USDC balance
+      expect(await usdcContract.balanceOf(user8.address)).to.equal(
+        fundUSDCAmount.div(2)
+      );
+
+      // user 3 then withdraws the remainder of their funds
+      await aelinPoolProxyStorage.connect(user8).withdrawMaxFromPool();
+      // checks pool balance is 0
+      expect(await aelinPoolProxyStorage.balanceOf(user8.address)).to.equal(0);
+      // checks all USDC has been refunded
+      expect(await usdcContract.balanceOf(user8.address)).to.equal(
+        fundUSDCAmount
+      );
+
+      await aaveContract
+        .connect(aaveWhaleTwo)
+        .approve(
+          aelinDealProxyStorage.address,
+          underlyingDealTokenUncappedTotal.add(1)
+        );
+
+      await aelinDealProxyStorage
+        .connect(aaveWhaleTwo)
+        .depositUnderlying(underlyingDealTokenUncappedTotal.add(1));
+
+      // checks deal underlying balance
+      expect(
+        await aaveContract.balanceOf(aelinDealProxyStorage.address)
+      ).to.equal(underlyingDealTokenUncappedTotal.add(1));
+
+      // withdraws the extra 1
+      await aelinDealProxyStorage.connect(aaveWhaleTwo).withdraw();
+
+      // checks updated deal underlying balance
+      expect(
+        await aaveContract.balanceOf(aelinDealProxyStorage.address)
+      ).to.equal(underlyingDealTokenUncappedTotal);
+
+      expect(await usdcContract.balanceOf(aaveWhaleTwo.address)).to.equal(0);
+      expect(await aelinDealProxyStorage.balanceOf(user6.address)).to.equal(0);
+      expect(await aelinDealProxyStorage.balanceOf(user7.address)).to.equal(0);
+      expect(await aelinDealProxyStorage.balanceOf(user8.address)).to.equal(0);
+      expect(await aelinDealProxyStorage.balanceOf(user9.address)).to.equal(0);
+      expect(await aelinDealProxyStorage.balanceOf(user10.address)).to.equal(0);
+
+      const user6ProRataAvail = await aelinPoolProxyStorage.maxProRataAvail(
+        user6.address
+      );
+      // 5000 is transferred to the holder
+      await aelinPoolProxyStorage.connect(user6).acceptMaxDealTokens();
+
+      // checks holder USDC balance
+      expect(await usdcContract.balanceOf(aaveWhaleTwo.address)).to.equal(
+        user6ProRataAvail.div(
+          Math.pow(10, dealOrPoolTokenDecimals - usdcDecimals)
+        )
+      );
+      // checks user 6 pool balance
+      expect(await aelinPoolProxyStorage.balanceOf(user6.address)).to.equal(
+        uncappedPoolAmount.sub(user6ProRataAvail)
+      );
+      // checks user 6 deal balance
+      expect(await aelinDealProxyStorage.balanceOf(user6.address)).to.equal(
+        user6ProRataAvail.mul(feesNumerator).div(feesDenominator)
+      );
+
+      const user7ProRataAvail = await aelinPoolProxyStorage.maxProRataAvail(
+        user7.address
+      );
+
+      await aelinPoolProxyStorage.connect(user7).acceptMaxDealTokens();
+
+      expect(await usdcContract.balanceOf(aaveWhaleTwo.address)).to.equal(
+        user7ProRataAvail
+          .add(user6ProRataAvail)
+          .div(Math.pow(10, dealOrPoolTokenDecimals - usdcDecimals))
+      );
+      expect(await aelinDealProxyStorage.balanceOf(user7.address)).to.equal(
+        user7ProRataAvail.mul(feesNumerator).div(feesDenominator)
+      );
+
+      // confirm user 8 has no balance left
+      expect(
+        await aelinPoolProxyStorage.maxProRataAvail(user8.address)
+      ).to.equal(0);
+
+      const user9ProRataAvail = await aelinPoolProxyStorage.maxProRataAvail(
+        user9.address
+      );
+
+      await aelinPoolProxyStorage
+        .connect(user9)
+        .acceptDealTokens(user9ProRataAvail);
+
+      expect(await aelinDealProxyStorage.balanceOf(user10.address)).to.equal(0);
+      expect(await aelinDealProxyStorage.balanceOf(user9.address)).to.equal(
+        user9ProRataAvail.mul(feesNumerator).div(feesDenominator)
+      );
+
+      expect(await usdcContract.balanceOf(aaveWhaleTwo.address)).to.equal(
+        user7ProRataAvail
+          .add(user6ProRataAvail)
+          .add(user9ProRataAvail)
+          .div(Math.pow(10, dealOrPoolTokenDecimals - usdcDecimals))
+      );
+      const user10ProRataAvail = await aelinPoolProxyStorage.maxProRataAvail(
+        user10.address
+      );
+
+      await aelinPoolProxyStorage
+        .connect(user10)
+        .acceptDealTokens(user10ProRataAvail);
+
+      expect(await aelinDealProxyStorage.balanceOf(user10.address)).to.equal(
+        user10ProRataAvail.mul(feesNumerator).div(feesDenominator)
+      );
+
+      expect(await usdcContract.balanceOf(aaveWhaleTwo.address)).to.equal(
+        user7ProRataAvail
+          .add(user6ProRataAvail)
+          .add(user9ProRataAvail)
+          .add(user10ProRataAvail)
+          .div(Math.pow(10, dealOrPoolTokenDecimals - usdcDecimals))
+      );
+
+      const acceptLogs = await aelinPoolProxyStorage.queryFilter(
+        aelinPoolProxyStorage.filters.AcceptDeal()
+      );
+      expect(acceptLogs.length).to.equal(4);
+
+      const mintLogs = await aelinDealProxyStorage.queryFilter(
+        aelinDealProxyStorage.filters.MintDealTokens()
+      );
+      expect(mintLogs.length).to.equal(4 * 3);
+
+      const totalToHolderFromEvents = acceptLogs.reduce(
+        (acc, log) => acc.add(log.args.underlyingToHolderAmt),
+        ethers.BigNumber.from(0)
+      );
+      expect(await usdcContract.balanceOf(aaveWhaleTwo.address)).to.equal(
+        totalToHolderFromEvents
+      );
+
+      await ethers.provider.send("evm_increaseTime", [
+        proRataRedemptionPeriod + 1,
+      ]);
+      await ethers.provider.send("evm_mine", []);
+
+      expect(await aelinPoolProxyStorage.balanceOf(user6.address)).to.not.equal(
+        0
+      );
+      await aelinPoolProxyStorage.connect(user6).acceptMaxDealTokens();
+
+      expect(await aelinPoolProxyStorage.balanceOf(user6.address)).to.equal(0);
+
+      await ethers.provider.send("evm_increaseTime", [
+        openRedemptionPeriod + 1,
+      ]);
+      await ethers.provider.send("evm_mine", []);
+      // hmm should do a cehck on balance before and after withdrawExpiry here
+      await aelinDealProxyStorage.connect(aaveWhaleTwo).withdrawExpiry();
+
+      const [, withdrawUnderlyingLog] = await aelinDealProxyStorage.queryFilter(
+        aelinDealProxyStorage.filters.WithdrawUnderlyingDealTokens()
+      );
+      expect(withdrawUnderlyingLog.args.depositor).to.equal(
+        aaveWhaleTwo.address
+      );
+      expect(
+        withdrawUnderlyingLog.args.underlyingDealTokenAddress.toLowerCase()
+      ).to.equal(aaveContract.address.toLowerCase());
+      expect(withdrawUnderlyingLog.args.dealContract).to.equal(
+        aelinDealProxyStorage.address
+      );
+      // the entire amount has been taken
+      expect(withdrawUnderlyingLog.args.underlyingDealTokenAmount).to.equal(0);
+
+      await ethers.provider.send("evm_increaseTime", [
+        vestingCliff + vestingPeriod + 1,
+      ]);
+      await ethers.provider.send("evm_mine", []);
+
+      expect(await aaveContract.balanceOf(user6.address)).to.equal(0);
+      expect(await aaveContract.balanceOf(user7.address)).to.equal(0);
+      expect(await aaveContract.balanceOf(user8.address)).to.equal(0);
+      expect(await aaveContract.balanceOf(user9.address)).to.equal(0);
+      expect(await aaveContract.balanceOf(user10.address)).to.equal(0);
+
+      await aelinDealProxyStorage.connect(user7).claim(user6.address);
+      await aelinDealProxyStorage.connect(user7).claim(user7.address);
+      await aelinDealProxyStorage.connect(user9).claim(user10.address);
+
+      const logs = await aelinDealProxyStorage.queryFilter(
+        aelinDealProxyStorage.filters.ClaimedUnderlyingDealTokens()
+      );
+
+      // TODO calculate exact claim amount
+      expect(await aaveContract.balanceOf(user6.address)).to.not.equal(0);
+      expect(await aaveContract.balanceOf(user7.address)).to.not.equal(0);
+      expect(await aaveContract.balanceOf(user8.address)).to.equal(0);
+      expect(await aaveContract.balanceOf(user9.address)).to.equal(0);
+      expect(await aaveContract.balanceOf(user10.address)).to.not.equal(0);
+
+      expect(await aaveContract.balanceOf(user6.address)).to.equal(
+        logs[0].args.underlyingDealTokensClaimed
+      );
+      expect(await aaveContract.balanceOf(user7.address)).to.equal(
+        logs[1].args.underlyingDealTokensClaimed
+      );
+      expect(await aaveContract.balanceOf(user10.address)).to.equal(
+        logs[2].args.underlyingDealTokensClaimed
+      );
+    });
+  });
+
+  describe("transfer blocked in redeem window", function () {
+    beforeEach(async function () {
+      const aelinPoolFactory = (await deployContract(
+        deployer,
+        AelinPoolFactoryArtifact
+      )) as AelinPoolFactory;
+
+      await aelinPoolFactory
         .connect(sponsor)
         .createPool(
           name,
@@ -532,8 +945,8 @@ describe("integration test", () => {
           aelinDealLogic.address
         );
 
-      const [createPoolLog] = await poolFactory.queryFilter(
-        poolFactory.filters.CreatePool()
+      const [createPoolLog] = await aelinPoolFactory.queryFilter(
+        aelinPoolFactory.filters.CreatePool()
       );
 
       aelinPoolProxyStorage = (await ethers.getContractAt(
@@ -564,7 +977,7 @@ describe("integration test", () => {
           vestingCliff,
           proRataRedemptionPeriod,
           openRedemptionPeriod,
-          aaveWhale.address
+          aaveWhaleOne.address
         );
 
       const [createDealLog] = await aelinPoolProxyStorage.queryFilter(
@@ -592,11 +1005,11 @@ describe("integration test", () => {
 
     it("should block a transfer during the redeem window", async function () {
       await aaveContract
-        .connect(aaveWhale)
+        .connect(aaveWhaleOne)
         .approve(aelinDealProxyStorage.address, underlyingDealTokenTotal);
 
       await aelinDealProxyStorage
-        .connect(aaveWhale)
+        .connect(aaveWhaleOne)
         .depositUnderlying(underlyingDealTokenTotal);
 
       expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
@@ -609,11 +1022,11 @@ describe("integration test", () => {
 
     it("should block a transferFrom during the redeem window", async function () {
       await aaveContract
-        .connect(aaveWhale)
+        .connect(aaveWhaleOne)
         .approve(aelinDealProxyStorage.address, underlyingDealTokenTotal);
 
       await aelinDealProxyStorage
-        .connect(aaveWhale)
+        .connect(aaveWhaleOne)
         .depositUnderlying(underlyingDealTokenTotal);
 
       expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
@@ -627,21 +1040,19 @@ describe("integration test", () => {
     });
   });
 
-  describe.skip("accept deal tests", function () {
-    let poolFactory: AelinPoolFactory;
-
+  describe("accept deal tests", function () {
     beforeEach(async function () {
-      poolFactory = (await deployContract(
+      const aelinPoolFactory = (await deployContract(
         deployer,
         AelinPoolFactoryArtifact
       )) as AelinPoolFactory;
 
-      await poolFactory
+      await aelinPoolFactory
         .connect(sponsor)
         .createPool(
           name,
           symbol,
-          purchaseAmount,
+          purchaseAmount.mul(4),
           usdcContract.address,
           duration,
           sponsorFee,
@@ -650,8 +1061,8 @@ describe("integration test", () => {
           aelinDealLogic.address
         );
 
-      const [createPoolLog] = await poolFactory.queryFilter(
-        poolFactory.filters.CreatePool()
+      const [createPoolLog] = await aelinPoolFactory.queryFilter(
+        aelinPoolFactory.filters.CreatePool()
       );
 
       aelinPoolProxyStorage = (await ethers.getContractAt(
@@ -661,12 +1072,21 @@ describe("integration test", () => {
 
       // purchasers get approval to buy pool tokens
       await usdcContract
-        .connect(user1)
+        .connect(user11)
+        .approve(aelinPoolProxyStorage.address, purchaseAmount);
+
+      // purchasers get approval to buy pool tokens
+      await usdcContract
+        .connect(user12)
         .approve(aelinPoolProxyStorage.address, purchaseAmount);
 
       // purchasers buy pool tokens
       await aelinPoolProxyStorage
-        .connect(user1)
+        .connect(user11)
+        .purchasePoolTokens(purchaseAmount);
+
+      await aelinPoolProxyStorage
+        .connect(user12)
         .purchasePoolTokens(purchaseAmount);
 
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
@@ -676,13 +1096,13 @@ describe("integration test", () => {
         .connect(sponsor)
         .createDeal(
           aaveContract.address,
-          purchaseAmount.div(4),
+          purchaseAmount,
           underlyingDealTokenTotal,
           vestingPeriod,
           vestingCliff,
           proRataRedemptionPeriod,
           openRedemptionPeriod,
-          aaveWhale.address
+          aaveWhaleOne.address
         );
 
       const [createDealLog] = await aelinPoolProxyStorage.queryFilter(
@@ -695,28 +1115,121 @@ describe("integration test", () => {
       )) as AelinDeal;
 
       await aaveContract
-        .connect(aaveWhale)
+        .connect(aaveWhaleOne)
         .approve(aelinDealProxyStorage.address, underlyingDealTokenTotal);
 
       await aelinDealProxyStorage
-        .connect(aaveWhale)
+        .connect(aaveWhaleOne)
         .depositUnderlying(underlyingDealTokenTotal);
     });
+
     it("should accept max deal tokens", async function () {
-      expect(await aelinDealProxyStorage.balanceOf(user1.address)).to.equal(0);
-      await aelinPoolProxyStorage.connect(user1).acceptMaxDealTokens();
-      expect(await aelinDealProxyStorage.balanceOf(user1.address)).to.equal(
-        poolAmount
+      expect(await aelinDealProxyStorage.balanceOf(user11.address)).to.equal(0);
+      await aelinPoolProxyStorage.connect(user11).acceptMaxDealTokens();
+      expect(await aelinDealProxyStorage.balanceOf(user11.address)).to.equal(
+        poolAmount.div(2).mul(feesNumerator).div(feesDenominator)
       );
     });
+
     it("should accept partial deal tokens", async function () {
-      expect(await aelinDealProxyStorage.balanceOf(user1.address)).to.equal(0);
+      expect(await aelinDealProxyStorage.balanceOf(user12.address)).to.equal(0);
       await aelinPoolProxyStorage
-        .connect(user1)
-        .acceptDealTokens(poolAmount.div(2));
-      expect(await aelinDealProxyStorage.balanceOf(user1.address)).to.equal(
-        poolAmount.div(2)
+        .connect(user12)
+        .acceptDealTokens(poolAmount.div(4));
+      expect(await aelinDealProxyStorage.balanceOf(user12.address)).to.equal(
+        poolAmount.div(4).mul(feesNumerator).div(feesDenominator)
       );
+    });
+
+    it("should revert outside of redeem window", async function () {
+      await ethers.provider.send("evm_increaseTime", [
+        proRataRedemptionPeriod + openRedemptionPeriod + 1,
+      ]);
+      await ethers.provider.send("evm_mine", []);
+      await expect(
+        aelinPoolProxyStorage
+          .connect(user12)
+          .acceptDealTokens(poolAmount.div(4))
+      ).to.be.revertedWith("outside of redeem window");
+    });
+
+    it("should revert with accepting more than share", async function () {
+      await expect(
+        aelinPoolProxyStorage
+          .connect(user12)
+          .acceptDealTokens(poolAmount.mul(2))
+      ).to.be.revertedWith("accepting more than share");
+    });
+
+    it("should work in open redemption period with max accept", async function () {
+      expect(await aelinDealProxyStorage.balanceOf(user11.address)).to.equal(0);
+      await aelinPoolProxyStorage.connect(user11).acceptMaxDealTokens();
+      expect(await aelinDealProxyStorage.balanceOf(user11.address)).to.equal(
+        poolAmount.div(2).mul(feesNumerator).div(feesDenominator)
+      );
+      await ethers.provider.send("evm_increaseTime", [
+        proRataRedemptionPeriod + 1,
+      ]);
+      await aelinPoolProxyStorage.connect(user11).acceptMaxDealTokens();
+      expect(await aelinDealProxyStorage.balanceOf(user11.address)).to.equal(
+        poolAmount.mul(feesNumerator).div(feesDenominator)
+      );
+    });
+
+    it("should work in open redemption period with partial accept", async function () {
+      expect(await aelinDealProxyStorage.balanceOf(user11.address)).to.equal(0);
+      await aelinPoolProxyStorage.connect(user11).acceptMaxDealTokens();
+      expect(await aelinDealProxyStorage.balanceOf(user11.address)).to.equal(
+        poolAmount.div(2).mul(feesNumerator).div(feesDenominator)
+      );
+      await ethers.provider.send("evm_increaseTime", [
+        proRataRedemptionPeriod + 1,
+      ]);
+      const partialAmount = 10000;
+      await aelinPoolProxyStorage
+        .connect(user11)
+        .acceptDealTokens(partialAmount);
+      expect(await aelinDealProxyStorage.balanceOf(user11.address)).to.equal(
+        poolAmount
+          .div(2)
+          .add(partialAmount)
+          .mul(feesNumerator)
+          .div(feesDenominator)
+      );
+    });
+
+    it("should revert with ineligible in open period due to not maxxing pro rata", async function () {
+      expect(await aelinDealProxyStorage.balanceOf(user12.address)).to.equal(0);
+      await aelinPoolProxyStorage
+        .connect(user12)
+        .acceptDealTokens(poolAmount.div(4));
+      expect(await aelinDealProxyStorage.balanceOf(user12.address)).to.equal(
+        poolAmount.div(4).mul(feesNumerator).div(feesDenominator)
+      );
+      await ethers.provider.send("evm_increaseTime", [
+        proRataRedemptionPeriod + 1,
+      ]);
+      await expect(
+        aelinPoolProxyStorage.connect(user12).acceptMaxDealTokens()
+      ).to.be.revertedWith("ineligible: didn't max pro rata");
+    });
+
+    it.only("should revert with accepting more than share in open period", async function () {
+      expect(await aelinDealProxyStorage.balanceOf(user11.address)).to.equal(0);
+      await aelinPoolProxyStorage.connect(user11).acceptMaxDealTokens();
+      expect(await aelinDealProxyStorage.balanceOf(user11.address)).to.equal(
+        poolAmount.div(2).mul(feesNumerator).div(feesDenominator)
+      );
+      await ethers.provider.send("evm_increaseTime", [
+        proRataRedemptionPeriod + 1,
+      ]);
+      const excessAmount = ethers.utils.parseUnits(
+        "500000000",
+        dealOrPoolTokenDecimals
+      );
+      await expect(
+        aelinPoolProxyStorage.connect(user11).acceptDealTokens(excessAmount)
+      ).to.be.revertedWith("accepting more than share");
     });
   });
 });

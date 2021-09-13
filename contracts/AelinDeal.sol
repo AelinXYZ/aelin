@@ -176,7 +176,7 @@ contract AelinDeal is AelinERC20 {
         }
     }
     
-    function claim(address recipient) public returns (uint dealTokensClaimed) {
+    function claim(address recipient) public returns (uint) {
         if (balanceOf[recipient] > 0) {
             uint maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
             if (maxTime > vestingCliff || (maxTime == vestingCliff && vestingPeriod == 0 && lastClaim[recipient] == 0)) {
@@ -194,8 +194,10 @@ contract AelinDeal is AelinERC20 {
                     emit ClaimedUnderlyingDealTokens(underlyingDealToken, recipient, underlyingDealTokensClaimed);
                 }
                 lastClaim[recipient] = maxTime;
+                return dealTokensClaimed;
             }
         }
+        return 0;
     }
     
     function mint(address dst, uint dealTokenAmount) external onlyPool {

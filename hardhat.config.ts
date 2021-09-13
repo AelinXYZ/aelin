@@ -21,7 +21,8 @@ const config: HardhatUserConfig = {
   },
   defaultNetwork: "hardhat",
   mocha: {
-    timeout: 100000,
+    // this needs to be long because CI takes a while to fork the mainnet data from alchemy
+    timeout: 200000,
   },
   networks: {
     kovan: {
