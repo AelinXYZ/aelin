@@ -519,16 +519,16 @@ describe("AelinDeal", function () {
 
         expect(transferLogs[0].args.from).to.equal(nullAddress);
         expect(transferLogs[0].args.to).to.equal(purchaser.address);
-        expect(transferLogs[0].args.amount).to.equal(mintAmount);
+        expect(transferLogs[0].args.value).to.equal(mintAmount);
 
         expect(transferLogs[1].args.from).to.equal(purchaser.address);
         expect(transferLogs[1].args.to).to.equal(nullAddress);
-        // @NOTE I thought the safeTransfer might emit an event  with the expected claim amount?
-        expect(transferLogs[1].args.amount).to.equal(mintAmount);
+        // @NOTE I thought the safeTransfer might emit an event  with the expected claim value?
+        expect(transferLogs[1].args.value).to.equal(mintAmount);
 
         expect(transferLogs[2].args.from).to.equal(purchaser.address);
         expect(transferLogs[2].args.to).to.equal(deployer.address);
-        expect(transferLogs[2].args.amount).to.equal(mintAmount);
+        expect(transferLogs[2].args.value).to.equal(mintAmount);
 
         expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
       });
@@ -573,15 +573,15 @@ describe("AelinDeal", function () {
 
         expect(transferLogs[0].args.from).to.equal(nullAddress);
         expect(transferLogs[0].args.to).to.equal(purchaser.address);
-        expect(transferLogs[0].args.amount).to.equal(mintAmount);
+        expect(transferLogs[0].args.value).to.equal(mintAmount);
 
         expect(transferLogs[1].args.from).to.equal(purchaser.address);
         expect(transferLogs[1].args.to).to.equal(nullAddress);
-        expect(transferLogs[1].args.amount).to.equal(mintAmount);
+        expect(transferLogs[1].args.value).to.equal(mintAmount);
 
         expect(transferLogs[2].args.from).to.equal(purchaser.address);
         expect(transferLogs[2].args.to).to.equal(holder.address);
-        expect(transferLogs[2].args.amount).to.equal(mintAmount);
+        expect(transferLogs[2].args.value).to.equal(mintAmount);
 
         expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
       });

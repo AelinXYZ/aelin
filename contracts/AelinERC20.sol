@@ -8,11 +8,11 @@ interface IERC20Decimals {
     function decimals() external view returns (uint8);
 }
 
-contract AelinERC20 is ERC20 {
+contract AelinERC20 is ERC20 {    
     bool setInfo;
     mapping(address => mapping(address => uint256)) public _allowances;
     
-    constructor () {}
+    constructor () ERC20("", "") {}
 
     modifier initInfoOnce () {
         require(setInfo == false, "can only initialize once");
@@ -26,13 +26,13 @@ contract AelinERC20 is ERC20 {
         return true;
     }
 
-    function convertUnderlyingToAelinAmount(uint underlyingAmount, uint underlyingDecimals) pure internal returns (uint) {
+    function convertUnderlyingToAelinAmount(uint underlyingAmount, uint underlyingDecimals) internal view returns (uint) {
         return underlyingDecimals == decimals() ? 
             underlyingAmount :
             underlyingAmount * 10**(decimals()-underlyingDecimals);
     }
 
-    function convertAelinToUnderlyingAmount(uint aelinTokenAmount, uint underlyingDecimals) pure internal returns (uint) {
+    function convertAelinToUnderlyingAmount(uint aelinTokenAmount, uint underlyingDecimals) internal view returns (uint) {
         return underlyingDecimals == decimals() ? 
             aelinTokenAmount :
             aelinTokenAmount / 10**(decimals()-underlyingDecimals);
