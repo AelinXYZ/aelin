@@ -4,8 +4,10 @@ pragma solidity 0.8.6;
 import "./AelinERC20.sol";
 import "./AelinPool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract AelinDeal is AelinERC20 {
+    using SafeERC20 for IERC20;
     uint256 public maxTotalSupply;
 
     address public underlyingDealToken;
@@ -116,8 +118,7 @@ contract AelinDeal is AelinERC20 {
             depositComplete = true;
         }
         if (_underlyingDealTokenAmount > 0) {
-            _safeTransferFrom(
-                underlyingDealToken,
+            IERC20(underlyingDealToken).safeTransferFrom(
                 msg.sender,
                 address(this),
                 _underlyingDealTokenAmount
@@ -160,7 +161,7 @@ contract AelinDeal is AelinERC20 {
         ) -
             underlyingDealTokenTotal -
             totalUnderlyingClaimed;
-        _safeTransfer(underlyingDealToken, holder, withdrawAmount);
+        IERC20(underlyingDealToken).safeTransfer(holder, withdrawAmount);
         emit WithdrawUnderlyingDealTokens(
             underlyingDealToken,
             holder,
@@ -180,7 +181,7 @@ contract AelinDeal is AelinERC20 {
         uint256 withdrawAmount = IERC20(underlyingDealToken).balanceOf(
             address(this)
         ) - ((underlyingPerPoolExchangeRate * totalSupply()) / 1e18);
-        _safeTransfer(underlyingDealToken, holder, withdrawAmount);
+        IERC20(underlyingDealToken).safeTransfer(holder, withdrawAmount);
         emit WithdrawUnderlyingDealTokens(
             underlyingDealToken,
             holder,
@@ -262,8 +263,7 @@ contract AelinDeal is AelinERC20 {
 
                 if (dealTokensClaimed > 0) {
                     _burn(recipient, dealTokensClaimed);
-                    _safeTransfer(
-                        underlyingDealToken,
+                    IERC20(underlyingDealToken).safeTransfer(
                         recipient,
                         underlyingDealTokensClaimed
                     );
@@ -286,14 +286,25 @@ contract AelinDeal is AelinERC20 {
         emit MintDealTokens(address(this), dst, dealTokenAmount);
     }
 
-    function _beforeTokenTransfer(
-        address from,
-        address to,
+    function transfer(address recipient, uint256 amount)
+        public
+        virtual
+        override
+        returns (bool)
+    {
+        _claim(msg.sender);
+        _claim(recipient);
+        return super.transfer(recipient, amount);
+    }
+
+    function transferFrom(
+        address sender,
+        address recipient,
         uint256 amount
-    ) internal virtual override {
-        super._beforeTokenTransfer(from, to, amount);
-        _claim(from);
-        _claim(to);
+    ) public virtual override returns (bool) {
+        _claim(sender);
+        _claim(recipient);
+        return super.transferFrom(sender, recipient, amount);
     }
 
     event SetHolder(address indexed holder);
