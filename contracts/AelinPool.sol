@@ -4,7 +4,6 @@ pragma solidity 0.8.6;
 import "./AelinERC20.sol";
 import "./AelinDeal.sol";
 import "./MinimalProxyFactory.sol";
-import "hardhat/console.sol";
 
 contract AelinPool is AelinERC20, MinimalProxyFactory {
     address public purchaseToken;
@@ -237,16 +236,16 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     function acceptDealLogic(address recipient, uint poolTokenAmount) internal {
         AelinDeal aelinDeal = AelinDeal(aelinDealStorageProxy);
         _burn(msg.sender, poolTokenAmount);
-        uint aelinFee = poolTokenAmount * AELIN_FEE / BASE;
-        uint sponsorFee = poolTokenAmount * sponsorFee / BASE;
+        uint aelinFeeAmt = poolTokenAmount * AELIN_FEE / BASE;
+        uint sponsorFeeAmt = poolTokenAmount * sponsorFee / BASE;
 
-        aelinDeal.mint(sponsor, sponsorFee);
-        aelinDeal.mint(AELIN_REWARDS, aelinFee);
-        aelinDeal.mint(recipient, poolTokenAmount - (sponsorFee + aelinFee));
+        aelinDeal.mint(sponsor, sponsorFeeAmt);
+        aelinDeal.mint(AELIN_REWARDS, aelinFeeAmt);
+        aelinDeal.mint(recipient, poolTokenAmount - (sponsorFeeAmt + aelinFeeAmt));
 
         uint underlyingToHolderAmt = convertAelinToUnderlyingAmount(poolTokenAmount, purchaseTokenDecimals);
         _safeTransfer(purchaseToken, holder, underlyingToHolderAmt);
-        emit AcceptDeal(recipient, address(this), aelinDealStorageProxy, poolTokenAmount, sponsorFee, aelinFee, underlyingToHolderAmt);
+        emit AcceptDeal(recipient, address(this), aelinDealStorageProxy, poolTokenAmount, sponsorFeeAmt, aelinFeeAmt, underlyingToHolderAmt);
     }
 
     function purchasePoolTokens(uint _purchaseTokenAmount) external {
