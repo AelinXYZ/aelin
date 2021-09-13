@@ -2,32 +2,15 @@
 pragma solidity 0.8.6;
 
 // currently here to generate the abi, but eventually want to switch to it
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { ERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-interface IERC20 {
-    function transfer(address recipient, uint256 amount) external returns (bool);
+interface IERC20Decimals {
     function decimals() external view returns (uint8);
-    function balanceOf(address) external view returns (uint);
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
 }
 
-// @TODO extend standard ERC20 from Open Zeppelin
-contract AelinERC20 {
-    string public name;
-    string public symbol;
-    uint8 public constant decimals = 18;
+abstract contract AelinERC20 is ERC20 {
     bool setInfo;
-    
-    uint public totalSupply = 0;
-    
-    mapping(address => mapping (address => uint)) public allowance;
-    mapping(address => uint) public balanceOf;
-    
-    /// @notice The standard EIP-20 transfer event
-    event Transfer(address indexed from, address indexed to, uint amount);
-
-    /// @notice The standard EIP-20 approval event
-    event Approval(address indexed owner, address indexed spender, uint amount);
+    mapping(address => mapping(address => uint256)) public _allowances;
     
     constructor () {}
 
@@ -37,68 +20,22 @@ contract AelinERC20 {
     }
 
     function _setNameAndSymbol(string memory _name, string memory _symbol) internal initInfoOnce returns (bool) {
-        name = _name;
-        symbol = _symbol;
+        _name = _name;
+        _symbol = _symbol;
         setInfo = true;
         return true;
     }
-    
-    function _mint(address dst, uint amount) internal {
-        totalSupply += amount;
-        balanceOf[dst] += amount;
-        emit Transfer(address(0), dst, amount);
-    }
-    
-    function _burn(address from, uint amount) internal {
-        totalSupply -= amount;
-        balanceOf[from] -= amount;
-        emit Transfer(from, address(0), amount);
-    }
 
     function convertUnderlyingToAelinAmount(uint underlyingAmount, uint underlyingDecimals) pure internal returns (uint) {
-        return underlyingDecimals == decimals ? 
+        return underlyingDecimals == decimals() ? 
             underlyingAmount :
-            underlyingAmount * 10**(decimals-underlyingDecimals);
+            underlyingAmount * 10**(decimals()-underlyingDecimals);
     }
 
     function convertAelinToUnderlyingAmount(uint aelinTokenAmount, uint underlyingDecimals) pure internal returns (uint) {
-        return underlyingDecimals == decimals ? 
+        return underlyingDecimals == decimals() ? 
             aelinTokenAmount :
-            aelinTokenAmount / 10**(decimals-underlyingDecimals);
-    }
-
-    function approve(address spender, uint amount) external returns (bool) {
-        allowance[msg.sender][spender] = amount;
-
-        emit Approval(msg.sender, spender, amount);
-        return true;
-    }
-
-    function transfer(address dst, uint amount) external virtual returns (bool) {
-        _transferTokens(msg.sender, dst, amount);
-        return true;
-    }
-
-    function transferFrom(address src, address dst, uint amount) external virtual returns (bool) {
-        address spender = msg.sender;
-        uint spenderAllowance = allowance[src][spender];
-
-        if (spender != src && spenderAllowance != type(uint).max) {
-            uint newAllowance = spenderAllowance - amount;
-            allowance[src][spender] = newAllowance;
-
-            emit Approval(src, spender, newAllowance);
-        }
-
-        _transferTokens(src, dst, amount);
-        return true;
-    }
-
-    function _transferTokens(address src, address dst, uint amount) internal virtual {
-        balanceOf[src] -= amount;
-        balanceOf[dst] += amount;
-        
-        emit Transfer(src, dst, amount);
+            aelinTokenAmount / 10**(decimals()-underlyingDecimals);
     }
     
     function _safeTransfer(

@@ -3,8 +3,9 @@ pragma solidity 0.8.6;
 
 import "./AelinERC20.sol";
 import "./AelinPool.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract AelinDeal is AelinERC20 {
+abstract contract AelinDeal is AelinERC20 {
     uint public maxTotalSupply;
 
     address public underlyingDealToken;
@@ -53,7 +54,7 @@ contract AelinDeal is AelinERC20 {
 
         holder = _holder;
         underlyingDealToken = _underlyingDealToken;
-        underlyingDealTokenDecimals = IERC20(_underlyingDealToken).decimals();
+        underlyingDealTokenDecimals = IERC20Decimals(_underlyingDealToken).decimals();
         underlyingDealTokenTotal = _underlyingDealTokenTotal;
         maxTotalSupply = _poolTokenMaxPurchaseAmount;
         
@@ -140,7 +141,7 @@ contract AelinDeal is AelinERC20 {
                 block.timestamp > proRataRedemptionExpiry,
             "redeem window still active"
         );
-        uint withdrawAmount = IERC20(underlyingDealToken).balanceOf(address(this)) - (underlyingPerPoolExchangeRate * totalSupply / 1e18);
+        uint withdrawAmount = IERC20(underlyingDealToken).balanceOf(address(this)) - (underlyingPerPoolExchangeRate * totalSupply() / 1e18);
         _safeTransfer(underlyingDealToken, holder, withdrawAmount);
         emit WithdrawUnderlyingDealTokens(underlyingDealToken, holder, address(this), withdrawAmount);
     }
@@ -168,7 +169,7 @@ contract AelinDeal is AelinERC20 {
                 return 0;
             } else {
                 uint timeElapsed = maxTime - lastClaimed;
-                uint dealTokensClaimable = vestingPeriod == 0 ? balanceOf[purchaser] : balanceOf[purchaser] * timeElapsed / vestingPeriod;
+                uint dealTokensClaimable = vestingPeriod == 0 ? balanceOf(purchaser) : balanceOf(purchaser) * timeElapsed / vestingPeriod;
                 return underlyingPerPoolExchangeRate * dealTokensClaimable / 1e18;
             }
         } else {
@@ -177,14 +178,14 @@ contract AelinDeal is AelinERC20 {
     }
     
     function claim(address recipient) public returns (uint) {
-        if (balanceOf[recipient] > 0) {
+        if (balanceOf(recipient) > 0) {
             uint maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
             if (maxTime > vestingCliff || (maxTime == vestingCliff && vestingPeriod == 0 && lastClaim[recipient] == 0)) {
                 if (lastClaim[recipient] == 0) {
                     lastClaim[recipient] = vestingCliff;
                 }
                 uint timeElapsed = maxTime - lastClaim[recipient];
-                uint dealTokensClaimed = vestingPeriod == 0 ? balanceOf[recipient] : balanceOf[recipient] * timeElapsed / vestingPeriod;
+                uint dealTokensClaimed = vestingPeriod == 0 ? balanceOf(recipient) : balanceOf(recipient) * timeElapsed / vestingPeriod;
                 uint underlyingDealTokensClaimed = underlyingPerPoolExchangeRate * dealTokensClaimed / 1e18;
 
                 if (dealTokensClaimed > 0) {
@@ -205,38 +206,10 @@ contract AelinDeal is AelinERC20 {
         emit MintDealTokens(address(this), dst, dealTokenAmount);
     }
 
-    // double and triple check the logic for these 3 methods
-    function transfer(address dst, uint dealTokenAmount) external override returns (bool) {
-        _transferTokens(msg.sender, dst, dealTokenAmount);
-        return true;
-    }
-
-    function transferFrom(address src, address dst, uint amount) external override returns (bool) {
-        address spender = msg.sender;
-        uint spenderAllowance = allowance[src][spender];
-
-        if (spender != src && spenderAllowance != type(uint).max) {
-            uint newAllowance = spenderAllowance - amount;
-            allowance[src][spender] = newAllowance;
-
-            emit Approval(src, spender, newAllowance);
-        }
-
-        _transferTokens(src, dst, amount);
-        return true;
-    }
-
-    // @NOTE when you transfer deal tokens you have to claim your balance to that point and 
-    // also claim for the receiving address in order to make sure the calculations are always
-    // accurate after the transfer. you also need to check the latest balance after the initial
-    // claim to make sure that you don't send more than you have left after claiming.
-    function _transferTokens(address src, address dst, uint amount) internal override {
-        require(balanceOf[src] >= amount, "not enough to transfer");
-        claim(src);
-        claim(dst);
-        balanceOf[dst] += amount;
-        
-        emit Transfer(src, dst, amount);
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
+        super._beforeTokenTransfer(from, to, amount);
+        claim(from);
+        claim(to);
     }
 
     event SetHolder(address indexed holder);
