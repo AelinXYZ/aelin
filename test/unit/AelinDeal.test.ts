@@ -444,7 +444,7 @@ describe("AelinDeal", function () {
           .withArgs(purchaser.address, expectedClaimUnderlying)
           .returns(true);
 
-        await aelinDeal.connect(purchaser).claim(purchaser.address);
+        await aelinDeal.connect(purchaser).claim();
 
         const [log] = await aelinDeal.queryFilter(
           aelinDeal.filters.ClaimedUnderlyingDealTokens()
@@ -475,7 +475,7 @@ describe("AelinDeal", function () {
           .withArgs(purchaser.address, partiallyExpectedClaimUnderlying)
           .returns(true);
 
-        await aelinDeal.connect(purchaser).claim(purchaser.address);
+        await aelinDeal.connect(purchaser).claim();
 
         const [log] = await aelinDeal.queryFilter(
           aelinDeal.filters.ClaimedUnderlyingDealTokens()
@@ -596,7 +596,7 @@ describe("AelinDeal", function () {
           .withArgs(purchaser.address, expectedClaimUnderlying)
           .returns(true);
 
-        await aelinDeal.connect(deployer).claim(deployer.address);
+        await aelinDeal.connect(deployer).claim();
         const claimedLogs = await aelinDeal.queryFilter(
           aelinDeal.filters.ClaimedUnderlyingDealTokens()
         );
@@ -671,7 +671,7 @@ describe("AelinDeal", function () {
         .withArgs(purchaser.address, expectedClaimUnderlying)
         .returns(true);
 
-      await aelinDeal.connect(purchaser).claim(purchaser.address);
+      await aelinDeal.connect(purchaser).claim();
 
       const [log] = await aelinDeal.queryFilter(
         aelinDeal.filters.ClaimedUnderlyingDealTokens()

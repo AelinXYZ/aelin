@@ -191,6 +191,7 @@ describe("integration test", () => {
         deployer,
         AelinPoolFactoryArtifact
       )) as AelinPoolFactory;
+      console.log("a");
       await aelinPoolFactory
         .connect(sponsor)
         .createPool(
@@ -522,9 +523,9 @@ describe("integration test", () => {
       expect(await aaveContract.balanceOf(user4.address)).to.equal(0);
       expect(await aaveContract.balanceOf(user5.address)).to.equal(0);
 
-      await aelinDealProxyStorage.connect(user2).claim(user1.address);
-      await aelinDealProxyStorage.connect(user2).claim(user2.address);
-      await aelinDealProxyStorage.connect(user4).claim(user5.address);
+      await aelinDealProxyStorage.connect(user1).claim();
+      await aelinDealProxyStorage.connect(user2).claim();
+      await aelinDealProxyStorage.connect(user4).claim();
 
       const logs = await aelinDealProxyStorage.queryFilter(
         aelinDealProxyStorage.filters.ClaimedUnderlyingDealTokens()
@@ -897,9 +898,9 @@ describe("integration test", () => {
       expect(await aaveContract.balanceOf(user9.address)).to.equal(0);
       expect(await aaveContract.balanceOf(user10.address)).to.equal(0);
 
-      await aelinDealProxyStorage.connect(user7).claim(user6.address);
-      await aelinDealProxyStorage.connect(user7).claim(user7.address);
-      await aelinDealProxyStorage.connect(user9).claim(user10.address);
+      await aelinDealProxyStorage.connect(user6).claim();
+      await aelinDealProxyStorage.connect(user7).claim();
+      await aelinDealProxyStorage.connect(user9).claim();
 
       const logs = await aelinDealProxyStorage.queryFilter(
         aelinDealProxyStorage.filters.ClaimedUnderlyingDealTokens()
