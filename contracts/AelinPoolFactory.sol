@@ -16,6 +16,7 @@ contract AelinPoolFactory is MinimalProxyFactory {
      * NOTE I am adding setters below for testing purposes that we will remove 
      * before deployment and hardcode the correct deployed addresses. Once we deploy 
      * we are forking mainnet in testing so we can use the real addresses in tests
+     * this is the only piece of code that is meant to be temporary in the contracts
      */
     address public AELIN_POOL_LOGIC;
     address public AELIN_DEAL_LOGIC;

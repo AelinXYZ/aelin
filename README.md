@@ -2,17 +2,17 @@
 
 Aelin is a fundraising protocol built on Ethereum. A sponsor goes out and announces they are raising a pool of capital with a purchase expiry period. Anyone with an internet connection, aka the purchaser, can contribute funds (e.g. sUSD) to the pool during the purchase expiry period; the funds are locked for a time duration period while the sponsor searches for a deal.
 
-If the sponsor finds a deal with the holder of a tokenized asset after the purchase expiry period, the sponsor announces the deal terms to the purchasers and the holder sends the underlying deal tokens/ tokenized assets to the contract. At this point in time the purchaers can convert their pool tokens (or a partial amount) to deal tokens, which represent a claim on the underlying deal token. Pool tokens are transferrable until the deal is created and fully funded. After the deal is funded, pool tokens must be either accpeted or withdrawn for the purchase token.
-
-The deal token is an ERC20 that might include a vesting schedule or not to claim the underlying deal token, depending upon the deal. Since the underlying deal tokens vesting are wrapped as an ERC20 they may be sold or traded before the vesting period is over. However, all vested tokens will be claimed and the respective deal tokens burned before any transfer occurs.
+If the sponsor finds a deal with the holder of a tokenized asset after the purchase expiry period, the sponsor announces the deal terms to the purchasers and then the holder sends the underlying deal tokens/ tokenized assets to the contract. At this point in time, purchaers can convert their pool tokens (or a partial amount) to deal tokens, which represent a claim on the underlying deal token. Pool tokens are transferrable until the deal is created and fully funded. After the deal is funded, pool tokens must be either accpeted or withdrawn for the purchase token.
 
 If the purchaers are not interested in the underlying deal token they are welcome to reject the deal and withdraw their capital after the deal terms are announced. Also if a deal is not found then the purchasers can take their money back at the end of the pool duration.
+
+The deal token is an ERC20 that might include a vesting schedule or not to claim the underlying deal token, depending upon the deal. Since the unvested underlying deal tokens are wrapped as an ERC20 they may be sold or traded before the vesting period is over. However, all vested tokens will be claimed and the respective deal tokens burned before any transfer occurs.
 
 ## Key terms
 
 - `Sponsor` - the entity or individual raising capital to pursue a deal
 
-- `Holder` - the entity or individual seeking capital in exchange for an underlying deal token
+- `Holder` - the entity or individual seeking capital in exchange for an underlying deal token they hold
 
 - `Purchaser` - the entity or individual providing capital in exchange for a possible investment opportunity
 
@@ -32,7 +32,7 @@ If the purchaers are not interested in the underlying deal token they are welcom
 
 ### **SPONSOR**
 
-**SPONSOR STEP 1**: Create a pool by calling `AelinPoolFactory.createPool(...)`
+**SPONSOR STEP 1 (Create a Pool)**: Create a pool by calling `AelinPoolFactory.createPool(...)`
 
 Arguments:
 
@@ -53,9 +53,9 @@ Requirements:
 
 NOTE if SPONSOR never finds a deal this is the end of their journey and the PURCHASER can retrieve their purchase tokens at the end of the `_duration`
 
-If a deal is found, the SPONSOR must wait for `PURCHASER step 1` to be completed and the purchase expiry period to end before going to `SPONSOR step 2`.
+If a deal is found, the SPONSOR must wait for `PURCHASER step 1 (Enter the Pool)` to be completed and the purchase expiry period to end before going to create a deal in step 2.
 
-**SPONSOR STEP 2**: Creates a deal by calling `AelinPool.createDeal(...)`
+**SPONSOR STEP 2 (Create a Deal)**: Creates a deal by calling `AelinPool.createDeal(...)`
 
 Modifiers:
 
@@ -82,13 +82,13 @@ Requirements:
 - the `_openRataRedemptionPeriod` must be >= 30 minutes and <= 30 days, If the proRataConversion rate is not 1:1, otherwise it must be 0 (revert)
 - the `_purchaseTokenTotalForDeal` converted to 18 decimals must be <= totalSupply of pool tokens (revert)
 
-NOTE the sponsor journey has ended. From here the next step is `HOLDER step 1`
+NOTE the sponsor journey has ended. From here the next step is `HOLDER step 1 (Fund the Deal)`
 
 **`EXTRA_METHODS`**: only the sponsor may also call `setSponsor()` followed by `acceptSponsor()` from the new address at any time to update the sponsor address for a deal
 
 ### **PURCHASER**
 
-**PURCHASER STEP 1**: Purchase pool tokens by calling `AelinPool.purchasePoolTokens(...)` or `Aelin.purchasePoolTokensUpToAmount(...)`. Note that calling UptoAmount method will fill a lesser amount if there is a risk that the `purchaseTokenCap` will be exceeded with the original amount at the time the transaction is executed.
+**PURCHASER STEP 1 (Enter the Pool)**: Purchase pool tokens by calling `AelinPool.purchasePoolTokens(...)` or `Aelin.purchasePoolTokensUpToAmount(...)`. Note that calling UptoAmount method will fill a lesser amount if there is a risk that the `purchaseTokenCap` will be exceeded with the original amount at the time the transaction is executed.
 
 Arguments:
 
@@ -99,9 +99,9 @@ Requirements:
 - the `_purchaseTokenAmount` when converted to 18 decimal format plus the `totalSupply` of the pool token must be <= `poolTokenCap` unless the cap is set to 0 (revert)
 - the pool tokens must be purchased when `block.timestamp` <= `purchaseExpiry`
 
-NOTE after `PURCHASER step 1` is `SPONSOR step 2 and then HOLDER step 1` followed by `PURCHASER step 2`. NOTE if a sponsor never creates a deal the purchaser can withdraw their funds the same way as if they reject the deal
+NOTE after `PURCHASER step 1 (Enter the Deal)` is `SPONSOR step 2 (Create the Deal)` and then `HOLDER step 1 (Fund the Deal)` followed by `PURCHASER step 2 (Accept or Reject the Deal)`. NOTE if a sponsor never creates a deal the purchaser can withdraw their funds the same way as if they reject the deal
 
-**PURCHASER STEP 2**: At step two the purchaser has 2 options: reject or accept the deal. At this point they can no longer transfer their pool tokens.<space><space>
+**PURCHASER STEP 2 (Accept or Reject the Deal)**: At step two the purchaser has 2 options: reject or accept the deal. At this point they can no longer transfer their pool tokens.<space><space>
 
 **OPTION 1 - REJECT**: Rejects a portion of or all of the deal offered by calling `AelinPool.withdrawMaxFromPool()` or `withdrawFromPool(uint poolTokenAmount)`
 
@@ -122,7 +122,7 @@ Requirements:
 - **OPEN REDEMPTION PERIOD**:
   (n/a - since the ratio is 1:1 all purchasers have already had the chance to max their contributions)
 
-**Accept when Conversion Ratio < 1:1** (e.g. a pool has $10M sUSD in it but the deal is for $8M sUSD)
+**Accept when Conversion Ratio is less than 1:1** (e.g. a pool has $10M sUSD in it but the deal is for $8M sUSD)
 
 - **PRO RATA PERIOD**:
 
@@ -138,7 +138,7 @@ Requirements:
 
 ### **HOLDER**
 
-**HOLDER STEP 1**: After the deal has been created by the sponsor, the holder (or any address on behalf of the holder) funds the deal by calling `AelinDeal.depositUnderlying(...)`
+**HOLDER STEP 1 (Fund the Deal)**: After the deal has been created by the sponsor, the holder (or any address on behalf of the holder) funds the deal by calling `AelinDeal.depositUnderlying(...)`
 
 Modifiers:
 
@@ -164,10 +164,15 @@ The integration tests require that hardhat run a fork of mainnet (see [docs](htt
 
 NOTE: the first time you run the test it will be slow. Hardhat caches the requests to Alchemy, so it will be faster on subsequent runs
 
+Environment variables needed for the codebase in additon to `ALCHEMY_URL`
+
+1. `export KOVAN_PRIVATE_KEY=...` any private key with some kovan ETH on it for deployment
+2. `export ALCHEMY_API_KEY=...` the same key at the end of the `ALCHEMY_URL` environment variable but it needs to be in its own environment variable.
+
 #### Deploying
 
 1. export ALCHEMY_API_KEY (just the key part) from step 2 in running integration tests.
 2. grab an Ethereum private key and get some Kovan ETH on it. `export KOVAN_PRIVATE_KEY=<key>`.
-3. `npm run deploy-deal:<network>` - take the address of the deployed deal from the CLI and save it for later usage
-4. `npm run deploy-pool:<network>` - take the address of the deployed pool from the CLI and save it for later usage
+3. `npm run deploy-deal:<network>` - take the address of the deployed deal from the CLI and paste it in the `AelinPoolFactory` as `address constant AELIN_DEAL_LOGIC = ...`
+4. `npm run deploy-pool:<network>` - take the address of the deployed pool from the CLI and paste it in the `AelinPoolFactory` as `address constant AELIN_POOL_LOGIC = ...`
 5. `npm run deploy-pool-factory:<network>`
