@@ -4,21 +4,51 @@ pragma solidity 0.8.6;
 import "./MinimalProxyFactory.sol";
 import "./AelinPool.sol";
 
+/**
+ * @dev the factory contract allows an Aelin sponsor to permissionlessly create new pools 
+ */
 contract AelinPoolFactory is MinimalProxyFactory {
+    /**
+     * TODO update with the correct multi-sig address
+     */
+    address constant AELIN_REWARDS = 0x5A0b54D5dc17e0AadC383d2db43B0a0D3E029c4c;
+    /**
+     * NOTE I am adding setters below for testing purposes that we will remove 
+     * before deployment and hardcode the correct deployed addresses. Once we deploy 
+     * we are forking mainnet in testing so we can use the real addresses in tests
+     */
+    address public AELIN_POOL_LOGIC;
+    address public AELIN_DEAL_LOGIC;
+
     constructor() {}
 
+    /**
+     * @dev this will be deleted before we release the protocol. It is a helper for tests
+     * but after we deploy the real contracts we will hardcode the values above
+     */
+    function setAddressesDeleteBeforeLaunch(address pool, address deal) external {
+        AELIN_POOL_LOGIC = pool;
+        AELIN_DEAL_LOGIC = deal;
+    }
+
+    /**
+     * @dev the method a sponsor calls to create a pool
+     */
     function createPool(
         string memory _name,
         string memory _symbol,
-        uint _purchaseTokenCap,
+        uint256 _purchaseTokenCap,
         address _purchaseToken,
-        uint _duration,
-        uint _sponsorFee,
-        uint _purchaseExpiry,
-        address _aelinPoolLogicAddress,
-        address _aelinDealLogicAddress
+        uint256 _duration,
+        uint256 _sponsorFee,
+        uint256 _purchaseExpiry
     ) external returns (address) {
-        AelinPool aelin_pool = AelinPool(_cloneAsMinimalProxy(_aelinPoolLogicAddress, "Could not create new deal"));
+        AelinPool aelin_pool = AelinPool(
+            _cloneAsMinimalProxy(
+                AELIN_POOL_LOGIC,
+                "Could not create new deal"
+            )
+        );
         aelin_pool.initialize(
             _name,
             _symbol,
@@ -28,7 +58,8 @@ contract AelinPoolFactory is MinimalProxyFactory {
             _sponsorFee,
             msg.sender,
             _purchaseExpiry,
-            _aelinDealLogicAddress
+            AELIN_DEAL_LOGIC,
+            AELIN_REWARDS
         );
 
         emit CreatePool(
@@ -46,16 +77,15 @@ contract AelinPoolFactory is MinimalProxyFactory {
         return address(aelin_pool);
     }
 
-    // TODO consider adding versioning to events
     event CreatePool(
         address indexed poolAddress,
         string name,
         string symbol,
-        uint purchaseTokenCap,
+        uint256 purchaseTokenCap,
         address indexed purchaseToken,
-        uint duration,
-        uint sponsorFee,
+        uint256 duration,
+        uint256 sponsorFee,
         address indexed sponsor,
-        uint purchaseExpiry
+        uint256 purchaseExpiry
     );
 }

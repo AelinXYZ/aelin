@@ -32,6 +32,10 @@ describe("AelinPoolFactory", function () {
       signers[0],
       AelinPoolFactoryArtifact
     )) as AelinPoolFactory;
+    await aelinPoolFactory.setAddressesDeleteBeforeLaunch(
+      aelinPoolLogic.address,
+      aelinDealLogic.address
+    );
 
     const sponsor = signers[1];
     const name = "Test token";
@@ -50,9 +54,7 @@ describe("AelinPoolFactory", function () {
         purchaseToken.address,
         duration,
         sponsorFee,
-        purchaseExpiry,
-        aelinPoolLogic.address,
-        aelinDealLogic.address
+        purchaseExpiry
       );
 
     expect(result.value).to.equal(0);

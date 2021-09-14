@@ -18,7 +18,6 @@ describe("AelinPool", function () {
   let holder: SignerWithAddress;
   let nonsponsor: SignerWithAddress;
   let user1: SignerWithAddress;
-  let user2: SignerWithAddress;
   // NOTE that the test will fail if this is a mock contract due to the
   // minimal proxy and initialize pattern. Technically this sort of
   // makes this an integration test but I am leaving it since it adds value
@@ -29,6 +28,7 @@ describe("AelinPool", function () {
   const purchaseTokenDecimals = 6;
   const underlyingDealTokenDecimals = 8;
   const poolTokenDecimals = 18;
+  const mockAelinRewardsAddress = "0xfdbdb06109CD25c7F485221774f5f96148F1e235";
 
   const userPurchaseBaseAmt = 400;
   const userPurchaseAmt = ethers.utils.parseUnits(
@@ -52,8 +52,7 @@ describe("AelinPool", function () {
   );
 
   before(async () => {
-    [deployer, sponsor, holder, nonsponsor, user1, user2] =
-      await ethers.getSigners();
+    [deployer, sponsor, holder, nonsponsor, user1] = await ethers.getSigners();
     purchaseToken = await deployMockContract(deployer, ERC20Artifact.abi);
     aelinDealLogic = (await deployContract(
       deployer,
@@ -89,7 +88,8 @@ describe("AelinPool", function () {
       sponsorFee,
       sponsor.address,
       purchaseExpiry,
-      aelinDealLogic.address
+      aelinDealLogic.address,
+      mockAelinRewardsAddress
     );
 
   const underlyingDealTokenTotalBase = 1000;
@@ -129,7 +129,8 @@ describe("AelinPool", function () {
           sponsorFee,
           sponsor.address,
           purchaseExpiry,
-          aelinDealLogic.address
+          aelinDealLogic.address,
+          mockAelinRewardsAddress
         )
       ).to.be.revertedWith("max 1 year duration");
     });
@@ -145,7 +146,8 @@ describe("AelinPool", function () {
           sponsorFee,
           sponsor.address,
           30 * 60 - 1, // 1 second less than 30min,
-          aelinDealLogic.address
+          aelinDealLogic.address,
+          mockAelinRewardsAddress
         )
       ).to.be.revertedWith("outside purchase expiry window");
     });
@@ -161,7 +163,8 @@ describe("AelinPool", function () {
           sponsorFee,
           sponsor.address,
           30 * 24 * 60 * 60 + 1, // 1 second more than 30 days
-          aelinDealLogic.address
+          aelinDealLogic.address,
+          mockAelinRewardsAddress
         )
       ).to.be.revertedWith("outside purchase expiry window");
     });
@@ -177,7 +180,8 @@ describe("AelinPool", function () {
           98001,
           sponsor.address,
           purchaseExpiry,
-          aelinDealLogic.address
+          aelinDealLogic.address,
+          mockAelinRewardsAddress
         )
       ).to.be.revertedWith("exceeds max sponsor fee");
     });
@@ -318,7 +322,7 @@ describe("AelinPool", function () {
       ).to.be.revertedWith("only sponsor can access");
     });
 
-    it("should fail when the open redemption period is too short", async function () {
+    it("should fail when the open redemption period is too short or too long", async function () {
       // setup so that a user can purchase pool tokens
       await purchaseToken.mock.balanceOf
         .withArgs(user1.address)
@@ -352,7 +356,20 @@ describe("AelinPool", function () {
           openRedemptionPeriod - 2, // 1 second less than minimum
           holder.address
         )
-      ).to.be.revertedWith("30 mins is min open period");
+      ).to.be.revertedWith("30 mins - 30 days for prorata");
+
+      await expect(
+        aelinPool.connect(sponsor).createDeal(
+          underlyingDealToken.address,
+          purchaseTokenTotalForDeal,
+          underlyingDealTokenTotal,
+          vestingPeriod,
+          vestingCliff,
+          proRataRedemptionPeriod,
+          365 * 60 * 60 * 60, // more than 30 days
+          holder.address
+        )
+      ).to.be.revertedWith("30 mins - 30 days for prorata");
     });
 
     it("should fail when the open redemption period is set when the totalSupply equals the deal purchase amount", async function () {

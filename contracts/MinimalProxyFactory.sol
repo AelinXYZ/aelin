@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >= 0.6.0 < 0.8.7;
+pragma solidity >=0.6.0 <0.8.7;
 
 // https://docs.synthetix.io/contracts/source/contracts/minimalproxyfactory
 contract MinimalProxyFactory {
-    function _cloneAsMinimalProxy(address _base, string memory _revertMsg) internal returns (address clone) {
+    function _cloneAsMinimalProxy(address _base, string memory _revertMsg)
+        internal
+        returns (address clone)
+    {
         bytes memory createData = _generateMinimalProxyCreateData(_base);
 
         assembly {
@@ -18,7 +21,11 @@ contract MinimalProxyFactory {
         require(clone != address(0), _revertMsg);
     }
 
-    function _generateMinimalProxyCreateData(address _base) internal pure returns (bytes memory) {
+    function _generateMinimalProxyCreateData(address _base)
+        internal
+        pure
+        returns (bytes memory)
+    {
         return
             abi.encodePacked(
                 //---- constructor -----

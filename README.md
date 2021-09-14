@@ -44,7 +44,6 @@ Arguments:
 - `uint _sponsorFee`- an optional fee from the sponsor set between 0 and 98%
 - `address _sponsor` the address of the sponsor
 - `uint _purchaseExpiry` the amount of time a purchaser has to buy a pool token before the sponsor can create the deal
-- `address _aelinDealLogicAddress` once the AelinDeal.sol contract has been deployed you need to pass in that address here. will be done from the UI automatically without the sponsor needing to find it
 
 Requirements:
 
@@ -80,6 +79,7 @@ Requirements:
 
 - the `block.timestamp >= purchaseExpiry` (revert)
 - the `_proRataRedemptionPeriod` must be >= 30 minutes and <= 30 days (revert)
+- the `_openRataRedemptionPeriod` must be >= 30 minutes and <= 30 days, If the proRataConversion rate is not 1:1, otherwise it must be 0 (revert)
 - the `_purchaseTokenTotalForDeal` converted to 18 decimals must be <= totalSupply of pool tokens (revert)
 
 NOTE the sponsor journey has ended. From here the next step is `HOLDER step 1`
@@ -171,5 +171,3 @@ NOTE: the first time you run the test it will be slow. Hardhat caches the reques
 3. `npm run deploy-deal:<network>` - take the address of the deployed deal from the CLI and save it for later usage
 4. `npm run deploy-pool:<network>` - take the address of the deployed pool from the CLI and save it for later usage
 5. `npm run deploy-pool-factory:<network>`
-
-NOTE after the deployment is done, when creating a UI to call the AelinPoolFactory.createPool method you will need to pass in the addresses from step 3 and 4 as `_aelinDealLogicAddress` and `_aelinPoolLogicAddress`
