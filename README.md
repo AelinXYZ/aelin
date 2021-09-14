@@ -79,6 +79,7 @@ Requirements:
 
 - the `block.timestamp >= purchaseExpiry` (revert)
 - the `_proRataRedemptionPeriod` must be >= 30 minutes and <= 30 days (revert)
+- the `_openRataRedemptionPeriod` must be >= 30 minutes and <= 30 days, If the proRataConversion rate is not 1:1, otherwise it must be 0 (revert)
 - the `_purchaseTokenTotalForDeal` converted to 18 decimals must be <= totalSupply of pool tokens (revert)
 
 NOTE the sponsor journey has ended. From here the next step is `HOLDER step 1`

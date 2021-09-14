@@ -42,6 +42,9 @@ contract AelinDeal is AelinERC20 {
      */
     constructor() {}
 
+    /**
+     * @dev the initialize method replaces the constructor setup and can only be called once
+     */
     function initialize(
         string memory _name,
         string memory _symbol,
@@ -80,8 +83,10 @@ contract AelinDeal is AelinERC20 {
         calledInitialize = true;
         depositComplete = false;
 
-        // NOTE calculate the amount of underlying deal tokens you get per wrapped pool token accepted
-        // Also, 1 wrapped pool token = 1 wrapped deal token
+        /**
+         * calculates the amount of underlying deal tokens you get per wrapped pool token accepted
+         * NOTE 1 wrapped pool token will always be claimed for 1 wrapped deal token
+         */ 
         underlyingPerPoolExchangeRate =
             (_underlyingDealTokenTotal * 1e18) /
             _poolTokenMaxPurchaseAmount;
@@ -98,6 +103,9 @@ contract AelinDeal is AelinERC20 {
         _;
     }
 
+    /**
+     * @dev the holder may change their address
+     */
     function setHolder(address _holder) external onlyHolder {
         futureHolder = _holder;
     }
@@ -108,8 +116,14 @@ contract AelinDeal is AelinERC20 {
         emit SetHolder(futureHolder);
     }
 
-    // NOTE if the deposit was completed with a transfer instead of this method,
-    // the deposit can be finalized by calling this method with amount 0;
+    /**
+     * @dev the holder finalizes the deal created by the sponsor by depositing funds
+     * using this method.
+     * 
+     * NOTE if the deposit was completed with a transfer instead of this method
+     * the deposit still needs to be finalized by calling this method with
+     * _underlyingDealTokenAmount set to 0
+     */
     function depositUnderlying(uint256 _underlyingDealTokenAmount)
         external
         finalizeDepositOnce
@@ -158,8 +172,18 @@ contract AelinDeal is AelinERC20 {
         return false;
     }
 
-    // @NOTE the holder can withdraw any amount accidentally deposited over the amount needed to fulfill the deal
-    // TODO the holder can deposit less if people withdraw after the deal is created but before the deal is funded.
+    /**
+     * @dev the holder can withdraw any amount accidentally deposited over
+     * the amount needed to fulfill the deal
+     *
+     * possible TODO - the holder can deposit less if purchasers withdraw 
+     * purchase tokens after the deal is created but before the deal is
+     * funded. nice to have but not critical
+     * 
+     * NOTE if the deposit was completed with a transfer instead of this method
+     * the deposit still needs to be finalized by calling this method with
+     * _underlyingDealTokenAmount set to 0
+     */
     function withdraw() external onlyHolder {
         uint256 withdrawAmount = IERC20(underlyingDealToken).balanceOf(
             address(this)
@@ -175,6 +199,13 @@ contract AelinDeal is AelinERC20 {
         );
     }
 
+    /**
+     * @dev after the redemption period has ended the holder can withdraw
+     * the excess funds remaining from purchasers who did not accept the deal
+     *
+     * Requirements:
+     * - both the pro rata and open redemption windows are no longer active
+     */
     function withdrawExpiry() external onlyHolder {
         require(proRataRedemptionExpiry > 0, "redemption period not started");
         require(
@@ -207,6 +238,10 @@ contract AelinDeal is AelinERC20 {
 
     mapping(address => uint256) public lastClaim;
 
+    /**
+     * @dev a view showing the number of claimable deal tokens and the
+     * amount of the underlying deal token a purchser gets in return
+     */
     function claimableTokens(address purchaser)
         public
         view
@@ -240,6 +275,11 @@ contract AelinDeal is AelinERC20 {
         }
     }
 
+    /**
+     * @dev allows a user to claim their underlying deal tokens or a partial amount
+     * of their underlying tokens once they have vested according to the schedule
+     * created by the sponsor 
+     */
     function claim() public returns (uint256) {
         return _claim(msg.sender);
     }
@@ -284,12 +324,22 @@ contract AelinDeal is AelinERC20 {
         }
         return 0;
     }
-
+    /**
+     * @dev allows the purchaser to mint deal tokens. this method is also used
+     * to send deal tokens to the sponsor and the aelin rewards pool. It may only 
+     * be called from the pool contract that created this deal
+     */
     function mint(address dst, uint256 dealTokenAmount) external onlyPool {
         _mint(dst, dealTokenAmount);
         emit MintDealTokens(address(this), dst, dealTokenAmount);
     }
 
+    /**
+     * @dev below are helpers for transferring deal tokens. NOTE the token holder transferring
+     * the deal tokens must pay the gas to claim their vested tokens first, which will burn their vested deal
+     * tokens. They must also pay for the receivers claim and burn any of their vested tokens in order to ensure
+     * the claim calculation is always accurate for all parties in the system
+     */
     function transferMax(address recipient) external returns (bool) {
         (, uint256 claimableDealTokens) = claimableTokens(msg.sender);
         return transfer(recipient, balanceOf(msg.sender) - claimableDealTokens);
