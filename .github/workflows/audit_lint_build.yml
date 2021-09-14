@@ -78,6 +78,7 @@ jobs:
       KOVAN_PRIVATE_KEY: ${{ secrets.KOVAN_PRIVATE_KEY }}
       ALCHEMY_URL: ${{ secrets.ALCHEMY_URL }}
       ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     container:
       image: ghcr.io/synthetixio/docker-node/alpine:14.17
@@ -116,11 +117,10 @@ jobs:
         run: npm run coverage -- --testfiles "test/unit/*.ts"
 
       - name: Upload coverage (unit tests)
-        uses: codecov/codecov-action@f32b3a3741e1053eb607407145bc9619351dc93b # pin@v2
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.json
-          flags: unit-tests
+        run: |
+          curl -Os https://uploader.codecov.io/latest/alpine/codecov
+          chmod +x codecov
+          ./codecov -t ${CODECOV_TOKEN} -f coverage.json
 
   build:
     needs: test
