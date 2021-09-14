@@ -72,6 +72,7 @@ jobs:
 
   test:
     needs: lint
+    if: always()
     runs-on: ubuntu-latest
     env:
       KOVAN_PRIVATE_KEY: ${{ secrets.KOVAN_PRIVATE_KEY }}
@@ -113,6 +114,7 @@ jobs:
 
   build:
     needs: test
+    if: always()
     runs-on: ubuntu-latest
 
     container:
