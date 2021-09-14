@@ -1,5 +1,7 @@
 const { ethers } = require("hardhat");
 
+// NOTE that we want to hardcode the Deal and Pool logic addresses
+// in the AelinPoolFactory before deployment
 async function main() {
   const [deployer] = await ethers.getSigners();
 

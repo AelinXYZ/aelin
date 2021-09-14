@@ -191,6 +191,10 @@ describe("integration test", () => {
         deployer,
         AelinPoolFactoryArtifact
       )) as AelinPoolFactory;
+      await aelinPoolFactory.setAddressesDeleteBeforeLaunch(
+        aelinPoolLogic.address,
+        aelinDealLogic.address
+      );
 
       await aelinPoolFactory
         .connect(sponsor)
@@ -563,6 +567,10 @@ describe("integration test", () => {
         deployer,
         AelinPoolFactoryArtifact
       )) as AelinPoolFactory;
+      await aelinPoolFactory.setAddressesDeleteBeforeLaunch(
+        aelinPoolLogic.address,
+        aelinDealLogic.address
+      );
 
       await aelinPoolFactory
         .connect(sponsor)
@@ -935,6 +943,10 @@ describe("integration test", () => {
         deployer,
         AelinPoolFactoryArtifact
       )) as AelinPoolFactory;
+      await aelinPoolFactory.setAddressesDeleteBeforeLaunch(
+        aelinPoolLogic.address,
+        aelinDealLogic.address
+      );
 
       await aelinPoolFactory
         .connect(sponsor)
@@ -1049,6 +1061,10 @@ describe("integration test", () => {
         deployer,
         AelinPoolFactoryArtifact
       )) as AelinPoolFactory;
+      await aelinPoolFactory.setAddressesDeleteBeforeLaunch(
+        aelinPoolLogic.address,
+        aelinDealLogic.address
+      );
 
       await aelinPoolFactory
         .connect(sponsor)

@@ -6,10 +6,19 @@ import "./AelinPool.sol";
 
 contract AelinPoolFactory is MinimalProxyFactory {
     address constant AELIN_REWARDS = 0x5A0b54D5dc17e0AadC383d2db43B0a0D3E029c4c;
-    address constant AELIN_POOL_LOGIC = 0xA08949CcAa0D8DcaF951611b95d58e74edF2Ec1e;
-    address constant AELIN_DEAL_LOGIC = 0xfdbdb06109CD25c7F485221774f5f96148F1e235;
+    // NOTE that when we deploy these we can just hardcode them but for now since
+    // create2 adds complexity I am adding setters below for testing purposes
+    // that we will remove before deployment. Once we deploy since we are forking mainnet
+    // we can just grab the contracts on our mainnet fork for testing instead of using create2
+    address public AELIN_POOL_LOGIC;
+    address public AELIN_DEAL_LOGIC;
 
     constructor() {}
+
+    function setAddressesDeleteBeforeLaunch(address pool, address deal) external {
+        AELIN_POOL_LOGIC = pool;
+        AELIN_DEAL_LOGIC = deal;
+    }
 
     function createPool(
         string memory _name,
@@ -54,7 +63,6 @@ contract AelinPoolFactory is MinimalProxyFactory {
         return address(aelin_pool);
     }
 
-    // TODO consider adding versioning to events
     event CreatePool(
         address indexed poolAddress,
         string name,
