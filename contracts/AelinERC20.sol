@@ -1,16 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-// currently here to generate the abi, but eventually want to switch to it
 import {ERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 interface IERC20Decimals {
     function decimals() external view returns (uint8);
 }
 
+/**
+ * @dev a standard ERC20 contract that is extended with a few methods
+ * described in detail below
+ */
 contract AelinERC20 is ERC20 {
     bool setInfo;
-    mapping(address => mapping(address => uint256)) public _allowances;
+    /**
+     * @dev Due to the constructor being empty for the MinimalProxy architecture we need
+     * to set the name and symbol in the initializer which requires these custom variables
+    */
     string private _custom_name;
     string private _custom_symbol;
 
@@ -21,14 +27,15 @@ contract AelinERC20 is ERC20 {
         _;
     }
 
+    /**
+     * @dev Due to the constructor being empty for the MinimalProxy architecture we need
+     * to set the name and symbol in the initializer which requires this custom logic
+     * for name(), symbol(), and _setNameAndSymbol()
+     */
     function name() public view virtual override returns (string memory) {
         return _custom_name;
     }
 
-    /**
-     * @dev Returns the symbol of the token, usually a shorter version of the
-     * name.
-     */
     function symbol() public view virtual override returns (string memory) {
         return _custom_symbol;
     }
@@ -44,6 +51,11 @@ contract AelinERC20 is ERC20 {
         return true;
     }
 
+    /**
+     * @dev Due to the 4 tokens in the Aelin protocol:
+     * purchase token, pool token, deal token, and underlying deal token,
+     * we need 2 methods to convert back and forth between tokens of varying decimals 
+     */
     function convertUnderlyingToAelinAmount(
         uint256 underlyingAmount,
         uint256 underlyingDecimals
@@ -62,33 +74,5 @@ contract AelinERC20 is ERC20 {
             underlyingDecimals == decimals()
                 ? aelinTokenAmount
                 : aelinTokenAmount / 10**(decimals() - underlyingDecimals);
-    }
-
-    function _safeTransfer(
-        address token,
-        address to,
-        uint256 value
-    ) internal {
-        (bool success, bytes memory data) = token.call(
-            abi.encodeWithSelector(IERC20.transfer.selector, to, value)
-        );
-        require(success && (data.length == 0 || abi.decode(data, (bool))));
-    }
-
-    function _safeTransferFrom(
-        address token,
-        address from,
-        address to,
-        uint256 value
-    ) internal {
-        (bool success, bytes memory data) = token.call(
-            abi.encodeWithSelector(
-                IERC20.transferFrom.selector,
-                from,
-                to,
-                value
-            )
-        );
-        require(success && (data.length == 0 || abi.decode(data, (bool))));
     }
 }

@@ -24,7 +24,7 @@ contract AelinPoolFactory is MinimalProxyFactory {
 
     /**
      * @dev this will be deleted before we release the protocol. It is a helper for tests
-     * but after we  
+     * but after we deploy the real contracts we will hardcode the values above
      */
     function setAddressesDeleteBeforeLaunch(address pool, address deal) external {
         AELIN_POOL_LOGIC = pool;

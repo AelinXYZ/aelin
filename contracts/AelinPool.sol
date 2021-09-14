@@ -4,8 +4,10 @@ pragma solidity 0.8.6;
 import "./AelinERC20.sol";
 import "./AelinDeal.sol";
 import "./MinimalProxyFactory.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract AelinPool is AelinERC20, MinimalProxyFactory {
+    using SafeERC20 for IERC20;
     address public purchaseToken;
     uint256 public purchaseTokenCap;
     uint256 public purchaseTokenDecimals;
@@ -221,6 +223,16 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         return aelinDealStorageProxy;
     }
 
+    /**
+     * @dev the 2 methods allow a purchaser to exchange accept all or a
+     * portion of their pool tokens for deal tokens
+     *
+     * Requirements:
+     * - the redemption period is either in the pro rata or open windows
+     * - the purchaser cannot accept more than their share for a period
+     * - if participating in the open period, a purchaser must have maxxed their
+     *   contribution in the pro rata phase
+     */
     function acceptMaxDealTokens() external {
         _acceptDealTokens(msg.sender, 0, true);
     }
@@ -327,7 +339,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             poolTokenAmount,
             purchaseTokenDecimals
         );
-        _safeTransfer(purchaseToken, holder, underlyingToHolderAmt);
+        IERC20(purchaseToken).safeTransfer(holder, underlyingToHolderAmt);
         emit AcceptDeal(
             recipient,
             address(this),
@@ -339,6 +351,14 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         );
     }
 
+    /**
+     * @dev allows anyone to become a purchaser by sending purchase tokens
+     * in exchange for pool tokens
+     *
+     * Requirements:
+     * - the deal is in the purchase expiry window
+     * - the cap has not been exceeded
+     */
     function purchasePoolTokens(uint256 _purchaseTokenAmount) external {
         _purchasePoolTokens(_purchaseTokenAmount, false);
     }
@@ -388,8 +408,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         if (totalPoolAfter == poolTokenCap) {
             purchaseExpiry = block.timestamp;
         }
-        _safeTransferFrom(
-            purchaseToken,
+        IERC20(purchaseToken).safeTransferFrom(
             msg.sender,
             address(this),
             purchaseAmount
@@ -403,6 +422,13 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         );
     }
 
+    /**
+     * @dev the withdraw and partial withdraw methods allow a purchaser to take their
+     * purchase tokens back in exchange for pool tokens if they do not accept a deal
+     *
+     * Requirements:
+     * - the pool has expired either due to the creation of a deal or the end of the duration
+     */
     function withdrawMaxFromPool() external {
         _withdraw(balanceOf(msg.sender));
     }
@@ -418,7 +444,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             poolTokenAmount,
             purchaseTokenDecimals
         );
-        _safeTransfer(purchaseToken, msg.sender, purchaseWithdrawAmount);
+        IERC20(purchaseToken).safeTransfer(msg.sender, purchaseWithdrawAmount);
         emit WithdrawFromPool(
             msg.sender,
             address(this),
@@ -427,6 +453,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         );
     }
 
+    /**
+     * @dev view to see how much of the deal a purchaser can accept
+     */
     function maxDealAccept(address purchaser) external view returns (uint256) {
         AelinDeal aelinDeal = AelinDeal(aelinDealStorageProxy);
         if (
@@ -446,6 +475,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         }
     }
 
+    /**
+     * @dev view to see how much of the pool a purchaser can buy into 
+     */
     function maxPoolPurchase() external view returns (uint256) {
         if (dealCreated == true || block.timestamp >= purchaseExpiry) {
             return 0;
@@ -466,6 +498,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         }
     }
 
+    /**
+     * @dev pool tokens may not be transferred once the deal redemption window starts.
+     * However, they may be withdrawn for purchase tokens which can then be transferred
+     */
     modifier transferWindow() {
         require(
             AelinDeal(aelinDealStorageProxy).proRataRedemptionStart() == 0,
@@ -481,8 +517,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         transferWindow
         returns (bool)
     {
-        _transfer(msg.sender, dst, amount);
-        return true;
+        super.transfer(dst, amount);
     }
 
     function transferFrom(
@@ -490,17 +525,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         address dst,
         uint256 amount
     ) public virtual override transferWindow returns (bool) {
-        _transfer(src, dst, amount);
-
-        uint256 currentAllowance = _allowances[src][msg.sender];
-        require(
-            currentAllowance >= amount,
-            "ERC20: transfer amount exceeds allowance"
-        );
-        unchecked {
-            _approve(src, _msgSender(), currentAllowance - amount);
-        }
-        return true;
+        super.transferFrom(src, dst, amount);
     }
 
     event SetSponsor(address indexed sponsor);

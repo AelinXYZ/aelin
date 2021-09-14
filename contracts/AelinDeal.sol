@@ -35,6 +35,11 @@ contract AelinDeal is AelinERC20 {
     bool public calledInitialize;
     bool public depositComplete;
 
+    /**
+     * @dev the constructor will always be blank due to the MinimalProxyFactory pattern
+     * this allows the underlying logic of this contract to only be deployed once
+     * and each new deal created is simply a storage wrapper
+     */
     constructor() {}
 
     function initialize(
