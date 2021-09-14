@@ -27,10 +27,52 @@ jobs:
       - name: Lockfile lint
         run: lockfile-lint -p package-lock.json --type npm --allowed-hosts npm --allowed-schemes "https:"
 
-  build:
+  lint:
     needs: audit
     # run only on audit success or audit skipped
     if: always() && (needs.audit.result == 'success' || needs.audit.result == 'skipped')
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/synthetixio/docker-node/alpine:14.17
+      credentials:
+        username: synthetixio
+        password: ${{ secrets.GH_PACKAGES_READ_ONLY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # pin@v2
+
+      - name: Set npm cache directory
+        run: npm config set cache .npm-cache --global
+        continue-on-error: true
+
+      - uses: actions/cache@c64c572235d810460d0d6876e9c705ad5002b353 # pin@v2
+        with:
+          path: |
+            .npm-cache
+            node_modules
+          key: ${{ runner.os }}-alpine-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-alpine-node-
+        continue-on-error: true
+
+      - name: Install dependencies
+        run: npm install --prefer-offline --no-audit
+
+      - name: Lint
+        run: npm run lint:sarif
+
+      - name: Upload lint results
+        if: always()
+        uses: github/codeql-action/upload-sarif@21830ef0c1f0f06f2d82ba3f1f07cb3ffe543ed7 # pin@codeql-bundle-20210517
+        with:
+          sarif_file: lint-results.sarif
+        continue-on-error: true
+
+  test:
+    needs: lint
+    if: always()
     runs-on: ubuntu-latest
     env:
       KOVAN_PRIVATE_KEY: ${{ secrets.KOVAN_PRIVATE_KEY }}
@@ -70,15 +112,37 @@ jobs:
       - name: Test
         run: npm run test
 
-      - name: Lint
-        run: npm run lint:sarif
+  build:
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
 
-      - name: Upload lint results
-        if: always()
-        uses: github/codeql-action/upload-sarif@21830ef0c1f0f06f2d82ba3f1f07cb3ffe543ed7 # pin@codeql-bundle-20210517
-        with:
-          sarif_file: lint-results.sarif
+    container:
+      image: ghcr.io/synthetixio/docker-node/alpine:14.17
+      credentials:
+        username: synthetixio
+        password: ${{ secrets.GH_PACKAGES_READ_ONLY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # pin@v2
+
+      - name: Set npm cache directory
+        run: npm config set cache .npm-cache --global
         continue-on-error: true
+
+      - uses: actions/cache@c64c572235d810460d0d6876e9c705ad5002b353 # pin@v2
+        with:
+          path: |
+            .npm-cache
+            node_modules
+          key: ${{ runner.os }}-alpine-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-alpine-node-
+        continue-on-error: true
+
+      - name: Install dependencies
+        run: npm install --prefer-offline --no-audit
 
       - name: Cache build cache
         uses: actions/cache@c64c572235d810460d0d6876e9c705ad5002b353 # pin@v2
