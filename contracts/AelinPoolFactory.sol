@@ -5,6 +5,10 @@ import "./MinimalProxyFactory.sol";
 import "./AelinPool.sol";
 
 contract AelinPoolFactory is MinimalProxyFactory {
+    address constant AELIN_REWARDS = 0x5A0b54D5dc17e0AadC383d2db43B0a0D3E029c4c;
+    address constant AELIN_POOL_LOGIC = 0xA08949CcAa0D8DcaF951611b95d58e74edF2Ec1e;
+    address constant AELIN_DEAL_LOGIC = 0xfdbdb06109CD25c7F485221774f5f96148F1e235;
+
     constructor() {}
 
     function createPool(
@@ -14,13 +18,11 @@ contract AelinPoolFactory is MinimalProxyFactory {
         address _purchaseToken,
         uint256 _duration,
         uint256 _sponsorFee,
-        uint256 _purchaseExpiry,
-        address _aelinPoolLogicAddress,
-        address _aelinDealLogicAddress
+        uint256 _purchaseExpiry
     ) external returns (address) {
         AelinPool aelin_pool = AelinPool(
             _cloneAsMinimalProxy(
-                _aelinPoolLogicAddress,
+                AELIN_POOL_LOGIC,
                 "Could not create new deal"
             )
         );
@@ -33,7 +35,8 @@ contract AelinPoolFactory is MinimalProxyFactory {
             _sponsorFee,
             msg.sender,
             _purchaseExpiry,
-            _aelinDealLogicAddress
+            AELIN_DEAL_LOGIC,
+            AELIN_REWARDS
         );
 
         emit CreatePool(

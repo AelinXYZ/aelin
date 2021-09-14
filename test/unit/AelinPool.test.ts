@@ -29,6 +29,7 @@ describe("AelinPool", function () {
   const purchaseTokenDecimals = 6;
   const underlyingDealTokenDecimals = 8;
   const poolTokenDecimals = 18;
+  const mockAelinRewardsAddress = "0xfdbdb06109CD25c7F485221774f5f96148F1e235";
 
   const userPurchaseBaseAmt = 400;
   const userPurchaseAmt = ethers.utils.parseUnits(
@@ -89,7 +90,8 @@ describe("AelinPool", function () {
       sponsorFee,
       sponsor.address,
       purchaseExpiry,
-      aelinDealLogic.address
+      aelinDealLogic.address,
+      mockAelinRewardsAddress
     );
 
   const underlyingDealTokenTotalBase = 1000;
@@ -129,7 +131,8 @@ describe("AelinPool", function () {
           sponsorFee,
           sponsor.address,
           purchaseExpiry,
-          aelinDealLogic.address
+          aelinDealLogic.address,
+          mockAelinRewardsAddress
         )
       ).to.be.revertedWith("max 1 year duration");
     });
@@ -145,7 +148,8 @@ describe("AelinPool", function () {
           sponsorFee,
           sponsor.address,
           30 * 60 - 1, // 1 second less than 30min,
-          aelinDealLogic.address
+          aelinDealLogic.address,
+          mockAelinRewardsAddress
         )
       ).to.be.revertedWith("outside purchase expiry window");
     });
@@ -161,7 +165,8 @@ describe("AelinPool", function () {
           sponsorFee,
           sponsor.address,
           30 * 24 * 60 * 60 + 1, // 1 second more than 30 days
-          aelinDealLogic.address
+          aelinDealLogic.address,
+          mockAelinRewardsAddress
         )
       ).to.be.revertedWith("outside purchase expiry window");
     });
@@ -177,7 +182,8 @@ describe("AelinPool", function () {
           98001,
           sponsor.address,
           purchaseExpiry,
-          aelinDealLogic.address
+          aelinDealLogic.address,
+          mockAelinRewardsAddress
         )
       ).to.be.revertedWith("exceeds max sponsor fee");
     });

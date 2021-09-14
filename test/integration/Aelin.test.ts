@@ -201,9 +201,7 @@ describe("integration test", () => {
           usdcContract.address,
           duration,
           sponsorFee,
-          purchaseExpiry,
-          aelinPoolLogic.address,
-          aelinDealLogic.address
+          purchaseExpiry
         );
 
       const [createPoolLog] = await aelinPoolFactory.queryFilter(
@@ -575,9 +573,7 @@ describe("integration test", () => {
           usdcContract.address,
           duration,
           sponsorFee,
-          purchaseExpiry,
-          aelinPoolLogic.address,
-          aelinDealLogic.address
+          purchaseExpiry
         );
 
       const [createPoolLog] = await aelinPoolFactory.queryFilter(
@@ -949,9 +945,7 @@ describe("integration test", () => {
           usdcContract.address,
           duration,
           sponsorFee,
-          purchaseExpiry,
-          aelinPoolLogic.address,
-          aelinDealLogic.address
+          purchaseExpiry
         );
 
       const [createPoolLog] = await aelinPoolFactory.queryFilter(
@@ -1065,9 +1059,7 @@ describe("integration test", () => {
           usdcContract.address,
           duration,
           sponsorFee,
-          purchaseExpiry,
-          aelinPoolLogic.address,
-          aelinDealLogic.address
+          purchaseExpiry
         );
 
       const [createPoolLog] = await aelinPoolFactory.queryFilter(

@@ -25,6 +25,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     bool public calledInitialize = false;
     bool public dealCreated = false;
 
+    address public aelinRewardsAddress;
     address public aelinDealLogicAddress;
     address public aelinDealStorageProxy;
     address public holder;
@@ -33,10 +34,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     string private storedName;
     string private storedSymbol;
-
-    // @TODO update with correct addresses
-    // HOW to manage the aelin rewards address???
-    address constant AELIN_REWARDS = 0x5A0b54D5dc17e0AadC383d2db43B0a0D3E029c4c;
 
     constructor() {}
 
@@ -49,7 +46,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint256 _sponsorFee,
         address _sponsor,
         uint256 _purchaseExpiry,
-        address _aelinDealLogicAddress
+        address _aelinDealLogicAddress,
+        address _aelinRewardsAddress
     ) external initOnce {
         storedName = _name;
         storedSymbol = _symbol;
@@ -71,6 +69,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         sponsorFee = _sponsorFee;
         sponsor = _sponsor;
         aelinDealLogicAddress = _aelinDealLogicAddress;
+        aelinRewardsAddress = _aelinRewardsAddress;
 
         calledInitialize = true;
         emit SetSponsor(_sponsor);
@@ -289,7 +288,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint256 aelinFeeAmt = (poolTokenAmount * AELIN_FEE) / BASE;
         uint256 sponsorFeeAmt = (poolTokenAmount * sponsorFee) / BASE;
         aelinDeal.mint(sponsor, sponsorFeeAmt);
-        aelinDeal.mint(AELIN_REWARDS, aelinFeeAmt);
+        aelinDeal.mint(aelinRewardsAddress, aelinFeeAmt);
         aelinDeal.mint(
             recipient,
             poolTokenAmount - (sponsorFeeAmt + aelinFeeAmt)

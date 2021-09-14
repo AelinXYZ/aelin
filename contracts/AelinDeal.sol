@@ -202,11 +202,13 @@ contract AelinDeal is AelinERC20 {
 
     mapping(address => uint256) public lastClaim;
 
-    function underlyingDealTokensClaimable(address purchaser)
-        external
+    function claimableTokens(address purchaser)
+        public
         view
-        returns (uint256)
+        returns (uint256 underlyingClaimable, uint256 dealTokensClaimable)
     {
+        underlyingClaimable = 0;
+        dealTokensClaimable = 0;
         uint256 maxTime = block.timestamp > vestingExpiry
             ? vestingExpiry
             : block.timestamp;
@@ -221,23 +223,20 @@ contract AelinDeal is AelinERC20 {
                 lastClaimed = vestingCliff;
             }
             if (lastClaimed >= maxTime && vestingPeriod != 0) {
-                return 0;
             } else {
                 uint256 timeElapsed = maxTime - lastClaimed;
-                uint256 dealTokensClaimable = vestingPeriod == 0
+                dealTokensClaimable = vestingPeriod == 0
                     ? balanceOf(purchaser)
                     : (balanceOf(purchaser) * timeElapsed) / vestingPeriod;
-                return
+                underlyingClaimable =
                     (underlyingPerPoolExchangeRate * dealTokensClaimable) /
                     1e18;
             }
-        } else {
-            return 0;
         }
     }
 
     function claim() public returns (uint256) {
-        _claim(msg.sender);
+        return _claim(msg.sender);
     }
 
     function _claim(address recipient) internal returns (uint256) {
@@ -284,6 +283,16 @@ contract AelinDeal is AelinERC20 {
     function mint(address dst, uint256 dealTokenAmount) external onlyPool {
         _mint(dst, dealTokenAmount);
         emit MintDealTokens(address(this), dst, dealTokenAmount);
+    }
+
+    function transferMax(address recipient) external returns (bool) {
+        (, uint256 claimableDealTokens) = claimableTokens(msg.sender);
+        return transfer(recipient, balanceOf(msg.sender) - claimableDealTokens);
+    }
+
+    function transferFromMax(address sender, address recipient) external returns (bool) {
+        (, uint256 claimableDealTokens) = claimableTokens(sender);
+        return transferFrom(sender, recipient, balanceOf(sender) - claimableDealTokens);
     }
 
     function transfer(address recipient, uint256 amount)
