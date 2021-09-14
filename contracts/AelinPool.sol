@@ -35,8 +35,21 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     string private storedName;
     string private storedSymbol;
 
+    /**
+     * @dev the constructor will always be blank due to the MinimalProxyFactory pattern
+     * this allows the underlying logic of this contract to only be deployed once
+     * and each new pool created is simply a storage wrapper
+     */
     constructor() {}
 
+    /**
+     * @dev the initialize method replaces the constructor setup and can only be called once
+     *
+     * Requirements:
+     * - max 1 year duration
+     * - purchase expiry can be set from 30 minutes to 30 days
+     * - max sponsor fee is 98000 representing 98%
+     */
     function initialize(
         string memory _name,
         string memory _symbol,
@@ -95,6 +108,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         _;
     }
 
+    /**
+     * @dev the sponsor may change addresses 
+     */
     function setSponsor(address _sponsor) external onlySponsor {
         futureSponsor = _sponsor;
     }
@@ -105,6 +121,18 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         emit SetSponsor(futureSponsor);
     }
 
+    /**
+     * @dev only the sponsor can create a deal. The deal must be funded by the holder
+     * of the underlying deal token before a purchaser may accept the deal
+     *
+     * Requirements:
+     * - The purchase expiry period must be over
+     * - the pro rata redemption period must be from 30 minutes to 30 days
+     * - the purchase token total for the deal that may be accepted must be <= the funds in the pool
+     * - if the pro rata conversion ratio (purchase token total for the deal:funds in pool)
+     *   is 1:1 then the open redemption period must be 0,
+     *   otherwise the open period is from 30 minutes to 30 days
+     */
     function createDeal(
         address _underlyingDealToken,
         uint256 _purchaseTokenTotalForDeal,
@@ -140,8 +168,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             );
         } else {
             require(
-                30 minutes <= _openRedemptionPeriod,
-                "30 mins is min open period"
+                30 minutes <= _openRedemptionPeriod &&
+                    30 days >= _openRedemptionPeriod,
+                "30 mins - 30 days for prorata"
             );
         }
 
