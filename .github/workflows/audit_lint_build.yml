@@ -81,7 +81,7 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     container:
-      image: ghcr.io/synthetixio/docker-node/alpine:14.17
+      image: ghcr.io/synthetixio/docker-sec-tools/alpine:14.17
       credentials:
         username: synthetixio
         password: ${{ secrets.GH_PACKAGES_READ_ONLY }}
