@@ -113,14 +113,11 @@ jobs:
       - name: Test
         run: npm run test
 
-      - name: Generate coverage (unit tests)
+      - name: Generate coverage
         run: npm run coverage -- --testfiles "test/unit/*.ts"
 
-      - name: Upload coverage (unit tests)
-        run: |
-          curl -Os https://uploader.codecov.io/latest/alpine/codecov
-          chmod +x codecov
-          ./codecov -t ${CODECOV_TOKEN} -f coverage.json
+      - name: Upload coverage
+        run: codecov -t ${CODECOV_TOKEN} -f coverage.json
 
   build:
     needs: test
