@@ -461,9 +461,10 @@ describe("AelinDeal", function () {
       });
 
       it("should allow the purchaser to claim their partially vested tokens", async function () {
-        const partiallyExpectedClaimUnderlying = 202739814;
-        // NOTE that this is deterministic and roughly half but it is hard to find
-        // the exact timestamp when calling evm_increaseTime
+        // NOTE that this is deterministic but changes with codecov running so I am using
+        // high and low estimates so the test will always pass even when the value changes slightly
+        const partiallyClaimUnderlyingHigh = 202739900;
+        const partiallyClaimUnderlyingLow = 202739700;
         await fundDealAndMintTokens();
 
         await ethers.provider.send("evm_increaseTime", [
@@ -471,9 +472,7 @@ describe("AelinDeal", function () {
         ]);
         await ethers.provider.send("evm_mine", []);
 
-        await underlyingDealToken.mock.transfer
-          .withArgs(purchaser.address, partiallyExpectedClaimUnderlying)
-          .returns(true);
+        await underlyingDealToken.mock.transfer.returns(true);
 
         await aelinDeal.connect(purchaser).claim();
 
@@ -484,8 +483,11 @@ describe("AelinDeal", function () {
           underlyingDealToken.address
         );
         expect(log.args.recipient).to.equal(purchaser.address);
-        expect(log.args.underlyingDealTokensClaimed).to.equal(
-          partiallyExpectedClaimUnderlying
+        expect(
+          log.args.underlyingDealTokensClaimed.toNumber()
+        ).to.be.greaterThan(partiallyClaimUnderlyingLow);
+        expect(log.args.underlyingDealTokensClaimed.toNumber()).to.be.lessThan(
+          partiallyClaimUnderlyingHigh
         );
       });
 
@@ -646,9 +648,10 @@ describe("AelinDeal", function () {
         expect(result[0]).to.equal(expectedClaimUnderlying);
       });
       it("should return the correct amount of tokens claimable after partially vested", async function () {
-        // NOTE that this is deterministic and roughly half but it is hard to find
-        // the exact timestamp when calling evm_increaseTime
-        const partialClaimValue = 202739789;
+        // NOTE that this is deterministic but changes with codecov running so I am using
+        // high and low estimates so the test will always pass even when the value changes slightly
+        const partialClaimEstHigh = 202739850;
+        const partialClaimEstLow = 202739750;
         await fundDealAndMintTokens();
 
         await ethers.provider.send("evm_increaseTime", [
@@ -657,7 +660,8 @@ describe("AelinDeal", function () {
         await ethers.provider.send("evm_mine", []);
 
         const result = await aelinDeal.claimableTokens(purchaser.address);
-        expect(result[0]).to.equal(partialClaimValue);
+        expect(result[0].toNumber()).to.be.lessThan(partialClaimEstHigh);
+        expect(result[0].toNumber()).to.be.greaterThan(partialClaimEstLow);
       });
       it("should return the correct amount of tokens claimable when not vested or with no balance", async function () {
         const result = await aelinDeal.claimableTokens(deployer.address);
