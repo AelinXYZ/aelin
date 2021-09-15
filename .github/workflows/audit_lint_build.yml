@@ -78,6 +78,7 @@ jobs:
       KOVAN_PRIVATE_KEY: ${{ secrets.KOVAN_PRIVATE_KEY }}
       ALCHEMY_URL: ${{ secrets.ALCHEMY_URL }}
       ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     container:
       image: ghcr.io/synthetixio/docker-node/alpine:14.17
@@ -111,6 +112,12 @@ jobs:
 
       - name: Test
         run: npm run test
+
+      - name: Generate coverage
+        run: npm run coverage -- --testfiles "test/unit/*.ts"
+
+      - name: Upload coverage
+        run: codecov -t ${CODECOV_TOKEN} -f coverage.json
 
   build:
     needs: test
