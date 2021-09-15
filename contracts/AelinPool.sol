@@ -517,7 +517,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         transferWindow
         returns (bool)
     {
-        super.transfer(dst, amount);
+        return super.transfer(dst, amount);
     }
 
     function transferFrom(
@@ -525,7 +525,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         address dst,
         uint256 amount
     ) public virtual override transferWindow returns (bool) {
-        super.transferFrom(src, dst, amount);
+        return super.transferFrom(src, dst, amount);
     }
 
     event SetSponsor(address indexed sponsor);
