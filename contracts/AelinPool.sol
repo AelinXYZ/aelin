@@ -360,24 +360,18 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
      * - the cap has not been exceeded
      */
     function purchasePoolTokens(uint256 _purchaseTokenAmount) external {
-        _purchasePoolTokens(_purchaseTokenAmount, false);
-    }
-
-    function purchasePoolTokensUpToAmount(uint256 _purchaseTokenAmount)
-        external
-    {
-        _purchasePoolTokens(_purchaseTokenAmount, true);
-    }
-
-    function _purchasePoolTokens(
-        uint256 _purchaseTokenAmount,
-        bool _usePartialFill
-    ) internal {
         require(
             dealCreated == false && block.timestamp < purchaseExpiry,
             "not in purchase window"
         );
-        uint256 purchaseAmount = _purchaseTokenAmount;
+        uint currentBalance = IERC20(purchaseToken).balanceOf(address(this));
+        IERC20(purchaseToken).safeTransferFrom(
+            msg.sender,
+            address(this),
+            _purchaseTokenAmount
+        );
+        uint balanceAfterTransfer = IERC20(purchaseToken).balanceOf(address(this));
+        uint256 purchaseAmount = balanceAfterTransfer - currentBalance;
         uint256 poolTokenAmount = convertUnderlyingToAelinAmount(
             purchaseAmount,
             purchaseTokenDecimals
@@ -387,32 +381,15 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             purchaseTokenDecimals
         );
 
-        if (
-            _usePartialFill && (totalSupply() + poolTokenAmount) > poolTokenCap
-        ) {
-            poolTokenAmount = poolTokenCap - totalSupply();
-            purchaseAmount = convertAelinToUnderlyingAmount(
-                poolTokenAmount,
-                purchaseTokenDecimals
-            );
-        }
-
         uint256 totalPoolAfter = totalSupply() + poolTokenAmount;
         require(
-            purchaseTokenCap == 0 ||
-                _usePartialFill ||
-                (!_usePartialFill && totalPoolAfter <= poolTokenCap),
+            purchaseTokenCap == 0 || totalPoolAfter <= poolTokenCap,
             "cap has been exceeded"
         );
 
         if (totalPoolAfter == poolTokenCap) {
             purchaseExpiry = block.timestamp;
         }
-        IERC20(purchaseToken).safeTransferFrom(
-            msg.sender,
-            address(this),
-            purchaseAmount
-        );
         _mint(msg.sender, poolTokenAmount);
         emit PurchasePoolToken(
             msg.sender,

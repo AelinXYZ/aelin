@@ -88,7 +88,7 @@ NOTE the sponsor journey has ended. From here the next step is `HOLDER step 1 (F
 
 ### **PURCHASER**
 
-**PURCHASER STEP 1 (Enter the Pool)**: Purchase pool tokens by calling `AelinPool.purchasePoolTokens(...)` or `Aelin.purchasePoolTokensUpToAmount(...)`. Note that calling UptoAmount method will fill a lesser amount if there is a risk that the `purchaseTokenCap` will be exceeded with the original amount at the time the transaction is executed.
+**PURCHASER STEP 1 (Enter the Pool)**: Purchase pool tokens by calling `AelinPool.purchasePoolTokens(...)`.
 
 Arguments:
 

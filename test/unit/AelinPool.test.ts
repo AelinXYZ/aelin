@@ -6,7 +6,8 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import ERC20Artifact from "../../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json";
 import AelinDealArtifact from "../../artifacts/contracts/AelinDeal.sol/AelinDeal.json";
 import AelinPoolArtifact from "../../artifacts/contracts/AelinPool.sol/AelinPool.json";
-import { AelinPool, AelinDeal } from "../../typechain";
+import { AelinPool, AelinDeal, ERC20 } from "../../typechain";
+import { fundUsers, getImpersonatedSigner } from "../helpers";
 
 const { deployContract, deployMockContract } = waffle;
 
@@ -23,12 +24,16 @@ describe("AelinPool", function () {
   // makes this an integration test but I am leaving it since it adds value
   let aelinDealLogic: AelinDeal;
   let aelinPool: AelinPool;
-  let purchaseToken: MockContract;
+  let purchaseToken: ERC20;
   let underlyingDealToken: MockContract;
   const purchaseTokenDecimals = 6;
   const underlyingDealTokenDecimals = 8;
   const poolTokenDecimals = 18;
   const mockAelinRewardsAddress = "0xfdbdb06109CD25c7F485221774f5f96148F1e235";
+  const purchaseTokenAddress = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+  const purchaseTokenWhaleAddress =
+    "0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503";
+  let purchaseTokenWhaleSigner: SignerWithAddress;
 
   const userPurchaseBaseAmt = 400;
   const userPurchaseAmt = ethers.utils.parseUnits(
@@ -53,12 +58,24 @@ describe("AelinPool", function () {
 
   before(async () => {
     [deployer, sponsor, holder, nonsponsor, user1] = await ethers.getSigners();
-    purchaseToken = await deployMockContract(deployer, ERC20Artifact.abi);
+    purchaseToken = (await ethers.getContractAt(
+      ERC20Artifact.abi,
+      purchaseTokenAddress
+    )) as ERC20;
     aelinDealLogic = (await deployContract(
       deployer,
       AelinDealArtifact
     )) as AelinDeal;
-    await purchaseToken.mock.decimals.returns(purchaseTokenDecimals);
+
+    purchaseTokenWhaleSigner = await getImpersonatedSigner(
+      purchaseTokenWhaleAddress
+    );
+    await fundUsers(
+      purchaseToken,
+      purchaseTokenWhaleSigner,
+      purchaseTokenCap.mul(2),
+      [user1]
+    );
     underlyingDealToken = await deployMockContract(holder, ERC20Artifact.abi);
     await underlyingDealToken.mock.decimals.returns(
       underlyingDealTokenDecimals
@@ -78,8 +95,12 @@ describe("AelinPool", function () {
   const aelinPoolName = `aePool-${name}`;
   const aelinPoolSymbol = `aeP-${symbol}`;
 
-  const successfullyInitializePool = () =>
-    aelinPool.initialize(
+  const successfullyInitializePool = async () => {
+    await purchaseToken
+      .connect(user1)
+      .approve(aelinPool.address, userPurchaseAmt);
+
+    return aelinPool.initialize(
       name,
       symbol,
       purchaseTokenCap,
@@ -91,6 +112,7 @@ describe("AelinPool", function () {
       aelinDealLogic.address,
       mockAelinRewardsAddress
     );
+  };
 
   const underlyingDealTokenTotalBase = 1000;
   const underlyingDealTokenTotal = ethers.utils.parseUnits(
@@ -192,7 +214,10 @@ describe("AelinPool", function () {
       expect(await aelinPool.name()).to.equal(aelinPoolName);
       expect(await aelinPool.symbol()).to.equal(aelinPoolSymbol);
       expect(await aelinPool.purchaseTokenCap()).to.equal(purchaseTokenCap);
-      expect(await aelinPool.purchaseToken()).to.equal(purchaseToken.address);
+      const returnAddress = await aelinPool.purchaseToken();
+      expect(returnAddress.toLowerCase()).to.equal(
+        purchaseToken.address.toLowerCase()
+      );
       expect(await aelinPool.purchaseTokenDecimals()).to.equal(
         purchaseTokenDecimals
       );
@@ -278,7 +303,6 @@ describe("AelinPool", function () {
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
       await ethers.provider.send("evm_mine", []);
 
-      await purchaseToken.mock.balanceOf.withArgs(aelinPool.address).returns(0);
       await expect(createDealWithValidParams()).to.be.revertedWith(
         "not enough funds available"
       );
@@ -288,10 +312,6 @@ describe("AelinPool", function () {
       await successfullyInitializePool();
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
       await ethers.provider.send("evm_mine", []);
-
-      await purchaseToken.mock.balanceOf
-        .withArgs(aelinPool.address)
-        .returns(purchaseTokenTotalForDeal.sub(1));
 
       await expect(createDealWithValidParams()).to.be.revertedWith(
         "not enough funds available"
@@ -324,26 +344,10 @@ describe("AelinPool", function () {
 
     it("should fail when the open redemption period is too short or too long", async function () {
       // setup so that a user can purchase pool tokens
-      await purchaseToken.mock.balanceOf
-        .withArgs(user1.address)
-        .returns(userPurchaseAmt);
-
-      await purchaseToken.mock.transferFrom
-        .withArgs(user1.address, aelinPool.address, userPurchaseAmt)
-        .returns(true);
-
-      await purchaseToken.mock.balanceOf
-        .withArgs(aelinPool.address)
-        .returns(userPurchaseAmt);
-
       await successfullyInitializePool();
       await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
       await ethers.provider.send("evm_mine", []);
-
-      await purchaseToken.mock.balanceOf
-        .withArgs(aelinPool.address)
-        .returns(purchaseTokenTotalForDeal.add(1));
 
       await expect(
         aelinPool.connect(sponsor).createDeal(
@@ -373,29 +377,10 @@ describe("AelinPool", function () {
     });
 
     it("should fail when the open redemption period is set when the totalSupply equals the deal purchase amount", async function () {
-      // setup so that a user can purchase pool tokens
-      await purchaseToken.mock.balanceOf
-        .withArgs(user1.address)
-        .returns(userPurchaseAmt);
-
-      await purchaseToken.mock.transferFrom
-        .withArgs(user1.address, aelinPool.address, userPurchaseAmt)
-        .returns(true);
-
-      await purchaseToken.mock.balanceOf
-        .withArgs(aelinPool.address)
-        .returns(userPurchaseAmt);
-
       await successfullyInitializePool();
       await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
       await ethers.provider.send("evm_mine", []);
-
-      // note it doesn't check the balanceOf so no one can mess with the logic by sending
-      // small amounts of tokens
-      await purchaseToken.mock.balanceOf
-        .withArgs(aelinPool.address)
-        .returns(purchaseTokenTotalForDeal.add(1));
 
       await expect(
         aelinPool
@@ -414,27 +399,10 @@ describe("AelinPool", function () {
     });
 
     it("should successfully create a deal", async function () {
-      // setup so that a user can purchase pool tokens
-      await purchaseToken.mock.balanceOf
-        .withArgs(user1.address)
-        .returns(userPurchaseAmt);
-
-      await purchaseToken.mock.transferFrom
-        .withArgs(user1.address, aelinPool.address, userPurchaseAmt)
-        .returns(true);
-
-      await purchaseToken.mock.balanceOf
-        .withArgs(aelinPool.address)
-        .returns(userPurchaseAmt);
-
       await successfullyInitializePool();
       await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
       await ethers.provider.send("evm_mine", []);
-
-      await purchaseToken.mock.balanceOf
-        .withArgs(aelinPool.address)
-        .returns(purchaseTokenTotalForDeal.add(1));
 
       const tx = await createDealWithValidParams();
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
@@ -523,18 +491,6 @@ describe("AelinPool", function () {
 
   describe("purchase pool tokens", function () {
     beforeEach(async function () {
-      await purchaseToken.mock.balanceOf
-        .withArgs(user1.address)
-        .returns(userPurchaseAmt);
-
-      await purchaseToken.mock.transferFrom
-        .withArgs(user1.address, aelinPool.address, userPurchaseAmt)
-        .returns(true);
-
-      await purchaseToken.mock.balanceOf
-        .withArgs(aelinPool.address)
-        .returns(userPurchaseAmt);
-
       await successfullyInitializePool();
     });
 
@@ -554,13 +510,13 @@ describe("AelinPool", function () {
 
     it("should fail the transaction when the cap has been exceeded", async function () {
       const maxPoolPurchase = await aelinPool.maxPoolPurchase();
-      await purchaseToken.mock.balanceOf
-        .withArgs(user1.address)
-        .returns(maxPoolPurchase.add(1));
       // we are mocking the contract has the user balance already
       // but since we do the check on the pool token allocation
       // the user can purchase up to the cap
       expect(maxPoolPurchase).to.equal(purchaseTokenCap);
+      await purchaseToken
+        .connect(user1)
+        .approve(aelinPool.address, purchaseTokenCap.add(1));
       await expect(
         aelinPool.connect(user1).purchasePoolTokens(purchaseTokenCap.add(1))
       ).to.be.revertedWith("cap has been exceeded");
@@ -569,19 +525,11 @@ describe("AelinPool", function () {
     it("should fail when the pool is full and thus the purchase window is expired", async function () {
       const excess = 100;
       const maxPoolPurchase = await aelinPool.maxPoolPurchase();
-      await purchaseToken.mock.balanceOf
-        .withArgs(user1.address)
-        .returns(maxPoolPurchase.add(excess));
-
-      await purchaseToken.mock.transferFrom
-        .withArgs(user1.address, aelinPool.address, maxPoolPurchase)
-        .returns(true);
-
-      await purchaseToken.mock.balanceOf
-        .withArgs(aelinPool.address)
-        .returns(maxPoolPurchase);
 
       expect(maxPoolPurchase).to.equal(purchaseTokenCap);
+      await purchaseToken
+        .connect(user1)
+        .approve(aelinPool.address, purchaseTokenCap.add(excess));
       await aelinPool.connect(user1).purchasePoolTokens(purchaseTokenCap);
       await expect(
         aelinPool.connect(user1).purchasePoolTokens(excess)
@@ -608,56 +556,10 @@ describe("AelinPool", function () {
         aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt)
       ).to.be.revertedWith("not in purchase window");
     });
-
-    it("should purchase a partial amount of tokens using upToAmount", async function () {
-      const excess = 100;
-      const maxPoolPurchase = await aelinPool.maxPoolPurchase();
-      await purchaseToken.mock.balanceOf
-        .withArgs(user1.address)
-        .returns(maxPoolPurchase.add(excess));
-
-      await purchaseToken.mock.transferFrom
-        .withArgs(user1.address, aelinPool.address, maxPoolPurchase.sub(1))
-        .returns(true);
-
-      expect(maxPoolPurchase).to.equal(purchaseTokenCap);
-      await aelinPool
-        .connect(user1)
-        .purchasePoolTokens(purchaseTokenCap.sub(1));
-
-      await purchaseToken.mock.transferFrom
-        .withArgs(user1.address, aelinPool.address, maxPoolPurchase.sub(1))
-        .returns(true);
-
-      const secondMaxPoolPurchase = await aelinPool.maxPoolPurchase();
-      expect(secondMaxPoolPurchase).to.equal(1);
-      await purchaseToken.mock.transferFrom
-        .withArgs(user1.address, aelinPool.address, 1)
-        .returns(true);
-      // NOTE there should only be 1 left and this should not revert
-      await aelinPool.connect(user1).purchasePoolTokensUpToAmount(excess);
-    });
   });
 
   describe("purchase pool token setup", function () {
     beforeEach(async function () {
-      // setup so that a user can purchase pool tokens
-      await purchaseToken.mock.balanceOf
-        .withArgs(user1.address)
-        .returns(userPurchaseAmt);
-
-      await purchaseToken.mock.transferFrom
-        .withArgs(user1.address, aelinPool.address, userPurchaseAmt)
-        .returns(true);
-
-      await purchaseToken.mock.transfer
-        .withArgs(user1.address, userPurchaseAmt)
-        .returns(true);
-
-      await purchaseToken.mock.balanceOf
-        .withArgs(aelinPool.address)
-        .returns(userPurchaseAmt);
-
       await successfullyInitializePool();
       await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
     });
@@ -699,10 +601,6 @@ describe("AelinPool", function () {
         const withdrawHalfPoolTokens = userPurchaseAmt
           .mul(Math.pow(10, poolTokenDecimals - purchaseTokenDecimals))
           .div(2);
-
-        await purchaseToken.mock.transfer
-          .withArgs(user1.address, userPurchaseAmt.div(2))
-          .returns(true);
 
         await aelinPool.connect(user1).withdrawFromPool(withdrawHalfPoolTokens);
 
