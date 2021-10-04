@@ -138,6 +138,7 @@ contract AelinDeal is AelinERC20 {
             );
             uint balanceAfterTransfer = IERC20(underlyingDealToken).balanceOf(address(this));
             uint underlyingDealTokenAmount = balanceAfterTransfer - currentBalance;
+
             emit DepositDealTokens(
                 underlyingDealToken,
                 msg.sender,
@@ -145,8 +146,7 @@ contract AelinDeal is AelinERC20 {
                 underlyingDealTokenAmount
             );
             if (
-                IERC20(underlyingDealToken).balanceOf(address(this)) +
-                    underlyingDealTokenAmount >=
+                IERC20(underlyingDealToken).balanceOf(address(this)) >=
                 underlyingDealTokenTotal
             ) {
                 depositComplete = true;

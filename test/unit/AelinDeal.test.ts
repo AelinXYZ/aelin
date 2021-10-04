@@ -92,11 +92,10 @@ describe("AelinDeal", function () {
     underlyingDealTokenWhaleSigner = await getImpersonatedSigner(
       underlyingDealTokenWhaleAddress
     );
-
     await fundUsers(
       underlyingDealToken,
       underlyingDealTokenWhaleSigner,
-      underlyingDealTokenTotal.mul(2),
+      underlyingDealTokenTotal.mul(100),
       [holder]
     );
   });
