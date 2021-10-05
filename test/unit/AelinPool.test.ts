@@ -73,7 +73,7 @@ describe("AelinPool", function () {
     await fundUsers(
       purchaseToken,
       purchaseTokenWhaleSigner,
-      purchaseTokenCap.mul(2),
+      purchaseTokenCap.mul(10),
       [user1]
     );
     underlyingDealToken = await deployMockContract(holder, ERC20Artifact.abi);
