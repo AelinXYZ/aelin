@@ -145,18 +145,11 @@ contract AelinDeal is AelinERC20 {
                 address(this),
                 underlyingDealTokenAmount
             );
-            if (
-                IERC20(underlyingDealToken).balanceOf(address(this)) >=
-                underlyingDealTokenTotal
-            ) {
-                depositComplete = true;
-            }
-        } else {
-            if (
-                IERC20(underlyingDealToken).balanceOf(address(this)) >= underlyingDealTokenTotal
-            ) {
-                depositComplete = true;
-            }
+        }
+        if (
+            IERC20(underlyingDealToken).balanceOf(address(this)) >= underlyingDealTokenTotal
+        ) {
+            depositComplete = true;
         }
     
         if (depositComplete == true) {
