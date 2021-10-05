@@ -12,7 +12,7 @@ const { deployContract, deployMockContract } = waffle;
 
 chai.use(solidity);
 
-describe("AelinDeal", function () {
+describe.only("AelinDeal", function () {
   let deployer: SignerWithAddress;
   let sponsor: SignerWithAddress;
   let holder: SignerWithAddress;
@@ -27,7 +27,7 @@ describe("AelinDeal", function () {
   const underlyingDealTokenAddress =
     "0x0258F474786DdFd37ABCE6df6BBb1Dd5dfC4434a";
   const underlyingDealTokenWhaleAddress =
-    "0x256293ee4a5c8f89589cb80a742ed690aca9044c";
+    "0xD6216fC19DB775Df9774a6E33526131dA7D19a2c";
   const poolTokenDecimals = 18;
   const oneDay = 24 * 60 * 60;
   const oneYear = oneDay * 365;

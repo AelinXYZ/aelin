@@ -36,7 +36,6 @@ const config: HardhatUserConfig = {
     },
     hardhat: {
       initialBaseFeePerGas: 0,
-      gasPrice: 0,
       forking: {
         url: process.env.ALCHEMY_URL || "",
         blockNumber: 13123510,
