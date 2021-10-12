@@ -359,7 +359,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
      * - the deal is in the purchase expiry window
      * - the cap has not been exceeded
      */
-    function purchasePoolTokens(uint256 _purchaseTokenAmount) external {
+    function purchasePoolTokens(uint256 _purchaseTokenAmount) external lock {
         require(
             dealCreated == false && block.timestamp < purchaseExpiry,
             "not in purchase window"

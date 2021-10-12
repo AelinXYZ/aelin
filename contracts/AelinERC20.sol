@@ -75,4 +75,17 @@ contract AelinERC20 is ERC20 {
                 ? aelinTokenAmount
                 : aelinTokenAmount / 10**(decimals() - underlyingDecimals);
     }
+
+    /**
+     * @dev Add this to prevent reentrancy attacks on purchasePoolTokens and depositUnderlying
+     * source: https://quantstamp.com/blog/how-the-dforce-hacker-used-reentrancy-to-steal-25-million
+     * uniswap implementation: https://github.com/Uniswap/v2-core/blob/master/contracts/UniswapV2Pair.sol#L31-L36
+     */
+    uint private unlocked = 1;
+    modifier lock() {
+        require(unlocked == 1, 'AelinV1: LOCKED');
+        unlocked = 0;
+        _;
+        unlocked = 1;
+    }
 }

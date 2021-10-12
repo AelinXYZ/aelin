@@ -127,6 +127,7 @@ contract AelinDeal is AelinERC20 {
     function depositUnderlying(uint256 _underlyingDealTokenAmount)
         external
         finalizeDepositOnce
+        lock
         returns (bool)
     {
         if (_underlyingDealTokenAmount > 0) {
