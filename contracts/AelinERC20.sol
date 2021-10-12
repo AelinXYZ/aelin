@@ -81,11 +81,11 @@ contract AelinERC20 is ERC20 {
      * source: https://quantstamp.com/blog/how-the-dforce-hacker-used-reentrancy-to-steal-25-million
      * uniswap implementation: https://github.com/Uniswap/v2-core/blob/master/contracts/UniswapV2Pair.sol#L31-L36
      */
-    uint private unlocked = 1;
+    bool private locked;
     modifier lock() {
-        require(unlocked == 1, 'AelinV1: LOCKED');
-        unlocked = 0;
+        require(locked == false, 'AelinV1: LOCKED');
+        locked = true;
         _;
-        unlocked = 1;
+        locked = false;
     }
 }
