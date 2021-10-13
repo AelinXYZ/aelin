@@ -1,5 +1,5 @@
 import chai, { expect } from "chai";
-import { ethers, network, waffle } from "hardhat";
+import { ethers, waffle } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { solidity } from "ethereum-waffle";
 
@@ -9,6 +9,7 @@ import AelinDealArtifact from "../../artifacts/contracts/AelinDeal.sol/AelinDeal
 import AelinPoolFactoryArtifact from "../../artifacts/contracts/AelinPoolFactory.sol/AelinPoolFactory.json";
 
 import { AelinPool, AelinDeal, AelinPoolFactory, ERC20 } from "../../typechain";
+import { fundUsers, getImpersonatedSigner } from "../helpers";
 
 const { deployContract } = waffle;
 
@@ -63,24 +64,6 @@ describe("integration test", () => {
   let aaveWhaleTwo: SignerWithAddress;
 
   const fundUSDCAmount = ethers.utils.parseUnits("100000", usdcDecimals);
-  const fundUsdcToUsers = async (users: SignerWithAddress[]) => {
-    users.forEach((user) => {
-      usdcContract
-        .connect(usdcWhaleSigner)
-        .transfer(user.address, fundUSDCAmount);
-    });
-  };
-
-  const getImpersonatedSigner = async (
-    address: string
-  ): Promise<SignerWithAddress> => {
-    await network.provider.request({
-      method: "hardhat_impersonateAccount",
-      params: [address],
-    });
-
-    return ethers.getSigner(address);
-  };
 
   before(async () => {
     [
@@ -130,7 +113,7 @@ describe("integration test", () => {
       deployer,
       AelinPoolArtifact
     )) as AelinPool;
-    await fundUsdcToUsers([
+    await fundUsers(usdcContract, usdcWhaleSigner, fundUSDCAmount, [
       user1,
       user2,
       user3,

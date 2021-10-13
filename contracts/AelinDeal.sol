@@ -127,28 +127,32 @@ contract AelinDeal is AelinERC20 {
     function depositUnderlying(uint256 _underlyingDealTokenAmount)
         external
         finalizeDepositOnce
+        lock
         returns (bool)
     {
-        if (
-            IERC20(underlyingDealToken).balanceOf(address(this)) +
-                _underlyingDealTokenAmount >=
-            underlyingDealTokenTotal
-        ) {
-            depositComplete = true;
-        }
         if (_underlyingDealTokenAmount > 0) {
+            uint currentBalance = IERC20(underlyingDealToken).balanceOf(address(this));
             IERC20(underlyingDealToken).safeTransferFrom(
                 msg.sender,
                 address(this),
                 _underlyingDealTokenAmount
             );
+            uint balanceAfterTransfer = IERC20(underlyingDealToken).balanceOf(address(this));
+            uint underlyingDealTokenAmount = balanceAfterTransfer - currentBalance;
+
             emit DepositDealTokens(
                 underlyingDealToken,
                 msg.sender,
                 address(this),
-                _underlyingDealTokenAmount
+                underlyingDealTokenAmount
             );
         }
+        if (
+            IERC20(underlyingDealToken).balanceOf(address(this)) >= underlyingDealTokenTotal
+        ) {
+            depositComplete = true;
+        }
+    
         if (depositComplete == true) {
             proRataRedemptionStart = block.timestamp;
             proRataRedemptionExpiry = block.timestamp + proRataRedemptionPeriod;
