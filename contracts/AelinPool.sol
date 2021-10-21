@@ -23,6 +23,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     uint256 public purchaseExpiry;
     uint256 public poolExpiry;
+    uint256 public holderFundingExpiry;
 
     bool public calledInitialize = false;
     bool public dealCreated = false;
@@ -73,13 +74,13 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         purchaseTokenCap = _purchaseTokenCap;
         purchaseToken = _purchaseToken;
         purchaseTokenDecimals = IERC20Decimals(_purchaseToken).decimals();
-        require(365 days >= _duration, "max 1 year duration");
-        poolExpiry = block.timestamp + _duration;
         require(
             30 minutes <= _purchaseExpiry && 30 days >= _purchaseExpiry,
             "outside purchase expiry window"
         );
         purchaseExpiry = block.timestamp + _purchaseExpiry;
+        require(365 days >= _duration, "max 1 year duration");
+        poolExpiry = purchaseExpiry + _duration;
         require(_sponsorFee <= MAX_SPONSOR_FEE, "exceeds max sponsor fee");
         sponsorFee = _sponsorFee;
         sponsor = _sponsor;
@@ -105,8 +106,12 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         _;
     }
 
-    modifier dealAlreadyCreated() {
-        require(dealCreated == true, "deal not yet created");
+    modifier dealFunded() {
+        require(
+            dealCreated == true &&
+            AelinDeal(aelinDealStorageProxy).proRataRedemptionStart() > 0,
+            "deal not yet funded"
+        );
         _;
     }
 
@@ -125,10 +130,13 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     /**
      * @dev only the sponsor can create a deal. The deal must be funded by the holder
-     * of the underlying deal token before a purchaser may accept the deal
+     * of the underlying deal token before a purchaser may accept the deal. If the 
+     * holder does not fund the deal before the expiry period is over then the sponsor 
+     * can create a new deal for the pool of capital.
      *
      * Requirements:
      * - The purchase expiry period must be over
+     * - the holder funding expiry period must be from 30 minutes to 30 days
      * - the pro rata redemption period must be from 30 minutes to 30 days
      * - the purchase token total for the deal that may be accepted must be <= the funds in the pool
      * - if the pro rata conversion ratio (purchase token total for the deal:funds in pool)
@@ -143,7 +151,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint256 _vestingCliff,
         uint256 _proRataRedemptionPeriod,
         uint256 _openRedemptionPeriod,
-        address _holder
+        address _holder,
+        uint256 _holderFundingExpiry
     ) external onlySponsor dealNotCreated returns (address) {
         require(
             block.timestamp >= purchaseExpiry,
@@ -153,6 +162,11 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             30 minutes <= _proRataRedemptionPeriod &&
                 30 days >= _proRataRedemptionPeriod,
             "30 mins - 30 days for prorata"
+        );
+        require(
+            30 minutes <= _holderFundingExpiry &&
+                30 days >= _holderFundingExpiry,
+            "30 mins - 30 days for holder"
         );
         uint256 poolTokenMaxPurchaseAmount = convertUnderlyingToAelinAmount(
             _purchaseTokenTotalForDeal,
@@ -179,6 +193,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         poolExpiry = block.timestamp;
         holder = _holder;
         dealCreated = true;
+        holderFundingExpiry = block.timetamp + _holderFundingExpiry;
 
         AelinDeal aelinDeal = AelinDeal(
             _cloneAsMinimalProxy(
@@ -224,6 +239,49 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     }
 
     /**
+     * @dev only the sponsor can create another deal if the deal they already
+     * created is not funded in time by the holder. The holder must fund the deal
+     * within the purchae expiry period for the create deal functionality of
+     * the pool to be locked permanently. There is only ever 1 deal per pool.
+     *
+     * Requirements:
+     * - the redemption period is either in the pro rata or open windows
+     * - the purchaser cannot accept more than their share for a period
+     * - if participating in the open period, a purchaser must have maxxed their
+     *   contribution in the pro rata phase
+     */
+    function createDealUnfunded(
+        address _underlyingDealToken,
+        uint256 _purchaseTokenTotalForDeal,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliff,
+        uint256 _proRataRedemptionPeriod,
+        uint256 _openRedemptionPeriod,
+        address _holder,
+        uint256 _holderFundingExpiry
+    ) external onlySponsor returns (address) {
+        require(
+            AelinDeal(aelinDealStorageProxy).depositComplete == false &&
+            holderFundingExpiry > 0 &&
+            holderFundingExpiry < block.timestamp,
+            "cant create new deal"
+        );
+        dealCreated = false;
+        createDeal(
+            _underlyingDealToken,
+            _purchaseTokenTotalForDeal,
+            _underlyingDealTokenTotal,
+            _vestingPeriod,
+            _vestingCliff,
+            _proRataRedemptionPeriod,
+            _openRedemptionPeriod,
+            _holder,
+            _holderFundingExpiry
+        );
+    }
+
+    /**
      * @dev the 2 methods allow a purchaser to exchange accept all or a
      * portion of their pool tokens for deal tokens
      *
@@ -245,6 +303,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         if (
             balanceOf(purchaser) == 0 ||
             dealCreated == false ||
+            AelinDeal(aelinDealStorageProxy).proRataRedemptionStart() == 0 ||
             block.timestamp >=
             AelinDeal(aelinDealStorageProxy).proRataRedemptionExpiry()
         ) {
@@ -270,7 +329,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         address recipient,
         uint256 poolTokenAmount,
         bool useMax
-    ) internal dealAlreadyCreated {
+    ) internal dealFunded {
         AelinDeal aelinDeal = AelinDeal(aelinDealStorageProxy);
         if (
             block.timestamp >= aelinDeal.proRataRedemptionStart() &&
@@ -437,6 +496,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         AelinDeal aelinDeal = AelinDeal(aelinDealStorageProxy);
         if (
             dealCreated == false ||
+            AelinDeal(aelinDealStorageProxy).proRataRedemptionStart() == 0 ||
             (block.timestamp >= aelinDeal.proRataRedemptionExpiry() &&
                 aelinDeal.openRedemptionStart() == 0) ||
             (block.timestamp > aelinDeal.openRedemptionExpiry() &&
@@ -456,7 +516,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
      * @dev view to see how much of the pool a purchaser can buy into 
      */
     function maxPoolPurchase() external view returns (uint256) {
-        if (dealCreated == true || block.timestamp >= purchaseExpiry) {
+        if (block.timestamp >= purchaseExpiry) {
             return 0;
         }
         if (purchaseTokenCap == 0) {

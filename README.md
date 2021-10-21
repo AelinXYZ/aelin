@@ -1,6 +1,6 @@
 # Aelin Overview
 
-Aelin is a fundraising protocol built on Ethereum. A sponsor goes out and announces they are raising a pool of capital with a purchase expiry period. Anyone with an internet connection, aka the purchaser, can contribute funds (e.g. sUSD) to the pool during the purchase expiry period; the funds are locked for a time duration period while the sponsor searches for a deal.
+Aelin is a fundraising protocol built on Ethereum. A sponsor goes out and announces they are raising a pool of capital with a purchase expiry period. Anyone with an internet connection, aka the purchaser, can contribute funds (e.g. sUSD) to the pool during the purchase expiry period; after the purchase expiry period, the funds are locked for a time duration period while the sponsor searches for a deal.
 
 If the sponsor finds a deal with the holder of a tokenized asset after the purchase expiry period, the sponsor announces the deal terms to the purchasers and then the holder sends the underlying deal tokens/ tokenized assets to the contract. At this point in time, purchaers can convert their pool tokens (or a partial amount) to deal tokens, which represent a claim on the underlying deal token. Pool tokens are transferrable until the deal is created and fully funded. After the deal is funded, pool tokens must be either accpeted or withdrawn for the purchase token.
 
@@ -40,9 +40,8 @@ Arguments:
 - `string memory _symbol` used as part of the symbol of the ERC20 pool and deal token
 - `uint _purchaseTokenCap`- the max amount of purchase tokens that can be used to buy pool tokens. if set to 0 the deal is uncapped
 - `address _purchaseToken` the purchase token used to buy the pool token
-- `uint _duration` the duration of the pool. if no deal is created by the end of the duration, the purchaser may withdraw their funds
+- `uint _duration` the duration of the pool which starts after the purchase expiry period ends. if no deal is created by the end of the duration, the purchaser may withdraw their funds
 - `uint _sponsorFee`- an optional fee from the sponsor set between 0 and 98%
-- `address _sponsor` the address of the sponsor
 - `uint _purchaseExpiry` the amount of time a purchaser has to buy a pool token before the sponsor can create the deal
 
 Requirements:
@@ -69,8 +68,9 @@ Arguments:
 - `uint _vestingPeriod` the total amount of time to fully vest starting at the end of the vesting cliff (vesting is linear for v1)
 - `uint _vestingCliff` the initial deal token holding period where no vesting occurs
 - `address _holder` the entity or individual with whom the sponsor agrees to a deal
+- `uint _holderFundingExpiry` the amount of time a holder has to fund the deal before the proposed deal expires
 
-// NOTE please be sure to understand how the 2 redemption periods work outlined below:
+> NOTE please be sure to understand how the 2 redemption periods work outlined below:
 
 - `uint _proRataRedemptionPeriod` the time a purchaser has to redeem their pro rata share of the deal. E.g. if the `_purchaseTokenTotalForDeal` is only 8M sUSD but the pool has 10M sUSD (4:5) in it then for every $1 the purchaser invested they get to redeem $0.80 for deal tokens during this period. If the proRataConversion rate is 1:1 there is no open redemption period
 - `uint _openRedemptionPeriod` is a period after the `_proRataRedemptionPeriod` when anyone who maxxed out their redemption in the `_proRataRedemptionPeriod` can use their remaining purchase tokens to buy any leftover deal tokens if some other purchasers did not redeem some or all of their pool tokens for deal tokens
@@ -78,13 +78,22 @@ Arguments:
 Requirements:
 
 - the `block.timestamp >= purchaseExpiry` (revert)
+- the `_holderFundingExpiry` must be >= 30 minutes and <= 30 days (revert)
 - the `_proRataRedemptionPeriod` must be >= 30 minutes and <= 30 days (revert)
 - the `_openRataRedemptionPeriod` must be >= 30 minutes and <= 30 days, If the proRataConversion rate is not 1:1, otherwise it must be 0 (revert)
 - the `_purchaseTokenTotalForDeal` converted to 18 decimals must be <= totalSupply of pool tokens (revert)
 
-NOTE the sponsor journey has ended. From here the next step is `HOLDER step 1 (Fund the Deal)`
+NOTE the sponsor journey has ended IF the holder funds the deal. From here the next step is `HOLDER step 1 (Fund the Deal)`. However, if the holder does not fund the deal a spnosor can create a new deal for the pool. There is always only 1 deal per pool.
 
 **`EXTRA_METHODS`**: only the sponsor may also call `setSponsor()` followed by `acceptSponsor()` from the new address at any time to update the sponsor address for a deal
+
+**SPONSOR STEP 3 (Create a Deal if original deal was not funded by the holder in time)**: Creates a new deal for the pool by calling `AelinPool.createDealUnfunded(...)`.
+
+Modifiers:
+
+- `onlySponsor` only the sponsor may call this method
+
+> `Arguments and Requirements` are the same as `SPONSOR STEP 2 (Create a Deal)` However, the sponsor may only call this method if the original deal was created but not funded by the holder in the amount of time the sponsor allocated. The sponsor calls it with the exact same arguments and requirements as the original `createDeal(...)` method.
 
 ### **PURCHASER**
 

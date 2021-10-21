@@ -18,8 +18,8 @@ contract AelinPoolFactory is MinimalProxyFactory {
      * we are forking mainnet in testing so we can use the real addresses in tests
      * this is the only piece of code that is meant to be temporary in the contracts
      */
-    address public AELIN_POOL_LOGIC;
-    address public AELIN_DEAL_LOGIC;
+    address public AELIN_POOL_LOGIC = 0xc5770D9bE37d5eFf77901854d5C74785C2e7C32F;
+    address public AELIN_DEAL_LOGIC = 0xfE5F3046a0F37a7F74859827Fa20d1E1Fc8833b1;
 
     constructor() {}
 

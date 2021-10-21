@@ -570,7 +570,7 @@ describe("AelinPool", function () {
       it("should require the deal to be created", async function () {
         await expect(
           aelinPool.connect(user1).acceptMaxDealTokens()
-        ).to.be.revertedWith("deal not yet created");
+        ).to.be.revertedWith("deal not yet funded");
       });
     });
 
