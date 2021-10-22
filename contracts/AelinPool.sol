@@ -26,7 +26,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     uint256 public holderFundingExpiry;
 
     bool public calledInitialize = false;
-    bool public dealCreated = false;
 
     address public aelinRewardsAddress;
     address public aelinDealLogicAddress;
@@ -91,8 +90,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         emit SetSponsor(_sponsor);
     }
 
-    modifier dealNotCreated() {
-        require(dealCreated == false, "deal has been created");
+    modifier firstDealAttempt() {
+        require(holderFundingExpiry == 0, "deal has been created");
         _;
     }
 
@@ -108,7 +107,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     modifier dealFunded() {
         require(
-            dealCreated == true &&
+            holderFundingExpiry > 0 &&
             AelinDeal(aelinDealStorageProxy).proRataRedemptionStart() > 0,
             "deal not yet funded"
         );
@@ -153,7 +152,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint256 _openRedemptionPeriod,
         address _holder,
         uint256 _holderFundingExpiry
-    ) external onlySponsor dealNotCreated returns (address) {
+    ) external onlySponsor firstDealAttempt returns (address) {
         require(
             block.timestamp >= purchaseExpiry,
             "pool still in purchase mode"
@@ -192,7 +191,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
         poolExpiry = block.timestamp;
         holder = _holder;
-        dealCreated = true;
         holderFundingExpiry = block.timetamp + _holderFundingExpiry;
 
         AelinDeal aelinDeal = AelinDeal(
@@ -262,12 +260,11 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint256 _holderFundingExpiry
     ) external onlySponsor returns (address) {
         require(
-            AelinDeal(aelinDealStorageProxy).depositComplete == false &&
             holderFundingExpiry > 0 &&
+            AelinDeal(aelinDealStorageProxy).depositComplete == false &&
             holderFundingExpiry < block.timestamp,
             "cant create new deal"
         );
-        dealCreated = false;
         createDeal(
             _underlyingDealToken,
             _purchaseTokenTotalForDeal,
@@ -302,7 +299,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     function maxProRataAvail(address purchaser) public view returns (uint256) {
         if (
             balanceOf(purchaser) == 0 ||
-            dealCreated == false ||
+            holderFundingExpiry == 0 ||
             AelinDeal(aelinDealStorageProxy).proRataRedemptionStart() == 0 ||
             block.timestamp >=
             AelinDeal(aelinDealStorageProxy).proRataRedemptionExpiry()
@@ -420,7 +417,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
      */
     function purchasePoolTokens(uint256 _purchaseTokenAmount) external lock {
         require(
-            dealCreated == false && block.timestamp < purchaseExpiry,
+            holderFundingExpiry == 0 && block.timestamp < purchaseExpiry,
             "not in purchase window"
         );
         uint currentBalance = IERC20(purchaseToken).balanceOf(address(this));
@@ -495,7 +492,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     function maxDealAccept(address purchaser) external view returns (uint256) {
         AelinDeal aelinDeal = AelinDeal(aelinDealStorageProxy);
         if (
-            dealCreated == false ||
+            holderFundingExpiry == 0 ||
             AelinDeal(aelinDealStorageProxy).proRataRedemptionStart() == 0 ||
             (block.timestamp >= aelinDeal.proRataRedemptionExpiry() &&
                 aelinDeal.openRedemptionStart() == 0) ||
