@@ -227,7 +227,7 @@ describe("AelinPool", function () {
       expect(await aelinPool.sponsor()).to.equal(sponsor.address);
 
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
-      const expectedPoolExpiry = timestamp + duration;
+      const expectedPoolExpiry = timestamp + purchaseExpiry + duration;
       expect(await aelinPool.poolExpiry()).to.equal(expectedPoolExpiry);
 
       const expectedPurchaseExpiry = timestamp + purchaseExpiry;
@@ -626,7 +626,9 @@ describe("AelinPool", function () {
 
     describe("withdraw pool tokens", function () {
       it("should allow a purchaser to withdraw pool tokens", async function () {
-        await ethers.provider.send("evm_increaseTime", [duration + 1]);
+        await ethers.provider.send("evm_increaseTime", [
+          purchaseExpiry + duration + 1,
+        ]);
         await ethers.provider.send("evm_mine", []);
 
         await aelinPool.connect(user1).withdrawMaxFromPool();
@@ -645,7 +647,9 @@ describe("AelinPool", function () {
       });
 
       it("should allow the purchaser to withdraw a subset of their tokens", async function () {
-        await ethers.provider.send("evm_increaseTime", [duration + 1]);
+        await ethers.provider.send("evm_increaseTime", [
+          purchaseExpiry + duration + 1,
+        ]);
         await ethers.provider.send("evm_mine", []);
 
         const withdrawHalfPoolTokens = userPurchaseAmt
