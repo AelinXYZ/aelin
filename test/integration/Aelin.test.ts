@@ -138,6 +138,7 @@ describe("integration test", () => {
   const base = 100000; // hardcoded in the contracts
   const aelinFee = 2000; // hardcoded in the contracts
   const purchaseExpiry = 30 * 24 * 60 * 60; // one month
+  const holderFundingExpiry = 30 * 24 * 60 * 60; // one month
   const feesNumerator = ethers.BigNumber.from(base - (aelinFee + sponsorFee));
   const feesDenominator = ethers.BigNumber.from(base);
 
@@ -303,7 +304,8 @@ describe("integration test", () => {
           vestingCliff,
           proRataRedemptionPeriod,
           openRedemptionPeriod,
-          aaveWhaleOne.address
+          aaveWhaleOne.address,
+          holderFundingExpiry
         );
 
       const [createDealLog] = await aelinPoolProxyStorage.queryFilter(
@@ -676,7 +678,8 @@ describe("integration test", () => {
           vestingCliff,
           proRataRedemptionPeriod,
           openRedemptionPeriod,
-          aaveWhaleTwo.address
+          aaveWhaleTwo.address,
+          holderFundingExpiry
         );
 
       const [createDealLog] = await aelinPoolProxyStorage.queryFilter(
@@ -975,7 +978,8 @@ describe("integration test", () => {
           vestingCliff,
           proRataRedemptionPeriod,
           openRedemptionPeriod,
-          aaveWhaleOne.address
+          aaveWhaleOne.address,
+          holderFundingExpiry
         );
 
       const [createDealLog] = await aelinPoolProxyStorage.queryFilter(
@@ -1102,7 +1106,8 @@ describe("integration test", () => {
           vestingCliff,
           proRataRedemptionPeriod,
           openRedemptionPeriod,
-          aaveWhaleOne.address
+          aaveWhaleOne.address,
+          holderFundingExpiry
         );
 
       const [createDealLog] = await aelinPoolProxyStorage.queryFilter(

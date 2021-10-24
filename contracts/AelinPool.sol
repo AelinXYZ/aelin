@@ -17,6 +17,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     address public sponsor;
     address public futureSponsor;
 
+    // TODO constants at the top - turn it to 18 decimals
     uint256 constant BASE = 100000;
     uint256 constant MAX_SPONSOR_FEE = 98000;
     uint256 constant AELIN_FEE = 2000;
@@ -64,6 +65,12 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         address _aelinDealLogicAddress,
         address _aelinRewardsAddress
     ) external initOnce {
+        require(
+            30 minutes <= _purchaseExpiry && 30 days >= _purchaseExpiry,
+            "outside purchase expiry window"
+        );
+        require(365 days >= _duration, "max 1 year duration");
+        require(_sponsorFee <= MAX_SPONSOR_FEE, "exceeds max sponsor fee");
         storedName = _name;
         storedSymbol = _symbol;
         _setNameAndSymbol(
@@ -73,20 +80,12 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         purchaseTokenCap = _purchaseTokenCap;
         purchaseToken = _purchaseToken;
         purchaseTokenDecimals = IERC20Decimals(_purchaseToken).decimals();
-        require(
-            30 minutes <= _purchaseExpiry && 30 days >= _purchaseExpiry,
-            "outside purchase expiry window"
-        );
         purchaseExpiry = block.timestamp + _purchaseExpiry;
-        require(365 days >= _duration, "max 1 year duration");
         poolExpiry = purchaseExpiry + _duration;
-        require(_sponsorFee <= MAX_SPONSOR_FEE, "exceeds max sponsor fee");
         sponsorFee = _sponsorFee;
         sponsor = _sponsor;
         aelinDealLogicAddress = _aelinDealLogicAddress;
         aelinRewardsAddress = _aelinRewardsAddress;
-
-        calledInitialize = true;
         emit SetSponsor(_sponsor);
     }
 
@@ -97,6 +96,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     modifier initOnce() {
         require(calledInitialize == false, "can only initialize once");
+        calledInitialize = true;
         _;
     }
 
@@ -152,7 +152,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint256 _openRedemptionPeriod,
         address _holder,
         uint256 _holderFundingExpiry
-    ) external onlySponsor firstDealAttempt returns (address) {
+    ) public onlySponsor firstDealAttempt returns (address) {
         require(
             block.timestamp >= purchaseExpiry,
             "pool still in purchase mode"
@@ -191,7 +191,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
         poolExpiry = block.timestamp;
         holder = _holder;
-        holderFundingExpiry = block.timetamp + _holderFundingExpiry;
+        holderFundingExpiry = block.timestamp + _holderFundingExpiry;
 
         AelinDeal aelinDeal = AelinDeal(
             _cloneAsMinimalProxy(
@@ -230,7 +230,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             _vestingCliff,
             _proRataRedemptionPeriod,
             _openRedemptionPeriod,
-            _holder
+            _holder,
+            _holderFundingExpiry
         );
 
         return aelinDealStorageProxy;
@@ -261,7 +262,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     ) external onlySponsor returns (address) {
         require(
             holderFundingExpiry > 0 &&
-            AelinDeal(aelinDealStorageProxy).depositComplete == false &&
+            AelinDeal(aelinDealStorageProxy).depositComplete() == false &&
             holderFundingExpiry < block.timestamp,
             "cant create new deal"
         );
@@ -416,6 +417,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
      * - the cap has not been exceeded
      */
     function purchasePoolTokens(uint256 _purchaseTokenAmount) external lock {
+        // maybe unnecessary first part
         require(
             holderFundingExpiry == 0 && block.timestamp < purchaseExpiry,
             "not in purchase window"
@@ -438,6 +440,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         );
 
         uint256 totalPoolAfter = totalSupply() + poolTokenAmount;
+        // if startment purchase token cap > 0
         require(
             purchaseTokenCap == 0 || totalPoolAfter <= poolTokenCap,
             "cap has been exceeded"
@@ -600,6 +603,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint256 vestingCliff,
         uint256 proRataRedemptionPeriod,
         uint256 openRedemptionPeriod,
-        address indexed holder
+        address indexed holder,
+        uint256 holderFundingExpiry
     );
 }

@@ -92,6 +92,7 @@ describe("AelinPool", function () {
   const duration = 100;
   const sponsorFee = 1000;
   const purchaseExpiry = 30 * 60 + 1; // 30min and 1sec
+  const holderFundingExpiry = 30 * 60 + 1; // 30min and 1sec
   const aelinPoolName = `aePool-${name}`;
   const aelinPoolSymbol = `aeP-${symbol}`;
 
@@ -136,7 +137,8 @@ describe("AelinPool", function () {
         vestingCliff,
         proRataRedemptionPeriod,
         openRedemptionPeriod,
-        holder.address
+        holder.address,
+        holderFundingExpiry
       );
 
   describe("initialize", function () {
@@ -255,7 +257,8 @@ describe("AelinPool", function () {
           vestingCliff,
           proRataRedemptionPeriod,
           openRedemptionPeriod,
-          holder.address
+          holder.address,
+          holderFundingExpiry
         )
       ).to.be.revertedWith("pool still in purchase mode");
     });
@@ -274,7 +277,8 @@ describe("AelinPool", function () {
           vestingCliff,
           proRataRedemptionPeriod - 2, // 1 second less than minimum
           openRedemptionPeriod,
-          holder.address
+          holder.address,
+          holderFundingExpiry
         )
       ).to.be.revertedWith("30 mins - 30 days for prorata");
     });
@@ -293,7 +297,8 @@ describe("AelinPool", function () {
           vestingCliff,
           30 * 24 * 60 * 60 + 1, // 1 second more than 30 days
           openRedemptionPeriod,
-          holder.address
+          holder.address,
+          holderFundingExpiry
         )
       ).to.be.revertedWith("30 mins - 30 days for prorata");
     });
@@ -337,7 +342,8 @@ describe("AelinPool", function () {
             vestingCliff,
             proRataRedemptionPeriod,
             openRedemptionPeriod,
-            holder.address
+            holder.address,
+            holderFundingExpiry
           )
       ).to.be.revertedWith("only sponsor can access");
     });
@@ -358,7 +364,8 @@ describe("AelinPool", function () {
           vestingCliff,
           proRataRedemptionPeriod,
           openRedemptionPeriod - 2, // 1 second less than minimum
-          holder.address
+          holder.address,
+          holderFundingExpiry
         )
       ).to.be.revertedWith("30 mins - 30 days for prorata");
 
@@ -371,7 +378,8 @@ describe("AelinPool", function () {
           vestingCliff,
           proRataRedemptionPeriod,
           365 * 60 * 60 * 60, // more than 30 days
-          holder.address
+          holder.address,
+          holderFundingExpiry
         )
       ).to.be.revertedWith("30 mins - 30 days for prorata");
     });
@@ -393,9 +401,45 @@ describe("AelinPool", function () {
             vestingCliff,
             proRataRedemptionPeriod,
             openRedemptionPeriod,
-            holder.address
+            holder.address,
+            holderFundingExpiry
           )
       ).to.be.revertedWith("deal is 1:1, set open to 0");
+    });
+
+    it("should fail when the holder funding expiry is too long or too short", async function () {
+      await successfullyInitializePool();
+      await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
+      await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await expect(
+        aelinPool.connect(sponsor).createDeal(
+          underlyingDealToken.address,
+          userPurchaseAmt,
+          underlyingDealTokenTotal,
+          vestingPeriod,
+          vestingCliff,
+          proRataRedemptionPeriod,
+          openRedemptionPeriod,
+          holder.address,
+          holderFundingExpiry - 2 // less than 30 minutes
+        )
+      ).to.be.revertedWith("30 mins - 30 days for holder");
+
+      await expect(
+        aelinPool.connect(sponsor).createDeal(
+          underlyingDealToken.address,
+          userPurchaseAmt,
+          underlyingDealTokenTotal,
+          vestingPeriod,
+          vestingCliff,
+          proRataRedemptionPeriod,
+          openRedemptionPeriod,
+          holder.address,
+          365 * 60 * 60 * 60 // more than 30 days
+        )
+      ).to.be.revertedWith("30 mins - 30 days for holder");
     });
 
     it("should successfully create a deal", async function () {
@@ -408,6 +452,9 @@ describe("AelinPool", function () {
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
 
       expect(await aelinPool.poolExpiry()).to.equal(timestamp);
+      expect(await aelinPool.holderFundingExpiry()).to.equal(
+        timestamp + holderFundingExpiry
+      );
       expect(await aelinPool.holder()).to.equal(holder.address);
 
       const expectedProRataResult = (
@@ -455,6 +502,9 @@ describe("AelinPool", function () {
         openRedemptionPeriod
       );
       expect(dealDetailsLog.args.holder).to.equal(holder.address);
+      expect(dealDetailsLog.args.holderFundingExpiry).to.equal(
+        holderFundingExpiry
+      );
 
       await expect(createDealWithValidParams()).to.be.revertedWith(
         "deal has been created"
