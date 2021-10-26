@@ -173,12 +173,9 @@ describe("integration test", () => {
   `, async () => {
       const aelinPoolFactory = (await deployContract(
         deployer,
-        AelinPoolFactoryArtifact
+        AelinPoolFactoryArtifact,
+        [aelinPoolLogic.address, aelinDealLogic.address]
       )) as AelinPoolFactory;
-      await aelinPoolFactory.setAddressesDeleteBeforeLaunch(
-        aelinPoolLogic.address,
-        aelinDealLogic.address
-      );
 
       await aelinPoolFactory
         .connect(sponsor)
@@ -472,7 +469,7 @@ describe("integration test", () => {
       expect(mintLogs.length).to.equal(4 * 3);
 
       const totalToHolderFromEvents = acceptLogs.reduce(
-        (acc, log) => acc.add(log.args.underlyingToHolderAmt),
+        (acc, log) => acc.add(log.args.poolTokenAmount),
         ethers.BigNumber.from(0)
       );
       expect(await usdcContract.balanceOf(aaveWhaleOne.address)).to.equal(
@@ -550,12 +547,9 @@ describe("integration test", () => {
   `, async () => {
       const aelinPoolFactory = (await deployContract(
         deployer,
-        AelinPoolFactoryArtifact
+        AelinPoolFactoryArtifact,
+        [aelinPoolLogic.address, aelinDealLogic.address]
       )) as AelinPoolFactory;
-      await aelinPoolFactory.setAddressesDeleteBeforeLaunch(
-        aelinPoolLogic.address,
-        aelinDealLogic.address
-      );
 
       await aelinPoolFactory
         .connect(sponsor)
@@ -840,7 +834,7 @@ describe("integration test", () => {
       expect(mintLogs.length).to.equal(4 * 3);
 
       const totalToHolderFromEvents = acceptLogs.reduce(
-        (acc, log) => acc.add(log.args.underlyingToHolderAmt),
+        (acc, log) => acc.add(log.args.poolTokenAmount),
         ethers.BigNumber.from(0)
       );
       expect(await usdcContract.balanceOf(aaveWhaleTwo.address)).to.equal(
@@ -927,12 +921,9 @@ describe("integration test", () => {
     beforeEach(async function () {
       const aelinPoolFactory = (await deployContract(
         deployer,
-        AelinPoolFactoryArtifact
+        AelinPoolFactoryArtifact,
+        [aelinPoolLogic.address, aelinDealLogic.address]
       )) as AelinPoolFactory;
-      await aelinPoolFactory.setAddressesDeleteBeforeLaunch(
-        aelinPoolLogic.address,
-        aelinDealLogic.address
-      );
 
       await aelinPoolFactory
         .connect(sponsor)
@@ -1046,12 +1037,9 @@ describe("integration test", () => {
     beforeEach(async function () {
       const aelinPoolFactory = (await deployContract(
         deployer,
-        AelinPoolFactoryArtifact
+        AelinPoolFactoryArtifact,
+        [aelinPoolLogic.address, aelinDealLogic.address]
       )) as AelinPoolFactory;
-      await aelinPoolFactory.setAddressesDeleteBeforeLaunch(
-        aelinPoolLogic.address,
-        aelinDealLogic.address
-      );
 
       await aelinPoolFactory
         .connect(sponsor)

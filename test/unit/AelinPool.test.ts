@@ -28,7 +28,6 @@ describe("AelinPool", function () {
   let underlyingDealToken: MockContract;
   const purchaseTokenDecimals = 6;
   const underlyingDealTokenDecimals = 8;
-  const poolTokenDecimals = 18;
   const mockAelinRewardsAddress = "0xfdbdb06109CD25c7F485221774f5f96148F1e235";
   const purchaseTokenAddress = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
   const purchaseTokenWhaleAddress =
@@ -39,10 +38,6 @@ describe("AelinPool", function () {
   const userPurchaseAmt = ethers.utils.parseUnits(
     userPurchaseBaseAmt.toString(),
     purchaseTokenDecimals
-  );
-
-  const poolTokenAmount = userPurchaseAmt.mul(
-    Math.pow(10, poolTokenDecimals - purchaseTokenDecimals)
   );
   const purchaseTokenTotalForDealBase = 100;
   const purchaseTokenTotalForDeal = ethers.utils.parseUnits(
@@ -90,7 +85,9 @@ describe("AelinPool", function () {
   const symbol = "TestSymbol";
 
   const duration = 100;
-  const sponsorFee = 1000;
+  // 2.5% sponsorFee
+  const sponsorFee = ethers.utils.parseEther("2.5");
+  console.log("sponsorFee", sponsorFee);
   const purchaseExpiry = 30 * 60 + 1; // 30min and 1sec
   const holderFundingExpiry = 30 * 60 + 1; // 30min and 1sec
   const aelinPoolName = `aePool-${name}`;
@@ -201,7 +198,7 @@ describe("AelinPool", function () {
           purchaseTokenCap,
           purchaseToken.address,
           duration,
-          98001,
+          ethers.utils.parseEther("98.1"),
           sponsor.address,
           purchaseExpiry,
           aelinDealLogic.address,
@@ -507,7 +504,7 @@ describe("AelinPool", function () {
       );
 
       await expect(createDealWithValidParams()).to.be.revertedWith(
-        "deal has been created"
+        "cant create new deal"
       );
     });
   });
@@ -553,7 +550,6 @@ describe("AelinPool", function () {
       expect(log.args.purchaser).to.equal(user1.address);
       expect(log.args.poolAddress).to.equal(aelinPool.address);
       expect(log.args.purchaseTokenAmount).to.equal(userPurchaseAmt);
-      expect(log.args.poolTokenAmount).to.equal(poolTokenAmount);
     });
 
     it("should fail the transaction when the cap has been exceeded", async function () {
@@ -627,11 +623,6 @@ describe("AelinPool", function () {
         expect(log.args.purchaser).to.equal(user1.address);
         expect(log.args.poolAddress).to.equal(aelinPool.address);
         expect(log.args.purchaseTokenAmount).to.equal(userPurchaseAmt);
-        expect(log.args.poolTokenAmount).to.equal(
-          userPurchaseAmt.mul(
-            Math.pow(10, poolTokenDecimals - purchaseTokenDecimals)
-          )
-        );
       });
 
       it("should allow the purchaser to withdraw a subset of their tokens", async function () {
@@ -640,9 +631,7 @@ describe("AelinPool", function () {
         ]);
         await ethers.provider.send("evm_mine", []);
 
-        const withdrawHalfPoolTokens = userPurchaseAmt
-          .mul(Math.pow(10, poolTokenDecimals - purchaseTokenDecimals))
-          .div(2);
+        const withdrawHalfPoolTokens = userPurchaseAmt.div(2);
 
         await aelinPool.connect(user1).withdrawFromPool(withdrawHalfPoolTokens);
 
@@ -651,20 +640,17 @@ describe("AelinPool", function () {
         );
         expect(log.args.purchaser).to.equal(user1.address);
         expect(log.args.poolAddress).to.equal(aelinPool.address);
-        expect(log.args.purchaseTokenAmount).to.equal(userPurchaseAmt.div(2));
-        expect(log.args.poolTokenAmount).to.equal(withdrawHalfPoolTokens);
+        expect(log.args.purchaseTokenAmount).to.equal(withdrawHalfPoolTokens);
       });
 
       it("should not allow the purchaser to withdraw more than their balance", async function () {
         await ethers.provider.send("evm_increaseTime", [duration + 1]);
         await ethers.provider.send("evm_mine", []);
 
-        const doublePoolTokens = userPurchaseAmt
-          .mul(Math.pow(10, poolTokenDecimals - purchaseTokenDecimals))
-          .mul(2);
+        const doublePurchaseTokens = userPurchaseAmt.mul(2);
 
         await expect(
-          aelinPool.connect(user1).withdrawFromPool(doublePoolTokens)
+          aelinPool.connect(user1).withdrawFromPool(doublePurchaseTokens)
         ).to.be.reverted;
       });
 

@@ -98,11 +98,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         if (holderFundingExpiry > 0) {
             require(
                 AelinDeal(aelinDealStorageProxy).depositComplete() == false &&
-                    holderFundingExpiry >= block.timestamp,
+                    block.timestamp >= holderFundingExpiry,
                 "cant create new deal"
             );
-        } else {
-            require(holderFundingExpiry == 0, "deal has been created");
         }
         _;
     }

@@ -60,7 +60,7 @@ describe("AelinDeal", function () {
     Math.pow(10, poolTokenDecimals - purchaseTokenDecimals)
   );
 
-  const underlyingPerPoolExchangeRate = (
+  const underlyingPerDealExchangeRate = (
     ((underlyingBaseAmount * Math.pow(10, 8)) /
       (purchaseBaseAmount * Math.pow(10, poolTokenDecimals))) *
     Math.pow(10, poolTokenDecimals)
@@ -73,7 +73,7 @@ describe("AelinDeal", function () {
     poolTokenDecimals
   );
   const underlyingRemovedBalance =
-    Number(underlyingPerPoolExchangeRate) * mintAmountBase;
+    Number(underlyingPerDealExchangeRate) * mintAmountBase;
   const remainingBalance = underlyingDealTokenTotal.sub(
     underlyingRemovedBalance
   );
@@ -165,8 +165,8 @@ describe("AelinDeal", function () {
       expect(await aelinDeal.openRedemptionPeriod()).to.equal(
         openRedemptionPeriod
       );
-      expect(await aelinDeal.underlyingPerPoolExchangeRate()).to.equal(
-        underlyingPerPoolExchangeRate
+      expect(await aelinDeal.underlyingPerDealExchangeRate()).to.equal(
+        underlyingPerDealExchangeRate
       );
     });
 
