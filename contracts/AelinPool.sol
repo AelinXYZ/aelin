@@ -94,8 +94,16 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         emit SetSponsor(_sponsor);
     }
 
-    modifier firstDealAttempt() {
-        require(holderFundingExpiry == 0, "deal has been created");
+    modifier dealReady() {
+        if (holderFundingExpiry > 0) {
+            require(
+                AelinDeal(aelinDealStorageProxy).depositComplete() == false &&
+                    holderFundingExpiry >= block.timestamp,
+                "cant create new deal"
+            );
+        } else {
+            require(holderFundingExpiry == 0, "deal has been created");
+        }
         _;
     }
 
@@ -136,7 +144,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
      * @dev only the sponsor can create a deal. The deal must be funded by the holder
      * of the underlying deal token before a purchaser may accept the deal. If the
      * holder does not fund the deal before the expiry period is over then the sponsor
-     * can create a new deal for the pool of capital.
+     * can create a new deal for the pool of capital by calling this method again.
      *
      * Requirements:
      * - The purchase expiry period must be over
@@ -157,7 +165,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint256 _openRedemptionPeriod,
         address _holder,
         uint256 _holderFundingExpiry
-    ) public onlySponsor firstDealAttempt returns (address) {
+    ) public onlySponsor dealReady returns (address) {
         require(
             block.timestamp >= purchaseExpiry,
             "pool still in purchase mode"
@@ -241,48 +249,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         );
 
         return aelinDealStorageProxy;
-    }
-
-    /**
-     * @dev only the sponsor can create another deal if the deal they already
-     * created is not funded in time by the holder. The holder must fund the deal
-     * within the purchae expiry period for the create deal functionality of
-     * the pool to be locked permanently. There is only ever 1 deal per pool.
-     *
-     * Requirements:
-     * - the redemption period is either in the pro rata or open windows
-     * - the purchaser cannot accept more than their share for a period
-     * - if participating in the open period, a purchaser must have maxxed their
-     *   contribution in the pro rata phase
-     */
-    function createDealUnfunded(
-        address _underlyingDealToken,
-        uint256 _purchaseTokenTotalForDeal,
-        uint256 _underlyingDealTokenTotal,
-        uint256 _vestingPeriod,
-        uint256 _vestingCliff,
-        uint256 _proRataRedemptionPeriod,
-        uint256 _openRedemptionPeriod,
-        address _holder,
-        uint256 _holderFundingExpiry
-    ) external onlySponsor returns (address) {
-        require(
-            holderFundingExpiry > 0 &&
-                AelinDeal(aelinDealStorageProxy).depositComplete() == false &&
-                holderFundingExpiry >= block.timestamp,
-            "cant create new deal"
-        );
-        createDeal(
-            _underlyingDealToken,
-            _purchaseTokenTotalForDeal,
-            _underlyingDealTokenTotal,
-            _vestingPeriod,
-            _vestingCliff,
-            _proRataRedemptionPeriod,
-            _openRedemptionPeriod,
-            _holder,
-            _holderFundingExpiry
-        );
     }
 
     /**

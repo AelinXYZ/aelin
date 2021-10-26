@@ -83,17 +83,9 @@ Requirements:
 - the `_openRataRedemptionPeriod` must be >= 30 minutes and <= 30 days, If the proRataConversion rate is not 1:1, otherwise it must be 0 (revert)
 - the `_purchaseTokenTotalForDeal` converted to 18 decimals must be <= totalSupply of pool tokens (revert)
 
-NOTE the sponsor journey has ended IF the holder funds the deal. From here the next step is `HOLDER step 1 (Fund the Deal)`. However, if the holder does not fund the deal a spnosor can create a new deal for the pool. There is always only 1 deal per pool.
+NOTE the sponsor journey has ended IF the holder funds the deal. From here the next step is `HOLDER step 1 (Fund the Deal)`. However, if the holder does not fund the deal a spnosor can create a new deal for the pool by calling `AelinPool.createDeal(...)` again. There is always only 1 deal per pool.
 
 **`EXTRA_METHODS`**: only the sponsor may also call `setSponsor()` followed by `acceptSponsor()` from the new address at any time to update the sponsor address for a deal
-
-**SPONSOR STEP 3 (Create a Deal if original deal was not funded by the holder in time)**: Creates a new deal for the pool by calling `AelinPool.createDealUnfunded(...)`.
-
-Modifiers:
-
-- `onlySponsor` only the sponsor may call this method
-
-> `Arguments and Requirements` are the same as `SPONSOR STEP 2 (Create a Deal)` However, the sponsor may only call this method if the original deal was created but not funded by the holder in the amount of time the sponsor allocated. The sponsor calls it with the exact same arguments and requirements as the original `createDeal(...)` method.
 
 ### **PURCHASER**
 
