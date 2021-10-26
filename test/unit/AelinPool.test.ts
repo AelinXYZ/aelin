@@ -545,8 +545,6 @@ describe("AelinPool", function () {
     });
 
     it("should successfully purchase pool tokens for the user", async function () {
-      const maxPoolPurchase = await aelinPool.maxPoolPurchase();
-      expect(maxPoolPurchase).to.equal(purchaseTokenCap);
       await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
       const [log] = await aelinPool.queryFilter(
         aelinPool.filters.PurchasePoolToken()
@@ -559,11 +557,6 @@ describe("AelinPool", function () {
     });
 
     it("should fail the transaction when the cap has been exceeded", async function () {
-      const maxPoolPurchase = await aelinPool.maxPoolPurchase();
-      // we are mocking the contract has the user balance already
-      // but since we do the check on the pool token allocation
-      // the user can purchase up to the cap
-      expect(maxPoolPurchase).to.equal(purchaseTokenCap);
       await purchaseToken
         .connect(user1)
         .approve(aelinPool.address, purchaseTokenCap.add(1));
@@ -574,9 +567,6 @@ describe("AelinPool", function () {
 
     it("should fail when the pool is full and thus the purchase window is expired", async function () {
       const excess = 100;
-      const maxPoolPurchase = await aelinPool.maxPoolPurchase();
-
-      expect(maxPoolPurchase).to.equal(purchaseTokenCap);
       await purchaseToken
         .connect(user1)
         .approve(aelinPool.address, purchaseTokenCap.add(excess));
@@ -595,8 +585,6 @@ describe("AelinPool", function () {
       await expect(
         aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt)
       ).to.be.revertedWith("not in purchase window");
-      const maxPoolPurchase = await aelinPool.maxPoolPurchase();
-      expect(maxPoolPurchase).to.equal(0);
     });
 
     it("should require the pool to be in the purchase expiry window", async function () {
