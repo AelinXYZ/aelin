@@ -87,7 +87,6 @@ describe("AelinPool", function () {
   const duration = 100;
   // 2.5% sponsorFee
   const sponsorFee = ethers.utils.parseEther("2.5");
-  console.log("sponsorFee", sponsorFee);
   const purchaseExpiry = 30 * 60 + 1; // 30min and 1sec
   const holderFundingExpiry = 30 * 60 + 1; // 30min and 1sec
   const aelinPoolName = `aePool-${name}`;
@@ -506,6 +505,47 @@ describe("AelinPool", function () {
       await expect(createDealWithValidParams()).to.be.revertedWith(
         "cant create new deal"
       );
+    });
+
+    it("should allow a second deal if the first is not funded", async function () {
+      await successfullyInitializePool();
+      await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
+      await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await createDealWithValidParams();
+      await ethers.provider.send("evm_increaseTime", [holderFundingExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await expect(
+        aelinPool
+          .connect(sponsor)
+          .createDeal(
+            underlyingDealToken.address,
+            purchaseTokenTotalForDeal,
+            underlyingDealTokenTotal,
+            vestingPeriod,
+            vestingCliff,
+            proRataRedemptionPeriod,
+            openRedemptionPeriod,
+            deployer.address,
+            holderFundingExpiry
+          )
+      ).to.not.be.reverted;
+      const [createDealLog, createDealLog2] = await aelinPool.queryFilter(
+        aelinPool.filters.CreateDeal()
+      );
+      const [dealDetailsLog, dealDetailsLog2] = await aelinPool.queryFilter(
+        aelinPool.filters.DealDetails()
+      );
+
+      expect(createDealLog.args.dealContract).to.be.properAddress;
+      expect(createDealLog2.args.dealContract).to.be.properAddress;
+      expect(createDealLog.args.dealContract).to.not.equal(
+        createDealLog2.args.dealContract
+      );
+      expect(dealDetailsLog.args.holder).to.equal(holder.address);
+      expect(dealDetailsLog2.args.holder).to.equal(deployer.address);
     });
   });
 

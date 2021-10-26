@@ -104,11 +104,11 @@ NOTE after `PURCHASER step 1 (Enter the Deal)` is `SPONSOR step 2 (Create the De
 
 **PURCHASER STEP 2 (Accept or Reject the Deal)**: At step two the purchaser has 2 options: reject or accept the deal. At this point they can no longer transfer their pool tokens.<space><space>
 
-**OPTION 1 - REJECT**: Rejects a portion of or all of the deal offered by calling `AelinPool.withdrawMaxFromPool()` or `withdrawFromPool(uint poolTokenAmount)`
+**OPTION 1 - REJECT**: Rejects a portion of or all of the deal offered by calling `AelinPool.withdrawMaxFromPool()` or `withdrawFromPool(uint purchaseTokenAmount)`
 
 Arguments:
 
-- `uint poolTokenAmount` used when withdrawing a specific amount and not all your tokens by calling the max function instead
+- `uint purchaseTokenAmount` used when withdrawing a specific amount and not all your tokens by calling the max function instead
 
 Requirements:
 

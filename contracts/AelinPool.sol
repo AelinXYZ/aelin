@@ -371,7 +371,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             recipient,
             address(this),
             aelinDealStorageProxy,
-            poolTokenDealFormatted,
+            poolTokenAmount,
             sponsorFeeAmt,
             aelinFeeAmt
         );
