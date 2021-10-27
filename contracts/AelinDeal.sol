@@ -197,9 +197,7 @@ contract AelinDeal is AelinERC20 {
     function withdraw() external onlyHolder {
         uint256 withdrawAmount = IERC20(underlyingDealToken).balanceOf(
             address(this)
-        ) -
-            underlyingDealTokenTotal -
-            totalUnderlyingClaimed;
+        ) - (underlyingDealTokenTotal - totalUnderlyingClaimed);
         IERC20(underlyingDealToken).safeTransfer(holder, withdrawAmount);
         emit WithdrawUnderlyingDealTokens(
             underlyingDealToken,
