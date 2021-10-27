@@ -356,6 +356,44 @@ describe("AelinDeal", function () {
         expect(log.args.underlyingDealTokenAmount).to.equal(excessAmount);
       });
 
+      it("should allow the holder to withdraw excess tokens from the pool after users have claimed", async function () {
+        const excessAmount = ethers.utils.parseUnits(
+          "10",
+          underlyingDealTokenDecimals
+        );
+
+        await underlyingDealToken
+          .connect(holder)
+          .approve(
+            aelinDeal.address,
+            underlyingDealTokenTotal.add(excessAmount)
+          );
+
+        await aelinDeal
+          .connect(holder)
+          .depositUnderlying(underlyingDealTokenTotal.add(excessAmount));
+
+        await aelinDeal.connect(deployer).mint(purchaser.address, mintAmount);
+
+        await ethers.provider.send("evm_increaseTime", [
+          vestingEnd - vestingPeriod / 2,
+        ]);
+        await ethers.provider.send("evm_mine", []);
+
+        await aelinDeal.connect(purchaser).claim();
+
+        await aelinDeal.connect(holder).withdraw();
+        const [log] = await aelinDeal.queryFilter(
+          aelinDeal.filters.WithdrawUnderlyingDealTokens()
+        );
+        expect(log.args.underlyingDealTokenAddress).to.equal(
+          underlyingDealToken.address
+        );
+        expect(log.args.depositor).to.equal(holder.address);
+        expect(log.args.dealContract).to.equal(aelinDeal.address);
+        expect(log.args.underlyingDealTokenAmount).to.equal(excessAmount);
+      });
+
       it("should block anyone else from withdrawing excess tokens from the pool", async function () {
         await expect(aelinDeal.connect(deployer).withdraw()).to.be.revertedWith(
           "only holder can access"
