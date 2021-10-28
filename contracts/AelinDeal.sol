@@ -23,6 +23,7 @@ contract AelinDeal is AelinERC20 {
     uint256 public vestingCliff;
     uint256 public vestingPeriod;
     uint256 public vestingExpiry;
+    uint256 public holderFundingExpiry;
 
     uint256 public proRataRedemptionPeriod;
     uint256 public proRataRedemptionStart;
@@ -56,7 +57,8 @@ contract AelinDeal is AelinERC20 {
         uint256 _proRataRedemptionPeriod,
         uint256 _openRedemptionPeriod,
         address _holder,
-        uint256 _maxDealTotalSupply
+        uint256 _maxDealTotalSupply,
+        uint256 _holderFundingExpiry
     ) external initOnce {
         _setNameSymbolAndDecimals(
             string(abi.encodePacked("aeDeal-", _name)),
@@ -81,6 +83,7 @@ contract AelinDeal is AelinERC20 {
         vestingExpiry = vestingCliff + _vestingPeriod;
         proRataRedemptionPeriod = _proRataRedemptionPeriod;
         openRedemptionPeriod = _openRedemptionPeriod;
+        holderFundingExpiry = _holderFundingExpiry;
 
         calledInitialize = true;
         depositComplete = false;
@@ -99,7 +102,8 @@ contract AelinDeal is AelinERC20 {
         _;
     }
 
-    modifier finalizeDepositOnce() {
+    modifier finalizeDeposit() {
+        require(block.timestamp < holderFundingExpiry, "deposit past deadline");
         require(depositComplete == false, "deposit already complete");
         _;
     }
@@ -127,7 +131,7 @@ contract AelinDeal is AelinERC20 {
      */
     function depositUnderlying(uint256 _underlyingDealTokenAmount)
         external
-        finalizeDepositOnce
+        finalizeDeposit
         lock
         returns (bool)
     {
@@ -195,9 +199,18 @@ contract AelinDeal is AelinERC20 {
      * _underlyingDealTokenAmount set to 0
      */
     function withdraw() external onlyHolder {
-        uint256 withdrawAmount = IERC20(underlyingDealToken).balanceOf(
-            address(this)
-        ) - (underlyingDealTokenTotal - totalUnderlyingClaimed);
+        uint256 withdrawAmount;
+        if (
+            depositComplete == false && block.timestamp >= holderFundingExpiry
+        ) {
+            withdrawAmount = IERC20(underlyingDealToken).balanceOf(
+                address(this)
+            );
+        } else {
+            withdrawAmount =
+                IERC20(underlyingDealToken).balanceOf(address(this)) -
+                (underlyingDealTokenTotal - totalUnderlyingClaimed);
+        }
         IERC20(underlyingDealToken).safeTransfer(holder, withdrawAmount);
         emit WithdrawUnderlyingDealTokens(
             underlyingDealToken,
