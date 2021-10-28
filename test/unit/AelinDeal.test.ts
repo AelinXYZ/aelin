@@ -60,7 +60,7 @@ describe("AelinDeal", function () {
     Math.pow(10, poolTokenDecimals - purchaseTokenDecimals)
   );
 
-  const underlyingPerPoolExchangeRate = (
+  const underlyingPerDealExchangeRate = (
     ((underlyingBaseAmount * Math.pow(10, 8)) /
       (purchaseBaseAmount * Math.pow(10, poolTokenDecimals))) *
     Math.pow(10, poolTokenDecimals)
@@ -73,7 +73,7 @@ describe("AelinDeal", function () {
     poolTokenDecimals
   );
   const underlyingRemovedBalance =
-    Number(underlyingPerPoolExchangeRate) * mintAmountBase;
+    Number(underlyingPerDealExchangeRate) * mintAmountBase;
   const remainingBalance = underlyingDealTokenTotal.sub(
     underlyingRemovedBalance
   );
@@ -165,8 +165,8 @@ describe("AelinDeal", function () {
       expect(await aelinDeal.openRedemptionPeriod()).to.equal(
         openRedemptionPeriod
       );
-      expect(await aelinDeal.underlyingPerPoolExchangeRate()).to.equal(
-        underlyingPerPoolExchangeRate
+      expect(await aelinDeal.underlyingPerDealExchangeRate()).to.equal(
+        underlyingPerDealExchangeRate
       );
     });
 
@@ -343,6 +343,44 @@ describe("AelinDeal", function () {
         await aelinDeal
           .connect(holder)
           .depositUnderlying(underlyingDealTokenTotal.add(excessAmount));
+
+        await aelinDeal.connect(holder).withdraw();
+        const [log] = await aelinDeal.queryFilter(
+          aelinDeal.filters.WithdrawUnderlyingDealTokens()
+        );
+        expect(log.args.underlyingDealTokenAddress).to.equal(
+          underlyingDealToken.address
+        );
+        expect(log.args.depositor).to.equal(holder.address);
+        expect(log.args.dealContract).to.equal(aelinDeal.address);
+        expect(log.args.underlyingDealTokenAmount).to.equal(excessAmount);
+      });
+
+      it("should allow the holder to withdraw excess tokens from the pool after users have claimed", async function () {
+        const excessAmount = ethers.utils.parseUnits(
+          "10",
+          underlyingDealTokenDecimals
+        );
+
+        await underlyingDealToken
+          .connect(holder)
+          .approve(
+            aelinDeal.address,
+            underlyingDealTokenTotal.add(excessAmount)
+          );
+
+        await aelinDeal
+          .connect(holder)
+          .depositUnderlying(underlyingDealTokenTotal.add(excessAmount));
+
+        await aelinDeal.connect(deployer).mint(purchaser.address, mintAmount);
+
+        await ethers.provider.send("evm_increaseTime", [
+          vestingEnd - vestingPeriod / 2,
+        ]);
+        await ethers.provider.send("evm_mine", []);
+
+        await aelinDeal.connect(purchaser).claim();
 
         await aelinDeal.connect(holder).withdraw();
         const [log] = await aelinDeal.queryFilter(

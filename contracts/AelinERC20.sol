@@ -16,9 +16,10 @@ contract AelinERC20 is ERC20 {
     /**
      * @dev Due to the constructor being empty for the MinimalProxy architecture we need
      * to set the name and symbol in the initializer which requires these custom variables
-    */
+     */
     string private _custom_name;
     string private _custom_symbol;
+    uint8 private _custom_decimals;
     bool private locked;
 
     constructor() ERC20("", "") {}
@@ -30,8 +31,8 @@ contract AelinERC20 is ERC20 {
 
     /**
      * @dev Due to the constructor being empty for the MinimalProxy architecture we need
-     * to set the name and symbol in the initializer which requires this custom logic
-     * for name(), symbol(), and _setNameAndSymbol()
+     * to set the name, symbol, and decimals in the initializer which requires this
+     * custom logic for name(), symbol(), decimals(), and _setNameSymbolAndDecimals()
      */
     function name() public view virtual override returns (string memory) {
         return _custom_name;
@@ -41,40 +42,20 @@ contract AelinERC20 is ERC20 {
         return _custom_symbol;
     }
 
-    function _setNameAndSymbol(string memory _name, string memory _symbol)
-        internal
-        initInfoOnce
-        returns (bool)
-    {
+    function decimals() public view virtual override returns (uint8) {
+        return _custom_decimals;
+    }
+
+    function _setNameSymbolAndDecimals(
+        string memory _name,
+        string memory _symbol,
+        uint8 _decimals
+    ) internal initInfoOnce returns (bool) {
         _custom_name = _name;
         _custom_symbol = _symbol;
+        _custom_decimals = _decimals;
         setInfo = true;
         return true;
-    }
-
-    /**
-     * @dev Due to the 4 tokens in the Aelin protocol:
-     * purchase token, pool token, deal token, and underlying deal token,
-     * we need 2 methods to convert back and forth between tokens of varying decimals 
-     */
-    function convertUnderlyingToAelinAmount(
-        uint256 underlyingAmount,
-        uint256 underlyingDecimals
-    ) internal view returns (uint256) {
-        return
-            underlyingDecimals == decimals()
-                ? underlyingAmount
-                : underlyingAmount * 10**(decimals() - underlyingDecimals);
-    }
-
-    function convertAelinToUnderlyingAmount(
-        uint256 aelinTokenAmount,
-        uint256 underlyingDecimals
-    ) internal view returns (uint256) {
-        return
-            underlyingDecimals == decimals()
-                ? aelinTokenAmount
-                : aelinTokenAmount / 10**(decimals() - underlyingDecimals);
     }
 
     /**
@@ -83,7 +64,7 @@ contract AelinERC20 is ERC20 {
      * uniswap implementation: https://github.com/Uniswap/v2-core/blob/master/contracts/UniswapV2Pair.sol#L31-L36
      */
     modifier lock() {
-        require(locked == false, 'AelinV1: LOCKED');
+        require(locked == false, "AelinV1: LOCKED");
         locked = true;
         _;
         locked = false;

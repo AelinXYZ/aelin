@@ -28,7 +28,6 @@ describe("AelinPool", function () {
   let underlyingDealToken: MockContract;
   const purchaseTokenDecimals = 6;
   const underlyingDealTokenDecimals = 8;
-  const poolTokenDecimals = 18;
   const mockAelinRewardsAddress = "0xfdbdb06109CD25c7F485221774f5f96148F1e235";
   const purchaseTokenAddress = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
   const purchaseTokenWhaleAddress =
@@ -39,10 +38,6 @@ describe("AelinPool", function () {
   const userPurchaseAmt = ethers.utils.parseUnits(
     userPurchaseBaseAmt.toString(),
     purchaseTokenDecimals
-  );
-
-  const poolTokenAmount = userPurchaseAmt.mul(
-    Math.pow(10, poolTokenDecimals - purchaseTokenDecimals)
   );
   const purchaseTokenTotalForDealBase = 100;
   const purchaseTokenTotalForDeal = ethers.utils.parseUnits(
@@ -90,8 +85,10 @@ describe("AelinPool", function () {
   const symbol = "TestSymbol";
 
   const duration = 100;
-  const sponsorFee = 1000;
+  // 2.5% sponsorFee
+  const sponsorFee = ethers.utils.parseEther("2.5");
   const purchaseExpiry = 30 * 60 + 1; // 30min and 1sec
+  const holderFundingExpiry = 30 * 60 + 1; // 30min and 1sec
   const aelinPoolName = `aePool-${name}`;
   const aelinPoolSymbol = `aeP-${symbol}`;
 
@@ -136,7 +133,8 @@ describe("AelinPool", function () {
         vestingCliff,
         proRataRedemptionPeriod,
         openRedemptionPeriod,
-        holder.address
+        holder.address,
+        holderFundingExpiry
       );
 
   describe("initialize", function () {
@@ -199,7 +197,7 @@ describe("AelinPool", function () {
           purchaseTokenCap,
           purchaseToken.address,
           duration,
-          98001,
+          ethers.utils.parseEther("98.1"),
           sponsor.address,
           purchaseExpiry,
           aelinDealLogic.address,
@@ -225,7 +223,7 @@ describe("AelinPool", function () {
       expect(await aelinPool.sponsor()).to.equal(sponsor.address);
 
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
-      const expectedPoolExpiry = timestamp + duration;
+      const expectedPoolExpiry = timestamp + purchaseExpiry + duration;
       expect(await aelinPool.poolExpiry()).to.equal(expectedPoolExpiry);
 
       const expectedPurchaseExpiry = timestamp + purchaseExpiry;
@@ -255,7 +253,8 @@ describe("AelinPool", function () {
           vestingCliff,
           proRataRedemptionPeriod,
           openRedemptionPeriod,
-          holder.address
+          holder.address,
+          holderFundingExpiry
         )
       ).to.be.revertedWith("pool still in purchase mode");
     });
@@ -274,7 +273,8 @@ describe("AelinPool", function () {
           vestingCliff,
           proRataRedemptionPeriod - 2, // 1 second less than minimum
           openRedemptionPeriod,
-          holder.address
+          holder.address,
+          holderFundingExpiry
         )
       ).to.be.revertedWith("30 mins - 30 days for prorata");
     });
@@ -293,7 +293,8 @@ describe("AelinPool", function () {
           vestingCliff,
           30 * 24 * 60 * 60 + 1, // 1 second more than 30 days
           openRedemptionPeriod,
-          holder.address
+          holder.address,
+          holderFundingExpiry
         )
       ).to.be.revertedWith("30 mins - 30 days for prorata");
     });
@@ -337,7 +338,8 @@ describe("AelinPool", function () {
             vestingCliff,
             proRataRedemptionPeriod,
             openRedemptionPeriod,
-            holder.address
+            holder.address,
+            holderFundingExpiry
           )
       ).to.be.revertedWith("only sponsor can access");
     });
@@ -358,7 +360,8 @@ describe("AelinPool", function () {
           vestingCliff,
           proRataRedemptionPeriod,
           openRedemptionPeriod - 2, // 1 second less than minimum
-          holder.address
+          holder.address,
+          holderFundingExpiry
         )
       ).to.be.revertedWith("30 mins - 30 days for prorata");
 
@@ -371,7 +374,8 @@ describe("AelinPool", function () {
           vestingCliff,
           proRataRedemptionPeriod,
           365 * 60 * 60 * 60, // more than 30 days
-          holder.address
+          holder.address,
+          holderFundingExpiry
         )
       ).to.be.revertedWith("30 mins - 30 days for prorata");
     });
@@ -393,9 +397,45 @@ describe("AelinPool", function () {
             vestingCliff,
             proRataRedemptionPeriod,
             openRedemptionPeriod,
-            holder.address
+            holder.address,
+            holderFundingExpiry
           )
       ).to.be.revertedWith("deal is 1:1, set open to 0");
+    });
+
+    it("should fail when the holder funding expiry is too long or too short", async function () {
+      await successfullyInitializePool();
+      await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
+      await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await expect(
+        aelinPool.connect(sponsor).createDeal(
+          underlyingDealToken.address,
+          userPurchaseAmt,
+          underlyingDealTokenTotal,
+          vestingPeriod,
+          vestingCliff,
+          proRataRedemptionPeriod,
+          openRedemptionPeriod,
+          holder.address,
+          holderFundingExpiry - 2 // less than 30 minutes
+        )
+      ).to.be.revertedWith("30 mins - 30 days for holder");
+
+      await expect(
+        aelinPool.connect(sponsor).createDeal(
+          underlyingDealToken.address,
+          userPurchaseAmt,
+          underlyingDealTokenTotal,
+          vestingPeriod,
+          vestingCliff,
+          proRataRedemptionPeriod,
+          openRedemptionPeriod,
+          holder.address,
+          365 * 60 * 60 * 60 // more than 30 days
+        )
+      ).to.be.revertedWith("30 mins - 30 days for holder");
     });
 
     it("should successfully create a deal", async function () {
@@ -408,6 +448,9 @@ describe("AelinPool", function () {
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
 
       expect(await aelinPool.poolExpiry()).to.equal(timestamp);
+      expect(await aelinPool.holderFundingExpiry()).to.equal(
+        timestamp + holderFundingExpiry
+      );
       expect(await aelinPool.holder()).to.equal(holder.address);
 
       const expectedProRataResult = (
@@ -455,10 +498,54 @@ describe("AelinPool", function () {
         openRedemptionPeriod
       );
       expect(dealDetailsLog.args.holder).to.equal(holder.address);
+      expect(dealDetailsLog.args.holderFundingExpiry).to.equal(
+        holderFundingExpiry
+      );
 
       await expect(createDealWithValidParams()).to.be.revertedWith(
-        "deal has been created"
+        "cant create new deal"
       );
+    });
+
+    it("should allow a second deal if the first is not funded", async function () {
+      await successfullyInitializePool();
+      await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
+      await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await createDealWithValidParams();
+      await ethers.provider.send("evm_increaseTime", [holderFundingExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await expect(
+        aelinPool
+          .connect(sponsor)
+          .createDeal(
+            underlyingDealToken.address,
+            purchaseTokenTotalForDeal,
+            underlyingDealTokenTotal,
+            vestingPeriod,
+            vestingCliff,
+            proRataRedemptionPeriod,
+            openRedemptionPeriod,
+            deployer.address,
+            holderFundingExpiry
+          )
+      ).to.not.be.reverted;
+      const [createDealLog, createDealLog2] = await aelinPool.queryFilter(
+        aelinPool.filters.CreateDeal()
+      );
+      const [dealDetailsLog, dealDetailsLog2] = await aelinPool.queryFilter(
+        aelinPool.filters.DealDetails()
+      );
+
+      expect(createDealLog.args.dealContract).to.be.properAddress;
+      expect(createDealLog2.args.dealContract).to.be.properAddress;
+      expect(createDealLog.args.dealContract).to.not.equal(
+        createDealLog2.args.dealContract
+      );
+      expect(dealDetailsLog.args.holder).to.equal(holder.address);
+      expect(dealDetailsLog2.args.holder).to.equal(deployer.address);
     });
   });
 
@@ -495,8 +582,6 @@ describe("AelinPool", function () {
     });
 
     it("should successfully purchase pool tokens for the user", async function () {
-      const maxPoolPurchase = await aelinPool.maxPoolPurchase();
-      expect(maxPoolPurchase).to.equal(purchaseTokenCap);
       await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
       const [log] = await aelinPool.queryFilter(
         aelinPool.filters.PurchasePoolToken()
@@ -505,15 +590,9 @@ describe("AelinPool", function () {
       expect(log.args.purchaser).to.equal(user1.address);
       expect(log.args.poolAddress).to.equal(aelinPool.address);
       expect(log.args.purchaseTokenAmount).to.equal(userPurchaseAmt);
-      expect(log.args.poolTokenAmount).to.equal(poolTokenAmount);
     });
 
     it("should fail the transaction when the cap has been exceeded", async function () {
-      const maxPoolPurchase = await aelinPool.maxPoolPurchase();
-      // we are mocking the contract has the user balance already
-      // but since we do the check on the pool token allocation
-      // the user can purchase up to the cap
-      expect(maxPoolPurchase).to.equal(purchaseTokenCap);
       await purchaseToken
         .connect(user1)
         .approve(aelinPool.address, purchaseTokenCap.add(1));
@@ -524,9 +603,6 @@ describe("AelinPool", function () {
 
     it("should fail when the pool is full and thus the purchase window is expired", async function () {
       const excess = 100;
-      const maxPoolPurchase = await aelinPool.maxPoolPurchase();
-
-      expect(maxPoolPurchase).to.equal(purchaseTokenCap);
       await purchaseToken
         .connect(user1)
         .approve(aelinPool.address, purchaseTokenCap.add(excess));
@@ -545,8 +621,6 @@ describe("AelinPool", function () {
       await expect(
         aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt)
       ).to.be.revertedWith("not in purchase window");
-      const maxPoolPurchase = await aelinPool.maxPoolPurchase();
-      expect(maxPoolPurchase).to.equal(0);
     });
 
     it("should require the pool to be in the purchase expiry window", async function () {
@@ -570,13 +644,15 @@ describe("AelinPool", function () {
       it("should require the deal to be created", async function () {
         await expect(
           aelinPool.connect(user1).acceptMaxDealTokens()
-        ).to.be.revertedWith("deal not yet created");
+        ).to.be.revertedWith("deal not yet funded");
       });
     });
 
     describe("withdraw pool tokens", function () {
       it("should allow a purchaser to withdraw pool tokens", async function () {
-        await ethers.provider.send("evm_increaseTime", [duration + 1]);
+        await ethers.provider.send("evm_increaseTime", [
+          purchaseExpiry + duration + 1,
+        ]);
         await ethers.provider.send("evm_mine", []);
 
         await aelinPool.connect(user1).withdrawMaxFromPool();
@@ -587,20 +663,15 @@ describe("AelinPool", function () {
         expect(log.args.purchaser).to.equal(user1.address);
         expect(log.args.poolAddress).to.equal(aelinPool.address);
         expect(log.args.purchaseTokenAmount).to.equal(userPurchaseAmt);
-        expect(log.args.poolTokenAmount).to.equal(
-          userPurchaseAmt.mul(
-            Math.pow(10, poolTokenDecimals - purchaseTokenDecimals)
-          )
-        );
       });
 
       it("should allow the purchaser to withdraw a subset of their tokens", async function () {
-        await ethers.provider.send("evm_increaseTime", [duration + 1]);
+        await ethers.provider.send("evm_increaseTime", [
+          purchaseExpiry + duration + 1,
+        ]);
         await ethers.provider.send("evm_mine", []);
 
-        const withdrawHalfPoolTokens = userPurchaseAmt
-          .mul(Math.pow(10, poolTokenDecimals - purchaseTokenDecimals))
-          .div(2);
+        const withdrawHalfPoolTokens = userPurchaseAmt.div(2);
 
         await aelinPool.connect(user1).withdrawFromPool(withdrawHalfPoolTokens);
 
@@ -609,20 +680,17 @@ describe("AelinPool", function () {
         );
         expect(log.args.purchaser).to.equal(user1.address);
         expect(log.args.poolAddress).to.equal(aelinPool.address);
-        expect(log.args.purchaseTokenAmount).to.equal(userPurchaseAmt.div(2));
-        expect(log.args.poolTokenAmount).to.equal(withdrawHalfPoolTokens);
+        expect(log.args.purchaseTokenAmount).to.equal(withdrawHalfPoolTokens);
       });
 
       it("should not allow the purchaser to withdraw more than their balance", async function () {
         await ethers.provider.send("evm_increaseTime", [duration + 1]);
         await ethers.provider.send("evm_mine", []);
 
-        const doublePoolTokens = userPurchaseAmt
-          .mul(Math.pow(10, poolTokenDecimals - purchaseTokenDecimals))
-          .mul(2);
+        const doublePurchaseTokens = userPurchaseAmt.mul(2);
 
         await expect(
-          aelinPool.connect(user1).withdrawFromPool(doublePoolTokens)
+          aelinPool.connect(user1).withdrawFromPool(doublePurchaseTokens)
         ).to.be.reverted;
       });
 

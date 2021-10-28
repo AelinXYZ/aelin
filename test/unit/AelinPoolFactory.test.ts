@@ -30,13 +30,9 @@ describe("AelinPoolFactory", function () {
     await purchaseToken.mock.decimals.returns(6);
     const aelinPoolFactory = (await deployContract(
       signers[0],
-      AelinPoolFactoryArtifact
+      AelinPoolFactoryArtifact,
+      [aelinPoolLogic.address, aelinDealLogic.address]
     )) as AelinPoolFactory;
-    await aelinPoolFactory.setAddressesDeleteBeforeLaunch(
-      aelinPoolLogic.address,
-      aelinDealLogic.address
-    );
-
     const sponsor = signers[1];
     const name = "Test token";
     const symbol = "AMA";

@@ -5,31 +5,20 @@ import "./MinimalProxyFactory.sol";
 import "./AelinPool.sol";
 
 /**
- * @dev the factory contract allows an Aelin sponsor to permissionlessly create new pools 
+ * @dev the factory contract allows an Aelin sponsor to permissionlessly create new pools
  */
 contract AelinPoolFactory is MinimalProxyFactory {
     /**
      * TODO update with the correct multi-sig address
+     * NOTE a pool factory v2 will be deployed when the staking rewards contract is live
      */
     address constant AELIN_REWARDS = 0x5A0b54D5dc17e0AadC383d2db43B0a0D3E029c4c;
-    /**
-     * NOTE I am adding setters below for testing purposes that we will remove 
-     * before deployment and hardcode the correct deployed addresses. Once we deploy 
-     * we are forking mainnet in testing so we can use the real addresses in tests
-     * this is the only piece of code that is meant to be temporary in the contracts
-     */
     address public AELIN_POOL_LOGIC;
     address public AELIN_DEAL_LOGIC;
 
-    constructor() {}
-
-    /**
-     * @dev this will be deleted before we release the protocol. It is a helper for tests
-     * but after we deploy the real contracts we will hardcode the values above
-     */
-    function setAddressesDeleteBeforeLaunch(address pool, address deal) external {
-        AELIN_POOL_LOGIC = pool;
-        AELIN_DEAL_LOGIC = deal;
+    constructor(address _aelinPoolLogic, address _aelinDealLogic) {
+        AELIN_POOL_LOGIC = _aelinPoolLogic;
+        AELIN_DEAL_LOGIC = _aelinDealLogic;
     }
 
     /**
@@ -45,10 +34,7 @@ contract AelinPoolFactory is MinimalProxyFactory {
         uint256 _purchaseExpiry
     ) external returns (address) {
         AelinPool aelin_pool = AelinPool(
-            _cloneAsMinimalProxy(
-                AELIN_POOL_LOGIC,
-                "Could not create new deal"
-            )
+            _cloneAsMinimalProxy(AELIN_POOL_LOGIC, "Could not create new deal")
         );
         aelin_pool.initialize(
             _name,
