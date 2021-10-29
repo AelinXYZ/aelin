@@ -299,6 +299,46 @@ describe("AelinPool", function () {
       ).to.be.revertedWith("30 mins - 30 days for prorata");
     });
 
+    it("should revert if vesting cliff is too long", async function () {
+      await successfullyInitializePool();
+      await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await expect(
+        aelinPool.createDeal(
+          underlyingDealToken.address,
+          purchaseTokenTotalForDeal,
+          underlyingDealTokenTotal,
+          vestingPeriod,
+          1825 * 24 * 60 * 60 + 1, // 1 second over maximum
+          proRataRedemptionPeriod,
+          openRedemptionPeriod,
+          holder.address,
+          holderFundingExpiry
+        )
+      ).to.be.revertedWith("max 5 year cliff");
+    });
+
+    it("should revert if vesting period is too long", async function () {
+      await successfullyInitializePool();
+      await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await expect(
+        aelinPool.createDeal(
+          underlyingDealToken.address,
+          purchaseTokenTotalForDeal,
+          underlyingDealTokenTotal,
+          1825 * 24 * 60 * 60 + 1, // 1 second over maximum
+          vestingCliff,
+          proRataRedemptionPeriod,
+          openRedemptionPeriod,
+          holder.address,
+          holderFundingExpiry
+        )
+      ).to.be.revertedWith("max 5 year vesting");
+    });
+
     it("should revert if the pool has no purchase tokens", async function () {
       await successfullyInitializePool();
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
