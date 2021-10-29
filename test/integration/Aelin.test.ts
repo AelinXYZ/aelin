@@ -160,10 +160,13 @@ describe("integration test", () => {
     it(`
     1. creates a capped pool
     2. gets fully funded by purchasers
-    3. the deal is created and then funded
-    4. some, but not all, of the pool accepts and the deal expires
-    5. the holder withdraws unaccepted tokens
-    6. the tokens fully vest and are claimed
+    3. the deal is created
+    4. the holder only partially funds the deposit
+    5. the deal expires and then the holder withdraws their funds
+    6. a new deal is created and funded
+    7. some, but not all, of the pool accepts and the deal expires
+    8. the holder withdraws unaccepted tokens
+    9. the tokens fully vest and are claimed
   `, async () => {
       const aelinPoolFactory = (await deployContract(
         deployer,
@@ -295,20 +298,71 @@ describe("integration test", () => {
           vestingCliff,
           proRataRedemptionPeriod,
           openRedemptionPeriod,
+          aaveWhaleTwo.address,
+          holderFundingExpiry
+        );
+      const [createDealOneLog] = await aelinPoolProxyStorage.queryFilter(
+        aelinPoolProxyStorage.filters.CreateDeal()
+      );
+
+      aelinDealProxyStorage = (await ethers.getContractAt(
+        AelinDealArtifact.abi,
+        createDealOneLog.args.dealContract
+      )) as AelinDeal;
+
+      // the first holder only deposits half and misses the deadline and then
+      // will withdraw their half after the deadline.
+      await aaveContract
+        .connect(aaveWhaleTwo)
+        .approve(
+          aelinDealProxyStorage.address,
+          underlyingDealTokenTotal.div(2)
+        );
+
+      await aelinDealProxyStorage
+        .connect(aaveWhaleTwo)
+        .depositUnderlying(underlyingDealTokenTotal.div(2));
+
+      // checks deal underlying balance
+      expect(
+        await aaveContract.balanceOf(aelinDealProxyStorage.address)
+      ).to.equal(underlyingDealTokenTotal.div(2));
+
+      await ethers.provider.send("evm_increaseTime", [holderFundingExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      // withdraws the half they deposited before the deadline
+      await aelinDealProxyStorage.connect(aaveWhaleTwo).withdraw();
+
+      // checks updated deal underlying balance is 0
+      expect(
+        await aaveContract.balanceOf(aelinDealProxyStorage.address)
+      ).to.equal(0);
+
+      await aelinPoolProxyStorage
+        .connect(sponsor)
+        .createDeal(
+          aaveContract.address,
+          purchaseTokenTotalForDeal,
+          underlyingDealTokenTotal,
+          vestingPeriod,
+          vestingCliff,
+          proRataRedemptionPeriod,
+          openRedemptionPeriod,
           aaveWhaleOne.address,
           holderFundingExpiry
         );
 
-      const [createDealLog] = await aelinPoolProxyStorage.queryFilter(
+      const [, createDealTwoLog] = await aelinPoolProxyStorage.queryFilter(
         aelinPoolProxyStorage.filters.CreateDeal()
       );
 
-      expect(createDealLog.args.dealContract).to.be.properAddress;
-      expect(createDealLog.args.name).to.equal("aeDeal-" + name);
+      expect(createDealTwoLog.args.dealContract).to.be.properAddress;
+      expect(createDealTwoLog.args.name).to.equal("aeDeal-" + name);
 
       aelinDealProxyStorage = (await ethers.getContractAt(
         AelinDealArtifact.abi,
-        createDealLog.args.dealContract
+        createDealTwoLog.args.dealContract
       )) as AelinDeal;
 
       // user 3 withdraws 500 from the pool leaving 2000 remaining

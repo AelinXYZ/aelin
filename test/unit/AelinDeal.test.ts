@@ -66,6 +66,7 @@ describe("AelinDeal", function () {
     Math.pow(10, poolTokenDecimals)
   ).toString();
 
+  const holderFundingExpiryBase = 30 * 60 + 1; // 30min and 1sec
   const nullAddress = "0x0000000000000000000000000000000000000000";
   const mintAmountBase = 2;
   const mintAmount = ethers.utils.parseUnits(
@@ -104,7 +105,11 @@ describe("AelinDeal", function () {
     aelinDeal = (await deployContract(sponsor, AelinDealArtifact)) as AelinDeal;
   });
 
-  const successfullyInitializeDeal = async () =>
+  const successfullyInitializeDeal = async ({
+    timestamp,
+  }: {
+    timestamp: number;
+  }) =>
     aelinDeal
       .connect(deployer)
       .initialize(
@@ -117,7 +122,8 @@ describe("AelinDeal", function () {
         proRataRedemptionPeriod,
         openRedemptionPeriod,
         holder.address,
-        poolTokenMaxPurchaseAmount
+        poolTokenMaxPurchaseAmount,
+        holderFundingExpiryBase + timestamp
       );
 
   const fundDealAndMintTokens = async () => {
@@ -132,7 +138,12 @@ describe("AelinDeal", function () {
 
   describe("initialize", function () {
     it("should successfully initialize", async function () {
-      const tx = await successfullyInitializeDeal();
+      const { timestamp: latestTimestamp } = await ethers.provider.getBlock(
+        "latest"
+      );
+      const tx = await successfullyInitializeDeal({
+        timestamp: latestTimestamp,
+      });
 
       // TODO test the aelinDeal.AELIN_POOL() variable
       expect(await aelinDeal.name()).to.equal(`aeDeal-${name}`);
@@ -171,16 +182,24 @@ describe("AelinDeal", function () {
     });
 
     it("should only allow initialization once", async function () {
-      await successfullyInitializeDeal();
-      await expect(successfullyInitializeDeal()).to.be.revertedWith(
-        "can only initialize once"
-      );
+      const { timestamp } = await ethers.provider.getBlock("latest");
+      await successfullyInitializeDeal({
+        timestamp,
+      });
+      await expect(
+        successfullyInitializeDeal({
+          timestamp,
+        })
+      ).to.be.revertedWith("can only initialize once");
     });
   });
 
   describe("tests needing initialize deal", function () {
     beforeEach(async () => {
-      await successfullyInitializeDeal();
+      const { timestamp } = await ethers.provider.getBlock("latest");
+      await successfullyInitializeDeal({
+        timestamp,
+      });
     });
 
     describe("changing the holder", function () {
@@ -254,6 +273,21 @@ describe("AelinDeal", function () {
         );
       });
 
+      it("should revert once the deposit deadline has passed", async function () {
+        await ethers.provider.send("evm_increaseTime", [
+          holderFundingExpiryBase + 1,
+        ]);
+        await ethers.provider.send("evm_mine", []);
+
+        await underlyingDealToken
+          .connect(holder)
+          .approve(aelinDeal.address, underlyingDealTokenTotal);
+
+        await expect(
+          aelinDeal.connect(holder).depositUnderlying(underlyingDealTokenTotal)
+        ).to.be.revertedWith("deposit past deadline");
+      });
+
       it("should revert once the deposit amount has already been reached", async function () {
         await underlyingDealToken
           .connect(holder)
@@ -268,7 +302,7 @@ describe("AelinDeal", function () {
         ).to.be.revertedWith("deposit already complete");
       });
 
-      it("should not finalize the deposit if the total amount has not been deposited", async function () {
+      it("should not finalize the deposit if the total amount has not been deposited and allow the holder to withdraw their funds", async function () {
         expect(await aelinDeal.depositComplete()).to.equal(false);
         const lowerAmount = underlyingDealTokenTotal.sub(1);
         await underlyingDealToken
@@ -298,6 +332,25 @@ describe("AelinDeal", function () {
           aelinDeal.filters.DealFullyFunded()
         );
         expect(dealFullyFundedLogs.length).to.equal(0);
+
+        const balanceBeforeWithdraw = await underlyingDealToken.balanceOf(
+          holder.address
+        );
+
+        await ethers.provider.send("evm_increaseTime", [
+          holderFundingExpiryBase + 1,
+        ]);
+        await ethers.provider.send("evm_mine", []);
+
+        await aelinDeal.connect(holder).withdraw();
+
+        const balanceAfterWithdraw = await underlyingDealToken.balanceOf(
+          holder.address
+        );
+
+        expect(balanceAfterWithdraw.sub(balanceBeforeWithdraw)).to.equal(
+          lowerAmount
+        );
       });
     });
 
@@ -657,6 +710,7 @@ describe("AelinDeal", function () {
   });
   describe("custom deal initializations", function () {
     it("should allow a purchaser to claim their tokens right away if there is no vesting schedule", async function () {
+      const { timestamp } = await ethers.provider.getBlock("latest");
       aelinDeal
         .connect(deployer)
         .initialize(
@@ -669,7 +723,8 @@ describe("AelinDeal", function () {
           proRataRedemptionPeriod,
           openRedemptionPeriod,
           holder.address,
-          poolTokenMaxPurchaseAmount
+          poolTokenMaxPurchaseAmount,
+          holderFundingExpiryBase + timestamp
         );
 
       await fundDealAndMintTokens();
