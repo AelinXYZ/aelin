@@ -2,9 +2,9 @@
 
 Aelin is a fundraising protocol built on Ethereum. A sponsor goes out and announces they are raising a pool of capital with a purchase expiry period. Anyone with an internet connection, aka the purchaser, can contribute funds (e.g. sUSD) to the pool during the purchase expiry period; after the purchase expiry period, the funds are locked for a time duration period while the sponsor searches for a deal.
 
-If the sponsor finds a deal with the holder of a tokenized asset after the purchase expiry period, the sponsor announces the deal terms to the purchasers and then the holder has a specified time period to send the underlying deal tokens/ tokenized assets to the contract. If the funds are sent, the purchaers can convert their pool tokens (or a partial amount) to deal tokens, which represent a claim on the underlying deal token. Pool tokens are transferrable until the deal is created and fully funded. After the deal is funded, pool tokens must be either accpeted or withdrawn for the purchase token. If the holder does not send the underlying deal tokens in time, the sponsor can create a new deal for the pool.
+If the sponsor finds a deal with the holder of a tokenized asset after the purchase expiry period, the sponsor announces the deal terms to the purchasers and then the holder has a specified time period to send the underlying deal tokens/ tokenized assets to the contract. If the funds are sent, the purchasers can convert their pool tokens (or a partial amount) to deal tokens, which represent a claim on the underlying deal token. Pool tokens are transferable until the deal is created and fully funded. After the deal is funded, pool tokens must be either accepted or withdrawn for the purchase token. If the holder does not send the underlying deal tokens in time, the sponsor can create a new deal for the pool.
 
-If the purchaers are not interested in the underlying deal token they are welcome to reject the deal and withdraw their capital after the deal terms are announced. Also if a deal is not found then the purchasers can take their money back at the end of the pool duration.
+If the purchasers are not interested in the underlying deal token they are welcome to reject the deal and withdraw their capital after the deal terms are announced. Also if a deal is not found then the purchasers can take their money back at the end of the pool duration.
 
 The deal token is an ERC20 that might include a vesting schedule or not to claim the underlying deal token, depending upon the deal. Since the unvested underlying deal tokens are wrapped as an ERC20 they may be sold or traded before the vesting period is over. However, all vested tokens will be claimed and the respective deal tokens burned before any transfer occurs.
 
@@ -62,7 +62,7 @@ Modifiers:
 
 Arguments:
 
-- `address _underlyingDealToken` the underlying deal token a purchaser recieves upon vesting
+- `address _underlyingDealToken` the underlying deal token a purchaser receives upon vesting
 - `uint _purchaseTokenTotalForDeal` the total amount of purchase tokens that can be converted for the deal tokens
 - `uint _underlyingDealTokenTotal` the total amount of underlying deal tokens all purchasers receive upon vesting
 - `uint _vestingPeriod` the total amount of time to fully vest starting at the end of the vesting cliff (vesting is linear for v1)
@@ -73,7 +73,7 @@ Arguments:
 > NOTE please be sure to understand how the 2 redemption periods work outlined below:
 
 - `uint _proRataRedemptionPeriod` the time a purchaser has to redeem their pro rata share of the deal. E.g. if the `_purchaseTokenTotalForDeal` is only 8M sUSD but the pool has 10M sUSD (4:5) in it then for every $1 the purchaser invested they get to redeem $0.80 for deal tokens during this period. If the proRataConversion rate is 1:1 there is no open redemption period
-- `uint _openRedemptionPeriod` is a period after the `_proRataRedemptionPeriod` when anyone who maxxed out their redemption in the `_proRataRedemptionPeriod` can use their remaining purchase tokens to buy any leftover deal tokens if some other purchasers did not redeem some or all of their pool tokens for deal tokens
+- `uint _openRedemptionPeriod` is a period after the `_proRataRedemptionPeriod` when anyone who maxed out their redemption in the `_proRataRedemptionPeriod` can use their remaining purchase tokens to buy any leftover deal tokens if some other purchasers did not redeem some or all of their pool tokens for deal tokens
 
 Requirements:
 
@@ -83,7 +83,7 @@ Requirements:
 - the `_openRataRedemptionPeriod` must be >= 30 minutes and <= 30 days, If the proRataConversion rate is not 1:1, otherwise it must be 0 (revert)
 - the `_purchaseTokenTotalForDeal` converted to 18 decimals must be <= totalSupply of pool tokens (revert)
 
-NOTE the sponsor journey has ended IF the holder funds the deal. From here the next step is `HOLDER step 1 (Fund the Deal)`. However, if the holder does not fund the deal a spnosor can create a new deal for the pool by calling `AelinPool.createDeal(...)` again. There is always only 1 deal per pool.
+NOTE the sponsor journey has ended IF the holder funds the deal. From here the next step is `HOLDER step 1 (Fund the Deal)`. However, if the holder does not fund the deal a sponsor can create a new deal for the pool by calling `AelinPool.createDeal(...)` again. There is always only 1 deal per pool.
 
 **`EXTRA_METHODS`**: only the sponsor may also call `setSponsor()` followed by `acceptSponsor()` from the new address at any time to update the sponsor address for a deal
 
@@ -135,7 +135,7 @@ Requirements:
 
   - **DID NOT MAX ACCEPT**: if the purchaser did not max out their allocation in the `proRataRedemptionPeriod` they are not eligible to participate in the open redemption period (revert)
 
-  - **DID MAX ACCEPT**: if the purchaser maxxed their allocation they may redeem their remaining purchase tokens for deal tokens up until they have used all their funds or the deal cap has been reached. They can do this by calling `AelinPool.acceptMaxDealTokens()` or `AelinPool.acceptDealTokens(uint poolTokenAmount)` while the `block.timestamp < openRataRedmeptionExpiry`
+  - **DID MAX ACCEPT**: if the purchaser maxed their allocation they may redeem their remaining purchase tokens for deal tokens up until they have used all their funds or the deal cap has been reached. They can do this by calling `AelinPool.acceptMaxDealTokens()` or `AelinPool.acceptDealTokens(uint poolTokenAmount)` while the `block.timestamp < openRataRedmeptionExpiry`
 
 ### **HOLDER**
 
@@ -165,7 +165,7 @@ The integration tests require that hardhat run a fork of mainnet (see [docs](htt
 
 NOTE: the first time you run the test it will be slow. Hardhat caches the requests to Alchemy, so it will be faster on subsequent runs
 
-Environment variables needed for the codebase in additon to `ALCHEMY_URL`
+Environment variables needed for the codebase in addition to `ALCHEMY_URL`
 
 1. `export KOVAN_PRIVATE_KEY=...` any private key with some kovan ETH on it for deployment
 2. `export ALCHEMY_API_KEY=...` the same key at the end of the `ALCHEMY_URL` environment variable but it needs to be in its own environment variable.
