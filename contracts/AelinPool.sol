@@ -173,6 +173,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
                 30 days >= _proRataRedemptionPeriod,
             "30 mins - 30 days for prorata"
         );
+        require(1825 days >= _vestingCliff, "max 5 year cliff");
+        require(1825 days >= _vestingPeriod, "max 5 year vesting");
         require(
             30 minutes <= _holderFundingExpiry &&
                 30 days >= _holderFundingExpiry,
