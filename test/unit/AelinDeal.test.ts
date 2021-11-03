@@ -552,7 +552,7 @@ describe("AelinDeal", function () {
         );
       });
 
-      it.only("should claim all the user deal tokens if they claim in the middle and then end of the claim period", async function () {
+      it("should claim all the user deal tokens if they claim in the middle and then end of the claim period", async function () {
         await fundDealAndMintTokens();
         expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(
           mintAmount
