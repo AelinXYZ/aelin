@@ -35,6 +35,7 @@ contract AelinDeal is AelinERC20 {
 
     bool public calledInitialize;
     bool public depositComplete;
+    mapping(address => uint256) public amountVesting;
 
     /**
      * @dev the constructor will always be blank due to the MinimalProxyFactory pattern
@@ -286,8 +287,8 @@ contract AelinDeal is AelinERC20 {
             if (lastClaimed >= maxTime && vestingPeriod != 0) {} else {
                 uint256 timeElapsed = maxTime - lastClaimed;
                 dealTokensClaimable = vestingPeriod == 0
-                    ? balanceOf(purchaser)
-                    : (balanceOf(purchaser) * timeElapsed) / vestingPeriod;
+                    ? amountVesting[purchaser]
+                    : (amountVesting[purchaser] * timeElapsed) / vestingPeriod;
                 underlyingClaimable =
                     (underlyingPerDealExchangeRate * dealTokensClaimable) /
                     1e18;
@@ -320,8 +321,8 @@ contract AelinDeal is AelinERC20 {
                 }
                 uint256 timeElapsed = maxTime - lastClaim[recipient];
                 uint256 dealTokensClaimed = vestingPeriod == 0
-                    ? balanceOf(recipient)
-                    : (balanceOf(recipient) * timeElapsed) / vestingPeriod;
+                    ? amountVesting[recipient]
+                    : (amountVesting[recipient] * timeElapsed) / vestingPeriod;
                 uint256 underlyingDealTokensClaimed = (underlyingPerDealExchangeRate *
                         dealTokensClaimed) / 1e18;
 
@@ -351,6 +352,7 @@ contract AelinDeal is AelinERC20 {
      * be called from the pool contract that created this deal
      */
     function mint(address dst, uint256 dealTokenAmount) external onlyPool {
+        amountVesting[dst] += dealTokenAmount;
         _mint(dst, dealTokenAmount);
         emit MintDealTokens(address(this), dst, dealTokenAmount);
     }

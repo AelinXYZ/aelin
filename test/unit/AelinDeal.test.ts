@@ -552,6 +552,41 @@ describe("AelinDeal", function () {
         );
       });
 
+      it.only("should claim all the user deal tokens if they claim in the middle and then end of the claim period", async function () {
+        await fundDealAndMintTokens();
+        expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(
+          mintAmount
+        );
+        console.log("mintAmount", ethers.utils.formatEther(mintAmount));
+        // claim halfway through the period
+        await ethers.provider.send("evm_increaseTime", [
+          vestingEnd - vestingPeriod / 2,
+        ]);
+        await ethers.provider.send("evm_mine", []);
+
+        await aelinDeal.connect(purchaser).claim();
+
+        const halfwayBalance = await aelinDeal.balanceOf(purchaser.address);
+        expect(
+          Number(ethers.utils.formatEther(halfwayBalance))
+        ).to.be.greaterThan((mintAmountBase / 2) * 0.99999);
+        expect(Number(ethers.utils.formatEther(halfwayBalance))).to.be.lessThan(
+          (mintAmountBase / 2) * 1.00001
+        );
+
+        // claim at the end of the period
+        await ethers.provider.send("evm_increaseTime", [vestingPeriod / 2 + 1]);
+        await ethers.provider.send("evm_mine", []);
+
+        await aelinDeal.connect(purchaser).claim();
+
+        const endingBalance = await aelinDeal.balanceOf(purchaser.address);
+        // sometimes 1 is left from precision loss
+        expect(Number(ethers.utils.formatEther(endingBalance))).to.be.lessThan(
+          0.000000000000000002 // 2 * 10 ** -poolTokenDecimals
+        );
+      });
+
       it("should claim their minted tokens when doing a transfer", async function () {
         await fundDealAndMintTokens();
         await ethers.provider.send("evm_increaseTime", [
