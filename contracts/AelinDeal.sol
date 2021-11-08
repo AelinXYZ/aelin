@@ -381,14 +381,29 @@ contract AelinDeal is AelinERC20 {
             );
     }
 
+    function _claimAndAdjustVest(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) internal {
+        _claim(sender);
+        _claim(recipient);
+        uint256 vestRemaining = block.timestamp <= vestingCliff
+            ? 1e18
+            : ((block.timestamp - vestingCliff) * 1e18) / vestingPeriod;
+        amountVesting[sender] -= (balanceOf(msg.sender) * 1e18) / vestRemaining;
+        amountVesting[recipient] +=
+            (balanceOf(recipient) * 1e18) /
+            vestRemaining;
+    }
+
     function transfer(address recipient, uint256 amount)
         public
         virtual
         override
         returns (bool)
     {
-        _claim(msg.sender);
-        _claim(recipient);
+        _claimAndAdjustVest(msg.sender, recipient, amount);
         return super.transfer(recipient, amount);
     }
 
@@ -397,8 +412,7 @@ contract AelinDeal is AelinERC20 {
         address recipient,
         uint256 amount
     ) public virtual override returns (bool) {
-        _claim(sender);
-        _claim(recipient);
+        _claimAndAdjustVest(sender, recipient, amount);
         return super.transferFrom(sender, recipient, amount);
     }
 
