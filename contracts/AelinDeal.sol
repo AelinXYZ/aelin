@@ -401,12 +401,9 @@ contract AelinDeal is AelinERC20 {
         _claim(sender);
         _claim(recipient);
         require(balanceOf(sender) >= amount, "amount exceeds balance");
-        uint256 maxTime = block.timestamp > vestingExpiry
-            ? vestingExpiry
-            : block.timestamp;
         uint256 vestRemaining = block.timestamp <= vestingCliff
             ? 1e18
-            : ((vestingExpiry - maxTime) * 1e18) / vestingPeriod;
+            : ((vestingExpiry - block.timestamp) * 1e18) / vestingPeriod;
         if (balanceOf(msg.sender) > 0) {
             amountVesting[sender] =
                 ((balanceOf(msg.sender) - amount) * 1e18) /

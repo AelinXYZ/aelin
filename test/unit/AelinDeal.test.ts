@@ -12,7 +12,7 @@ const { deployContract, deployMockContract } = waffle;
 
 chai.use(solidity);
 
-describe.only("AelinDeal", function () {
+describe("AelinDeal", function () {
   let deployer: SignerWithAddress;
   let sponsor: SignerWithAddress;
   let holder: SignerWithAddress;
