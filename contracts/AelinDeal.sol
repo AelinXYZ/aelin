@@ -388,12 +388,17 @@ contract AelinDeal is AelinERC20 {
     ) internal {
         _claim(sender);
         _claim(recipient);
+        uint256 maxTime = block.timestamp > vestingExpiry
+            ? vestingExpiry
+            : block.timestamp;
         uint256 vestRemaining = block.timestamp <= vestingCliff
             ? 1e18
-            : ((block.timestamp - vestingCliff) * 1e18) / vestingPeriod;
-        amountVesting[sender] -= (balanceOf(msg.sender) * 1e18) / vestRemaining;
-        amountVesting[recipient] +=
-            (balanceOf(recipient) * 1e18) /
+            : ((vestingExpiry - maxTime) * 1e18) / vestingPeriod;
+        amountVesting[sender] =
+            ((balanceOf(msg.sender) - amount) * 1e18) /
+            vestRemaining;
+        amountVesting[recipient] =
+            ((balanceOf(recipient) + amount) * 1e18) /
             vestRemaining;
     }
 
