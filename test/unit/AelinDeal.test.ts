@@ -12,7 +12,7 @@ const { deployContract, deployMockContract } = waffle;
 
 chai.use(solidity);
 
-describe("AelinDeal", function () {
+describe.only("AelinDeal", function () {
   let deployer: SignerWithAddress;
   let sponsor: SignerWithAddress;
   let holder: SignerWithAddress;
@@ -726,6 +726,12 @@ describe("AelinDeal", function () {
         ]);
         await ethers.provider.send("evm_mine", []);
 
+        await expect(
+          aelinDeal
+            .connect(purchaser)
+            .transfer(purchaserTwo.address, mintAmount.div(100))
+        ).to.be.revertedWith("no transfers after vest done");
+
         await aelinDeal.connect(purchaser).claim();
         await aelinDeal.connect(purchaserTwo).claim();
 
@@ -751,8 +757,14 @@ describe("AelinDeal", function () {
 
       it("should claim their minted tokens when doing a transfer", async function () {
         await fundDealAndMintTokens();
-        await ethers.provider.send("evm_increaseTime", [
-          vestingEnd - oneDay * 180,
+        const vestingCliffEVM = await aelinDeal.vestingCliff();
+        const vestingPeriodEVM = await aelinDeal.vestingPeriod();
+        const vestingCliff = vestingCliffEVM.toNumber();
+        const vestingPeriod = vestingPeriodEVM.toNumber();
+
+        // halfway through the period
+        await ethers.provider.send("evm_setNextBlockTimestamp", [
+          vestingCliff + vestingPeriod / 2,
         ]);
         await ethers.provider.send("evm_mine", []);
         expect(await aelinDeal.balanceOf(purchaser.address)).to.not.equal(0);
@@ -787,21 +799,49 @@ describe("AelinDeal", function () {
         expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
       });
 
+      it("should error when the purchaser transfers after the vesting ends", async function () {
+        await fundDealAndMintTokens();
+
+        await ethers.provider.send("evm_increaseTime", [vestingEnd + 1]);
+        await ethers.provider.send("evm_mine", []);
+
+        await expect(
+          aelinDeal
+            .connect(purchaser)
+            .transfer(purchaserTwo.address, mintAmount.div(100))
+        ).to.be.revertedWith("no transfers after vest done");
+      });
+
       it("should error when the purchaser transfers more than they have after claiming", async function () {
         await fundDealAndMintTokens();
-        await ethers.provider.send("evm_increaseTime", [vestingEnd + 1]);
+
+        const vestingCliffEVM = await aelinDeal.vestingCliff();
+        const vestingPeriodEVM = await aelinDeal.vestingPeriod();
+        const vestingCliff = vestingCliffEVM.toNumber();
+        const vestingPeriod = vestingPeriodEVM.toNumber();
+
+        // quarter through the period
+        await ethers.provider.send("evm_setNextBlockTimestamp", [
+          vestingCliff + vestingPeriod / 4,
+        ]);
         await ethers.provider.send("evm_mine", []);
 
         // TODO add a method
         await expect(
           aelinDeal.connect(purchaser).transfer(deployer.address, mintAmount)
-        ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
+        ).to.be.revertedWith("amount exceeds balance");
       });
 
       it("should claim their minted tokens when doing a transferFrom", async function () {
         await fundDealAndMintTokens();
-        await ethers.provider.send("evm_increaseTime", [
-          vestingEnd - oneDay * 180,
+        const vestingCliffEVM = await aelinDeal.vestingCliff();
+        const vestingPeriodEVM = await aelinDeal.vestingPeriod();
+        const vestingCliff = vestingCliffEVM.toNumber();
+        const vestingPeriod = vestingPeriodEVM.toNumber();
+
+        // halfway through the period
+        await ethers.provider.send("evm_setNextBlockTimestamp", [
+          vestingCliff + vestingPeriod / 2,
         ]);
         await ethers.provider.send("evm_mine", []);
 
@@ -846,7 +886,15 @@ describe("AelinDeal", function () {
       it("should error when transferFrom is called with too many tokens after claiming", async function () {
         await fundDealAndMintTokens();
 
-        await ethers.provider.send("evm_increaseTime", [vestingEnd + 1]);
+        const vestingCliffEVM = await aelinDeal.vestingCliff();
+        const vestingPeriodEVM = await aelinDeal.vestingPeriod();
+        const vestingCliff = vestingCliffEVM.toNumber();
+        const vestingPeriod = vestingPeriodEVM.toNumber();
+
+        // quarter through the period
+        await ethers.provider.send("evm_setNextBlockTimestamp", [
+          vestingCliff + vestingPeriod / 4,
+        ]);
         await ethers.provider.send("evm_mine", []);
 
         await aelinDeal
@@ -857,7 +905,7 @@ describe("AelinDeal", function () {
           aelinDeal
             .connect(deployer)
             .transferFrom(purchaser.address, holder.address, mintAmount)
-        ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
+        ).to.be.revertedWith("amount exceeds balance");
       });
 
       it("should not allow a random wallet with no balance to claim", async function () {

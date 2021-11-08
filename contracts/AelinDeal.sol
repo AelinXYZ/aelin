@@ -358,6 +358,18 @@ contract AelinDeal is AelinERC20 {
     }
 
     /**
+     * @dev deal tokens cant be transferred after the vesting expiry since
+     * all tokens will be claimed at the start of the transfer leaving 0 to send
+     */
+    modifier transferWindow() {
+        require(
+            vestingExpiry > block.timestamp,
+            "no transfers after vest done"
+        );
+        _;
+    }
+
+    /**
      * @dev below are helpers for transferring deal tokens. NOTE the token holder transferring
      * the deal tokens must pay the gas to claim their vested tokens first, which will burn their vested deal
      * tokens. They must also pay for the receivers claim and burn any of their vested tokens in order to ensure
@@ -388,15 +400,20 @@ contract AelinDeal is AelinERC20 {
     ) internal {
         _claim(sender);
         _claim(recipient);
+        require(balanceOf(sender) >= amount, "amount exceeds balance");
         uint256 maxTime = block.timestamp > vestingExpiry
             ? vestingExpiry
             : block.timestamp;
         uint256 vestRemaining = block.timestamp <= vestingCliff
             ? 1e18
             : ((vestingExpiry - maxTime) * 1e18) / vestingPeriod;
-        amountVesting[sender] =
-            ((balanceOf(msg.sender) - amount) * 1e18) /
-            vestRemaining;
+        if (balanceOf(msg.sender) > 0) {
+            amountVesting[sender] =
+                ((balanceOf(msg.sender) - amount) * 1e18) /
+                vestRemaining;
+        } else {
+            amountVesting[sender] = 0;
+        }
         amountVesting[recipient] =
             ((balanceOf(recipient) + amount) * 1e18) /
             vestRemaining;
@@ -406,6 +423,7 @@ contract AelinDeal is AelinERC20 {
         public
         virtual
         override
+        transferWindow
         returns (bool)
     {
         _claimAndAdjustVest(msg.sender, recipient, amount);
@@ -416,7 +434,7 @@ contract AelinDeal is AelinERC20 {
         address sender,
         address recipient,
         uint256 amount
-    ) public virtual override returns (bool) {
+    ) public virtual override transferWindow returns (bool) {
         _claimAndAdjustVest(sender, recipient, amount);
         return super.transferFrom(sender, recipient, amount);
     }
