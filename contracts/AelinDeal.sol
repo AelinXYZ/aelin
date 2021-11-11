@@ -35,6 +35,7 @@ contract AelinDeal is AelinERC20 {
 
     bool public calledInitialize;
     bool public depositComplete;
+    mapping(address => uint256) public amountVested;
 
     /**
      * @dev the constructor will always be blank due to the MinimalProxyFactory pattern
@@ -257,8 +258,6 @@ contract AelinDeal is AelinERC20 {
         _;
     }
 
-    mapping(address => uint256) public lastClaim;
-
     /**
      * @dev a view showing the number of claimable deal tokens and the
      * amount of the underlying deal token a purchser gets in return
@@ -274,24 +273,20 @@ contract AelinDeal is AelinERC20 {
             ? vestingExpiry
             : block.timestamp;
         if (
-            maxTime > vestingCliff ||
-            (maxTime == vestingCliff &&
-                vestingPeriod == 0 &&
-                lastClaim[purchaser] == 0)
+            balanceOf(purchaser) > 0 &&
+            (maxTime > vestingCliff ||
+                (maxTime == vestingCliff && vestingPeriod == 0))
         ) {
-            uint256 lastClaimed = lastClaim[purchaser];
-            if (lastClaimed == 0) {
-                lastClaimed = vestingCliff;
-            }
-            if (lastClaimed >= maxTime && vestingPeriod != 0) {} else {
-                uint256 timeElapsed = maxTime - lastClaimed;
-                dealTokensClaimable = vestingPeriod == 0
-                    ? balanceOf(purchaser)
-                    : (balanceOf(purchaser) * timeElapsed) / vestingPeriod;
-                underlyingClaimable =
-                    (underlyingPerDealExchangeRate * dealTokensClaimable) /
-                    1e18;
-            }
+            uint256 timeElapsed = maxTime - vestingCliff;
+            dealTokensClaimable = vestingPeriod == 0
+                ? balanceOf(purchaser)
+                : ((balanceOf(purchaser) + amountVested[purchaser]) *
+                    timeElapsed) /
+                    vestingPeriod -
+                    amountVested[purchaser];
+            underlyingClaimable =
+                (underlyingPerDealExchangeRate * dealTokensClaimable) /
+                1e18;
         }
     }
 
@@ -311,21 +306,20 @@ contract AelinDeal is AelinERC20 {
                 : block.timestamp;
             if (
                 maxTime > vestingCliff ||
-                (maxTime == vestingCliff &&
-                    vestingPeriod == 0 &&
-                    lastClaim[recipient] == 0)
+                (maxTime == vestingCliff && vestingPeriod == 0)
             ) {
-                if (lastClaim[recipient] == 0) {
-                    lastClaim[recipient] = vestingCliff;
-                }
-                uint256 timeElapsed = maxTime - lastClaim[recipient];
+                uint256 timeElapsed = maxTime - vestingCliff;
                 uint256 dealTokensClaimed = vestingPeriod == 0
                     ? balanceOf(recipient)
-                    : (balanceOf(recipient) * timeElapsed) / vestingPeriod;
+                    : ((balanceOf(recipient) + amountVested[recipient]) *
+                        timeElapsed) /
+                        vestingPeriod -
+                        amountVested[recipient];
                 uint256 underlyingDealTokensClaimed = (underlyingPerDealExchangeRate *
                         dealTokensClaimed) / 1e18;
 
                 if (dealTokensClaimed > 0) {
+                    amountVested[recipient] += dealTokensClaimed;
                     _burn(recipient, dealTokensClaimed);
                     IERC20(underlyingDealToken).safeTransfer(
                         recipient,
@@ -338,7 +332,6 @@ contract AelinDeal is AelinERC20 {
                         underlyingDealTokensClaimed
                     );
                 }
-                lastClaim[recipient] = maxTime;
                 return dealTokensClaimed;
             }
         }
@@ -353,6 +346,18 @@ contract AelinDeal is AelinERC20 {
     function mint(address dst, uint256 dealTokenAmount) external onlyPool {
         _mint(dst, dealTokenAmount);
         emit MintDealTokens(address(this), dst, dealTokenAmount);
+    }
+
+    /**
+     * @dev deal tokens cant be transferred after the vesting expiry since
+     * all tokens will be claimed at the start of the transfer leaving 0 to send
+     */
+    modifier transferWindow() {
+        require(
+            vestingExpiry > block.timestamp,
+            "no transfers after vest done"
+        );
+        _;
     }
 
     /**
@@ -383,6 +388,7 @@ contract AelinDeal is AelinERC20 {
         public
         virtual
         override
+        transferWindow
         returns (bool)
     {
         _claim(msg.sender);
@@ -394,7 +400,7 @@ contract AelinDeal is AelinERC20 {
         address sender,
         address recipient,
         uint256 amount
-    ) public virtual override returns (bool) {
+    ) public virtual override transferWindow returns (bool) {
         _claim(sender);
         _claim(recipient);
         return super.transferFrom(sender, recipient, amount);

@@ -17,6 +17,7 @@ describe("AelinDeal", function () {
   let sponsor: SignerWithAddress;
   let holder: SignerWithAddress;
   let purchaser: SignerWithAddress;
+  let purchaserTwo: SignerWithAddress;
   let aelinDeal: AelinDeal;
   let purchaseToken: MockContract;
   let underlyingDealToken: ERC20;
@@ -81,7 +82,8 @@ describe("AelinDeal", function () {
   const expectedClaimUnderlying = underlyingRemovedBalance;
 
   before(async () => {
-    [deployer, sponsor, holder, purchaser] = await ethers.getSigners();
+    [deployer, sponsor, holder, purchaser, purchaserTwo] =
+      await ethers.getSigners();
     purchaseToken = await deployMockContract(deployer, ERC20Artifact.abi);
     await purchaseToken.mock.decimals.returns(purchaseTokenDecimals);
 
@@ -552,10 +554,207 @@ describe("AelinDeal", function () {
         );
       });
 
+      it("should claim all the user deal tokens if they claim in the middle and then end of the claim period", async function () {
+        await fundDealAndMintTokens();
+        expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(
+          mintAmount
+        );
+        // claim halfway through the period
+        await ethers.provider.send("evm_increaseTime", [
+          vestingEnd - vestingPeriod / 2,
+        ]);
+        await ethers.provider.send("evm_mine", []);
+
+        await aelinDeal.connect(purchaser).claim();
+
+        const halfwayBalance = await aelinDeal.balanceOf(purchaser.address);
+        expect(
+          Number(ethers.utils.formatEther(halfwayBalance))
+        ).to.be.greaterThan((mintAmountBase / 2) * 0.99999);
+        expect(Number(ethers.utils.formatEther(halfwayBalance))).to.be.lessThan(
+          (mintAmountBase / 2) * 1.00001
+        );
+
+        // claim at the end of the period
+        await ethers.provider.send("evm_increaseTime", [vestingPeriod / 2 + 1]);
+        await ethers.provider.send("evm_mine", []);
+
+        await aelinDeal.connect(purchaser).claim();
+
+        const endingBalance = await aelinDeal.balanceOf(purchaser.address);
+        expect(Number(ethers.utils.formatEther(endingBalance))).to.equal(0);
+      });
+
+      it("should handle multiple claim and transfers appropriately", async function () {
+        // purchaser has 2 total, purchaserTwo has 4 total
+        await fundDealAndMintTokens();
+        await aelinDeal
+          .connect(deployer)
+          .mint(purchaserTwo.address, mintAmount.mul(2));
+
+        expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(
+          mintAmount
+        );
+        expect(await aelinDeal.balanceOf(purchaserTwo.address)).to.equal(
+          mintAmount.mul(2)
+        );
+
+        const vestingCliffEVM = await aelinDeal.vestingCliff();
+        const vestingPeriodEVM = await aelinDeal.vestingPeriod();
+        const vestingCliff = vestingCliffEVM.toNumber();
+        const vestingPeriod = vestingPeriodEVM.toNumber();
+
+        // claim quarter through the period
+        await ethers.provider.send("evm_setNextBlockTimestamp", [
+          vestingCliff + vestingPeriod / 4,
+        ]);
+        await ethers.provider.send("evm_mine", []);
+        // after 1/4 is vested the purchaser deal token balance should be .75 * 2 + 1 in transfer = 2.5
+        // while purchaser two deal token balance .75 * 4 - 1 in transfer = 2
+        await aelinDeal
+          .connect(purchaserTwo)
+          .transfer(purchaser.address, mintAmount.div(2));
+
+        const quarterBalancePurchaser = await aelinDeal.balanceOf(
+          purchaser.address
+        );
+        const quarterBalancePurchaserTwo = await aelinDeal.balanceOf(
+          purchaserTwo.address
+        );
+
+        // with 1/4 done the total amount vested for purchaser should be = 0.5
+        // with 1/4 done the total amount vested for purchaser should be = 1
+        const quarterAmountVestedPurchaser = await aelinDeal.amountVested(
+          purchaser.address
+        );
+        const quarterAmountVestedPurchaserTwo = await aelinDeal.amountVested(
+          purchaserTwo.address
+        );
+
+        expect(
+          Number(ethers.utils.formatEther(quarterBalancePurchaser))
+        ).to.be.greaterThan(2.5 * 0.99999);
+        expect(
+          Number(ethers.utils.formatEther(quarterBalancePurchaser))
+        ).to.be.lessThan(2.5 * 1.00001);
+
+        expect(
+          Number(ethers.utils.formatEther(quarterAmountVestedPurchaser))
+        ).to.be.greaterThan(0.5 * 0.99999);
+        expect(
+          Number(ethers.utils.formatEther(quarterAmountVestedPurchaser))
+        ).to.be.lessThan(0.5 * 1.00001);
+
+        expect(
+          Number(ethers.utils.formatEther(quarterBalancePurchaserTwo))
+        ).to.be.greaterThan(2 * 0.99999);
+        expect(
+          Number(ethers.utils.formatEther(quarterBalancePurchaserTwo))
+        ).to.be.lessThan(2 * 1.00001);
+
+        expect(
+          Number(ethers.utils.formatEther(quarterAmountVestedPurchaserTwo))
+        ).to.be.greaterThan(1 * 0.99999);
+        expect(
+          Number(ethers.utils.formatEther(quarterAmountVestedPurchaserTwo))
+        ).to.be.lessThan(1 * 1.00001);
+
+        // go through another 50% of the vesting period to 75% completion
+        await ethers.provider.send("evm_setNextBlockTimestamp", [
+          vestingCliff + (vestingPeriod / 4) * 3,
+        ]);
+        await ethers.provider.send("evm_mine", []);
+        // after 3/4 is vested the purchaser claims (2.5 + 0.5) * .75 - 0.5 = 1.75
+        // and transfers 0.5 leaving them with = 0.25
+        // while purchaser two deal claims (2 + 1) * .75 - 1 = 1.25
+        // and receives 0.5 leaving them with 1.25
+        await aelinDeal
+          .connect(purchaser)
+          .transfer(purchaserTwo.address, mintAmount.div(4));
+
+        const threeQuarterBalancePurchaser = await aelinDeal.balanceOf(
+          purchaser.address
+        );
+        const threeQuarterBalancePurchaserTwo = await aelinDeal.balanceOf(
+          purchaserTwo.address
+        );
+
+        // with 3/4 done the total amount vested for purchaser is 2.25
+        // with 3/4 done the total amount vested for purchaserTwo is 2.25
+        const threeQuarterAmountVestedPurchaser = await aelinDeal.amountVested(
+          purchaser.address
+        );
+        const threeQuarterAmountVestedPurchaserTwo =
+          await aelinDeal.amountVested(purchaserTwo.address);
+
+        expect(
+          Number(ethers.utils.formatEther(threeQuarterBalancePurchaser))
+        ).to.be.greaterThan(0.25 * 0.99999);
+        expect(
+          Number(ethers.utils.formatEther(threeQuarterBalancePurchaser))
+        ).to.be.lessThan(0.25 * 1.00001);
+
+        expect(
+          Number(ethers.utils.formatEther(threeQuarterAmountVestedPurchaser))
+        ).to.be.greaterThan(2.25 * 0.99999);
+        expect(
+          Number(ethers.utils.formatEther(threeQuarterAmountVestedPurchaser))
+        ).to.be.lessThan(2.25 * 1.00001);
+
+        expect(
+          Number(ethers.utils.formatEther(threeQuarterBalancePurchaserTwo))
+        ).to.be.greaterThan(1.25 * 0.99999);
+        expect(
+          Number(ethers.utils.formatEther(threeQuarterBalancePurchaserTwo))
+        ).to.be.lessThan(1.25 * 1.00001);
+
+        expect(
+          Number(ethers.utils.formatEther(threeQuarterAmountVestedPurchaserTwo))
+        ).to.be.greaterThan(2.25 * 0.99999);
+        expect(
+          Number(ethers.utils.formatEther(threeQuarterAmountVestedPurchaserTwo))
+        ).to.be.lessThan(2.25 * 1.00001);
+
+        // claim quarter through the period
+        await ethers.provider.send("evm_setNextBlockTimestamp", [
+          vestingCliff + vestingPeriod,
+        ]);
+        await ethers.provider.send("evm_mine", []);
+
+        await expect(
+          aelinDeal
+            .connect(purchaser)
+            .transfer(purchaserTwo.address, mintAmount.div(100))
+        ).to.be.revertedWith("no transfers after vest done");
+
+        await aelinDeal.connect(purchaser).claim();
+        await aelinDeal.connect(purchaserTwo).claim();
+
+        const endingBalancePurchaser = await aelinDeal.balanceOf(
+          purchaser.address
+        );
+        const endingBalancePurchaserTwo = await aelinDeal.balanceOf(
+          purchaserTwo.address
+        );
+
+        expect(
+          Number(ethers.utils.formatEther(endingBalancePurchaser))
+        ).to.equal(0);
+        expect(
+          Number(ethers.utils.formatEther(endingBalancePurchaserTwo))
+        ).to.equal(0);
+      });
+
       it("should claim their minted tokens when doing a transfer", async function () {
         await fundDealAndMintTokens();
-        await ethers.provider.send("evm_increaseTime", [
-          vestingEnd - oneDay * 180,
+        const vestingCliffEVM = await aelinDeal.vestingCliff();
+        const vestingPeriodEVM = await aelinDeal.vestingPeriod();
+        const vestingCliff = vestingCliffEVM.toNumber();
+        const vestingPeriod = vestingPeriodEVM.toNumber();
+
+        // halfway through the period
+        await ethers.provider.send("evm_setNextBlockTimestamp", [
+          vestingCliff + vestingPeriod / 2,
         ]);
         await ethers.provider.send("evm_mine", []);
         expect(await aelinDeal.balanceOf(purchaser.address)).to.not.equal(0);
@@ -590,21 +789,49 @@ describe("AelinDeal", function () {
         expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
       });
 
+      it("should error when the purchaser transfers after the vesting ends", async function () {
+        await fundDealAndMintTokens();
+
+        await ethers.provider.send("evm_increaseTime", [vestingEnd + 1]);
+        await ethers.provider.send("evm_mine", []);
+
+        await expect(
+          aelinDeal
+            .connect(purchaser)
+            .transfer(purchaserTwo.address, mintAmount.div(100))
+        ).to.be.revertedWith("no transfers after vest done");
+      });
+
       it("should error when the purchaser transfers more than they have after claiming", async function () {
         await fundDealAndMintTokens();
-        await ethers.provider.send("evm_increaseTime", [vestingEnd + 1]);
+
+        const vestingCliffEVM = await aelinDeal.vestingCliff();
+        const vestingPeriodEVM = await aelinDeal.vestingPeriod();
+        const vestingCliff = vestingCliffEVM.toNumber();
+        const vestingPeriod = vestingPeriodEVM.toNumber();
+
+        // quarter through the period
+        await ethers.provider.send("evm_setNextBlockTimestamp", [
+          vestingCliff + vestingPeriod / 4,
+        ]);
         await ethers.provider.send("evm_mine", []);
 
         // TODO add a method
         await expect(
           aelinDeal.connect(purchaser).transfer(deployer.address, mintAmount)
-        ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
+        ).to.be.revertedWith("amount exceeds balance");
       });
 
       it("should claim their minted tokens when doing a transferFrom", async function () {
         await fundDealAndMintTokens();
-        await ethers.provider.send("evm_increaseTime", [
-          vestingEnd - oneDay * 180,
+        const vestingCliffEVM = await aelinDeal.vestingCliff();
+        const vestingPeriodEVM = await aelinDeal.vestingPeriod();
+        const vestingCliff = vestingCliffEVM.toNumber();
+        const vestingPeriod = vestingPeriodEVM.toNumber();
+
+        // halfway through the period
+        await ethers.provider.send("evm_setNextBlockTimestamp", [
+          vestingCliff + vestingPeriod / 2,
         ]);
         await ethers.provider.send("evm_mine", []);
 
@@ -649,7 +876,15 @@ describe("AelinDeal", function () {
       it("should error when transferFrom is called with too many tokens after claiming", async function () {
         await fundDealAndMintTokens();
 
-        await ethers.provider.send("evm_increaseTime", [vestingEnd + 1]);
+        const vestingCliffEVM = await aelinDeal.vestingCliff();
+        const vestingPeriodEVM = await aelinDeal.vestingPeriod();
+        const vestingCliff = vestingCliffEVM.toNumber();
+        const vestingPeriod = vestingPeriodEVM.toNumber();
+
+        // quarter through the period
+        await ethers.provider.send("evm_setNextBlockTimestamp", [
+          vestingCliff + vestingPeriod / 4,
+        ]);
         await ethers.provider.send("evm_mine", []);
 
         await aelinDeal
@@ -660,7 +895,7 @@ describe("AelinDeal", function () {
           aelinDeal
             .connect(deployer)
             .transferFrom(purchaser.address, holder.address, mintAmount)
-        ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
+        ).to.be.revertedWith("amount exceeds balance");
       });
 
       it("should not allow a random wallet with no balance to claim", async function () {
