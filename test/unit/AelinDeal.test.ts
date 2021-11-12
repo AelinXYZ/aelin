@@ -155,9 +155,6 @@ describe("AelinDeal", function () {
         underlyingDealToken.address
       );
       expect(await aelinDeal.aelinPool()).to.equal(deployer.address);
-      expect(await aelinDeal.underlyingDealTokenDecimals()).to.equal(
-        underlyingDealTokenDecimals
-      );
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
       expect(await aelinDeal.underlyingDealTokenTotal()).to.equal(
         underlyingDealTokenTotal.toString()

@@ -13,10 +13,12 @@ contract AelinPoolFactory is MinimalProxyFactory {
      * NOTE a pool factory v2 will be deployed when the staking rewards contract is live
      */
     address constant AELIN_REWARDS = 0x5A0b54D5dc17e0AadC383d2db43B0a0D3E029c4c;
-    address public AELIN_POOL_LOGIC;
-    address public AELIN_DEAL_LOGIC;
+    address public immutable AELIN_POOL_LOGIC;
+    address public immutable AELIN_DEAL_LOGIC;
 
     constructor(address _aelinPoolLogic, address _aelinDealLogic) {
+        require(_aelinPoolLogic != address(0), "cant pass null pool address");
+        require(_aelinDealLogic != address(0), "cant pass null deal address");
         AELIN_POOL_LOGIC = _aelinPoolLogic;
         AELIN_DEAL_LOGIC = _aelinDealLogic;
     }
@@ -49,8 +51,9 @@ contract AelinPoolFactory is MinimalProxyFactory {
             AELIN_REWARDS
         );
 
+        address aelin_pool_address = address(aelin_pool);
         emit CreatePool(
-            address(aelin_pool),
+            aelin_pool_address,
             string(abi.encodePacked("aePool-", _name)),
             string(abi.encodePacked("aeP-", _symbol)),
             _purchaseTokenCap,
@@ -61,7 +64,7 @@ contract AelinPoolFactory is MinimalProxyFactory {
             _purchaseExpiry
         );
 
-        return address(aelin_pool);
+        return aelin_pool_address;
     }
 
     event CreatePool(

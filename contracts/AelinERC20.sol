@@ -25,7 +25,7 @@ contract AelinERC20 is ERC20 {
     constructor() ERC20("", "") {}
 
     modifier initInfoOnce() {
-        require(setInfo == false, "can only initialize once");
+        require(!setInfo, "can only initialize once");
         _;
     }
 
@@ -64,7 +64,7 @@ contract AelinERC20 is ERC20 {
      * uniswap implementation: https://github.com/Uniswap/v2-core/blob/master/contracts/UniswapV2Pair.sol#L31-L36
      */
     modifier lock() {
-        require(locked == false, "AelinV1: LOCKED");
+        require(!locked, "AelinV1: LOCKED");
         locked = true;
         _;
         locked = false;
