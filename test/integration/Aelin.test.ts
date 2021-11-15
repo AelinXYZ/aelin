@@ -10,6 +10,7 @@ import AelinPoolFactoryArtifact from "../../artifacts/contracts/AelinPoolFactory
 
 import { AelinPool, AelinDeal, AelinPoolFactory, ERC20 } from "../../typechain";
 import { fundUsers, getImpersonatedSigner } from "../helpers";
+const nullAddress = "0x0000000000000000000000000000000000000000";
 
 const { deployContract } = waffle;
 
@@ -511,8 +512,9 @@ describe("integration test", () => {
       expect(acceptLogs.length).to.equal(4);
 
       const mintLogs = await aelinDealProxyStorage.queryFilter(
-        aelinDealProxyStorage.filters.MintDealTokens()
+        aelinDealProxyStorage.filters.Transfer(nullAddress)
       );
+
       expect(mintLogs.length).to.equal(4 * 3);
 
       const totalToHolderFromEvents = acceptLogs.reduce(
@@ -872,8 +874,9 @@ describe("integration test", () => {
       expect(acceptLogs.length).to.equal(4);
 
       const mintLogs = await aelinDealProxyStorage.queryFilter(
-        aelinDealProxyStorage.filters.MintDealTokens()
+        aelinDealProxyStorage.filters.Transfer(nullAddress)
       );
+
       expect(mintLogs.length).to.equal(4 * 3);
 
       const totalToHolderFromEvents = acceptLogs.reduce(
@@ -912,7 +915,7 @@ describe("integration test", () => {
       expect(
         withdrawUnderlyingLog.args.underlyingDealTokenAddress.toLowerCase()
       ).to.equal(aaveContract.address.toLowerCase());
-      expect(withdrawUnderlyingLog.args.dealContract).to.equal(
+      expect(withdrawUnderlyingLog.address).to.equal(
         aelinDealProxyStorage.address
       );
       // the entire amount has been taken

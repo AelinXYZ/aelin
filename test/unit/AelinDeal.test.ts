@@ -251,14 +251,12 @@ describe("AelinDeal", function () {
           underlyingDealToken.address
         );
         expect(depositDealTokensLog.args.depositor).to.equal(holder.address);
-        expect(depositDealTokensLog.args.dealContract).to.equal(
-          aelinDeal.address
-        );
+        expect(depositDealTokensLog.address).to.equal(aelinDeal.address);
         expect(depositDealTokensLog.args.underlyingDealTokenAmount).to.equal(
           underlyingDealTokenTotal
         );
 
-        expect(dealFundedLog.args.dealAddress).to.equal(aelinDeal.address);
+        expect(dealFundedLog.address).to.equal(aelinDeal.address);
         expect(dealFundedLog.args.poolAddress).to.be.properAddress;
         expect(dealFundedLog.args.proRataRedemptionStart).to.equal(timestamp);
         expect(dealFundedLog.args.proRataRedemptionExpiry).to.equal(
@@ -320,9 +318,7 @@ describe("AelinDeal", function () {
           underlyingDealToken.address
         );
         expect(depositDealTokensLog.args.depositor).to.equal(holder.address);
-        expect(depositDealTokensLog.args.dealContract).to.equal(
-          aelinDeal.address
-        );
+        expect(depositDealTokensLog.address).to.equal(aelinDeal.address);
         expect(depositDealTokensLog.args.underlyingDealTokenAmount).to.equal(
           lowerAmount
         );
@@ -358,17 +354,33 @@ describe("AelinDeal", function () {
         expect(await aelinDeal.totalSupply()).to.equal(
           ethers.BigNumber.from(0)
         );
+        await underlyingDealToken
+          .connect(holder)
+          .approve(aelinDeal.address, underlyingDealTokenTotal);
+
+        await aelinDeal
+          .connect(holder)
+          .depositUnderlying(underlyingDealTokenTotal);
         await aelinDeal.connect(deployer).mint(purchaser.address, mintAmount);
         expect(await aelinDeal.totalSupply()).to.equal(mintAmount);
         expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(
           mintAmount
         );
         const [mintLog] = await aelinDeal.queryFilter(
-          aelinDeal.filters.MintDealTokens()
+          aelinDeal.filters.Transfer(nullAddress)
         );
-        expect(mintLog.args.dealContract).to.equal(aelinDeal.address);
-        expect(mintLog.args.recipient).to.equal(purchaser.address);
-        expect(mintLog.args.dealTokenAmount).to.equal(mintAmount);
+        expect(mintLog.address).to.equal(aelinDeal.address);
+        expect(mintLog.args.to).to.equal(purchaser.address);
+        expect(mintLog.args.value).to.equal(mintAmount);
+      });
+
+      it("should block mint tokens when the deposit is not complete", async function () {
+        expect(await aelinDeal.totalSupply()).to.equal(
+          ethers.BigNumber.from(0)
+        );
+        await expect(
+          aelinDeal.connect(deployer).mint(purchaser.address, mintAmount)
+        ).to.be.revertedWith("deposit not complete");
       });
 
       it("should not allow mint tokens for the wrong account (only the deployer which is enforced as the pool)", async function () {
@@ -400,11 +412,12 @@ describe("AelinDeal", function () {
         const [log] = await aelinDeal.queryFilter(
           aelinDeal.filters.WithdrawUnderlyingDealTokens()
         );
+        console.log("log", log);
         expect(log.args.underlyingDealTokenAddress).to.equal(
           underlyingDealToken.address
         );
         expect(log.args.depositor).to.equal(holder.address);
-        expect(log.args.dealContract).to.equal(aelinDeal.address);
+        expect(log.address).to.equal(aelinDeal.address);
         expect(log.args.underlyingDealTokenAmount).to.equal(excessAmount);
       });
 
@@ -442,7 +455,7 @@ describe("AelinDeal", function () {
           underlyingDealToken.address
         );
         expect(log.args.depositor).to.equal(holder.address);
-        expect(log.args.dealContract).to.equal(aelinDeal.address);
+        expect(log.address).to.equal(aelinDeal.address);
         expect(log.args.underlyingDealTokenAmount).to.equal(excessAmount);
       });
 
@@ -479,7 +492,7 @@ describe("AelinDeal", function () {
           underlyingDealToken.address
         );
         expect(log.args.depositor).to.equal(holder.address);
-        expect(log.args.dealContract).to.equal(aelinDeal.address);
+        expect(log.address).to.equal(aelinDeal.address);
         expect(log.args.underlyingDealTokenAmount).to.equal(remainingBalance);
       });
 

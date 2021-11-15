@@ -403,7 +403,7 @@ describe("AelinPool", function () {
           holder.address,
           holderFundingExpiry
         )
-      ).to.be.revertedWith("30 mins - 30 days for prorata");
+      ).to.be.revertedWith("30 mins - 30 days for open");
 
       await expect(
         aelinPool.connect(sponsor).createDeal(
@@ -417,7 +417,7 @@ describe("AelinPool", function () {
           holder.address,
           holderFundingExpiry
         )
-      ).to.be.revertedWith("30 mins - 30 days for prorata");
+      ).to.be.revertedWith("30 mins - 30 days for open");
     });
 
     it("should fail when the open redemption period is set when the totalSupply equals the deal purchase amount", async function () {
@@ -517,7 +517,7 @@ describe("AelinPool", function () {
       );
       expect(createDealLog.args.dealContract).to.be.properAddress;
       expect(createDealLog.args.sponsor).to.equal(sponsor.address);
-      expect(createDealLog.args.poolAddress).to.equal(aelinPool.address);
+      expect(createDealLog.address).to.equal(aelinPool.address);
 
       expect(dealDetailsLog.args.dealContract).to.be.properAddress;
       expect(dealDetailsLog.args.underlyingDealToken).to.equal(
@@ -628,7 +628,7 @@ describe("AelinPool", function () {
       );
 
       expect(log.args.purchaser).to.equal(user1.address);
-      expect(log.args.poolAddress).to.equal(aelinPool.address);
+      expect(log.address).to.equal(aelinPool.address);
       expect(log.args.purchaseTokenAmount).to.equal(userPurchaseAmt);
     });
 
@@ -701,7 +701,7 @@ describe("AelinPool", function () {
           aelinPool.filters.WithdrawFromPool()
         );
         expect(log.args.purchaser).to.equal(user1.address);
-        expect(log.args.poolAddress).to.equal(aelinPool.address);
+        expect(log.address).to.equal(aelinPool.address);
         expect(log.args.purchaseTokenAmount).to.equal(userPurchaseAmt);
       });
 
@@ -719,7 +719,7 @@ describe("AelinPool", function () {
           aelinPool.filters.WithdrawFromPool()
         );
         expect(log.args.purchaser).to.equal(user1.address);
-        expect(log.args.poolAddress).to.equal(aelinPool.address);
+        expect(log.address).to.equal(aelinPool.address);
         expect(log.args.purchaseTokenAmount).to.equal(withdrawHalfPoolTokens);
       });
 
