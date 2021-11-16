@@ -23,3 +23,6 @@ export const getImpersonatedSigner = async (
 
   return ethers.getSigner(address);
 };
+
+export const mockAelinRewardsAddress =
+  "0xfdbdb06109CD25c7F485221774f5f96148F1e235";

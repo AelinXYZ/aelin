@@ -2,6 +2,7 @@
 pragma solidity 0.8.6;
 
 import "./AelinERC20.sol";
+import "./AelinPool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -57,12 +58,12 @@ contract AelinDeal is AelinERC20 {
         uint256 _openRedemptionPeriod,
         address _holder,
         uint256 _maxDealTotalSupply,
-        uint256 _holderFundingExpiry
+        uint256 _holderFundingDuration
     ) external initOnce {
         _setNameSymbolAndDecimals(
             string(abi.encodePacked("aeDeal-", _name)),
             string(abi.encodePacked("aeD-", _symbol)),
-            18
+            DEAL_TOKEN_DECIMALS
         );
 
         holder = _holder;
@@ -80,9 +81,8 @@ contract AelinDeal is AelinERC20 {
         vestingExpiry = vestingCliff + _vestingPeriod;
         proRataRedemptionPeriod = _proRataRedemptionPeriod;
         openRedemptionPeriod = _openRedemptionPeriod;
-        holderFundingExpiry = _holderFundingExpiry;
+        holderFundingExpiry = _holderFundingDuration;
 
-        calledInitialize = true;
         depositComplete = false;
 
         /**
@@ -96,6 +96,7 @@ contract AelinDeal is AelinERC20 {
 
     modifier initOnce() {
         require(!calledInitialize, "can only initialize once");
+        calledInitialize = true;
         _;
     }
 
@@ -119,8 +120,8 @@ contract AelinDeal is AelinERC20 {
     }
 
     /**
-     * @dev the holder finalizes the deal created by the sponsor by depositing funds
-     * using this method.
+     * @dev the holder finalizes the deal for the pool created by the
+     * sponsor by depositing funds using this method.
      *
      * NOTE if the deposit was completed with a transfer instead of this method
      * the deposit still needs to be finalized by calling this method with
@@ -152,6 +153,7 @@ contract AelinDeal is AelinERC20 {
                 underlyingDealTokenAmount
             );
         }
+        // TODO update the total based on if others withdrew...
         if (
             IERC20(underlyingDealToken).balanceOf(address(this)) >=
             underlyingDealTokenTotal
@@ -181,10 +183,6 @@ contract AelinDeal is AelinERC20 {
     /**
      * @dev the holder can withdraw any amount accidentally deposited over
      * the amount needed to fulfill the deal
-     *
-     * possible TODO - the holder can deposit less if purchasers withdraw
-     * purchase tokens after the deal is created but before the deal is
-     * funded. nice to have but not critical
      *
      * NOTE if the deposit was completed with a transfer instead of this method
      * the deposit still needs to be finalized by calling this method with

@@ -9,7 +9,11 @@ import AelinDealArtifact from "../../artifacts/contracts/AelinDeal.sol/AelinDeal
 import AelinPoolFactoryArtifact from "../../artifacts/contracts/AelinPoolFactory.sol/AelinPoolFactory.json";
 
 import { AelinPool, AelinDeal, AelinPoolFactory, ERC20 } from "../../typechain";
-import { fundUsers, getImpersonatedSigner } from "../helpers";
+import {
+  fundUsers,
+  getImpersonatedSigner,
+  mockAelinRewardsAddress,
+} from "../helpers";
 const nullAddress = "0x0000000000000000000000000000000000000000";
 
 const { deployContract } = waffle;
@@ -172,7 +176,11 @@ describe("integration test", () => {
       const aelinPoolFactory = (await deployContract(
         deployer,
         AelinPoolFactoryArtifact,
-        [aelinPoolLogic.address, aelinDealLogic.address]
+        [
+          aelinPoolLogic.address,
+          aelinDealLogic.address,
+          mockAelinRewardsAddress,
+        ]
       )) as AelinPoolFactory;
 
       await aelinPoolFactory
@@ -596,7 +604,11 @@ describe("integration test", () => {
       const aelinPoolFactory = (await deployContract(
         deployer,
         AelinPoolFactoryArtifact,
-        [aelinPoolLogic.address, aelinDealLogic.address]
+        [
+          aelinPoolLogic.address,
+          aelinDealLogic.address,
+          mockAelinRewardsAddress,
+        ]
       )) as AelinPoolFactory;
 
       await aelinPoolFactory
@@ -968,7 +980,11 @@ describe("integration test", () => {
       const aelinPoolFactory = (await deployContract(
         deployer,
         AelinPoolFactoryArtifact,
-        [aelinPoolLogic.address, aelinDealLogic.address]
+        [
+          aelinPoolLogic.address,
+          aelinDealLogic.address,
+          mockAelinRewardsAddress,
+        ]
       )) as AelinPoolFactory;
 
       await aelinPoolFactory
@@ -1086,7 +1102,11 @@ describe("integration test", () => {
       const aelinPoolFactory = (await deployContract(
         deployer,
         AelinPoolFactoryArtifact,
-        [aelinPoolLogic.address, aelinDealLogic.address]
+        [
+          aelinPoolLogic.address,
+          aelinDealLogic.address,
+          mockAelinRewardsAddress,
+        ]
       )) as AelinPoolFactory;
 
       await aelinPoolFactory

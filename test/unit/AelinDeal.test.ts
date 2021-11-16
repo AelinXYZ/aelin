@@ -412,7 +412,6 @@ describe("AelinDeal", function () {
         const [log] = await aelinDeal.queryFilter(
           aelinDeal.filters.WithdrawUnderlyingDealTokens()
         );
-        console.log("log", log);
         expect(log.args.underlyingDealTokenAddress).to.equal(
           underlyingDealToken.address
         );

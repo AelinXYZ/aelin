@@ -42,12 +42,12 @@ Arguments:
 - `address _purchaseToken` the purchase token used to buy the pool token
 - `uint _duration` the duration of the pool which starts after the purchase expiry period ends. if no deal is created by the end of the duration, the purchaser may withdraw their funds
 - `uint _sponsorFee`- an optional fee from the sponsor set between 0 and 98%
-- `uint _purchaseExpiry` the amount of time a purchaser has to buy a pool token before the sponsor can create the deal
+- `uint _purchaseDuration` the amount of time a purchaser has to buy a pool token before the sponsor can create the deal
 
 Requirements:
 
 - the `_duration` must be <= 1 year (revert)
-- the `_purchaseExpiry` must be >= 30 minutes and <= 30 days (revert)
+- the `_purchaseDuration` must be >= 30 minutes and <= 30 days (revert)
 - the `_sponsorFee` must be between 0% and 98% (revert)
 
 NOTE if SPONSOR never finds a deal this is the end of their journey and the PURCHASER can retrieve their purchase tokens at the end of the `_duration`
@@ -68,7 +68,7 @@ Arguments:
 - `uint _vestingPeriod` the total amount of time to fully vest starting at the end of the vesting cliff (vesting is linear for v1)
 - `uint _vestingCliff` the initial deal token holding period where no vesting occurs
 - `address _holder` the entity or individual with whom the sponsor agrees to a deal
-- `uint _holderFundingExpiry` the amount of time a holder has to fund the deal before the proposed deal expires
+- `uint _holderFundingDuration` the amount of time a holder has to fund the deal before the proposed deal expires
 
 > NOTE please be sure to understand how the 2 redemption periods work outlined below:
 
@@ -78,7 +78,7 @@ Arguments:
 Requirements:
 
 - the `block.timestamp >= purchaseExpiry` (revert)
-- the `_holderFundingExpiry` must be >= 30 minutes and <= 30 days (revert)
+- the `_holderFundingDuration` must be >= 30 minutes and <= 30 days (revert)
 - the `_proRataRedemptionPeriod` must be >= 30 minutes and <= 30 days (revert)
 - the `_openRataRedemptionPeriod` must be >= 30 minutes and <= 30 days, If the proRataConversion rate is not 1:1, otherwise it must be 0 (revert)
 - the `_purchaseTokenTotalForDeal` converted to 18 decimals must be <= totalSupply of pool tokens (revert)

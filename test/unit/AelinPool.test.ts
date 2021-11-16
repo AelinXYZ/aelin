@@ -7,7 +7,11 @@ import ERC20Artifact from "../../artifacts/@openzeppelin/contracts/token/ERC20/E
 import AelinDealArtifact from "../../artifacts/contracts/AelinDeal.sol/AelinDeal.json";
 import AelinPoolArtifact from "../../artifacts/contracts/AelinPool.sol/AelinPool.json";
 import { AelinPool, AelinDeal, ERC20 } from "../../typechain";
-import { fundUsers, getImpersonatedSigner } from "../helpers";
+import {
+  fundUsers,
+  getImpersonatedSigner,
+  mockAelinRewardsAddress,
+} from "../helpers";
 
 const { deployContract, deployMockContract } = waffle;
 
@@ -28,7 +32,7 @@ describe("AelinPool", function () {
   let underlyingDealToken: MockContract;
   const purchaseTokenDecimals = 6;
   const underlyingDealTokenDecimals = 8;
-  const mockAelinRewardsAddress = "0xfdbdb06109CD25c7F485221774f5f96148F1e235";
+
   const purchaseTokenAddress = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
   const purchaseTokenWhaleAddress =
     "0x47ac0fb4f2d84898e4d9e7b4dab3c24507a6d503";
@@ -538,7 +542,7 @@ describe("AelinPool", function () {
         openRedemptionPeriod
       );
       expect(dealDetailsLog.args.holder).to.equal(holder.address);
-      expect(dealDetailsLog.args.holderFundingExpiry).to.equal(
+      expect(dealDetailsLog.args.holderFundingDuration).to.equal(
         holderFundingExpiry
       );
 

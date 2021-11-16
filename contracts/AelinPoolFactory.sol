@@ -8,19 +8,21 @@ import "./AelinPool.sol";
  * @dev the factory contract allows an Aelin sponsor to permissionlessly create new pools
  */
 contract AelinPoolFactory is MinimalProxyFactory {
-    /**
-     * TODO update with the correct multi-sig address
-     * NOTE a pool factory v2 will be deployed when the staking rewards contract is live
-     */
-    address constant AELIN_REWARDS = 0x5A0b54D5dc17e0AadC383d2db43B0a0D3E029c4c;
+    address public immutable AELIN_REWARDS;
     address public immutable AELIN_POOL_LOGIC;
     address public immutable AELIN_DEAL_LOGIC;
 
-    constructor(address _aelinPoolLogic, address _aelinDealLogic) {
+    constructor(
+        address _aelinPoolLogic,
+        address _aelinDealLogic,
+        address _aelinRewards
+    ) {
         require(_aelinPoolLogic != address(0), "cant pass null pool address");
         require(_aelinDealLogic != address(0), "cant pass null deal address");
+        require(_aelinRewards != address(0), "cant pass null rewards address");
         AELIN_POOL_LOGIC = _aelinPoolLogic;
         AELIN_DEAL_LOGIC = _aelinDealLogic;
+        AELIN_REWARDS = _aelinRewards;
     }
 
     /**
@@ -33,8 +35,9 @@ contract AelinPoolFactory is MinimalProxyFactory {
         address _purchaseToken,
         uint256 _duration,
         uint256 _sponsorFee,
-        uint256 _purchaseExpiry
+        uint256 _purchaseDuration
     ) external returns (address) {
+        require(_purchaseToken != address(0), "cant pass null token address");
         AelinPool aelin_pool = AelinPool(
             _cloneAsMinimalProxy(AELIN_POOL_LOGIC, "Could not create new deal")
         );
@@ -46,7 +49,7 @@ contract AelinPoolFactory is MinimalProxyFactory {
             _duration,
             _sponsorFee,
             msg.sender,
-            _purchaseExpiry,
+            _purchaseDuration,
             AELIN_DEAL_LOGIC,
             AELIN_REWARDS
         );
@@ -61,7 +64,7 @@ contract AelinPoolFactory is MinimalProxyFactory {
             _duration,
             _sponsorFee,
             msg.sender,
-            _purchaseExpiry
+            _purchaseDuration
         );
 
         return aelin_pool_address;
@@ -76,6 +79,6 @@ contract AelinPoolFactory is MinimalProxyFactory {
         uint256 duration,
         uint256 sponsorFee,
         address indexed sponsor,
-        uint256 purchaseExpiry
+        uint256 purchaseDuration
     );
 }

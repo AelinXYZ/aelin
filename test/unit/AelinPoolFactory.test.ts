@@ -7,6 +7,7 @@ import AelinDealArtifact from "../../artifacts/contracts/AelinDeal.sol/AelinDeal
 import AelinPoolArtifact from "../../artifacts/contracts/AelinPool.sol/AelinPool.json";
 import AelinPoolFactoryArtifact from "../../artifacts/contracts/AelinPoolFactory.sol/AelinPoolFactory.json";
 import { AelinPoolFactory } from "../../typechain";
+import { mockAelinRewardsAddress } from "../helpers";
 
 const { deployContract, deployMockContract } = waffle;
 
@@ -31,7 +32,7 @@ describe("AelinPoolFactory", function () {
     const aelinPoolFactory = (await deployContract(
       signers[0],
       AelinPoolFactoryArtifact,
-      [aelinPoolLogic.address, aelinDealLogic.address]
+      [aelinPoolLogic.address, aelinDealLogic.address, mockAelinRewardsAddress]
     )) as AelinPoolFactory;
     const sponsor = signers[1];
     const name = "Test token";
@@ -67,6 +68,6 @@ describe("AelinPoolFactory", function () {
     expect(log.args.duration).to.equal(duration);
     expect(log.args.sponsorFee).to.equal(sponsorFee);
     expect(log.args.sponsor).to.equal(sponsor.address);
-    expect(log.args.purchaseExpiry).to.equal(purchaseExpiry);
+    expect(log.args.purchaseDuration).to.equal(purchaseExpiry);
   });
 });

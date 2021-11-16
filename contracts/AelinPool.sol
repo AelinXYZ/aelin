@@ -63,19 +63,23 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint256 _duration,
         uint256 _sponsorFee,
         address _sponsor,
-        uint256 _purchaseExpiry,
+        uint256 _purchaseDuration,
         address _aelinDealLogicAddress,
         address _aelinRewardsAddress
     ) external initOnce {
         require(
-            30 minutes <= _purchaseExpiry && 30 days >= _purchaseExpiry,
+            30 minutes <= _purchaseDuration && 30 days >= _purchaseDuration,
             "outside purchase expiry window"
         );
         require(365 days >= _duration, "max 1 year duration");
         require(_sponsorFee <= MAX_SPONSOR_FEE, "exceeds max sponsor fee");
+        purchaseTokenDecimals = IERC20Decimals(_purchaseToken).decimals();
+        require(
+            purchaseTokenDecimals <= DEAL_TOKEN_DECIMALS,
+            "too many token decimals"
+        );
         storedName = _name;
         storedSymbol = _symbol;
-        purchaseTokenDecimals = IERC20Decimals(_purchaseToken).decimals();
 
         _setNameSymbolAndDecimals(
             string(abi.encodePacked("aePool-", _name)),
@@ -85,7 +89,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
         purchaseTokenCap = _purchaseTokenCap;
         purchaseToken = _purchaseToken;
-        purchaseExpiry = block.timestamp + _purchaseExpiry;
+        purchaseExpiry = block.timestamp + _purchaseDuration;
         poolExpiry = purchaseExpiry + _duration;
         sponsorFee = _sponsorFee;
         sponsor = _sponsor;
@@ -162,8 +166,13 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint256 _proRataRedemptionPeriod,
         uint256 _openRedemptionPeriod,
         address _holder,
-        uint256 _holderFundingExpiry
+        uint256 _holderFundingDuration
     ) external onlySponsor dealReady returns (address) {
+        require(_holder != address(0), "cant pass null holder address");
+        require(
+            _underlyingDealToken != address(0),
+            "cant pass null token address"
+        );
         require(
             block.timestamp >= purchaseExpiry,
             "pool still in purchase mode"
@@ -176,8 +185,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         require(1825 days >= _vestingCliff, "max 5 year cliff");
         require(1825 days >= _vestingPeriod, "max 5 year vesting");
         require(
-            30 minutes <= _holderFundingExpiry &&
-                30 days >= _holderFundingExpiry,
+            30 minutes <= _holderFundingDuration &&
+                30 days >= _holderFundingDuration,
             "30 mins - 30 days for holder"
         );
         require(
@@ -200,7 +209,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
         poolExpiry = block.timestamp;
         holder = _holder;
-        holderFundingExpiry = block.timestamp + _holderFundingExpiry;
+        holderFundingExpiry = block.timestamp + _holderFundingDuration;
         purchaseTokenTotalForDeal = _purchaseTokenTotalForDeal;
         uint256 maxDealTotalSupply = convertPoolToDeal(
             _purchaseTokenTotalForDeal,
@@ -245,7 +254,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             _proRataRedemptionPeriod,
             _openRedemptionPeriod,
             _holder,
-            _holderFundingExpiry
+            _holderFundingDuration
         );
 
         return aelinDealStorageProxy;
@@ -269,6 +278,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         _acceptDealTokens(msg.sender, poolTokenAmount, false);
     }
 
+    /**
+     * @dev the if statement says if you have no balance or if the deal is not funded
+     * or if the pro rata period is not active, then you have 0 available for this period
+     */
     function maxProRataAvail(address purchaser) public view returns (uint256) {
         if (
             balanceOf(purchaser) == 0 ||
@@ -327,7 +340,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint256 acceptAmount = useMax ? maxProRata : poolTokenAmount;
         amountAccepted[recipient] += acceptAmount;
         totalAmountAccepted += acceptAmount;
-        acceptDealLogic(recipient, acceptAmount);
+        mintDealTokens(recipient, acceptAmount);
         if (proRataConversion != 1e18 && maxProRataAvail(recipient) == 0) {
             openPeriodEligible[recipient] = true;
         }
@@ -347,10 +360,14 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         if (!useMax) {
             require(acceptAmount <= maxOpen, "accepting more than share");
         }
-        acceptDealLogic(recipient, acceptAmount);
+        mintDealTokens(recipient, acceptAmount);
     }
 
-    function acceptDealLogic(address recipient, uint256 poolTokenAmount)
+    /**
+     * @dev the holder will receive less purchase tokens than the amount
+     * transferred if the purchase token burns or takes a fee during transfer
+     */
+    function mintDealTokens(address recipient, uint256 poolTokenAmount)
         internal
     {
         AelinDeal aelinDeal = AelinDeal(aelinDealStorageProxy);
@@ -436,10 +453,15 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     }
 
     /**
-     * @dev view to see how much of the deal a purchaser can accept
+     * @dev view to see how much of the deal a purchaser can accept.
      */
     function maxDealAccept(address purchaser) external view returns (uint256) {
         AelinDeal aelinDeal = AelinDeal(aelinDealStorageProxy);
+        /**
+         * The if statement is checking to see if the holder has not funded the deal
+         * or if the period is outside of a redemption window so nothing is available.
+         * It then checks if you are in the pro rata period and open period eligibility
+         */
         if (
             holderFundingExpiry == 0 ||
             aelinDeal.proRataRedemptionStart() == 0 ||
@@ -531,6 +553,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint256 proRataRedemptionPeriod,
         uint256 openRedemptionPeriod,
         address indexed holder,
-        uint256 holderFundingExpiry
+        uint256 holderFundingDuration
     );
 }

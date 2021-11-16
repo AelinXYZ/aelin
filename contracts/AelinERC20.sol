@@ -21,6 +21,7 @@ contract AelinERC20 is ERC20 {
     string private _custom_symbol;
     uint8 private _custom_decimals;
     bool private locked;
+    uint8 constant DEAL_TOKEN_DECIMALS = 18;
 
     constructor() ERC20("", "") {}
 
