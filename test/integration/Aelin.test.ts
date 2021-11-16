@@ -340,7 +340,6 @@ describe("integration test", () => {
       await ethers.provider.send("evm_increaseTime", [holderFundingExpiry + 1]);
       await ethers.provider.send("evm_mine", []);
 
-      // withdraws the half they deposited before the deadline
       await aelinDealProxyStorage.connect(aaveWhaleTwo).withdraw();
 
       // checks updated deal underlying balance is 0
@@ -374,6 +373,25 @@ describe("integration test", () => {
         createDealTwoLog.args.dealContract
       )) as AelinDeal;
 
+      await aaveContract
+        .connect(aaveWhaleOne)
+        .approve(
+          aelinDealProxyStorage.address,
+          underlyingDealTokenTotal.add(1)
+        );
+
+      await aelinDealProxyStorage
+        .connect(aaveWhaleOne)
+        .depositUnderlying(underlyingDealTokenTotal.add(1));
+
+      // checks deal underlying balance
+      expect(
+        await aaveContract.balanceOf(aelinDealProxyStorage.address)
+      ).to.equal(underlyingDealTokenTotal.add(1));
+
+      // withdraws the extra 1
+      await aelinDealProxyStorage.connect(aaveWhaleOne).withdraw();
+
       // user 3 withdraws 500 from the pool leaving 2000 remaining
       await aelinPoolProxyStorage
         .connect(user3)
@@ -395,25 +413,6 @@ describe("integration test", () => {
       expect(await usdcContract.balanceOf(user3.address)).to.equal(
         fundUSDCAmount
       );
-
-      await aaveContract
-        .connect(aaveWhaleOne)
-        .approve(
-          aelinDealProxyStorage.address,
-          underlyingDealTokenTotal.add(1)
-        );
-
-      await aelinDealProxyStorage
-        .connect(aaveWhaleOne)
-        .depositUnderlying(underlyingDealTokenTotal.add(1));
-
-      // checks deal underlying balance
-      expect(
-        await aaveContract.balanceOf(aelinDealProxyStorage.address)
-      ).to.equal(underlyingDealTokenTotal.add(1));
-
-      // withdraws the extra 1
-      await aelinDealProxyStorage.connect(aaveWhaleOne).withdraw();
 
       // checks updated deal underlying balance
       expect(
@@ -742,28 +741,6 @@ describe("integration test", () => {
         createDealLog.args.dealContract
       )) as AelinDeal;
 
-      // user 8 withdraws 50000 from the pool leaving 50000 remaining
-      await aelinPoolProxyStorage
-        .connect(user8)
-        .withdrawFromPool(ethers.utils.parseUnits("50000", usdcDecimals));
-      // checks pool balance
-      expect(await aelinPoolProxyStorage.balanceOf(user8.address)).to.equal(
-        uncappedPurchaseAmount.div(2)
-      );
-      // checks USDC balance
-      expect(await usdcContract.balanceOf(user8.address)).to.equal(
-        fundUSDCAmount.div(2)
-      );
-
-      // user 3 then withdraws the remainder of their funds
-      await aelinPoolProxyStorage.connect(user8).withdrawMaxFromPool();
-      // checks pool balance is 0
-      expect(await aelinPoolProxyStorage.balanceOf(user8.address)).to.equal(0);
-      // checks all USDC has been refunded
-      expect(await usdcContract.balanceOf(user8.address)).to.equal(
-        fundUSDCAmount
-      );
-
       await aaveContract
         .connect(aaveWhaleTwo)
         .approve(
@@ -787,6 +764,28 @@ describe("integration test", () => {
       expect(
         await aaveContract.balanceOf(aelinDealProxyStorage.address)
       ).to.equal(underlyingDealTokenUncappedTotal);
+
+      // user 8 withdraws 50000 from the pool leaving 50000 remaining
+      await aelinPoolProxyStorage
+        .connect(user8)
+        .withdrawFromPool(ethers.utils.parseUnits("50000", usdcDecimals));
+      // checks pool balance
+      expect(await aelinPoolProxyStorage.balanceOf(user8.address)).to.equal(
+        uncappedPurchaseAmount.div(2)
+      );
+      // checks USDC balance
+      expect(await usdcContract.balanceOf(user8.address)).to.equal(
+        fundUSDCAmount.div(2)
+      );
+
+      // user 3 then withdraws the remainder of their funds
+      await aelinPoolProxyStorage.connect(user8).withdrawMaxFromPool();
+      // checks pool balance is 0
+      expect(await aelinPoolProxyStorage.balanceOf(user8.address)).to.equal(0);
+      // checks all USDC has been refunded
+      expect(await usdcContract.balanceOf(user8.address)).to.equal(
+        fundUSDCAmount
+      );
 
       expect(await usdcContract.balanceOf(aaveWhaleTwo.address)).to.equal(0);
       expect(await aelinDealProxyStorage.balanceOf(user6.address)).to.equal(0);
