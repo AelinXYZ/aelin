@@ -5,6 +5,7 @@ import "./AelinERC20.sol";
 import "./AelinPool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "hardhat/console.sol";
 
 contract AelinDeal is AelinERC20 {
     using SafeERC20 for IERC20;
@@ -17,6 +18,7 @@ contract AelinDeal is AelinERC20 {
     address public futureHolder;
 
     uint256 public underlyingPerDealExchangeRate;
+    uint256 public amountWithdrawnPreDeposit;
 
     address public aelinPool;
     uint256 public vestingCliff;
@@ -119,6 +121,13 @@ contract AelinDeal is AelinERC20 {
         emit SetHolder(futureHolder);
     }
 
+    function depositAmount() public view returns (uint256) {
+        return
+            underlyingDealTokenTotal -
+            ((amountWithdrawnPreDeposit * underlyingPerDealExchangeRate) /
+                1e18);
+    }
+
     /**
      * @dev the holder finalizes the deal for the pool created by the
      * sponsor by depositing funds using this method.
@@ -153,10 +162,10 @@ contract AelinDeal is AelinERC20 {
                 underlyingDealTokenAmount
             );
         }
-        // TODO update the total based on if others withdrew...
+
         if (
             IERC20(underlyingDealToken).balanceOf(address(this)) >=
-            underlyingDealTokenTotal
+            depositAmount()
         ) {
             depositComplete = true;
             proRataRedemptionStart = block.timestamp;
@@ -314,6 +323,11 @@ contract AelinDeal is AelinERC20 {
     function mint(address dst, uint256 dealTokenAmount) external onlyPool {
         require(depositComplete, "deposit not complete");
         _mint(dst, dealTokenAmount);
+    }
+
+    function withdrawPreDeposit(uint256 amount) external onlyPool {
+        require(!depositComplete, "deposit complete");
+        amountWithdrawnPreDeposit += amount;
     }
 
     /**

@@ -434,7 +434,6 @@ describe("integration test", () => {
       await aelinPoolProxyStorage.connect(user1).acceptMaxDealTokens();
 
       // checks holder USDC balance
-      // TODO it wont equal purchase amount it will be the max pro rata avail for the user :)
       expect(await usdcContract.balanceOf(aaveWhaleOne.address)).to.equal(
         user1ProRataAvail
       );

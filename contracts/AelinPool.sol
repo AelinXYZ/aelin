@@ -447,6 +447,18 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     function _withdraw(uint256 purchaseTokenAmount) internal {
         require(block.timestamp >= poolExpiry, "not yet withdraw period");
+        if (
+            holderFundingExpiry > 0 &&
+            !AelinDeal(aelinDealStorageProxy).depositComplete()
+        ) {
+            uint256 purchaseTokenDealFormatted = convertPoolToDeal(
+                purchaseTokenAmount,
+                purchaseTokenDecimals
+            );
+            AelinDeal(aelinDealStorageProxy).withdrawPreDeposit(
+                purchaseTokenDealFormatted
+            );
+        }
         _burn(msg.sender, purchaseTokenAmount);
         IERC20(purchaseToken).safeTransfer(msg.sender, purchaseTokenAmount);
         emit WithdrawFromPool(msg.sender, purchaseTokenAmount);
