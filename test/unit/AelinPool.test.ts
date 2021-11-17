@@ -11,6 +11,7 @@ import {
   fundUsers,
   getImpersonatedSigner,
   mockAelinRewardsAddress,
+  nullAddress,
 } from "../helpers";
 
 const { deployContract, deployMockContract } = waffle;
@@ -301,6 +302,40 @@ describe("AelinPool", function () {
           holderFundingExpiry
         )
       ).to.be.revertedWith("30 mins - 30 days for prorata");
+    });
+
+    it("should revert if null addresses are passing in for the holder or underlying token", async function () {
+      await successfullyInitializePool();
+      await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await expect(
+        aelinPool.createDeal(
+          underlyingDealToken.address,
+          purchaseTokenTotalForDeal,
+          underlyingDealTokenTotal,
+          vestingPeriod,
+          vestingCliff,
+          30 * 24 * 60 * 60 + 1, // 1 second more than 30 days
+          openRedemptionPeriod,
+          nullAddress,
+          holderFundingExpiry
+        )
+      ).to.be.revertedWith("cant pass null holder address");
+
+      await expect(
+        aelinPool.createDeal(
+          nullAddress,
+          purchaseTokenTotalForDeal,
+          underlyingDealTokenTotal,
+          vestingPeriod,
+          vestingCliff,
+          30 * 24 * 60 * 60 + 1, // 1 second more than 30 days
+          openRedemptionPeriod,
+          holder.address,
+          holderFundingExpiry
+        )
+      ).to.be.revertedWith("cant pass null token address");
     });
 
     it("should revert if vesting cliff is too long", async function () {

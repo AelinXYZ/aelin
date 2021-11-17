@@ -26,3 +26,5 @@ export const getImpersonatedSigner = async (
 
 export const mockAelinRewardsAddress =
   "0xfdbdb06109CD25c7F485221774f5f96148F1e235";
+
+export const nullAddress = "0x0000000000000000000000000000000000000000";

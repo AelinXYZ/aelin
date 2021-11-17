@@ -6,7 +6,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import ERC20Artifact from "../../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json";
 import AelinDealArtifact from "../../artifacts/contracts/AelinDeal.sol/AelinDeal.json";
 import { AelinDeal, ERC20 } from "../../typechain";
-import { fundUsers, getImpersonatedSigner } from "../helpers";
+import { fundUsers, getImpersonatedSigner, nullAddress } from "../helpers";
 
 const { deployContract, deployMockContract } = waffle;
 
@@ -68,7 +68,6 @@ describe("AelinDeal", function () {
   ).toString();
 
   const holderFundingExpiryBase = 30 * 60 + 1; // 30min and 1sec
-  const nullAddress = "0x0000000000000000000000000000000000000000";
   const mintAmountBase = 2;
   const mintAmount = ethers.utils.parseUnits(
     mintAmountBase.toString(),

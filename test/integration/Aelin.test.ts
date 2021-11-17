@@ -13,8 +13,8 @@ import {
   fundUsers,
   getImpersonatedSigner,
   mockAelinRewardsAddress,
+  nullAddress,
 } from "../helpers";
-const nullAddress = "0x0000000000000000000000000000000000000000";
 
 const { deployContract } = waffle;
 
