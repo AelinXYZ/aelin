@@ -456,7 +456,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             require(
                 block.timestamp > holderFundingExpiry ||
                     AelinDeal(aelinDealStorageProxy).depositComplete(),
-                "withdraw after deposit period"
+                "cant withdraw in funding period"
             );
         }
         _burn(msg.sender, purchaseTokenAmount);

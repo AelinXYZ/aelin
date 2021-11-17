@@ -160,6 +160,28 @@ describe("AelinPool", function () {
       ).to.be.revertedWith("max 1 year duration");
     });
 
+    it("should revert if purchase token is more than 18 decimals due to conversion issues", async function () {
+      const mockTokenTooManyDecimals = await deployMockContract(
+        holder,
+        ERC20Artifact.abi
+      );
+      await mockTokenTooManyDecimals.mock.decimals.returns(19);
+      await expect(
+        aelinPool.initialize(
+          name,
+          symbol,
+          purchaseTokenCap,
+          mockTokenTooManyDecimals.address,
+          365 * 24 * 60 * 60 - 100,
+          sponsorFee,
+          sponsor.address,
+          purchaseExpiry,
+          aelinDealLogic.address,
+          mockAelinRewardsAddress
+        )
+      ).to.be.revertedWith("too many token decimals");
+    });
+
     it("should revert if purchase expiry is less than 30 min", async function () {
       await expect(
         aelinPool.initialize(
@@ -777,6 +799,16 @@ describe("AelinPool", function () {
         await expect(
           aelinPool.connect(user1).withdrawMaxFromPool()
         ).to.be.revertedWith("not yet withdraw period");
+      });
+
+      it("should not allow a purchaser to withdraw in the funding period", async function () {
+        await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
+        await ethers.provider.send("evm_mine", []);
+
+        await createDealWithValidParams();
+        await expect(
+          aelinPool.connect(user1).withdrawMaxFromPool()
+        ).to.be.revertedWith("cant withdraw in funding period");
       });
     });
   });
