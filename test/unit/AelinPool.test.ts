@@ -59,7 +59,7 @@ describe("AelinPool", function () {
   const allowListAmounts = [
     purchaseTokenCap,
     purchaseTokenCap.div(2),
-    purchaseTokenCap.div(4),
+    ethers.constants.MaxInt256,
   ];
 
   before(async () => {
@@ -759,12 +759,15 @@ describe("AelinPool", function () {
     });
     it("should allow a purchaser on the allow list to enter the pool", async function () {
       await successfullyInitializePool({ useAllowList: true });
+      // nonsponsor has max capacity to invest in the uncapped pool
       await purchaseToken
         .connect(nonsponsor)
         .approve(aelinPool.address, allowListAmounts[2]);
-      await aelinPool
-        .connect(nonsponsor)
-        .purchasePoolTokens(allowListAmounts[2]);
+      const totalBalance = await purchaseToken.balanceOf(nonsponsor.address);
+      const amount = totalBalance.gt(purchaseTokenCap)
+        ? purchaseTokenCap
+        : totalBalance;
+      await aelinPool.connect(nonsponsor).purchasePoolTokens(amount);
 
       const [log] = await aelinPool.queryFilter(
         aelinPool.filters.PurchasePoolToken()
@@ -772,7 +775,7 @@ describe("AelinPool", function () {
 
       expect(log.args.purchaser).to.equal(nonsponsor.address);
       expect(log.address).to.equal(aelinPool.address);
-      expect(log.args.purchaseTokenAmount).to.equal(allowListAmounts[2]);
+      expect(log.args.purchaseTokenAmount).to.equal(amount);
     });
   });
 

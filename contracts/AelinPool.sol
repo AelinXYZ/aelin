@@ -19,7 +19,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     uint256 public sponsorFee;
     address public sponsor;
-    address public poolFactory;
     address public futureSponsor;
 
     uint256 public purchaseExpiry;
@@ -85,7 +84,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         );
         storedName = _name;
         storedSymbol = _symbol;
-        poolFactory = msg.sender;
 
         _setNameSymbolAndDecimals(
             string(abi.encodePacked("aePool-", _name)),
