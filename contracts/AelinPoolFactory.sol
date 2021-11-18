@@ -35,7 +35,9 @@ contract AelinPoolFactory is MinimalProxyFactory {
         address _purchaseToken,
         uint256 _duration,
         uint256 _sponsorFee,
-        uint256 _purchaseDuration
+        uint256 _purchaseDuration,
+        address[] memory _allowList,
+        uint256[] memory _allowListAmounts
     ) external returns (address) {
         require(_purchaseToken != address(0), "cant pass null token address");
         AelinPool aelin_pool = AelinPool(
@@ -51,7 +53,9 @@ contract AelinPoolFactory is MinimalProxyFactory {
             msg.sender,
             _purchaseDuration,
             AELIN_DEAL_LOGIC,
-            AELIN_REWARDS
+            AELIN_REWARDS,
+            _allowList,
+            _allowListAmounts
         );
 
         address aelin_pool_address = address(aelin_pool);
@@ -64,7 +68,8 @@ contract AelinPoolFactory is MinimalProxyFactory {
             _duration,
             _sponsorFee,
             msg.sender,
-            _purchaseDuration
+            _purchaseDuration,
+            _allowList.length > 0
         );
 
         return aelin_pool_address;
@@ -79,6 +84,7 @@ contract AelinPoolFactory is MinimalProxyFactory {
         uint256 duration,
         uint256 sponsorFee,
         address indexed sponsor,
-        uint256 purchaseDuration
+        uint256 purchaseDuration,
+        bool hasAllowList
     );
 }

@@ -36,6 +36,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     mapping(address => uint256) public amountAccepted;
     mapping(address => bool) public openPeriodEligible;
+    mapping(address => uint256) public allowList;
+    bool hasAllowList;
 
     string private storedName;
     string private storedSymbol;
@@ -65,7 +67,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         address _sponsor,
         uint256 _purchaseDuration,
         address _aelinDealLogicAddress,
-        address _aelinRewardsAddress
+        address _aelinRewardsAddress,
+        address[] memory _allowList,
+        uint256[] memory _allowListAmounts
     ) external initOnce {
         require(
             30 minutes <= _purchaseDuration && 30 days >= _purchaseDuration,
@@ -95,7 +99,25 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         sponsor = _sponsor;
         aelinDealLogicAddress = _aelinDealLogicAddress;
         aelinRewardsAddress = _aelinRewardsAddress;
+        if (_allowList.length > 0) {
+            hasAllowList = true;
+            addToAllowList(_allowList, _allowListAmounts);
+        }
         emit SetSponsor(_sponsor);
+    }
+
+    function addToAllowList(
+        address[] memory _allowList,
+        uint256[] memory _allowListAmounts
+    ) public onlySponsor {
+        require(hasAllowList, "must be allowList pool");
+        require(
+            _allowList.length == _allowListAmounts.length,
+            "allowList array length issue"
+        );
+        for (uint256 i = 0; i < _allowList.length; i++) {
+            allowList[_allowList[i]] = _allowListAmounts[i];
+        }
     }
 
     modifier dealReady() {
@@ -404,6 +426,13 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
      * - the cap has not been exceeded
      */
     function purchasePoolTokens(uint256 _purchaseTokenAmount) external lock {
+        if (hasAllowList) {
+            require(
+                _purchaseTokenAmount <= allowList[msg.sender],
+                "more than allocation"
+            );
+            allowList[msg.sender] -= _purchaseTokenAmount;
+        }
         require(block.timestamp < purchaseExpiry, "not in purchase window");
         uint256 currentBalance = IERC20(purchaseToken).balanceOf(address(this));
         IERC20(purchaseToken).safeTransferFrom(

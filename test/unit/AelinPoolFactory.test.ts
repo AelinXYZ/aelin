@@ -59,7 +59,9 @@ describe("AelinPoolFactory", function () {
         purchaseToken.address,
         duration,
         sponsorFee,
-        purchaseExpiry
+        purchaseExpiry,
+        [],
+        []
       );
 
     expect(result.value).to.equal(0);
