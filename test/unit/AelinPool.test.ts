@@ -55,6 +55,12 @@ describe("AelinPool", function () {
     purchaseTokenCapBase.toString(),
     purchaseTokenDecimals
   );
+  const allowList: string[] = [];
+  const allowListAmounts = [
+    ethers.utils.parseEther("1"),
+    ethers.utils.parseEther("2"),
+    ethers.utils.parseEther("3"),
+  ];
 
   before(async () => {
     [deployer, sponsor, holder, nonsponsor, user1] = await ethers.getSigners();
@@ -66,6 +72,9 @@ describe("AelinPool", function () {
       deployer,
       AelinDealArtifact
     )) as AelinDeal;
+    allowList[0] = deployer.address;
+    allowList[1] = holder.address;
+    allowList[2] = nonsponsor.address;
 
     purchaseTokenWhaleSigner = await getImpersonatedSigner(
       purchaseTokenWhaleAddress
@@ -97,7 +106,7 @@ describe("AelinPool", function () {
   const aelinPoolName = `aePool-${name}`;
   const aelinPoolSymbol = `aeP-${symbol}`;
 
-  const successfullyInitializePool = async () => {
+  const successfullyInitializePool = async ({ useAllowList = false }) => {
     await purchaseToken
       .connect(user1)
       .approve(aelinPool.address, userPurchaseAmt);
@@ -112,7 +121,9 @@ describe("AelinPool", function () {
       sponsor.address,
       purchaseExpiry,
       aelinDealLogic.address,
-      mockAelinRewardsAddress
+      mockAelinRewardsAddress,
+      useAllowList ? allowList : [],
+      useAllowList ? allowListAmounts : []
     );
   };
 
@@ -155,7 +166,9 @@ describe("AelinPool", function () {
           sponsor.address,
           purchaseExpiry,
           aelinDealLogic.address,
-          mockAelinRewardsAddress
+          mockAelinRewardsAddress,
+          [],
+          []
         )
       ).to.be.revertedWith("max 1 year duration");
     });
@@ -177,7 +190,9 @@ describe("AelinPool", function () {
           sponsor.address,
           purchaseExpiry,
           aelinDealLogic.address,
-          mockAelinRewardsAddress
+          mockAelinRewardsAddress,
+          [],
+          []
         )
       ).to.be.revertedWith("too many token decimals");
     });
@@ -194,7 +209,9 @@ describe("AelinPool", function () {
           sponsor.address,
           30 * 60 - 1, // 1 second less than 30min,
           aelinDealLogic.address,
-          mockAelinRewardsAddress
+          mockAelinRewardsAddress,
+          [],
+          []
         )
       ).to.be.revertedWith("outside purchase expiry window");
     });
@@ -211,7 +228,9 @@ describe("AelinPool", function () {
           sponsor.address,
           30 * 24 * 60 * 60 + 1, // 1 second more than 30 days
           aelinDealLogic.address,
-          mockAelinRewardsAddress
+          mockAelinRewardsAddress,
+          [],
+          []
         )
       ).to.be.revertedWith("outside purchase expiry window");
     });
@@ -228,16 +247,19 @@ describe("AelinPool", function () {
           sponsor.address,
           purchaseExpiry,
           aelinDealLogic.address,
-          mockAelinRewardsAddress
+          mockAelinRewardsAddress,
+          [],
+          []
         )
       ).to.be.revertedWith("exceeds max sponsor fee");
     });
 
     it("should successfully initialize", async function () {
-      const tx = await successfullyInitializePool();
+      const tx = await successfullyInitializePool({});
 
       expect(await aelinPool.name()).to.equal(aelinPoolName);
       expect(await aelinPool.symbol()).to.equal(aelinPoolSymbol);
+      expect(await aelinPool.hasAllowList()).to.equal(false);
       expect(await aelinPool.purchaseTokenCap()).to.equal(purchaseTokenCap);
       const returnAddress = await aelinPool.purchaseToken();
       expect(returnAddress.toLowerCase()).to.equal(
@@ -260,9 +282,59 @@ describe("AelinPool", function () {
       expect(log.args.sponsor).to.equal(sponsor.address);
     });
 
+    it("should successfully initialize with an allow list", async function () {
+      const tx = await successfullyInitializePool({ useAllowList: true });
+
+      expect(await aelinPool.name()).to.equal(aelinPoolName);
+      expect(await aelinPool.symbol()).to.equal(aelinPoolSymbol);
+      expect(await aelinPool.purchaseTokenCap()).to.equal(purchaseTokenCap);
+      expect(await aelinPool.hasAllowList()).to.equal(true);
+      expect(await aelinPool.allowList(allowList[0])).to.equal(
+        allowListAmounts[0]
+      );
+      const returnAddress = await aelinPool.purchaseToken();
+      expect(returnAddress.toLowerCase()).to.equal(
+        purchaseToken.address.toLowerCase()
+      );
+      expect(await aelinPool.purchaseTokenDecimals()).to.equal(
+        purchaseTokenDecimals
+      );
+      expect(await aelinPool.sponsorFee()).to.equal(sponsorFee);
+      expect(await aelinPool.sponsor()).to.equal(sponsor.address);
+
+      const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
+      const expectedPoolExpiry = timestamp + purchaseExpiry + duration;
+      expect(await aelinPool.poolExpiry()).to.equal(expectedPoolExpiry);
+
+      const expectedPurchaseExpiry = timestamp + purchaseExpiry;
+      expect(await aelinPool.purchaseExpiry()).to.equal(expectedPurchaseExpiry);
+
+      const [log] = await aelinPool.queryFilter(aelinPool.filters.SetSponsor());
+      expect(log.args.sponsor).to.equal(sponsor.address);
+    });
+
+    it("Should error with an allow list and amounts of mismatching length", async function () {
+      await expect(
+        aelinPool.initialize(
+          name,
+          symbol,
+          purchaseTokenCap,
+          purchaseToken.address,
+          duration,
+          sponsorFee,
+          sponsor.address,
+          purchaseExpiry,
+          aelinDealLogic.address,
+          mockAelinRewardsAddress,
+          [...allowList, "0x0Ce6a5fF5217e38315f87032CF90686C96627CAA"],
+          allowListAmounts
+        )
+      ).to.be.revertedWith("allowList array length issue");
+    });
+
     it("should only allow initialization once", async function () {
-      await successfullyInitializePool();
-      await expect(successfullyInitializePool()).to.be.revertedWith(
+      await successfullyInitializePool({});
+      await expect(successfullyInitializePool({})).to.be.revertedWith(
         "can only initialize once"
       );
     });
@@ -270,7 +342,7 @@ describe("AelinPool", function () {
 
   describe("createDeal", async function () {
     it("should revert if pool is still in purchase mode", async function () {
-      await successfullyInitializePool();
+      await successfullyInitializePool({});
       await expect(
         aelinPool.createDeal(
           underlyingDealToken.address,
@@ -287,7 +359,7 @@ describe("AelinPool", function () {
     });
 
     it("should revert if redemption period is too short", async function () {
-      await successfullyInitializePool();
+      await successfullyInitializePool({});
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
       await ethers.provider.send("evm_mine", []);
 
@@ -307,7 +379,7 @@ describe("AelinPool", function () {
     });
 
     it("should revert if redemption period is too long", async function () {
-      await successfullyInitializePool();
+      await successfullyInitializePool({});
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
       await ethers.provider.send("evm_mine", []);
 
@@ -327,7 +399,7 @@ describe("AelinPool", function () {
     });
 
     it("should revert if null addresses are passing in for the holder or underlying token", async function () {
-      await successfullyInitializePool();
+      await successfullyInitializePool({});
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
       await ethers.provider.send("evm_mine", []);
 
@@ -361,7 +433,7 @@ describe("AelinPool", function () {
     });
 
     it("should revert if vesting cliff is too long", async function () {
-      await successfullyInitializePool();
+      await successfullyInitializePool({});
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
       await ethers.provider.send("evm_mine", []);
 
@@ -381,7 +453,7 @@ describe("AelinPool", function () {
     });
 
     it("should revert if vesting period is too long", async function () {
-      await successfullyInitializePool();
+      await successfullyInitializePool({});
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
       await ethers.provider.send("evm_mine", []);
 
@@ -401,7 +473,7 @@ describe("AelinPool", function () {
     });
 
     it("should revert if the pool has no purchase tokens", async function () {
-      await successfullyInitializePool();
+      await successfullyInitializePool({});
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
       await ethers.provider.send("evm_mine", []);
 
@@ -411,7 +483,7 @@ describe("AelinPool", function () {
     });
 
     it("should revert if the purchase total exceeds the pool balance", async function () {
-      await successfullyInitializePool();
+      await successfullyInitializePool({});
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
       await ethers.provider.send("evm_mine", []);
 
@@ -427,7 +499,7 @@ describe("AelinPool", function () {
     });
 
     it("should revert if non-sponsor attempts to call it", async function () {
-      await successfullyInitializePool();
+      await successfullyInitializePool({});
       await expect(
         aelinPool
           .connect(nonsponsor)
@@ -447,7 +519,7 @@ describe("AelinPool", function () {
 
     it("should fail when the open redemption period is too short or too long", async function () {
       // setup so that a user can purchase pool tokens
-      await successfullyInitializePool();
+      await successfullyInitializePool({});
       await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
       await ethers.provider.send("evm_mine", []);
@@ -482,7 +554,7 @@ describe("AelinPool", function () {
     });
 
     it("should fail when the open redemption period is set when the totalSupply equals the deal purchase amount", async function () {
-      await successfullyInitializePool();
+      await successfullyInitializePool({});
       await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
       await ethers.provider.send("evm_mine", []);
@@ -505,7 +577,7 @@ describe("AelinPool", function () {
     });
 
     it("should fail when the holder funding expiry is too long or too short", async function () {
-      await successfullyInitializePool();
+      await successfullyInitializePool({});
       await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
       await ethers.provider.send("evm_mine", []);
@@ -540,7 +612,7 @@ describe("AelinPool", function () {
     });
 
     it("should successfully create a deal", async function () {
-      await successfullyInitializePool();
+      await successfullyInitializePool({});
       await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
       await ethers.provider.send("evm_mine", []);
@@ -609,7 +681,7 @@ describe("AelinPool", function () {
     });
 
     it("should allow a second deal if the first is not funded", async function () {
-      await successfullyInitializePool();
+      await successfullyInitializePool({});
       await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
       await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
       await ethers.provider.send("evm_mine", []);
@@ -652,7 +724,7 @@ describe("AelinPool", function () {
 
   describe("changing the sponsor", function () {
     beforeEach(async function () {
-      await successfullyInitializePool();
+      await successfullyInitializePool({});
     });
     it("should fail to let a non sponsor change the sponsor", async function () {
       await expect(
@@ -677,9 +749,95 @@ describe("AelinPool", function () {
     });
   });
 
+  describe("managing and purchasing with allow list", function () {
+    it("should let the sponsor add to the allow list", async function () {
+      const newAllowList = ["0x194eBd173F6cDacE046C53eACcE9B953F28411d1"];
+      const newAllowListAmount = [ethers.utils.parseEther("4")];
+      await successfullyInitializePool({ useAllowList: true });
+      expect(await aelinPool.hasAllowList()).to.equal(true);
+      expect(await aelinPool.allowList(allowList[0])).to.equal(
+        allowListAmounts[0]
+      );
+      expect(await aelinPool.allowList(newAllowList[0])).to.equal(0);
+      await aelinPool
+        .connect(sponsor)
+        .addToAllowList(newAllowList, newAllowListAmount);
+      expect(await aelinPool.allowList(newAllowList[0])).to.equal(
+        newAllowListAmount[0]
+      );
+    });
+    // TODO confirm this? Immutable per address? Immutable after creation?
+    it("should let the sponsor update an allow list amount", async function () {
+      const newAllowList = [allowList[0]];
+      const newAllowListAmount = [ethers.utils.parseEther("4")];
+      await successfullyInitializePool({ useAllowList: true });
+      expect(await aelinPool.hasAllowList()).to.equal(true);
+      expect(await aelinPool.allowList(newAllowList[0])).to.equal(allowList[0]);
+      await aelinPool
+        .connect(sponsor)
+        .addToAllowList(newAllowList, newAllowListAmount);
+      expect(await aelinPool.allowList(newAllowList[0])).to.equal(
+        newAllowListAmount[0]
+      );
+    });
+
+    it("should fail when a non sponsor tries to update the whitelist", async function () {
+      await successfullyInitializePool({ useAllowList: true });
+      await expect(
+        await aelinPool
+          .connect(nonsponsor)
+          .addToAllowList(allowList, allowListAmounts)
+      ).to.be.revertedWith("only sponsor can access");
+    });
+
+    it("should fail when a whitelist is not setup with pool creation", async function () {
+      const newAllowList = [allowList[0]];
+      const newAllowListAmount = [ethers.utils.parseEther("4")];
+      await successfullyInitializePool({});
+      await expect(
+        aelinPool
+          .connect(sponsor)
+          .addToAllowList(newAllowList, newAllowListAmount)
+      ).to.be.revertedWith("must be allowList pool");
+    });
+
+    it("should not allow an unlisted purchaser to enter the pool", async function () {
+      await successfullyInitializePool({ useAllowList: true });
+      await expect(
+        aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt)
+      ).to.be.revertedWith("more than allocation");
+    });
+    it("should not allow a purchaser on the allow list to enter the pool with too many funds", async function () {
+      await successfullyInitializePool({ useAllowList: true });
+      await purchaseToken
+        .connect(holder)
+        .approve(aelinPool.address, ethers.utils.parseEther("100"));
+      await expect(
+        aelinPool
+          .connect(holder)
+          .purchasePoolTokens(ethers.utils.parseEther("100"))
+      ).to.be.revertedWith("more than allocation");
+    });
+    it("should allow a purchaser on the allow list to enter the pool", async function () {
+      await successfullyInitializePool({ useAllowList: true });
+      await purchaseToken
+        .connect(holder)
+        .approve(aelinPool.address, allowListAmounts[1]);
+      await aelinPool.connect(holder).purchasePoolTokens(allowListAmounts[1]);
+
+      const [log] = await aelinPool.queryFilter(
+        aelinPool.filters.PurchasePoolToken()
+      );
+
+      expect(log.args.purchaser).to.equal(holder.address);
+      expect(log.address).to.equal(aelinPool.address);
+      expect(log.args.purchaseTokenAmount).to.equal(allowListAmounts[1]);
+    });
+  });
+
   describe("purchase pool tokens", function () {
     beforeEach(async function () {
-      await successfullyInitializePool();
+      await successfullyInitializePool({});
     });
 
     it("should successfully purchase pool tokens for the user", async function () {
@@ -735,7 +893,7 @@ describe("AelinPool", function () {
 
   describe("purchase pool token setup", function () {
     beforeEach(async function () {
-      await successfullyInitializePool();
+      await successfullyInitializePool({});
       await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
     });
     // NOTE that most of the tests for this method will be in the

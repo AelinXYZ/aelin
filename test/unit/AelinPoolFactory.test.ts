@@ -28,6 +28,16 @@ describe("AelinPoolFactory", function () {
   const duration = 29388523;
   const sponsorFee = 3000;
   const purchaseExpiry = 30 * 60 + 1; // 30min and 1sec
+  const allowList = [
+    "0xff4e21298e5dce1398d6fc9857098eae3caf1e72",
+    "0x2F50D538606Fa9EDD2B11E2446BEb18C9D5846bB",
+    "0x90Bb609649E0451E5aD952683D64BD2d1f245840",
+  ];
+  const allowListAmounts = [
+    ethers.utils.parseEther("1"),
+    ethers.utils.parseEther("2"),
+    ethers.utils.parseEther("3"),
+  ];
 
   before(async () => {
     const signers = await ethers.getSigners();
@@ -79,6 +89,7 @@ describe("AelinPoolFactory", function () {
     expect(log.args.sponsorFee).to.equal(sponsorFee);
     expect(log.args.sponsor).to.equal(sponsor.address);
     expect(log.args.purchaseDuration).to.equal(purchaseExpiry);
+    expect(log.args.hasAllowList).to.equal(false);
   });
 
   it("Should revert when purchse token is zero address", async function () {
@@ -92,7 +103,9 @@ describe("AelinPoolFactory", function () {
           nullAddress,
           duration,
           sponsorFee,
-          purchaseExpiry
+          purchaseExpiry,
+          [],
+          []
         )
     ).to.be.revertedWith("cant pass null token address");
   });
@@ -121,5 +134,37 @@ describe("AelinPoolFactory", function () {
         nullAddress,
       ])
     ).to.be.revertedWith("cant pass null rewards address");
+  });
+
+  it("Should work with an allow list and amounts of equal array length", async function () {
+    const result = await aelinPoolFactory
+      .connect(sponsor)
+      .createPool(
+        name,
+        symbol,
+        purchaseTokenCap,
+        nullAddress,
+        duration,
+        sponsorFee,
+        purchaseExpiry,
+        allowList,
+        allowListAmounts
+      );
+    expect(result.value).to.equal(0);
+
+    const [log] = await aelinPoolFactory.queryFilter(
+      aelinPoolFactory.filters.CreatePool()
+    );
+
+    expect(log.args.poolAddress).to.be.properAddress;
+    expect(log.args.name).to.equal("aePool-" + name);
+    expect(log.args.symbol).to.equal("aeP-" + symbol);
+    expect(log.args.purchaseTokenCap).to.equal(purchaseTokenCap);
+    expect(log.args.purchaseToken).to.equal(purchaseToken.address);
+    expect(log.args.duration).to.equal(duration);
+    expect(log.args.sponsorFee).to.equal(sponsorFee);
+    expect(log.args.sponsor).to.equal(sponsor.address);
+    expect(log.args.purchaseDuration).to.equal(purchaseExpiry);
+    expect(log.args.hasAllowList).to.equal(true);
   });
 });

@@ -19,6 +19,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     uint256 public sponsorFee;
     address public sponsor;
+    address public poolFactory;
     address public futureSponsor;
 
     uint256 public purchaseExpiry;
@@ -37,7 +38,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     mapping(address => uint256) public amountAccepted;
     mapping(address => bool) public openPeriodEligible;
     mapping(address => uint256) public allowList;
-    bool hasAllowList;
+    bool public hasAllowList;
 
     string private storedName;
     string private storedSymbol;
@@ -82,8 +83,13 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             purchaseTokenDecimals <= DEAL_TOKEN_DECIMALS,
             "too many token decimals"
         );
+        require(
+            _allowList.length == _allowListAmounts.length,
+            "allowList array length issue"
+        );
         storedName = _name;
         storedSymbol = _symbol;
+        poolFactory = msg.sender;
 
         _setNameSymbolAndDecimals(
             string(abi.encodePacked("aePool-", _name)),
@@ -109,7 +115,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     function addToAllowList(
         address[] memory _allowList,
         uint256[] memory _allowListAmounts
-    ) public onlySponsor {
+    ) public onlySponsorOrInitCall {
         require(hasAllowList, "must be allowList pool");
         require(
             _allowList.length == _allowListAmounts.length,
@@ -139,6 +145,14 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     modifier onlySponsor() {
         require(msg.sender == sponsor, "only sponsor can access");
+        _;
+    }
+
+    modifier onlySponsorOrInitCall() {
+        require(
+            msg.sender == sponsor || msg.sender == poolFactory,
+            "only sponsor can access"
+        );
         _;
     }
 
