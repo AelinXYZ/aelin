@@ -83,10 +83,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             purchaseTokenDecimals <= DEAL_TOKEN_DECIMALS,
             "too many token decimals"
         );
-        require(
-            _allowList.length == _allowListAmounts.length,
-            "allowList array length issue"
-        );
         storedName = _name;
         storedSymbol = _symbol;
         poolFactory = msg.sender;
@@ -107,23 +103,12 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         aelinRewardsAddress = _aelinRewardsAddress;
         if (_allowList.length > 0) {
             hasAllowList = true;
-            addToAllowList(_allowList, _allowListAmounts);
+            for (uint256 i = 0; i < _allowList.length; i++) {
+                allowList[_allowList[i]] = _allowListAmounts[i];
+            }
         }
-        emit SetSponsor(_sponsor);
-    }
 
-    function addToAllowList(
-        address[] memory _allowList,
-        uint256[] memory _allowListAmounts
-    ) public onlySponsorOrInitCall {
-        require(hasAllowList, "must be allowList pool");
-        require(
-            _allowList.length == _allowListAmounts.length,
-            "allowList array length issue"
-        );
-        for (uint256 i = 0; i < _allowList.length; i++) {
-            allowList[_allowList[i]] = _allowListAmounts[i];
-        }
+        emit SetSponsor(_sponsor);
     }
 
     modifier dealReady() {
@@ -145,14 +130,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     modifier onlySponsor() {
         require(msg.sender == sponsor, "only sponsor can access");
-        _;
-    }
-
-    modifier onlySponsorOrInitCall() {
-        require(
-            msg.sender == sponsor || msg.sender == poolFactory,
-            "only sponsor can access"
-        );
         _;
     }
 

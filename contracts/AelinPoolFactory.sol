@@ -40,6 +40,10 @@ contract AelinPoolFactory is MinimalProxyFactory {
         uint256[] memory _allowListAmounts
     ) external returns (address) {
         require(_purchaseToken != address(0), "cant pass null token address");
+        require(
+            _allowList.length == _allowListAmounts.length,
+            "allowList array length issue"
+        );
         AelinPool aelin_pool = AelinPool(
             _cloneAsMinimalProxy(AELIN_POOL_LOGIC, "Could not create new deal")
         );

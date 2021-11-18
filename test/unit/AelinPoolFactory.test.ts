@@ -143,7 +143,7 @@ describe("AelinPoolFactory", function () {
         name,
         symbol,
         purchaseTokenCap,
-        nullAddress,
+        purchaseToken.address,
         duration,
         sponsorFee,
         purchaseExpiry,
@@ -152,7 +152,7 @@ describe("AelinPoolFactory", function () {
       );
     expect(result.value).to.equal(0);
 
-    const [log] = await aelinPoolFactory.queryFilter(
+    const [, log] = await aelinPoolFactory.queryFilter(
       aelinPoolFactory.filters.CreatePool()
     );
 
@@ -166,5 +166,22 @@ describe("AelinPoolFactory", function () {
     expect(log.args.sponsor).to.equal(sponsor.address);
     expect(log.args.purchaseDuration).to.equal(purchaseExpiry);
     expect(log.args.hasAllowList).to.equal(true);
+  });
+  it("Should error with an allow list and amounts of mismatching length", async function () {
+    await expect(
+      aelinPoolFactory
+        .connect(sponsor)
+        .createPool(
+          name,
+          symbol,
+          purchaseTokenCap,
+          purchaseToken.address,
+          duration,
+          sponsorFee,
+          purchaseExpiry,
+          [...allowList, deployer.address],
+          allowListAmounts
+        )
+    ).to.be.revertedWith("allowList array length issue");
   });
 });
