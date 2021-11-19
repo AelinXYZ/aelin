@@ -63,7 +63,6 @@ describe("integration test", () => {
 
   const aaveWhaleAddressOne = "0x73f9B272aBda7A97CB1b237D85F9a7236EDB6F16";
   const aaveWhaleAddressTwo = "0xAd18FC2cfB141BF64Dd64B9eB99616b5b2b92AbD";
-  const aaveWhaleAddressThree = "0x44f41E35D9e5De934861E913Ea4A7F5A94dC9f79";
   let aaveWhaleOne: SignerWithAddress;
   let aaveWhaleTwo: SignerWithAddress;
 

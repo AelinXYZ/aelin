@@ -111,20 +111,29 @@ describe("AelinPool", function () {
       .connect(user1)
       .approve(aelinPool.address, userPurchaseAmt);
 
-    return aelinPool.initialize(
-      name,
-      symbol,
-      purchaseTokenCap,
-      purchaseToken.address,
-      duration,
-      sponsorFee,
-      sponsor.address,
-      purchaseExpiry,
-      aelinDealLogic.address,
-      mockAelinRewardsAddress,
-      useAllowList ? allowList : [],
-      useAllowList ? allowListAmounts : []
-    );
+    const tx = await aelinPool
+      .connect(deployer)
+      .initialize(
+        name,
+        symbol,
+        purchaseTokenCap,
+        purchaseToken.address,
+        duration,
+        sponsorFee,
+        sponsor.address,
+        purchaseExpiry,
+        aelinDealLogic.address,
+        mockAelinRewardsAddress
+      );
+
+    if (useAllowList) {
+      // TODO connect with the factory
+      await aelinPool
+        .connect(deployer)
+        .updateAllowList(allowList, allowListAmounts);
+    }
+
+    return tx;
   };
 
   const underlyingDealTokenTotalBase = 1000;
@@ -166,9 +175,7 @@ describe("AelinPool", function () {
           sponsor.address,
           purchaseExpiry,
           aelinDealLogic.address,
-          mockAelinRewardsAddress,
-          [],
-          []
+          mockAelinRewardsAddress
         )
       ).to.be.revertedWith("max 1 year duration");
     });
@@ -190,9 +197,7 @@ describe("AelinPool", function () {
           sponsor.address,
           purchaseExpiry,
           aelinDealLogic.address,
-          mockAelinRewardsAddress,
-          [],
-          []
+          mockAelinRewardsAddress
         )
       ).to.be.revertedWith("too many token decimals");
     });
@@ -209,9 +214,7 @@ describe("AelinPool", function () {
           sponsor.address,
           30 * 60 - 1, // 1 second less than 30min,
           aelinDealLogic.address,
-          mockAelinRewardsAddress,
-          [],
-          []
+          mockAelinRewardsAddress
         )
       ).to.be.revertedWith("outside purchase expiry window");
     });
@@ -228,9 +231,7 @@ describe("AelinPool", function () {
           sponsor.address,
           30 * 24 * 60 * 60 + 1, // 1 second more than 30 days
           aelinDealLogic.address,
-          mockAelinRewardsAddress,
-          [],
-          []
+          mockAelinRewardsAddress
         )
       ).to.be.revertedWith("outside purchase expiry window");
     });
@@ -247,9 +248,7 @@ describe("AelinPool", function () {
           sponsor.address,
           purchaseExpiry,
           aelinDealLogic.address,
-          mockAelinRewardsAddress,
-          [],
-          []
+          mockAelinRewardsAddress
         )
       ).to.be.revertedWith("exceeds max sponsor fee");
     });
