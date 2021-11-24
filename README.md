@@ -1,6 +1,6 @@
 # Aelin Overview
 
-Aelin is a fundraising protocol built on Ethereum. A sponsor goes out and announces they are raising a pool of capital with a purchase expiry period. Anyone with an internet connection, aka the purchaser, can contribute funds (e.g. sUSD) to the pool during the purchase expiry period; after the purchase expiry period, the funds are locked for a time duration period while the sponsor searches for a deal.
+Aelin is a fundraising protocol built on Ethereum. A sponsor goes out and announces they are raising a pool of capital with a purchase expiry period. The sponsor can create a public or private pool. If it is a public pool, qnyone with an internet connection, aka the purchaser, can contribute funds (e.g. sUSD) to the pool during the purchase expiry period; after the purchase expiry period, the funds are locked for a time duration period while the sponsor searches for a deal. Private pools are reserved for an allow list of addresses with specified investment amounts.
 
 If the sponsor finds a deal with the holder of a tokenized asset after the purchase expiry period, the sponsor announces the deal terms to the purchasers and then the holder has a specified time period to send the underlying deal tokens/ tokenized assets to the contract. If the funds are sent, the purchasers can convert their pool tokens (or a partial amount) to deal tokens, which represent a claim on the underlying deal token. Pool tokens are transferable until the deal is created and fully funded. After the deal is funded, pool tokens must be either accepted or withdrawn for the purchase token. If the holder does not send the underlying deal tokens in time, the sponsor can create a new deal for the pool.
 
@@ -42,12 +42,12 @@ Arguments:
 - `address _purchaseToken` the purchase token used to buy the pool token
 - `uint _duration` the duration of the pool which starts after the purchase expiry period ends. if no deal is created by the end of the duration, the purchaser may withdraw their funds
 - `uint _sponsorFee`- an optional fee from the sponsor set between 0 and 98%
-- `uint _purchaseExpiry` the amount of time a purchaser has to buy a pool token before the sponsor can create the deal
+- `uint _purchaseDuration` the amount of time a purchaser has to buy a pool token before the sponsor can create the deal
 
 Requirements:
 
 - the `_duration` must be <= 1 year (revert)
-- the `_purchaseExpiry` must be >= 30 minutes and <= 30 days (revert)
+- the `_purchaseDuration` must be >= 30 minutes and <= 30 days (revert)
 - the `_sponsorFee` must be between 0% and 98% (revert)
 
 NOTE if SPONSOR never finds a deal this is the end of their journey and the PURCHASER can retrieve their purchase tokens at the end of the `_duration`
@@ -68,7 +68,7 @@ Arguments:
 - `uint _vestingPeriod` the total amount of time to fully vest starting at the end of the vesting cliff (vesting is linear for v1)
 - `uint _vestingCliff` the initial deal token holding period where no vesting occurs
 - `address _holder` the entity or individual with whom the sponsor agrees to a deal
-- `uint _holderFundingExpiry` the amount of time a holder has to fund the deal before the proposed deal expires
+- `uint _holderFundingDuration` the amount of time a holder has to fund the deal before the proposed deal expires
 
 > NOTE please be sure to understand how the 2 redemption periods work outlined below:
 
@@ -78,7 +78,7 @@ Arguments:
 Requirements:
 
 - the `block.timestamp >= purchaseExpiry` (revert)
-- the `_holderFundingExpiry` must be >= 30 minutes and <= 30 days (revert)
+- the `_holderFundingDuration` must be >= 30 minutes and <= 30 days (revert)
 - the `_proRataRedemptionPeriod` must be >= 30 minutes and <= 30 days (revert)
 - the `_openRataRedemptionPeriod` must be >= 30 minutes and <= 30 days, If the proRataConversion rate is not 1:1, otherwise it must be 0 (revert)
 - the `_purchaseTokenTotalForDeal` converted to 18 decimals must be <= totalSupply of pool tokens (revert)

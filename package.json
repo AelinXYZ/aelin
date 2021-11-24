@@ -10,6 +10,7 @@
     "compile": "hardhat compile",
     "build": "waffle",
     "coverage": "hardhat coverage",
+    "coverage:unit": "hardhat coverage  --testfiles 'test/unit/*.ts'",
     "clean": "hardhat clean",
     "lint:sarif": "node lint.js . --ext js,ts,tsx",
     "deploy-deal:mainnet": "hardhat run scripts/deploy-deal.js --network mainnet",

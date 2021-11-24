@@ -21,11 +21,12 @@ contract AelinERC20 is ERC20 {
     string private _custom_symbol;
     uint8 private _custom_decimals;
     bool private locked;
+    uint8 constant DEAL_TOKEN_DECIMALS = 18;
 
     constructor() ERC20("", "") {}
 
     modifier initInfoOnce() {
-        require(setInfo == false, "can only initialize once");
+        require(!setInfo, "can only initialize once");
         _;
     }
 
@@ -64,7 +65,7 @@ contract AelinERC20 is ERC20 {
      * uniswap implementation: https://github.com/Uniswap/v2-core/blob/master/contracts/UniswapV2Pair.sol#L31-L36
      */
     modifier lock() {
-        require(locked == false, "AelinV1: LOCKED");
+        require(!locked, "AelinV1: LOCKED");
         locked = true;
         _;
         locked = false;

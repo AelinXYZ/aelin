@@ -1,46 +1,65 @@
 import chai, { expect } from "chai";
 import { ethers, waffle } from "hardhat";
-import { solidity } from "ethereum-waffle";
+import { MockContract, solidity } from "ethereum-waffle";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 import ERC20Artifact from "../../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json";
 import AelinDealArtifact from "../../artifacts/contracts/AelinDeal.sol/AelinDeal.json";
 import AelinPoolArtifact from "../../artifacts/contracts/AelinPool.sol/AelinPool.json";
 import AelinPoolFactoryArtifact from "../../artifacts/contracts/AelinPoolFactory.sol/AelinPoolFactory.json";
-import { AelinPoolFactory } from "../../typechain";
+import { AelinPool, AelinPoolFactory } from "../../typechain";
+import { mockAelinRewardsAddress, nullAddress } from "../helpers";
 
 const { deployContract, deployMockContract } = waffle;
 
 chai.use(solidity);
 
 describe("AelinPoolFactory", function () {
-  it("Should call the createPool method", async function () {
+  let deployer: SignerWithAddress;
+  let sponsor: SignerWithAddress;
+  let purchaseToken: MockContract;
+  let aelinDealLogic: MockContract;
+  let aelinPoolLogic: AelinPool;
+  let aelinPoolFactory: AelinPoolFactory;
+
+  const name = "Test token";
+  const symbol = "AMA";
+  const purchaseTokenCap = 1000000;
+  const duration = 29388523;
+  const sponsorFee = 3000;
+  const purchaseExpiry = 30 * 60 + 1; // 30min and 1sec
+  const allowList = [
+    "0xff4e21298e5dce1398d6fc9857098eae3caf1e72",
+    "0x2F50D538606Fa9EDD2B11E2446BEb18C9D5846bB",
+    "0x90Bb609649E0451E5aD952683D64BD2d1f245840",
+  ];
+  const allowListAmounts = [
+    ethers.utils.parseEther("1"),
+    ethers.utils.parseEther("2"),
+    ethers.utils.parseEther("3"),
+  ];
+
+  before(async () => {
     const signers = await ethers.getSigners();
-    const purchaseToken = await deployMockContract(
-      signers[0],
-      ERC20Artifact.abi
-    );
-    const aelinDealLogic = await deployMockContract(
-      signers[0],
-      AelinDealArtifact.abi
-    );
+    [deployer, sponsor] = signers;
+    purchaseToken = await deployMockContract(deployer, ERC20Artifact.abi);
+    aelinDealLogic = await deployMockContract(deployer, AelinDealArtifact.abi);
     // NOTE that the test will fail if this is a mock contract due to the
     // minimal proxy and initialize pattern. Technically this sort of
     // makes this an integration test but I am leaving it since it adds value
-    const aelinPoolLogic = await deployContract(signers[0], AelinPoolArtifact);
+    aelinPoolLogic = (await deployContract(
+      deployer,
+      AelinPoolArtifact
+    )) as AelinPool;
     await purchaseToken.mock.decimals.returns(6);
-    const aelinPoolFactory = (await deployContract(
-      signers[0],
+    aelinPoolFactory = (await deployContract(
+      deployer,
       AelinPoolFactoryArtifact,
-      [aelinPoolLogic.address, aelinDealLogic.address]
+      [aelinPoolLogic.address, aelinDealLogic.address, mockAelinRewardsAddress]
     )) as AelinPoolFactory;
-    const sponsor = signers[1];
-    const name = "Test token";
-    const symbol = "AMA";
-    const purchaseTokenCap = 1000000;
-    const duration = 29388523;
-    const sponsorFee = 3000;
-    const purchaseExpiry = 30 * 60 + 1; // 30min and 1sec
+  });
 
+  it("Should call the createPool method", async function () {
     const result = await aelinPoolFactory
       .connect(sponsor)
       .createPool(
@@ -50,7 +69,9 @@ describe("AelinPoolFactory", function () {
         purchaseToken.address,
         duration,
         sponsorFee,
-        purchaseExpiry
+        purchaseExpiry,
+        [],
+        []
       );
 
     expect(result.value).to.equal(0);
@@ -67,6 +88,100 @@ describe("AelinPoolFactory", function () {
     expect(log.args.duration).to.equal(duration);
     expect(log.args.sponsorFee).to.equal(sponsorFee);
     expect(log.args.sponsor).to.equal(sponsor.address);
-    expect(log.args.purchaseExpiry).to.equal(purchaseExpiry);
+    expect(log.args.purchaseDuration).to.equal(purchaseExpiry);
+    expect(log.args.hasAllowList).to.equal(false);
+  });
+
+  it("Should revert when purchse token is zero address", async function () {
+    await expect(
+      aelinPoolFactory
+        .connect(sponsor)
+        .createPool(
+          name,
+          symbol,
+          purchaseTokenCap,
+          nullAddress,
+          duration,
+          sponsorFee,
+          purchaseExpiry,
+          [],
+          []
+        )
+    ).to.be.revertedWith("cant pass null token address");
+  });
+
+  it("Should revert when any constructor value is a zero address", async function () {
+    await expect(
+      deployContract(deployer, AelinPoolFactoryArtifact, [
+        nullAddress,
+        aelinDealLogic.address,
+        mockAelinRewardsAddress,
+      ])
+    ).to.be.revertedWith("cant pass null pool address");
+
+    await expect(
+      deployContract(deployer, AelinPoolFactoryArtifact, [
+        aelinPoolLogic.address,
+        nullAddress,
+        mockAelinRewardsAddress,
+      ])
+    ).to.be.revertedWith("cant pass null deal address");
+
+    await expect(
+      deployContract(deployer, AelinPoolFactoryArtifact, [
+        aelinPoolLogic.address,
+        aelinDealLogic.address,
+        nullAddress,
+      ])
+    ).to.be.revertedWith("cant pass null rewards address");
+  });
+
+  it("Should work with an allow list and amounts of equal array length", async function () {
+    const result = await aelinPoolFactory
+      .connect(sponsor)
+      .createPool(
+        name,
+        symbol,
+        purchaseTokenCap,
+        purchaseToken.address,
+        duration,
+        sponsorFee,
+        purchaseExpiry,
+        allowList,
+        allowListAmounts
+      );
+    expect(result.value).to.equal(0);
+
+    const [, log] = await aelinPoolFactory.queryFilter(
+      aelinPoolFactory.filters.CreatePool()
+    );
+
+    expect(log.args.poolAddress).to.be.properAddress;
+    expect(log.args.name).to.equal("aePool-" + name);
+    expect(log.args.symbol).to.equal("aeP-" + symbol);
+    expect(log.args.purchaseTokenCap).to.equal(purchaseTokenCap);
+    expect(log.args.purchaseToken).to.equal(purchaseToken.address);
+    expect(log.args.duration).to.equal(duration);
+    expect(log.args.sponsorFee).to.equal(sponsorFee);
+    expect(log.args.sponsor).to.equal(sponsor.address);
+    expect(log.args.purchaseDuration).to.equal(purchaseExpiry);
+    expect(log.args.hasAllowList).to.equal(true);
+  });
+  it("Should error with an allow list and amounts of mismatching length", async function () {
+    await expect(
+      aelinPoolFactory
+        .connect(sponsor)
+        .createPool(
+          name,
+          symbol,
+          purchaseTokenCap,
+          purchaseToken.address,
+          duration,
+          sponsorFee,
+          purchaseExpiry,
+          [...allowList, deployer.address],
+          allowListAmounts
+        )
+    ).to.be.revertedWith("allowList array length issue");
   });
 });
