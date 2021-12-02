@@ -279,6 +279,12 @@ describe("AelinPool", function () {
 
       const [log] = await aelinPool.queryFilter(aelinPool.filters.SetSponsor());
       expect(log.args.sponsor).to.equal(sponsor.address);
+      const [tokenLog] = await aelinPool.queryFilter(
+        aelinPool.filters.AelinToken()
+      );
+      expect(tokenLog.args.name).to.equal(aelinPoolName);
+      expect(tokenLog.args.symbol).to.equal(aelinPoolSymbol);
+      expect(tokenLog.args.decimals).to.equal(purchaseTokenDecimals);
     });
 
     it("should successfully initialize with an allow list", async function () {

@@ -56,6 +56,7 @@ contract AelinERC20 is ERC20 {
         _custom_symbol = _symbol;
         _custom_decimals = _decimals;
         setInfo = true;
+        emit AelinToken(_name, _symbol, _decimals);
         return true;
     }
 
@@ -70,4 +71,6 @@ contract AelinERC20 is ERC20 {
         _;
         locked = false;
     }
+
+    event AelinToken(string name, string symbol, uint8 decimals);
 }
