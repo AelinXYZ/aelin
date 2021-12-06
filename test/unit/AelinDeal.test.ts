@@ -240,18 +240,18 @@ describe("AelinDeal", function () {
 
         const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
 
-        const [depositDealTokensLog] = await aelinDeal.queryFilter(
-          aelinDeal.filters.DepositDealTokens()
+        const [depositDealTokenLog] = await aelinDeal.queryFilter(
+          aelinDeal.filters.DepositDealToken()
         );
         const [dealFundedLog] = await aelinDeal.queryFilter(
           aelinDeal.filters.DealFullyFunded()
         );
-        expect(depositDealTokensLog.args.underlyingDealTokenAddress).to.equal(
+        expect(depositDealTokenLog.args.underlyingDealTokenAddress).to.equal(
           underlyingDealToken.address
         );
-        expect(depositDealTokensLog.args.depositor).to.equal(holder.address);
-        expect(depositDealTokensLog.address).to.equal(aelinDeal.address);
-        expect(depositDealTokensLog.args.underlyingDealTokenAmount).to.equal(
+        expect(depositDealTokenLog.args.depositor).to.equal(holder.address);
+        expect(depositDealTokenLog.address).to.equal(aelinDeal.address);
+        expect(depositDealTokenLog.args.underlyingDealTokenAmount).to.equal(
           underlyingDealTokenTotal
         );
 
@@ -309,16 +309,16 @@ describe("AelinDeal", function () {
 
         expect(await aelinDeal.depositComplete()).to.equal(false);
 
-        const [depositDealTokensLog] = await aelinDeal.queryFilter(
-          aelinDeal.filters.DepositDealTokens()
+        const [depositDealTokenLog] = await aelinDeal.queryFilter(
+          aelinDeal.filters.DepositDealToken()
         );
 
-        expect(depositDealTokensLog.args.underlyingDealTokenAddress).to.equal(
+        expect(depositDealTokenLog.args.underlyingDealTokenAddress).to.equal(
           underlyingDealToken.address
         );
-        expect(depositDealTokensLog.args.depositor).to.equal(holder.address);
-        expect(depositDealTokensLog.address).to.equal(aelinDeal.address);
-        expect(depositDealTokensLog.args.underlyingDealTokenAmount).to.equal(
+        expect(depositDealTokenLog.args.depositor).to.equal(holder.address);
+        expect(depositDealTokenLog.address).to.equal(aelinDeal.address);
+        expect(depositDealTokenLog.args.underlyingDealTokenAmount).to.equal(
           lowerAmount
         );
 
@@ -409,7 +409,7 @@ describe("AelinDeal", function () {
 
         await aelinDeal.connect(holder).withdraw();
         const [log] = await aelinDeal.queryFilter(
-          aelinDeal.filters.WithdrawUnderlyingDealTokens()
+          aelinDeal.filters.WithdrawUnderlyingDealToken()
         );
         expect(log.args.underlyingDealTokenAddress).to.equal(
           underlyingDealToken.address
@@ -447,7 +447,7 @@ describe("AelinDeal", function () {
 
         await aelinDeal.connect(holder).withdraw();
         const [log] = await aelinDeal.queryFilter(
-          aelinDeal.filters.WithdrawUnderlyingDealTokens()
+          aelinDeal.filters.WithdrawUnderlyingDealToken()
         );
         expect(log.args.underlyingDealTokenAddress).to.equal(
           underlyingDealToken.address
@@ -484,7 +484,7 @@ describe("AelinDeal", function () {
         await aelinDeal.connect(holder).withdrawExpiry();
 
         const [log] = await aelinDeal.queryFilter(
-          aelinDeal.filters.WithdrawUnderlyingDealTokens()
+          aelinDeal.filters.WithdrawUnderlyingDealToken()
         );
         expect(log.args.underlyingDealTokenAddress).to.equal(
           underlyingDealToken.address
@@ -520,7 +520,7 @@ describe("AelinDeal", function () {
         await aelinDeal.connect(purchaser).claim();
 
         const [log] = await aelinDeal.queryFilter(
-          aelinDeal.filters.ClaimedUnderlyingDealTokens()
+          aelinDeal.filters.ClaimedUnderlyingDealToken()
         );
         expect(log.args.underlyingDealTokenAddress).to.equal(
           underlyingDealToken.address
@@ -548,7 +548,7 @@ describe("AelinDeal", function () {
         await aelinDeal.connect(purchaser).claim();
 
         const [log] = await aelinDeal.queryFilter(
-          aelinDeal.filters.ClaimedUnderlyingDealTokens()
+          aelinDeal.filters.ClaimedUnderlyingDealToken()
         );
         expect(log.args.underlyingDealTokenAddress).to.equal(
           underlyingDealToken.address
@@ -770,7 +770,7 @@ describe("AelinDeal", function () {
         await aelinDeal.connect(purchaser).transferMax(deployer.address);
 
         const [claimLog] = await aelinDeal.queryFilter(
-          aelinDeal.filters.ClaimedUnderlyingDealTokens()
+          aelinDeal.filters.ClaimedUnderlyingDealToken()
         );
         const transferLogs = await aelinDeal.queryFilter(
           aelinDeal.filters.Transfer()
@@ -853,7 +853,7 @@ describe("AelinDeal", function () {
           .transferFromMax(purchaser.address, holder.address);
 
         const [claimLog] = await aelinDeal.queryFilter(
-          aelinDeal.filters.ClaimedUnderlyingDealTokens()
+          aelinDeal.filters.ClaimedUnderlyingDealToken()
         );
         const transferLogs = await aelinDeal.queryFilter(
           aelinDeal.filters.Transfer()
@@ -914,7 +914,7 @@ describe("AelinDeal", function () {
 
         await aelinDeal.connect(deployer).claim();
         const claimedLogs = await aelinDeal.queryFilter(
-          aelinDeal.filters.ClaimedUnderlyingDealTokens()
+          aelinDeal.filters.ClaimedUnderlyingDealToken()
         );
         expect(claimedLogs.length).to.equal(0);
       });
@@ -982,7 +982,7 @@ describe("AelinDeal", function () {
       await aelinDeal.connect(purchaser).claim();
 
       const [log] = await aelinDeal.queryFilter(
-        aelinDeal.filters.ClaimedUnderlyingDealTokens()
+        aelinDeal.filters.ClaimedUnderlyingDealToken()
       );
       expect(log.args.underlyingDealTokenAddress).to.equal(
         underlyingDealToken.address
