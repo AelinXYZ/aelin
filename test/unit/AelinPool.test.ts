@@ -624,8 +624,8 @@ describe("AelinPool", function () {
       const [createDealLog] = await aelinPool.queryFilter(
         aelinPool.filters.CreateDeal()
       );
-      const [dealDetailsLog] = await aelinPool.queryFilter(
-        aelinPool.filters.DealDetails()
+      const [dealDetailLog] = await aelinPool.queryFilter(
+        aelinPool.filters.DealDetail()
       );
 
       expect(createDealLog.args.name).to.equal(
@@ -638,26 +638,26 @@ describe("AelinPool", function () {
       expect(createDealLog.args.sponsor).to.equal(sponsor.address);
       expect(createDealLog.address).to.equal(aelinPool.address);
 
-      expect(dealDetailsLog.args.dealContract).to.be.properAddress;
-      expect(dealDetailsLog.args.underlyingDealToken).to.equal(
+      expect(dealDetailLog.args.dealContract).to.be.properAddress;
+      expect(dealDetailLog.args.underlyingDealToken).to.equal(
         underlyingDealToken.address
       );
-      expect(dealDetailsLog.args.purchaseTokenTotalForDeal).to.equal(
+      expect(dealDetailLog.args.purchaseTokenTotalForDeal).to.equal(
         purchaseTokenTotalForDeal
       );
-      expect(dealDetailsLog.args.underlyingDealTokenTotal).to.equal(
+      expect(dealDetailLog.args.underlyingDealTokenTotal).to.equal(
         underlyingDealTokenTotal
       );
-      expect(dealDetailsLog.args.vestingPeriod).to.equal(vestingPeriod);
-      expect(dealDetailsLog.args.vestingCliff).to.equal(vestingCliff);
-      expect(dealDetailsLog.args.proRataRedemptionPeriod).to.equal(
+      expect(dealDetailLog.args.vestingPeriod).to.equal(vestingPeriod);
+      expect(dealDetailLog.args.vestingCliff).to.equal(vestingCliff);
+      expect(dealDetailLog.args.proRataRedemptionPeriod).to.equal(
         proRataRedemptionPeriod
       );
-      expect(dealDetailsLog.args.openRedemptionPeriod).to.equal(
+      expect(dealDetailLog.args.openRedemptionPeriod).to.equal(
         openRedemptionPeriod
       );
-      expect(dealDetailsLog.args.holder).to.equal(holder.address);
-      expect(dealDetailsLog.args.holderFundingDuration).to.equal(
+      expect(dealDetailLog.args.holder).to.equal(holder.address);
+      expect(dealDetailLog.args.holderFundingDuration).to.equal(
         holderFundingExpiry
       );
 
@@ -694,8 +694,8 @@ describe("AelinPool", function () {
       const [createDealLog, createDealLog2] = await aelinPool.queryFilter(
         aelinPool.filters.CreateDeal()
       );
-      const [dealDetailsLog, dealDetailsLog2] = await aelinPool.queryFilter(
-        aelinPool.filters.DealDetails()
+      const [dealDetailLog, dealDetailLog2] = await aelinPool.queryFilter(
+        aelinPool.filters.DealDetail()
       );
 
       expect(createDealLog.args.dealContract).to.be.properAddress;
@@ -703,8 +703,8 @@ describe("AelinPool", function () {
       expect(createDealLog.args.dealContract).to.not.equal(
         createDealLog2.args.dealContract
       );
-      expect(dealDetailsLog.args.holder).to.equal(holder.address);
-      expect(dealDetailsLog2.args.holder).to.equal(deployer.address);
+      expect(dealDetailLog.args.holder).to.equal(holder.address);
+      expect(dealDetailLog2.args.holder).to.equal(deployer.address);
     });
   });
 

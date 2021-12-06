@@ -265,7 +265,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             aelinDealStorageProxy
         );
 
-        emit DealDetails(
+        emit DealDetail(
             aelinDealStorageProxy,
             _underlyingDealToken,
             _purchaseTokenTotalForDeal,
@@ -579,7 +579,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         address indexed sponsor,
         address indexed dealContract
     );
-    event DealDetails(
+    event DealDetail(
         address indexed dealContract,
         address indexed underlyingDealToken,
         uint256 purchaseTokenTotalForDeal,

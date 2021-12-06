@@ -576,7 +576,7 @@ describe("integration test", () => {
       await aelinDealProxyStorage.connect(user5).claim();
 
       const logs = await aelinDealProxyStorage.queryFilter(
-        aelinDealProxyStorage.filters.ClaimedUnderlyingDealTokens()
+        aelinDealProxyStorage.filters.ClaimedUnderlyingDealToken()
       );
       // TODO calculate exact claim amount
       expect(await aaveContract.balanceOf(user1.address)).to.not.equal(0);
@@ -927,7 +927,7 @@ describe("integration test", () => {
       await aelinDealProxyStorage.connect(aaveWhaleTwo).withdrawExpiry();
 
       const [, withdrawUnderlyingLog] = await aelinDealProxyStorage.queryFilter(
-        aelinDealProxyStorage.filters.WithdrawUnderlyingDealTokens()
+        aelinDealProxyStorage.filters.WithdrawUnderlyingDealToken()
       );
       expect(withdrawUnderlyingLog.args.depositor).to.equal(
         aaveWhaleTwo.address
@@ -958,7 +958,7 @@ describe("integration test", () => {
       await aelinDealProxyStorage.connect(user10).claim();
 
       const logs = await aelinDealProxyStorage.queryFilter(
-        aelinDealProxyStorage.filters.ClaimedUnderlyingDealTokens()
+        aelinDealProxyStorage.filters.ClaimedUnderlyingDealToken()
       );
 
       // TODO calculate exact claim amount

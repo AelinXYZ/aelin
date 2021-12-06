@@ -146,7 +146,7 @@ contract AelinDeal is AelinERC20 {
             uint256 underlyingDealTokenAmount = balanceAfterTransfer -
                 currentBalance;
 
-            emit DepositDealTokens(
+            emit DepositDealToken(
                 underlyingDealToken,
                 msg.sender,
                 underlyingDealTokenAmount
@@ -199,7 +199,7 @@ contract AelinDeal is AelinERC20 {
                 (underlyingDealTokenTotal - totalUnderlyingClaimed);
         }
         IERC20(underlyingDealToken).safeTransfer(holder, withdrawAmount);
-        emit WithdrawUnderlyingDealTokens(
+        emit WithdrawUnderlyingDealToken(
             underlyingDealToken,
             holder,
             withdrawAmount
@@ -225,7 +225,7 @@ contract AelinDeal is AelinERC20 {
             address(this)
         ) - ((underlyingPerDealExchangeRate * totalSupply()) / 1e18);
         IERC20(underlyingDealToken).safeTransfer(holder, withdrawAmount);
-        emit WithdrawUnderlyingDealTokens(
+        emit WithdrawUnderlyingDealToken(
             underlyingDealToken,
             holder,
             withdrawAmount
@@ -296,7 +296,7 @@ contract AelinDeal is AelinERC20 {
                 underlyingDealTokensClaimed
             );
             totalUnderlyingClaimed += underlyingDealTokensClaimed;
-            emit ClaimedUnderlyingDealTokens(
+            emit ClaimedUnderlyingDealToken(
                 underlyingDealToken,
                 recipient,
                 underlyingDealTokensClaimed
@@ -381,17 +381,17 @@ contract AelinDeal is AelinERC20 {
         uint256 openRedemptionStart,
         uint256 openRedemptionExpiry
     );
-    event DepositDealTokens(
+    event DepositDealToken(
         address indexed underlyingDealTokenAddress,
         address indexed depositor,
         uint256 underlyingDealTokenAmount
     );
-    event WithdrawUnderlyingDealTokens(
+    event WithdrawUnderlyingDealToken(
         address indexed underlyingDealTokenAddress,
         address indexed depositor,
         uint256 underlyingDealTokenAmount
     );
-    event ClaimedUnderlyingDealTokens(
+    event ClaimedUnderlyingDealToken(
         address indexed underlyingDealTokenAddress,
         address indexed recipient,
         uint256 underlyingDealTokensClaimed
