@@ -1,0 +1,14 @@
+{
+  "mainnet": {
+    "Distribution": "",
+    "Aelin": ""
+  },
+  "kovan": {
+    "Distribution": "",
+    "Aelin": ""
+  },
+  "localhost": {
+    "Distribution": "",
+    "Aelin": ""
+  }
+}

@@ -10,7 +10,11 @@ async function main() {
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
   const AelinPoolFactory = await ethers.getContractFactory("AelinPoolFactory");
-  const aelinPoolFactory = await AelinPoolFactory.deploy();
+  const aelinPoolFactory = await AelinPoolFactory.deploy(
+    "0xbA615F3aa6384F642DBFB729E1d157524f0334b3",
+    "0xa2cc163735DF76fB3fa4BD0F971a02b5F217C93C",
+    "0x2C1dA0F3A1E2916cA9B8F33C6E12d75eC2f975aa"
+  );
 
   console.log("AelinPoolFactory address:", aelinPoolFactory.address);
 }
