@@ -1,9 +1,10 @@
-pragma solidity ^0.5.16;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.6;
 
-import "openzeppelin-solidity-2.3.0/contracts/token/ERC20/IERC20.sol";
-import "synthetix-2.43.1/contracts/Owned.sol";
-import "openzeppelin-solidity-2.3.0/contracts/cryptography/MerkleProof.sol";
-import "synthetix-2.43.1/contracts/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./Owned.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import "./Pausable.sol";
 
 /**
  * Contract which implements a merkle distribution for a given token
@@ -22,17 +23,24 @@ contract Distribution is Owned, Pausable {
         address _owner,
         IERC20 _token,
         bytes32 _root
-    ) public Owned(_owner) Pausable() {
+    ) Owned(_owner) Pausable() {
         token = _token;
         root = _root;
         startTime = block.timestamp;
     }
 
     // Check if a given reward has already been claimed
-    function claimed(uint256 index) internal returns (uint256 claimedBlock, uint256 claimedMask) {
+    function claimed(uint256 index)
+        internal
+        view
+        returns (uint256 claimedBlock, uint256 claimedMask)
+    {
         claimedBlock = _claimed[index / 256];
         claimedMask = (uint256(1) << uint256(index % 256));
-        require((claimedBlock & claimedMask) == 0, "Tokens have already been claimed");
+        require(
+            (claimedBlock & claimedMask) == 0,
+            "Tokens have already been claimed"
+        );
     }
 
     // helper for the dapp
@@ -49,7 +57,10 @@ contract Distribution is Owned, Pausable {
         uint256 amount,
         bytes32[] memory merkleProof
     ) public notPaused {
-        require(token.balanceOf(address(this)) > amount, "Contract doesnt have enough tokens");
+        require(
+            token.balanceOf(address(this)) > amount,
+            "Contract doesnt have enough tokens"
+        );
 
         // Make sure the tokens have not already been redeemed
         (uint256 claimedBlock, uint256 claimedMask) = claimed(index);
@@ -58,7 +69,10 @@ contract Distribution is Owned, Pausable {
         // Compute the merkle leaf from index, recipient and amount
         bytes32 leaf = keccak256(abi.encodePacked(index, msg.sender, amount));
         // verify the proof is valid
-        require(MerkleProof.verify(merkleProof, root, leaf), "Proof is not valid");
+        require(
+            MerkleProof.verify(merkleProof, root, leaf),
+            "Proof is not valid"
+        );
         // Redeem!
         token.transfer(msg.sender, amount);
         emit Claim(msg.sender, amount, block.timestamp);
@@ -66,12 +80,15 @@ contract Distribution is Owned, Pausable {
 
     function _selfDestruct(address payable beneficiary) external onlyOwner {
         //only callable a year after end time
-        require(block.timestamp > (startTime + 365 days), "Contract can only be selfdestruct after a year");
+        require(
+            block.timestamp > (startTime + 365 days),
+            "Contract can only be selfdestruct after a year"
+        );
 
         token.transfer(beneficiary, token.balanceOf(address(this)));
 
         selfdestruct(beneficiary);
     }
 
-    event Claim(address claimer, uint256 amount, uint timestamp);
+    event Claim(address claimer, uint256 amount, uint256 timestamp);
 }
