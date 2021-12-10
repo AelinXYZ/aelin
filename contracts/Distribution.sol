@@ -35,19 +35,25 @@ contract Distribution is Owned, Pausable {
         view
         returns (uint256 claimedBlock, uint256 claimedMask)
     {
-        claimedBlock = _claimed[index / 256];
-        claimedMask = (uint256(1) << uint256(index % 256));
+        (claimedBlock, claimedMask) = _canClaim(index);
         require(
-            (claimedBlock & claimedMask) == 0,
+            ((claimedBlock & claimedMask) == 0),
             "Tokens have already been claimed"
         );
     }
 
-    // helper for the dapp
     function canClaim(uint256 index) external view returns (bool) {
-        uint256 claimedBlock = _claimed[index / 256];
-        uint256 claimedMask = (uint256(1) << uint256(index % 256));
+        (uint256 claimedBlock, uint256 claimedMask) = _canClaim(index);
         return ((claimedBlock & claimedMask) == 0);
+    }
+
+    function _canClaim(uint256 index)
+        internal
+        view
+        returns (uint256 claimedBlock, uint256 claimedMask)
+    {
+        claimedBlock = _claimed[index / 256];
+        claimedMask = (uint256(1) << uint256(index % 256));
     }
 
     // Get distributed tokens assigned to address
