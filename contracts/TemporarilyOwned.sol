@@ -1,0 +1,56 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.6;
+
+contract TemporarilyOwned {
+    address public temporaryOwner;
+    address public nominatedOwner;
+    uint256 public expiryTime;
+
+    constructor(address _temporaryOwner, uint256 _ownershipDuration) {
+        require(
+            _temporaryOwner != address(0),
+            "Temp owner address cannot be 0"
+        );
+        require(_ownershipDuration > 0, "Duration cannot be 0");
+
+        temporaryOwner = _temporaryOwner;
+        expiryTime = block.timestamp + _ownershipDuration;
+    }
+
+    function setNewExpiryTime(uint256 _duration) external onlyTemporaryOwner {
+        require(
+            block.timestamp + _duration < expiryTime,
+            "New expiry time must be sooner than it currently is"
+        );
+        expiryTime = block.timestamp + _duration;
+    }
+
+    function nominateNewOwner(address _owner) external onlyTemporaryOwner {
+        nominatedOwner = _owner;
+        emit OwnerNominated(_owner);
+    }
+
+    function acceptOwnership() external {
+        require(block.timestamp < expiryTime, "Ownership expired");
+        require(
+            msg.sender == nominatedOwner,
+            "You must be nominated before you can accept ownership"
+        );
+        emit OwnerChanged(temporaryOwner, nominatedOwner);
+        temporaryOwner = nominatedOwner;
+        nominatedOwner = address(0);
+    }
+
+    modifier onlyTemporaryOwner() {
+        _onlyTemporaryOwner();
+        _;
+    }
+
+    function _onlyTemporaryOwner() private view {
+        require(block.timestamp < expiryTime, "Ownership expired");
+        require(msg.sender == temporaryOwner, "Only executable by temp owner");
+    }
+
+    event OwnerNominated(address newOwner);
+    event OwnerChanged(address oldOwner, address newOwner);
+}

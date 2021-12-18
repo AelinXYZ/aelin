@@ -2,14 +2,13 @@ const fs = require("fs");
 const { web3, ethers } = require("hardhat");
 const { MerkleTree } = require("merkletreejs");
 const keccak256 = require("keccak256");
-const deployments = require("./helpers/deployments.json");
-console.log("web3", web3);
+const distributionAddresses = require("./helpers/dist-addresses.json");
 
 const setTargetAddress = (contractName, network, address) => {
-  deployments[network][contractName] = address;
+  distributionAddresses[network][contractName] = address;
   fs.writeFileSync(
-    "./deployments.json",
-    JSON.stringify(deployments),
+    "./dist-addresses.json",
+    JSON.stringify(distributionAddresses),
     function (err) {
       if (err) return console.log(err);
     }
@@ -17,7 +16,7 @@ const setTargetAddress = (contractName, network, address) => {
 };
 
 const getTargetAddress = (contractName, network) => {
-  return deployments[network][contractName];
+  return distributionAddresses[network][contractName];
 };
 
 let historicalSnapshot = require("./helpers/staking-data.json");
@@ -26,24 +25,23 @@ async function distributionSetup() {
   const accounts = await ethers.getSigners();
   const networkObj = await ethers.provider.getNetwork();
   let network = networkObj.name;
-  if (network === "homestead") {
-    network = "mainnet";
-  } else if (network === "unknown") {
-    network = "localhost";
-  }
 
-  if (network !== "mainnet") {
-    console.log("not on mainnet - using test snapshot");
+  if (network !== "optimism") {
+    console.log("not on prod - using test snapshot");
     historicalSnapshot = require("./helpers/staking-test-data.json");
   }
   console.log("Network name:" + network);
 
   const owner = accounts[0];
 
+  const AELIN_FEE = 0.02;
+
   const AELIN_AIRDROP_AMOUNT = 750;
+  // to account for the 2% protocol fee;
+  const vAELIN_AIRDROP_AMOUNT = AELIN_AIRDROP_AMOUNT / (1 - AELIN_FEE);
 
   const DISTRIBUTION_AMOUNT = ethers.utils.parseUnits(
-    AELIN_AIRDROP_AMOUNT.toString(),
+    vAELIN_AIRDROP_AMOUNT.toString(),
     18
   );
 
@@ -118,26 +116,26 @@ async function distributionSetup() {
   const root = merkleTree.getHexRoot();
   console.log("tree root:", root);
 
-  const aelinTokenAddress = getTargetAddress("AelinToken", network);
-  console.log("aelin token address:", aelinTokenAddress);
+  const virtualAelinAddress = getTargetAddress("VirtualAelinToken", network);
+  console.log("$vAELIN token address:", virtualAelinAddress);
 
   // deploy Distribution contract
   const Distribution = await ethers.getContractFactory("Distribution");
   const distribution = await Distribution.deploy(
     owner.address,
-    aelinTokenAddress,
+    virtualAelinAddress,
     root
   );
   await distribution.deployed();
 
   console.log("distribution deployed at", distribution.address);
-  // update deployments.json file
+  // update dist-addresses.json file
   setTargetAddress("Distribution", network, distribution.address);
 
   // TODO figure out what config is needed for this to work properly
   // await hre.run("verify:verify", {
   //   address: distribution.address,
-  //   constructorArguments: [owner.address, aelinTokenAddress, root],
+  //   constructorArguments: [owner.address, virtualAelinAddress, root],
   // });
 }
 

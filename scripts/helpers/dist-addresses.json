@@ -1,0 +1,10 @@
+{
+  "kovan": {
+    "Distribution": "",
+    "VirtualAelinToken": "0x50263AFE9Ea8Ded3DaD1a9Af96Fc366bB5d96bfa"
+  },
+  "optimism": {
+    "Distribution": "",
+    "VirtualAelinToken": "0x50263AFE9Ea8Ded3DaD1a9Af96Fc366bB5d96bfa"
+  }
+}
