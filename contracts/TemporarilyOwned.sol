@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+pragma solidity ^0.5.16;
 
 contract TemporarilyOwned {
     address public temporaryOwner;
     address public nominatedOwner;
     uint256 public expiryTime;
 
-    constructor(address _temporaryOwner, uint256 _ownershipDuration) {
+    constructor(address _temporaryOwner, uint256 _ownershipDuration) public {
         require(
             _temporaryOwner != address(0),
             "Temp owner address cannot be 0"

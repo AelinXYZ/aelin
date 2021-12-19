@@ -1,25 +1,27 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+pragma solidity ^0.5.16;
+pragma experimental ABIEncoderV2;
 
 // Inheritance
-import "./Owned.sol";
+import "./LegacyOwned.sol";
 
 // Internal references
 import "./interfaces/IOwnerRelayOnOptimism.sol";
 import "@eth-optimism/contracts/iOVM/bridge/messaging/iAbs_BaseCrossDomainMessenger.sol";
 
-contract OwnerRelayOnEthereum is Owned {
+contract OwnerRelayOnEthereum is LegacyOwned {
     address public MESSENGER;
     address public CONTRACT_OVM_OWNER_RELAY_ON_OPTIMISM;
+    uint32 public constant MAX_CROSS_DOMAIN_GAS_LIMIT = 8e6;
 
     // ========== CONSTRUCTOR ==========
-    constructor(address _owner) Owned(_owner) {}
+    constructor(address _owner) public LegacyOwned(_owner) {}
 
-    function setContractData(address _messenger, address _relayOnOptimism)
-        external
-        onlyOwner
-    {
-        MESSENGER = _messenger;
+    function setContractData(
+        address _messengerAddress,
+        address _relayOnOptimism
+    ) external onlyOwner {
+        MESSENGER = _messengerAddress;
         CONTRACT_OVM_OWNER_RELAY_ON_OPTIMISM = _relayOnOptimism;
     }
 
@@ -39,11 +41,7 @@ contract OwnerRelayOnEthereum is Owned {
         return
             crossDomainGasLimit != 0
                 ? crossDomainGasLimit
-                : uint32(
-                    getCrossDomainMessageGasLimit(
-                        CrossDomainMessageGasLimits.Relay
-                    )
-                );
+                : MAX_CROSS_DOMAIN_GAS_LIMIT;
     }
 
     /* ========== RESTRICTED ========== */

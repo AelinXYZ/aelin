@@ -12,18 +12,36 @@ import "solidity-coverage";
  */
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.6",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
-      },
-      outputSelection: {
-        "*": {
-          "*": ["storageLayout"],
+    compilers: [
+      {
+        version: "0.5.16",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+          outputSelection: {
+            "*": {
+              "*": ["storageLayout"],
+            },
+          },
         },
       },
-    },
+      {
+        version: "0.8.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+          outputSelection: {
+            "*": {
+              "*": ["storageLayout"],
+            },
+          },
+        },
+      },
+    ],
   },
   defaultNetwork: "hardhat",
   mocha: {

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+pragma solidity ^0.5.16;
+pragma experimental ABIEncoderV2;
 
 // Inheritance
 import "./TemporarilyOwned.sol";
@@ -9,20 +10,21 @@ import "./interfaces/IOwnerRelayOnOptimism.sol";
 import "@eth-optimism/contracts/iOVM/bridge/messaging/iAbs_BaseCrossDomainMessenger.sol";
 
 contract OwnerRelayOnOptimism is TemporarilyOwned, IOwnerRelayOnOptimism {
-    address public immutable MESSENGER;
-    address public immutable CONTRACT_BASE_OWNER_RELAY_ON_ETHEREUM;
+    address public MESSENGER;
+    address public CONTRACT_BASE_OWNER_RELAY_ON_ETHEREUM;
 
     /* ========== CONSTRUCTOR ============ */
 
     constructor(address _temporaryOwner, uint256 _ownershipDuration)
+        public
         TemporarilyOwned(_temporaryOwner, _ownershipDuration)
     {}
 
-    function setContractData(address _messenger, address _relayOnEthereum)
-        external
-        onlyTemporaryOwner
-    {
-        MESSENGER = _messenger;
+    function setContractData(
+        address _messengerAddress,
+        address _relayOnEthereum
+    ) external onlyTemporaryOwner {
+        MESSENGER = _messengerAddress;
         CONTRACT_BASE_OWNER_RELAY_ON_ETHEREUM = _relayOnEthereum;
     }
 
