@@ -2,6 +2,10 @@ const fs = require("fs");
 const { request, gql } = require("graphql-request");
 const { ethers } = require("ethers");
 const { getAddress } = require("@ethersproject/address");
+import {
+  L1_TO_L2_NETWORK_MAPPER,
+  OPTIMISM_NETWORKS,
+} from "@synthetixio/optimism-networks";
 
 const DebtCacheABI = [
   "function currentDebt() view returns (uint256 debt, bool anyRateIsInvalid)",
@@ -164,18 +168,28 @@ async function getSNXHolders(
 }
 
 async function main() {
+  const score = {};
+
   const l1Provider = new ethers.providers.JsonRpcProvider({
     url: process.env.ARCHIVE_NODE_URL,
     user: process.env.ARCHIVE_NODE_USER,
     password: process.env.ARCHIVE_NODE_PASS,
   });
-  const l2Provider = null;
-  const score = {};
+  const mainnetID = 1;
+  const ovmNetworkId = L1_TO_L2_NETWORK_MAPPER[mainnetID];
+  const l2Provider = new ethers.providers.StaticJsonRpcProvider(
+    OPTIMISM_NETWORKS[ovmNetworkId].rpcUrls[0]
+  );
+
   const l1BlockNumber = 13812549;
   const l2BlockNumber = 1231113;
+
   const l1Results = await getHolders(l1BlockNumber, "L1");
   const l2Results = await getHolders(l2BlockNumber, "L2");
+
   const totalL1Debt = await loadTotalDebt(l1Provider, l1BlockNumber); // (high-precision 1e18)
+  const totalL2Debt = await loadTotalDebt(l2Provider, l2BlockNumber);
+
   const lastDebtLedgerEntryL1 = await loadLastDebtLedgerEntry(
     l1Provider,
     l1BlockNumber
@@ -185,15 +199,12 @@ async function main() {
     l2BlockNumber
   );
 
-  const totalL2Debt = await loadTotalDebt(l2Provider, l2BlockNumber);
-
   // @TODO update the currentDebt for the snapshot from (https://contracts.synthetix.io/ovm/DebtCache)
   // const totalL2Debt = 48646913;
   // @TODO update the lastDebtLedgerEntry from (https://contracts.synthetix.io/ovm/SynthetixState)
   // const lastDebtLedgerEntryL2 = 9773647546760863848975891;
   // @TODO update the comparison between OVM:ETH c-ratios at the time of snapshot
   const normalisedL2CRatio = 500 / 400;
-
   const scaledTotalL2Debt = totalL2Debt * normalisedL2CRatio;
 
   if (l1Results.length > 0 && l2Results.length > 0) {

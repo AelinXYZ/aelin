@@ -170,10 +170,46 @@ Environment variables needed for the codebase in addition to `ALCHEMY_URL`
 1. `export KOVAN_PRIVATE_KEY=...` any private key with some kovan ETH on it for deployment
 2. `export ALCHEMY_API_KEY=...` the same key at the end of the `ALCHEMY_URL` environment variable but it needs to be in its own environment variable.
 
-#### Deploying
+#### Deploying Aelin
 
-1. export ALCHEMY_API_KEY (just the key part) from step 2 in running integration tests.
-2. grab an Ethereum private key and get some Kovan ETH on it. `export KOVAN_PRIVATE_KEY=<key>`.
-3. `npm run deploy-deal:<network>` - take the address of the deployed deal from the CLI and paste it in the `AelinPoolFactory` as `address constant AELIN_DEAL_LOGIC = ...`
-4. `npm run deploy-pool:<network>` - take the address of the deployed pool from the CLI and paste it in the `AelinPoolFactory` as `address constant AELIN_POOL_LOGIC = ...`
-5. `npm run deploy-pool-factory:<network>`
+NOTE: Steps 1 and 2 are repo setup steps that should not be needed but have not been refactored out.
+
+1. export ALCHEMY_API_KEY (just the key part) from step 2 which is needed in running integration tests.
+
+2. grab an Ethereum private key and get some Kovan ETH on it if using KOVAN. `export KOVAN_PRIVATE_KEY=<key>`. NOTE we might need some additional setup around hardhat for deploying to Optimistic Kovan
+
+3. `npm run deploy-deal:<network>` - take the address of the deployed deal from the CLI and paste it in `scripts/deploy-pool-factory.js` variable `dealLogicAddress`
+
+4. `npm run deploy-pool:<network>` - take the address of the deployed pool from the CLI and paste it in `scripts/deploy-pool-factory.js` variable `poolLogicAddress`
+
+5. `npm run deploy-owner-relay-on-optimism` - to deploy the Optimism Bridge (OwnerRelayOnOptimism.sol) and paste it in `scripts/deploy-optimism-treasuty.js` variable `owner` and also paste it in `scripts/deploy-owner-relay-on-ethereum.js` variable `relayOnOptimism`. Note the private key used to deploy this contract will be the temporary owner of this contract for the amount of time specified in `scripts/deploy-owner-relay-on-optimism.js` variable `ownershipDuration`. You will need to use this same private key as the signer in `scripts/helpers/optimism-bridge-calls.js`. I have not run this yet but using ethers from hardhat and having the deployer sign it is prob the best move here on testnet.
+
+6. `npm run deploy-optimism-treasury` - take the address of the deployed deal fee/ AELIN token treasury address from the CLI and paste it in the `scripts/deploy-pool-factory.js` variable `rewardsAddress` and also paste it in `scripts/deploy-aelin-token.js` variable `optimismTreasury`
+
+7. `npm run deploy-owner-relay-on-ethereum` - take the address of the deployed bridge and paste it in `scripts/helpers/optimism-bridge-calls.js` variable `relayOnEthereum`
+
+8. `npm run optimism-bridge-calls` to set the contract data for the bridge so it is aware of the Ethereum bridge address. Note that this will finalize setup of the contract. you still want to test this bridge more while the `ownershipDuration` used in step 5 is still active.
+
+8a. (testing) transfer some funds to the Optimism Treasuty and try calling the direct relay method on the Optimism Bridge as the temporary owner (deployer) `npm run optimism-bridge-calls` can make this call if you comment out the top part and uncomment the bottom. This script makes sure the temp owner can move the funds during their ownershipDuration in case something goes wrong.
+
+8b. (testing) try transfering some funds out of the Optimism Treasury using the relay calls from Ethereum L1 Bridge (TODO - write this script from L1 that makes a call to the bridge with the proper encoding)
+
+8c (testing) call nominateNewOwner on the Optimism Treasury from the Ethereum Bridge to make sure that it is working so we can soon transfer ownership of the Treasury to a L2 multisig controlled by Aelin Council
+
+9. `npm run deploy-pool-factory:<network>`
+
+10. `npm run deploy-aelin-token:optimism` to deploy the `AELIN token` and send all the tokens to the OptimismTreasury deployed contract;
+
+11. Create a vAELIN ERC20 token on Optimism by calling `npm run deploy-virtual-aelin:optimism` and paste this vAELIN ERC20 address in `scripts/helpers/dist-addresses.json` under `optimism.VirtualAelinToken` json field
+
+12. Run the historical staking data script. You need to have an Optimism archive node running to get the `totalL2Debt`, `lastDebtLedgerEntryL2` for the block we are looking to capture the data at `1231113` in this case. Daniel sent me this link yesterday so we can run an Optimism archive node locally while doing this. It syncs quickly apparently (https://github.com/optimisticben/op-replica). On the other hand, I took a snapshot today at block `13839440` in case the archive node is not working. at that block the `totalL2Debt` is `44623051603213924679706746` and the `lastDebtLedgerEntryL2` is `10432172923357179928181650`. we can use the corresponding L1 block for this later snapshot (it is likely in the area of block `13839700`???). I have the right L1 block hardcoded if the OP archive node works.
+
+13. Double check that the script was run properly and the distribution scores are ready in `scripts/helpers/staking-data.json`; this is a json file with address key and score fields such as: `{ "0x829BD824B016326A401d083B33D092293333A830": 5.861 }`
+
+14. `npm run deploy-distribution:optimism` to build the airdrop merkle tree from the list of scores and deploy the distribution airdrop contract with the merkle root. Make sure that the `scripts/helpers/optimism/dist-hashes.json` file saves properly as users will need the merkle root leaves from this file in order to make their claims. we can have them download this entire file and find their item in the long array but only when they go to the claim screen.
+
+NOTE that you will now have a working set of Aelin Contracts sending deal fees to a treasury contract on L2 which is controlled by a multisig on L1 until gnosis is deployed and can transfer ownership to a L2 multisig. The treasury contract will also have all the AELIN tokens in it, ready to be distributed from the L1 multisig. We need to make sure that the L1 multisig can transfer all of the funds and change owners to the future L2 multisig.
+
+We can do the Balancer pool at another point in time.
+
+Outstanding questions: can you just deploy using hardhat with --network optimism

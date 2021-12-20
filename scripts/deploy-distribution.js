@@ -34,11 +34,8 @@ async function distributionSetup() {
 
   const owner = accounts[0];
 
-  const AELIN_FEE = 0.02;
-
-  const AELIN_AIRDROP_AMOUNT = 750;
-  // to account for the 2% protocol fee;
-  const vAELIN_AIRDROP_AMOUNT = AELIN_AIRDROP_AMOUNT / (1 - AELIN_FEE);
+  // this is hardcoded from the contract which value comes from the calc 750 / 0.98 to account for the 2% protocol fee;
+  const vAELIN_AIRDROP_AMOUNT = 765306122448980000000 / 1e18;
 
   const DISTRIBUTION_AMOUNT = ethers.utils.parseUnits(
     vAELIN_AIRDROP_AMOUNT.toString(),
