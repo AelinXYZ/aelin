@@ -52,6 +52,7 @@
     "@ethersproject/address": "5.0.4",
     "@microsoft/eslint-formatter-sarif": "2.1.5",
     "@nomiclabs/hardhat-ethers": "2.0.2",
+    "@nomiclabs/hardhat-etherscan": "2.1.8",
     "@nomiclabs/hardhat-waffle": "2.0.1",
     "@nomiclabs/hardhat-web3": "2.0.0",
     "@openzeppelin/contracts": "4.3.2",

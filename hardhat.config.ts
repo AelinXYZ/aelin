@@ -7,6 +7,7 @@ import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "hardhat-interact";
 import "solidity-coverage";
+import "@nomiclabs/hardhat-etherscan";
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
@@ -48,6 +49,9 @@ const config: HardhatUserConfig = {
   mocha: {
     // this needs to be long because CI takes a while to fork the mainnet data from alchemy
     timeout: 1000000,
+  },
+  etherscan: {
+    apiKey: `${process.env.ETHERSCAN_API_KEY}`,
   },
   networks: {
     optimism: {
