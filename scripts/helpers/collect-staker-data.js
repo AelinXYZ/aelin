@@ -2,10 +2,6 @@ const fs = require("fs");
 const { request, gql } = require("graphql-request");
 const { ethers } = require("ethers");
 const { getAddress } = require("@ethersproject/address");
-import {
-  L1_TO_L2_NETWORK_MAPPER,
-  OPTIMISM_NETWORKS,
-} from "@synthetixio/optimism-networks";
 
 const DebtCacheABI = [
   "function currentDebt() view returns (uint256 debt, bool anyRateIsInvalid)",
@@ -26,63 +22,48 @@ const synthetixSnxL1 =
 const synthetixSnxL2 =
   "https://api.thegraph.com/subgraphs/name/synthetixio-team/optimism-main";
 
+
+const ARCHIVE_NODE_URL= '';
+const ARCHIVE_NODE_USER= '';
+const ARCHIVE_NODE_PASS= '';
+
 const MAX_LENGTH = 1000;
 const HIGH_PRECISE_UNIT = 1e27;
 const MED_PRECISE_UNIT = 1e18;
-const SCALING_FACTOR = 1e5;
 
-const debtL1 = async (
+const SNX_PRICE_AT_SNAPSHOT = 5;
+
+const computeScaledWeight =  (
   initialDebtOwnership,
   debtEntryAtIndex,
   totalL1Debt,
   scaledTotalL2Debt,
-  lastDebtLedgerEntry
+  lastDebtLedgerEntry,
+  collateral,
+  targetRatio,
+  isL2
+
 ) => {
+
+  const totalDebt = isL2 ? scaledTotalL2Debt: totalL1Debt;
   const currentDebtOwnershipPercent =
     (Number(lastDebtLedgerEntry) / Number(debtEntryAtIndex)) *
     Number(initialDebtOwnership);
 
   const highPrecisionBalance =
-    totalL1Debt *
+  totalDebt *
     MED_PRECISE_UNIT *
     (currentDebtOwnershipPercent / HIGH_PRECISE_UNIT);
 
   const currentDebtBalance = highPrecisionBalance / MED_PRECISE_UNIT;
 
-  const totalDebtInSystem = totalL1Debt + scaledTotalL2Debt;
-
-  const ownershipPercentOfTotalDebt = currentDebtBalance / totalDebtInSystem;
-
-  const scaledWeighting = ownershipPercentOfTotalDebt * SCALING_FACTOR;
-
-  return scaledWeighting;
-};
-
-const debtL2 = async (
-  initialDebtOwnership,
-  debtEntryAtIndex,
-  totalL1Debt,
-  scaledTotalL2Debt,
-  lastDebtLedgerEntryL2
-) => {
-  const currentDebtOwnershipPercent =
-    (Number(lastDebtLedgerEntryL2) / Number(debtEntryAtIndex)) *
-    Number(initialDebtOwnership);
-
-  const highPrecisionBalance =
-    totalL1Debt *
-    MED_PRECISE_UNIT *
-    (currentDebtOwnershipPercent / HIGH_PRECISE_UNIT);
-
-  const currentDebtBalance = highPrecisionBalance / MED_PRECISE_UNIT;
+  const cappedCurrentDebtBalance = Math.min(currentDebtBalance, Number(collateral) * SNX_PRICE_AT_SNAPSHOT * targetRatio);
 
   const totalDebtInSystem = totalL1Debt + scaledTotalL2Debt;
 
-  const ownershipPercentOfTotalDebt = currentDebtBalance / totalDebtInSystem;
+  const ownershipPercentOfTotalDebt = cappedCurrentDebtBalance / totalDebtInSystem;
 
-  const scaledWeighting = ownershipPercentOfTotalDebt * SCALING_FACTOR;
-
-  return scaledWeighting;
+  return ownershipPercentOfTotalDebt;
 };
 
 const loadLastDebtLedgerEntry = async (provider, snapshot) => {
@@ -113,6 +94,7 @@ const loadTotalDebt = async (provider, snapshot) => {
   return Number(currentDebtObject.debt) / MED_PRECISE_UNIT;
 };
 
+
 const createStakersQuery = (blockNumber, minTimestamp) => {
   const minTimestampWhere =
     minTimestamp != null ? `, timestamp_lt: $minTimestamp` : "";
@@ -130,6 +112,7 @@ snxholders(
   collateral
   debtEntryAtIndex
   initialDebtOwnership
+  block
 }
 }
 `;
@@ -156,7 +139,7 @@ async function getSNXHolders(
   );
   const data = [...stakedResponse.snxholders, ...prevData];
   if (stakedResponse.snxholders.length === MAX_LENGTH) {
-    return getHolders(
+    return getSNXHolders(
       blockNumber,
       stakedResponse.snxholders[stakedResponse.snxholders.length - 1].timestamp,
       data,
@@ -164,40 +147,35 @@ async function getSNXHolders(
       network
     );
   }
-  return;
+  return data;
 }
 
 async function main() {
   const score = {};
 
   const l1Provider = new ethers.providers.JsonRpcProvider({
-    url: process.env.ARCHIVE_NODE_URL,
-    user: process.env.ARCHIVE_NODE_USER,
-    password: process.env.ARCHIVE_NODE_PASS,
+    url: ARCHIVE_NODE_URL,
+    user: ARCHIVE_NODE_USER,
+    password: ARCHIVE_NODE_PASS,
   });
-  const mainnetID = 1;
-  const ovmNetworkId = L1_TO_L2_NETWORK_MAPPER[mainnetID];
-  const l2Provider = new ethers.providers.StaticJsonRpcProvider(
-    OPTIMISM_NETWORKS[ovmNetworkId].rpcUrls[0]
-  );
 
-  const l1BlockNumber = 13812549;
-  const l2BlockNumber = 1231113;
+  const l1BlockNumber = 13812548;
+  const l2BlockNumber = 1231112;
 
   const l1Results = await getHolders(l1BlockNumber, "L1");
   const l2Results = await getHolders(l2BlockNumber, "L2");
 
   const totalL1Debt = await loadTotalDebt(l1Provider, l1BlockNumber); // (high-precision 1e18)
-  const totalL2Debt = await loadTotalDebt(l2Provider, l2BlockNumber);
+  const totalL2Debt = Number('44623051603213924679706746') / 1e18;
 
   const lastDebtLedgerEntryL1 = await loadLastDebtLedgerEntry(
     l1Provider,
     l1BlockNumber
   );
-  const lastDebtLedgerEntryL2 = await loadLastDebtLedgerEntry(
-    l2Provider,
-    l2BlockNumber
-  );
+  const lastDebtLedgerEntryL2 = Number('10432172923357179928181650') / 1e18;
+
+  const issuanceRatioL1 = 0.25;
+  const issuanceRatioL2 = 0.2;
 
   // @TODO update the currentDebt for the snapshot from (https://contracts.synthetix.io/ovm/DebtCache)
   // const totalL2Debt = 48646913;
@@ -210,13 +188,17 @@ async function main() {
   if (l1Results.length > 0 && l2Results.length > 0) {
     for (let i = 0; i < l1Results.length; i++) {
       const holder = l1Results[i];
-      const vote = debtL1(
+      const vote = computeScaledWeight(
         holder.initialDebtOwnership,
         holder.debtEntryAtIndex,
         totalL1Debt,
         scaledTotalL2Debt,
-        lastDebtLedgerEntryL1
+        lastDebtLedgerEntryL1,
+        holder.collateral,
+        issuanceRatioL1,
+        false,
       );
+
       if (score[getAddress(holder.id)]) {
         console.log(
           "should never have a duplicate in L1 results but we do with:",
@@ -229,12 +211,15 @@ async function main() {
     }
     for (let i = 0; i < l2Results.length; i++) {
       const holder = l2Results[i];
-      const vote = await debtL2(
+      const vote = computeScaledWeight(
         holder.initialDebtOwnership,
         holder.debtEntryAtIndex,
         totalL1Debt,
         scaledTotalL2Debt,
-        lastDebtLedgerEntryL2
+        lastDebtLedgerEntryL2,
+        holder.collateral,
+        issuanceRatioL2,
+        true
       );
       if (score[getAddress(holder.id)]) {
         console.log("We have a duplicate in L2 results for:", holder.id);
