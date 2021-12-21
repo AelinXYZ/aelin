@@ -24,10 +24,10 @@ let historicalSnapshot = require("./helpers/staking-data.json");
 async function distributionSetup() {
   const accounts = await ethers.getSigners();
   const networkObj = await ethers.provider.getNetwork();
-  let network = networkObj.name;
+  let network = networkObj.chainId === 10 ? "optimism" : networkObj.name;
 
-  if (network !== "optimism") {
-    console.log("not on prod - using test snapshot");
+  if (network === "optimism") {
+    console.log("using test snapshot");
     historicalSnapshot = require("./helpers/staking-test-data.json");
   }
   console.log("Network name:" + network);

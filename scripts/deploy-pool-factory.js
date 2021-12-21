@@ -10,14 +10,13 @@ async function main() {
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
   // TODO fill out the correct fields for each deployment
-  const poolLogicAddress = "";
-  const dealLogicAddress = "";
-  const rewardsAddress = "";
+  const poolLogicAddress = "0x2569f66b7Acd8954A7B3A48481823e30c4990742";
+  const dealLogicAddress = "0x02b9E99a05458d763256B977E61c1d947a5a0d04";
+  const rewardsAddress = "0x55c1688587e6DfD52E44BF8B7028a8f7525296E7";
 
-  // latest Kovan addresses
-  // "0xbA615F3aa6384F642DBFB729E1d157524f0334b3",
-  // "0xa2cc163735DF76fB3fa4BD0F971a02b5F217C93C",
-  // "0x2C1dA0F3A1E2916cA9B8F33C6E12d75eC2f975aa"
+  // mainnet OP deployed contracts
+  // const poolLogicAddress = "0x2569f66b7Acd8954A7B3A48481823e30c4990742";
+  // const dealLogicAddress = "0x02b9E99a05458d763256B977E61c1d947a5a0d04";
 
   const AelinPoolFactory = await ethers.getContractFactory("AelinPoolFactory");
   const aelinPoolFactory = await AelinPoolFactory.deploy(

@@ -16,7 +16,7 @@ async function main() {
   // from https://github.com/ethereum-optimism/optimism/blob/ef5343d61708f2d15f51dca981f03ee4ac447c21/packages/contracts/deployments/README.md
   const messengerAddress = "0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1";
   // NOTE you need to deploy OwnerRelayOnOptimism first so you have this address
-  const relayOnOptimism = "";
+  const relayOnOptimism = "0x88FdC711EFF5877B464D299C7ac3077135C6C5ca";
   const ownerRelayOnEthereum = await OwnerRelayOnEthereum.deploy(
     owner,
     messengerAddress,

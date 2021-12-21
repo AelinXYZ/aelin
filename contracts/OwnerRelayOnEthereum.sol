@@ -10,8 +10,8 @@ import "./interfaces/IOwnerRelayOnOptimism.sol";
 import "@eth-optimism/contracts/iOVM/bridge/messaging/iAbs_BaseCrossDomainMessenger.sol";
 
 contract OwnerRelayOnEthereum is LegacyOwned {
-    address public immutable MESSENGER;
-    address public immutable CONTRACT_OVM_OWNER_RELAY_ON_OPTIMISM;
+    address public MESSENGER;
+    address public CONTRACT_OVM_OWNER_RELAY_ON_OPTIMISM;
     uint32 public constant MAX_CROSS_DOMAIN_GAS_LIMIT = 8e6;
 
     // ========== CONSTRUCTOR ==========

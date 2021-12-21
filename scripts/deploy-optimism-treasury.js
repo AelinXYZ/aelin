@@ -9,7 +9,7 @@ async function main() {
 
   // NOTE the L2 bridge contract which is owned by the L1 multisig will own the treasury
   // The L1 multisig will call change ownership to a L2 multisig once gnosis is live on Optimism
-  const owner = "";
+  const owner = "0x88FdC711EFF5877B464D299C7ac3077135C6C5ca";
 
   const OptimismTreasury = await ethers.getContractFactory("OptimismTreasury");
   const optimismTreasury = await OptimismTreasury.deploy(owner);

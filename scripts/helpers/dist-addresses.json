@@ -1,10 +1,10 @@
 {
   "kovan": {
     "Distribution": "",
-    "VirtualAelinToken": "0x50263AFE9Ea8Ded3DaD1a9Af96Fc366bB5d96bfa"
+    "VirtualAelinToken": ""
   },
   "optimism": {
     "Distribution": "",
-    "VirtualAelinToken": "0x50263AFE9Ea8Ded3DaD1a9Af96Fc366bB5d96bfa"
+    "VirtualAelinToken": "0xA7A86ec3C266435C580354d8c9A33b1BC91697A7"
   }
 }

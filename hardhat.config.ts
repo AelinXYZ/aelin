@@ -49,6 +49,14 @@ const config: HardhatUserConfig = {
     timeout: 1000000,
   },
   networks: {
+    optimism: {
+      url: `https://optimism-mainnet.infura.io/v3/${process.env.OP_API_KEY}`,
+      accounts: [`0x${process.env.OP_PRIVATE_KEY}`],
+    },
+    mainnet: {
+      url: `${process.env.ALCHEMY_URL}`,
+      accounts: [`0x${process.env.OP_PRIVATE_KEY}`],
+    },
     kovan: {
       url: `https://eth-kovan.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
       accounts: [`0x${process.env.KOVAN_PRIVATE_KEY}`],

@@ -176,17 +176,17 @@ NOTE: Steps 1 and 2 are repo setup steps that should not be needed but have not 
 
 1. export ALCHEMY_API_KEY (just the key part) from step 2 which is needed in running integration tests.
 
-2. grab an Ethereum private key and get some Kovan ETH on it if using KOVAN. `export KOVAN_PRIVATE_KEY=<key>`. NOTE we might need some additional setup around hardhat for deploying to Optimistic Kovan
+2. grab an Ethereum private key and get some Kovan ETH on it if using KOVAN. `export KOVAN_PRIVATE_KEY=<key>`. NOTE we might need some additional setup around hardhat for deploying to Optimism too
 
 3. `npm run deploy-deal:<network>` - take the address of the deployed deal from the CLI and paste it in `scripts/deploy-pool-factory.js` variable `dealLogicAddress`
 
 4. `npm run deploy-pool:<network>` - take the address of the deployed pool from the CLI and paste it in `scripts/deploy-pool-factory.js` variable `poolLogicAddress`
 
-5. `npm run deploy-owner-relay-on-optimism` - to deploy the Optimism Bridge (OwnerRelayOnOptimism.sol) and paste it in `scripts/deploy-optimism-treasuty.js` variable `owner` and also paste it in `scripts/deploy-owner-relay-on-ethereum.js` variable `relayOnOptimism`. Note the private key used to deploy this contract will be the temporary owner of this contract for the amount of time specified in `scripts/deploy-owner-relay-on-optimism.js` variable `ownershipDuration`. You will need to use this same private key as the signer in `scripts/helpers/optimism-bridge-calls.js`. I have not run this yet but using ethers from hardhat and having the deployer sign it is prob the best move here on testnet.
+5. `npm run deploy-owner-relay-on-optimism` - to deploy the Optimism Bridge (OwnerRelayOnOptimism.sol) and paste it in `scripts/deploy-optimism-treasuty.js` variable `owner` and also paste it in `scripts/deploy-owner-relay-on-ethereum.js` variable `relayOnOptimism` and also paste it in `scripts/optimism-bridge-calls.js` variable `bridgeAddress`. Note the private key used to deploy this contract will be the temporary owner of this contract for the amount of time specified in `scripts/deploy-owner-relay-on-optimism.js` variable `ownershipDuration`. You will need to use this same private key as the signer in `scripts/helpers/optimism-bridge-calls.js`. I have not run this yet but using ethers from hardhat and having the deployer sign it is prob the best move here.
 
 6. `npm run deploy-optimism-treasury` - take the address of the deployed deal fee/ AELIN token treasury address from the CLI and paste it in the `scripts/deploy-pool-factory.js` variable `rewardsAddress` and also paste it in `scripts/deploy-aelin-token.js` variable `optimismTreasury`
 
-7. `npm run deploy-owner-relay-on-ethereum` - take the address of the deployed bridge and paste it in `scripts/helpers/optimism-bridge-calls.js` variable `relayOnEthereum`
+7. `npm run deploy-owner-relay-on-ethereum` - take the address of the deployed bridge and paste it in `scripts/optimism-bridge-calls.js` variable `relayOnEthereum`
 
 8. `npm run optimism-bridge-calls` to set the contract data for the bridge so it is aware of the Ethereum bridge address. Note that this will finalize setup of the contract. you still want to test this bridge more while the `ownershipDuration` used in step 5 is still active.
 
