@@ -72,6 +72,7 @@
     "graphql-request": "^3.7.0",
     "hardhat": "2.6.4",
     "hardhat-gas-reporter": "1.0.4",
+    "hardhat-interact": "0.2.0",
     "keccak256": "1.0.3",
     "merkletreejs": "0.2.23",
     "mocha": "7.2.0",

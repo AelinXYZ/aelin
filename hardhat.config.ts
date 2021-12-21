@@ -5,6 +5,7 @@ import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-web3";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
+import "hardhat-interact";
 import "solidity-coverage";
 
 /**
@@ -54,8 +55,9 @@ const config: HardhatUserConfig = {
       accounts: [`0x${process.env.OP_PRIVATE_KEY}`],
     },
     mainnet: {
-      url: `${process.env.ALCHEMY_URL}`,
+      url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
       accounts: [`0x${process.env.OP_PRIVATE_KEY}`],
+      gasMultiplier: 1.5,
     },
     kovan: {
       url: `https://eth-kovan.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,

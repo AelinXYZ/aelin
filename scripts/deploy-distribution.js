@@ -7,7 +7,7 @@ const distributionAddresses = require("./helpers/dist-addresses.json");
 const setTargetAddress = (contractName, network, address) => {
   distributionAddresses[network][contractName] = address;
   fs.writeFileSync(
-    "./dist-addresses.json",
+    "./scripts/helpers/dist-addresses.json",
     JSON.stringify(distributionAddresses),
     function (err) {
       if (err) return console.log(err);
