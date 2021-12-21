@@ -1,9 +1,6 @@
 const { ethers } = require("hardhat");
-// const OptimismTreasuryArtifact = require("../../artifacts/contracts/OptimismTreasury.sol/OptimismTreasury.json");
 const OwnerRelayOnOptimismArtifact = require("../artifacts/contracts/OwnerRelayOnOptimism.sol/OwnerRelayOnOptimism.json");
 
-// NOTE I put the code for 2 separate calls in this file. both are related to the Optimism bridge
-// you will have to comment the top tx related code and uncomment the bottom one to run the bottom method
 async function main() {
   const bridgeAddress = "0x88FdC711EFF5877B464D299C7ac3077135C6C5ca";
 
@@ -23,26 +20,6 @@ async function main() {
     .setContractData(messengerAddress, relayOnEthereum);
   console.log("tx submitted", tx);
   // tx hash to set data on OP 0xa0cca34b7b07d2576e12e2eaa1158462f8f8c00d4f3c181e53daab884a8e8e6b
-
-  // TODO work on testing direct relay as well
-  // const optimismTreasuryAddress = "";
-  // const optimismTreasury = await ethers.getContractAt(
-  //   OptimismTreasuryArtifact.abi,
-  //   optimismTreasuryAddress,
-  //   signer
-  // );
-  // const tokenToTransferAddress = "";
-  // const transferTo = "";
-  // const transferAmount = ethers.utils.parseEther(1);
-  // const transferPayload = optimismTreasury.interface.encodeFunctionData(
-  //   "transferToken(address,address,uint256)",
-  //   [tokenToTransferAddress, transferTo, transferAmount]
-  // );
-  // const tx = await ownerRelayOnOptimism.directRelay(
-  //   optimismTreasuryAddress,
-  //   transferPayload
-  // );
-  // console.log("tx submitted", tx);
 }
 
 main()
