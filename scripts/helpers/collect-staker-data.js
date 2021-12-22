@@ -22,13 +22,11 @@ const synthetixSnxL1 =
 const synthetixSnxL2 =
   "https://api.thegraph.com/subgraphs/name/synthetixio-team/optimism-main";
 
-const ARCHIVE_NODE_URL = "";
-const ARCHIVE_NODE_USER = "";
-const ARCHIVE_NODE_PASS = "";
+const ARCHIVE_NODE_URL = "https://ethnode.synthetix.io";
+const ARCHIVE_NODE_USER = "snx";
+const ARCHIVE_NODE_PASS = "snx321";
 
 const MAX_LENGTH = 1000;
-const HIGH_PRECISE_UNIT = 1e27;
-const MED_PRECISE_UNIT = 1e18;
 
 const SNX_PRICE_AT_SNAPSHOT = 5;
 
@@ -40,22 +38,17 @@ const computeScaledWeight = (
   lastDebtLedgerEntry,
   collateral,
   targetRatio,
-  isL2
+  isL2,
+  shouldLog
 ) => {
   const totalDebt = isL2 ? scaledTotalL2Debt : totalL1Debt;
-  const currentDebtOwnershipPercent =
-    (Number(lastDebtLedgerEntry) / Number(debtEntryAtIndex)) *
+
+  const debtBalance =
+    ((totalDebt * Number(lastDebtLedgerEntry)) / Number(debtEntryAtIndex)) *
     Number(initialDebtOwnership);
 
-  const highPrecisionBalance =
-    totalDebt *
-    MED_PRECISE_UNIT *
-    (currentDebtOwnershipPercent / HIGH_PRECISE_UNIT);
-
-  const currentDebtBalance = highPrecisionBalance / MED_PRECISE_UNIT;
-
   const cappedCurrentDebtBalance = Math.min(
-    currentDebtBalance,
+    debtBalance,
     Number(collateral) * SNX_PRICE_AT_SNAPSHOT * targetRatio
   );
 
@@ -64,7 +57,15 @@ const computeScaledWeight = (
   const ownershipPercentOfTotalDebt =
     cappedCurrentDebtBalance / totalDebtInSystem;
 
-  return ownershipPercentOfTotalDebt;
+  if (shouldLog) {
+    console.log("totalDebt", totalDebt);
+    console.log("debtBalance", debtBalance);
+    console.log("cappedCurrentDebtBalance", cappedCurrentDebtBalance);
+    console.log("totalDebtInSystem", totalDebtInSystem);
+    console.log("ownershipPercentOfTotalDebt", ownershipPercentOfTotalDebt);
+  }
+
+  return ownershipPercentOfTotalDebt * 10 ** 8;
 };
 
 const loadLastDebtLedgerEntry = async (provider, snapshot) => {
@@ -78,7 +79,7 @@ const loadLastDebtLedgerEntry = async (provider, snapshot) => {
     blockTag: snapshot,
   });
 
-  return ethers.BigNumber.from(lastDebtLedgerEntry);
+  return ethers.utils.formatUnits(lastDebtLedgerEntry, 27);
 };
 
 const loadTotalDebt = async (provider, snapshot) => {
@@ -92,7 +93,7 @@ const loadTotalDebt = async (provider, snapshot) => {
     blockTag: snapshot,
   });
 
-  return Number(currentDebtObject.debt) / MED_PRECISE_UNIT;
+  return Number(currentDebtObject.debt) / 1e18;
 };
 
 const createStakersQuery = (blockNumber, minTimestamp) => {
@@ -137,7 +138,14 @@ async function getSNXHolders(
       minTimestamp,
     }
   );
-  const data = [...stakedResponse.snxholders, ...prevData];
+  const parsedData = stakedResponse.snxholders.map((holder) => {
+    holder.initialDebtOwnership = ethers.utils.formatEther(
+      holder.initialDebtOwnership
+    );
+    holder.debtEntryAtIndex = ethers.utils.formatEther(holder.debtEntryAtIndex);
+    return holder;
+  });
+  const data = [...parsedData, ...prevData];
   if (stakedResponse.snxholders.length === MAX_LENGTH) {
     return getSNXHolders(
       blockNumber,
@@ -167,13 +175,16 @@ async function main() {
 
   const totalL1Debt = await loadTotalDebt(l1Provider, l1BlockNumber); // (high-precision 1e18)
   const totalL2Debt = Number("44623051603213924679706746") / 1e18;
+  console.log("totalL1Debt", totalL1Debt);
+  console.log("totalL2Debt", totalL2Debt);
 
   const lastDebtLedgerEntryL1 = await loadLastDebtLedgerEntry(
     l1Provider,
     l1BlockNumber
   );
-  const lastDebtLedgerEntryL2 = Number("10432172923357179928181650") / 1e18;
-
+  const lastDebtLedgerEntryL2 = "10432172923357179928181650" / 1e27;
+  console.log("lastDebtLedgerEntryL1", lastDebtLedgerEntryL1);
+  console.log("lastDebtLedgerEntryL2", lastDebtLedgerEntryL2);
   const issuanceRatioL1 = 0.25;
   const issuanceRatioL2 = 0.2;
 
@@ -184,11 +195,18 @@ async function main() {
   // @TODO update the comparison between OVM:ETH c-ratios at the time of snapshot
   const normalisedL2CRatio = 500 / 400;
   const scaledTotalL2Debt = totalL2Debt * normalisedL2CRatio;
+  console.log("scaledTotalL2Debt", scaledTotalL2Debt);
   let totalScore = 0;
 
   if (l1Results.length > 0 && l2Results.length > 0) {
     for (let i = 0; i < l1Results.length; i++) {
       const holder = l1Results[i];
+      if (
+        holder.id.toLowerCase() ===
+        "0xe0041ea9c685fd159e7cb45adf6119ae791f3c93".toLowerCase()
+      ) {
+        console.log("test holder l1", holder);
+      }
       const vote = computeScaledWeight(
         holder.initialDebtOwnership,
         holder.debtEntryAtIndex,
@@ -197,7 +215,9 @@ async function main() {
         lastDebtLedgerEntryL1,
         holder.collateral,
         issuanceRatioL1,
-        false
+        false,
+        holder.id.toLowerCase() ===
+          "0xe0041ea9c685fd159e7cb45adf6119ae791f3c93".toLowerCase()
       );
 
       if (score[getAddress(holder.id)]) {
@@ -213,6 +233,12 @@ async function main() {
     }
     for (let i = 0; i < l2Results.length; i++) {
       const holder = l2Results[i];
+      if (
+        holder.id.toLowerCase() ===
+        "0xe0041ea9c685fd159e7cb45adf6119ae791f3c93".toLowerCase()
+      ) {
+        console.log("test holder l2", holder);
+      }
       const vote = computeScaledWeight(
         holder.initialDebtOwnership,
         holder.debtEntryAtIndex,
@@ -221,7 +247,9 @@ async function main() {
         lastDebtLedgerEntryL2,
         holder.collateral,
         issuanceRatioL2,
-        true
+        true,
+        holder.id.toLowerCase() ===
+          "0xe0041ea9c685fd159e7cb45adf6119ae791f3c93".toLowerCase()
       );
       if (score[getAddress(holder.id)]) {
         console.log("We have a duplicate in L2 results for:", holder.id);

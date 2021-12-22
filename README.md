@@ -206,7 +206,7 @@ NOTE: Steps 1 and 2 are repo setup steps that should not be needed but have not 
 
 13. Double check that the script was run properly and the distribution scores are ready in `scripts/helpers/staking-data.json`; this is a json file with address key and score fields such as: `{ "0x829BD824B016326A401d083B33D092293333A830": 5.861 }`
 
-14. `npm run deploy-distribution:optimism` to build the airdrop merkle tree from the list of scores and deploy the distribution airdrop contract with the merkle root. Make sure that the `scripts/helpers/optimism/dist-hashes.json` file saves properly as users will need the merkle root leaves from this file in order to make their claims. we can have them download this entire file and find their item in the long array but only when they go to the claim screen.
+14. `npm run deploy-distribution:optimism` to build the distribution merkle tree from the list of scores and deploy the distribution contract with the merkle root. Make sure that the `scripts/helpers/optimism/dist-hashes.json` file saves properly as users will need the merkle root leaves from this file in order to make their claims. we can have them download this entire file and find their item in the long array but only when they go to the claim screen.
 
 NOTE that you will now have a working set of Aelin Contracts sending deal fees to a treasury contract on L2 which is controlled by a multisig on L1 until gnosis is deployed and can transfer ownership to a L2 multisig. The treasury contract will also have all the AELIN tokens in it, ready to be distributed from the L1 multisig. We need to make sure that the L1 multisig can transfer all of the funds and change owners to the future L2 multisig.
 

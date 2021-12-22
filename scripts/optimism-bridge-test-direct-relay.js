@@ -16,16 +16,18 @@ async function main() {
     OptimismTreasuryArtifact.abi,
     optimismTreasuryAddress
   );
-  const tokenToTransferAddress = "0xFa0DE0E65292C12ED22c80dA331CA2806a84215D";
-  const transferTo = "0x7856f2a12A7A18b4A115d295F548434a9b078fA1";
-  const transferAmount = ethers.utils.parseEther("1");
+  const tokenToTransferAddress = "0xA7A86ec3C266435C580354d8c9A33b1BC91697A7";
+  const transferTo = "0x24Fa2b48178f4aCD577230B3aC30b935195dCaf3";
+  const transferAmount = "765306122448980000000";
   const transferPayload = optimismTreasury.interface.encodeFunctionData(
     "transferToken(address,address,uint256)",
     [tokenToTransferAddress, transferTo, transferAmount]
   );
   const tx = await ownerRelayOnOptimism
     .connect(deployer)
-    .directRelay(optimismTreasuryAddress, transferPayload);
+    .directRelay(optimismTreasuryAddress, transferPayload, {
+      gasLimit: 8000000,
+    });
   console.log("tx submitted", tx);
 }
 

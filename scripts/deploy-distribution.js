@@ -26,7 +26,7 @@ async function distributionSetup() {
   const networkObj = await ethers.provider.getNetwork();
   let network = networkObj.chainId === 10 ? "optimism" : networkObj.name;
 
-  if (network === "optimism") {
+  if (network !== "optimism") {
     console.log("using test snapshot");
     historicalSnapshot = require("./helpers/staking-test-data.json");
   }
@@ -34,22 +34,27 @@ async function distributionSetup() {
 
   const owner = accounts[0];
 
-  // this is hardcoded from the contract which value comes from the calc 750 / 0.98 to account for the 2% protocol fee;
-  const vAELIN_AIRDROP_AMOUNT = 765306122448980000000 / 1e18;
-
-  const DISTRIBUTION_AMOUNT = ethers.utils.parseUnits(
-    vAELIN_AIRDROP_AMOUNT.toString(),
-    18
-  );
-
   const historicalSnapshotData = Object.entries(historicalSnapshot);
 
   const userBalanceAndHashes = [];
   const userBalanceHashes = [];
   const totalStakingScore = historicalSnapshotData.reduce(
-    (acc, [, stakingScore]) => acc.add(stakingScore),
-    new ethers.BigNumber.from(0)
+    (acc, [, stakingScore]) => acc + stakingScore,
+    0
   );
+
+  const FLOOR_AMOUNT = 0.001 * 1e18;
+  const totalFloorDistribution =
+    Object.keys(historicalSnapshotData).length * FLOOR_AMOUNT;
+
+  const DISTRIBUTION_AMOUNT = 765306122448979591836;
+  const POST_FLOOR_DISTRIBUTION_AMOUNT =
+    DISTRIBUTION_AMOUNT - totalFloorDistribution;
+
+  const aelinAmounts = {};
+  const vAelinAmounts = {};
+  let totalAelinAmount = 0;
+  let totalVAelinAmount = 0;
 
   // merge all addresses into final snapshot
   // get list of leaves for the merkle trees using index, address and token balance
@@ -57,11 +62,26 @@ async function distributionSetup() {
   let duplicateCheckerSet = new Set();
   let i = 0;
   for (const [address, stakingScore] of historicalSnapshotData) {
-    console.log("address", address, "stakingScore", stakingScore);
     // new value is stakingScore / totalStakingScore * DISTRIBUTION_AMOUNT
-    const newValue = new ethers.BigNumber.from(stakingScore)
-      .mul(DISTRIBUTION_AMOUNT)
-      .div(totalStakingScore);
+    let newValue =
+      Math.round(
+        POST_FLOOR_DISTRIBUTION_AMOUNT * (stakingScore / totalStakingScore)
+      ) + FLOOR_AMOUNT;
+
+    if (
+      address.toLowerCase() ===
+      "0x8cA24021E3Ee3B5c241BBfcee0712554D7Dc38a1".toLowerCase()
+    ) {
+      console.log("DISTRIBUTION_AMOUNT", DISTRIBUTION_AMOUNT);
+      console.log("totalVAelinAmount", totalVAelinAmount);
+      // fix js precision loss by taking tiny tiny amount away from largest holder
+      newValue = DISTRIBUTION_AMOUNT - totalVAelinAmount;
+    }
+
+    aelinAmounts[address] = Math.round((newValue * 98) / 100);
+    totalAelinAmount += aelinAmounts[address];
+    vAelinAmounts[address] = Math.round(newValue);
+    totalVAelinAmount += vAelinAmounts[address];
 
     if (duplicateCheckerSet.has(address)) {
       console.log(
@@ -89,6 +109,25 @@ async function distributionSetup() {
     userBalanceAndHashes.push(balance);
     i++;
   }
+
+  console.log("totalAelinAmount", totalAelinAmount);
+  console.log("totalVAelinAmount", totalVAelinAmount);
+
+  fs.writeFileSync(
+    `./scripts/helpers/vaelin-amounts.json`,
+    JSON.stringify(vAelinAmounts),
+    function (err) {
+      if (err) return console.log(err);
+    }
+  );
+
+  fs.writeFileSync(
+    `./scripts/helpers/aelin-amounts.json`,
+    JSON.stringify(aelinAmounts),
+    function (err) {
+      if (err) return console.log(err);
+    }
+  );
 
   // create merkle tree
   const merkleTree = new MerkleTree(userBalanceHashes, keccak256, {
@@ -128,12 +167,6 @@ async function distributionSetup() {
   console.log("distribution deployed at", distribution.address);
   // update dist-addresses.json file
   setTargetAddress("Distribution", network, distribution.address);
-
-  // TODO figure out what config is needed for this to work properly
-  // await hre.run("verify:verify", {
-  //   address: distribution.address,
-  //   constructorArguments: [owner.address, virtualAelinAddress, root],
-  // });
 }
 
 distributionSetup()
