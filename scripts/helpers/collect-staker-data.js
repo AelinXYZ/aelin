@@ -22,9 +22,9 @@ const synthetixSnxL1 =
 const synthetixSnxL2 =
   "https://api.thegraph.com/subgraphs/name/synthetixio-team/optimism-main";
 
-const ARCHIVE_NODE_URL = "https://ethnode.synthetix.io";
-const ARCHIVE_NODE_USER = "snx";
-const ARCHIVE_NODE_PASS = "snx321";
+const ARCHIVE_NODE_URL = "";
+const ARCHIVE_NODE_USER = "";
+const ARCHIVE_NODE_PASS = "";
 
 const MAX_LENGTH = 1000;
 
@@ -160,6 +160,7 @@ async function getSNXHolders(
 
 async function main() {
   const score = {};
+  const collateral = {};
 
   const l1Provider = new ethers.providers.JsonRpcProvider({
     url: ARCHIVE_NODE_URL,
@@ -220,6 +221,16 @@ async function main() {
           "0xe0041ea9c685fd159e7cb45adf6119ae791f3c93".toLowerCase()
       );
 
+      if (collateral[getAddress(holder.id)]) {
+        console.log(
+          "should never have a duplicate in L1 results but we do with:",
+          holder.id
+        );
+        collateral[getAddress(holder.id)] += holder.collateral;
+      } else {
+        collateral[getAddress(holder.id)] = holder.collateral;
+      }
+
       if (score[getAddress(holder.id)]) {
         console.log(
           "should never have a duplicate in L1 results but we do with:",
@@ -251,6 +262,17 @@ async function main() {
         holder.id.toLowerCase() ===
           "0xe0041ea9c685fd159e7cb45adf6119ae791f3c93".toLowerCase()
       );
+
+      if (collateral[getAddress(holder.id)]) {
+        console.log(
+          "should never have a duplicate in L1 results but we do with:",
+          holder.id
+        );
+        collateral[getAddress(holder.id)] += holder.collateral;
+      } else {
+        collateral[getAddress(holder.id)] = holder.collateral;
+      }
+
       if (score[getAddress(holder.id)]) {
         console.log("We have a duplicate in L2 results for:", holder.id);
         score[getAddress(holder.id)] += vote;
@@ -266,6 +288,13 @@ async function main() {
   fs.writeFileSync(
     `./scripts/helpers/staking-data.json`,
     JSON.stringify(score),
+    function (err) {
+      if (err) return console.log(err);
+    }
+  );
+  fs.writeFileSync(
+    `./scripts/helpers/snx-balances-per-wallet.json`,
+    JSON.stringify(collateral),
     function (err) {
       if (err) return console.log(err);
     }
