@@ -8,10 +8,10 @@ async function main() {
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
   // TODO fill out the correct dao address for each deployment
-  const optimismTreasury = "0x55c1688587e6DfD52E44BF8B7028a8f7525296E7";
+  const daoMultisigL2 = "0x5B8F3fb479571Eca6A06240b21926Db586Cdf10f";
 
   const AelinToken = await ethers.getContractFactory("AelinToken");
-  const aelinToken = await AelinToken.deploy(optimismTreasury);
+  const aelinToken = await AelinToken.deploy(daoMultisigL2);
 
   console.log("AelinToken address:", aelinToken.address);
 }

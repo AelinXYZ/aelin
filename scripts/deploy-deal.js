@@ -17,13 +17,10 @@ async function main() {
   }
 
   const AelinDeal = await ethers.getContractFactory("AelinDeal");
-  try {
-    const aelinDeal = await AelinDeal.deploy();
-    console.log("aelinDeal", aelinDeal);
-    console.log("AelinDeal address:", aelinDeal.address);
-  } catch (e) {
-    console.log("deal deploy error", e);
-  }
+  const aelinDeal = await AelinDeal.deploy();
+
+  console.log("aelinDeal", aelinDeal);
+  console.log("AelinDeal address:", aelinDeal.address);
 }
 
 main()

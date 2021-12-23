@@ -91,11 +91,11 @@ const createStakersQuery = (blockNumber, minTimestamp) => {
   const minTimestampWhere =
     minTimestamp != null ? `, timestamp_lt: $minTimestamp` : "";
   return gql`
-query snxholders($minInitialDebtOwnership: Int!, $minTimestamp: String) {
+query snxholders($minCollateral: Int!, $minInitialDebtOwnership: Int!, $minTimestamp: String) {
 snxholders(
   first: 1000
   block: { number: ${blockNumber} }
-  where: { initialDebtOwnership_gt: $minInitialDebtOwnership${minTimestampWhere} }
+  where: { collateral_gt: $minCollateral, initialDebtOwnership_gt: $minInitialDebtOwnership${minTimestampWhere} }
   orderBy: timestamp
   orderDirection: desc
 ) {
@@ -127,6 +127,7 @@ async function getSNXHolders(
     createStakersQuery(blockNumber, minTimestamp),
     {
       minInitialDebtOwnership: 0,
+      minCollateral: 1,
       minTimestamp,
     }
   );
