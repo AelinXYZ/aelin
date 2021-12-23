@@ -90,7 +90,7 @@ const blockNumber = 13812548;
 const loadLastDebtLedgerEntry = async (address) => {
   const [issuanceData, collateral] = await Promise.all([stateContract.issuanceData(address,{
     blockTag: blockNumber,
-  }), synthetixContract.collateral(address)]);
+  }), synthetixContract.collateral(address, { blockTag: blockNumber})]);
 
   return {initialDebtOwnership: issuanceData.initialDebtOwnership, debtEntryIndex: issuanceData.debtEntryIndex, collateral: collateral};
 };
@@ -108,16 +108,19 @@ const runAllQueries = async(source) => {
 }
 
 
+const stakingDataToObj = {};
+stakingData.forEach(({address}) => stakingDataToObj[ethers.utils.getAddress(address)] = true);
 
 fs.createReadStream('./etherscan-source.csv')
     .pipe(csv.parse({ headers: true }))
     .on('error', error => console.error(error))
     .on('data', row => {
-			if (!stakingData[ethers.utils.getAddress(row.HolderAddress)]) {
+			if (!stakingDataToObj[ethers.utils.getAddress(row.HolderAddress)]) {
 				leftovers.push(row)
 			}
 		})
     .on('end', async(rowCount) => {
+			console.log('Results: ', leftovers.length);
 
 			const results = await runAllQueries(leftovers);
 			const arr = results.map(({initialDebtOwnership, debtEntryIndex, collateral}, i) => {
