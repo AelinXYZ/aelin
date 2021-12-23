@@ -22,9 +22,9 @@ const synthetixSnxL1 =
 const synthetixSnxL2 =
   "https://api.thegraph.com/subgraphs/name/synthetixio-team/optimism-main";
 
-const ARCHIVE_NODE_URL = "";
-const ARCHIVE_NODE_USER = "";
-const ARCHIVE_NODE_PASS = "";
+const ARCHIVE_NODE_URL = "https://ethnode.synthetix.io";
+const ARCHIVE_NODE_USER = "snx";
+const ARCHIVE_NODE_PASS = "snx321";
 
 const MAX_LENGTH = 1000;
 
@@ -56,7 +56,7 @@ const computeScaledWeight = (
   const ownershipPercentOfTotalDebt =
     cappedCurrentDebtBalance / totalDebtInSystem;
 
-  return ownershipPercentOfTotalDebt * 10 ** 8;
+  return Number(ownershipPercentOfTotalDebt) * 10 ** 8;
 };
 
 const loadLastDebtLedgerEntry = async (provider, snapshot) => {
@@ -154,6 +154,19 @@ async function main() {
   // will save data in the form of { [address]: { collateral, score, vAelinAmount } }
   const output = {};
   const missingGraphData = require("./missing-wallets.json");
+  const parsedMissingGraphData = missingGraphData.map((holder) => {
+    holder.initialDebtOwnership = ethers.utils.formatEther(
+      ethers.utils.parseEther(
+        new ethers.BigNumber.from(holder.initialDebtOwnership).toString()
+      )
+    );
+    holder.debtEntryAtIndex = ethers.utils.formatEther(
+      ethers.utils.parseEther(
+        new ethers.BigNumber.from(holder.debtEntryIndex).toString()
+      )
+    );
+    return holder;
+  });
 
   const l1Provider = new ethers.providers.JsonRpcProvider({
     url: ARCHIVE_NODE_URL,
@@ -165,7 +178,8 @@ async function main() {
   const l2BlockNumber = 1231112;
 
   const l1ResultsGraph = await getHolders(l1BlockNumber, "L1");
-  const l1Results = [...l1ResultsGraph, ...missingGraphData];
+  const l1Results = [...l1ResultsGraph, ...parsedMissingGraphData];
+
   const l2Results = await getHolders(l2BlockNumber, "L2");
 
   const totalL1Debt = await loadTotalDebt(l1Provider, l1BlockNumber); // (high-precision 1e18)
@@ -210,14 +224,16 @@ async function main() {
           "should never have a duplicate in L1 results but we do with:",
           holder.id
         );
-        output[getAddress(holder.id)].score += vote;
-        output[getAddress(holder.id)].collateral += holder.collateral;
+        output[getAddress(holder.id)].score += Number(vote);
+        output[getAddress(holder.id)].collateral += Number(holder.collateral);
       } else {
-        output[getAddress(holder.id)].score = vote;
-        output[getAddress(holder.id)].collateral = holder.collateral;
+        output[getAddress(holder.id)] = {
+          score: Number(vote),
+          collateral: Number(holder.collateral),
+        };
       }
-      totalScore += vote;
-      totalCollateral += holder.collateral;
+      totalScore += Number(vote);
+      totalCollateral += Number(holder.collateral);
     }
     for (let i = 0; i < l2Results.length; i++) {
       const holder = l2Results[i];
@@ -233,18 +249,16 @@ async function main() {
       );
 
       if (output[getAddress(holder.id)]) {
-        console.log(
-          "should never have a duplicate in L2 results but we do with:",
-          holder.id
-        );
-        output[getAddress(holder.id)].score += vote;
-        output[getAddress(holder.id)].collateral += holder.collateral;
+        output[getAddress(holder.id)].score += Number(vote);
+        output[getAddress(holder.id)].collateral += Number(holder.collateral);
       } else {
-        output[getAddress(holder.id)].score = vote;
-        output[getAddress(holder.id)].collateral = holder.collateral;
+        output[getAddress(holder.id)] = {
+          score: Number(vote),
+          collateral: Number(holder.collateral),
+        };
       }
-      totalScore += vote;
-      totalCollateral += holder.collateral;
+      totalScore += Number(vote);
+      totalCollateral += Number(holder.collateral);
     }
   } else {
     throw new Error("not getting results from both networks");
@@ -255,7 +269,11 @@ async function main() {
   // TODO sort by order of collateral and put into array format temporarily
   const accountsValues = [];
   Object.entries(output).map(([address, { score, collateral }]) => {
-    accountsValues.push({ address, score, collateral });
+    accountsValues.push({
+      address,
+      score: Number(score),
+      collateral: Number(collateral),
+    });
   });
 
   // need to sort in reverse order so the biggest holder
@@ -264,7 +282,9 @@ async function main() {
   // 0.001 / .98 for vAELIN loss
   const FLOOR_AMOUNT = 0.0010204082 * 1e18;
   const totalFloorDistribution = accountsValues.length * FLOOR_AMOUNT;
-  console.log("total floor distribution");
+  console.log("total floor distribution", totalFloorDistribution);
+  console.log("FLOOR_AMOUNT", FLOOR_AMOUNT);
+  console.log("totalScore", totalScore);
 
   // NOTE this matches the contract amount of vAELIN exactly
   const DISTRIBUTION_AMOUNT = 765306122448979591836;
@@ -273,25 +293,31 @@ async function main() {
 
   let totalVAelinAmount = 0;
 
+  console.log("accountsValues.length", accountsValues.length);
   for (let i = 0; i < accountsValues.length; i++) {
     let newValue =
       Math.round(
-        POST_FLOOR_DISTRIBUTION_AMOUNT * (accountsValues[i].score / totalScore)
+        POST_FLOOR_DISTRIBUTION_AMOUNT *
+          (accountsValues[i].score / Number(totalScore))
       ) + FLOOR_AMOUNT;
 
     if (i === accountsValues.length - 1) {
       // fix js precision loss by using the difference on the last holder
       // who is the largest whale, taking a tiny tiny tiny amount away from largest holder
-      newValue = DISTRIBUTION_AMOUNT - totalVAelinAmount;
+      newValue = DISTRIBUTION_AMOUNT - totalVAelinAmount * 1e18;
+      accountsValues[i].vAELIN = (newValue / 1e18).toString();
+      totalVAelinAmount += Number(accountsValues[i].vAELIN);
+    } else {
+      accountsValues[i].vAELIN = (Math.round(newValue) / 1e18).toString();
+      totalVAelinAmount += Number(accountsValues[i].vAELIN);
     }
-
-    accountsValues[i].vAELIN = Math.round(newValue);
-    totalVAelinAmount += accountsValues[i].vAELIN;
   }
 
+  accountsValues.sort((a, b) => b.vAELIN - a.vAELIN);
+  console.log("number of distribution recipients", accountsValues.length);
   fs.writeFileSync(
     `./scripts/helpers/staking-data.json`,
-    JSON.stringify(output),
+    JSON.stringify(accountsValues),
     function (err) {
       if (err) return console.log(err);
     }
