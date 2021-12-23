@@ -130,7 +130,7 @@ fs.createReadStream('./etherscan-source.csv')
 					debtEntryIndex,
 					collateral: ethers.utils.formatEther(collateral.toString())
 				}
-			}).filter(({initialDebtOwnership}) => Number(initialDebtOwnership) > 0);
+			}).filter(({initialDebtOwnership, collateral}) => Number(initialDebtOwnership) > 0 && Number(collateral) > 1);
 
 			console.log(arr.length);
 			fs.writeFileSync(
