@@ -38,8 +38,7 @@ const computeScaledWeight = (
   lastDebtLedgerEntry,
   collateral,
   targetRatio,
-  isL2,
-  shouldLog
+  isL2
 ) => {
   const totalDebt = isL2 ? scaledTotalL2Debt : totalL1Debt;
 
@@ -56,14 +55,6 @@ const computeScaledWeight = (
 
   const ownershipPercentOfTotalDebt =
     cappedCurrentDebtBalance / totalDebtInSystem;
-
-  if (shouldLog) {
-    console.log("totalDebt", totalDebt);
-    console.log("debtBalance", debtBalance);
-    console.log("cappedCurrentDebtBalance", cappedCurrentDebtBalance);
-    console.log("totalDebtInSystem", totalDebtInSystem);
-    console.log("ownershipPercentOfTotalDebt", ownershipPercentOfTotalDebt);
-  }
 
   return ownershipPercentOfTotalDebt * 10 ** 8;
 };
@@ -114,6 +105,7 @@ snxholders(
   debtEntryAtIndex
   initialDebtOwnership
   block
+  balanceOf
 }
 }
 `;
@@ -159,8 +151,9 @@ async function getSNXHolders(
 }
 
 async function main() {
-  const score = {};
-  const collateral = {};
+  // will save data in the form of { [address]: { collateral, score, vAelinAmount } }
+  const output = {};
+  const missingGraphData = require("./missing-wallets.json");
 
   const l1Provider = new ethers.providers.JsonRpcProvider({
     url: ARCHIVE_NODE_URL,
@@ -171,21 +164,19 @@ async function main() {
   const l1BlockNumber = 13812548;
   const l2BlockNumber = 1231112;
 
-  const l1Results = await getHolders(l1BlockNumber, "L1");
+  const l1ResultsGraph = await getHolders(l1BlockNumber, "L1");
+  const l1Results = [...l1ResultsGraph, ...missingGraphData];
   const l2Results = await getHolders(l2BlockNumber, "L2");
 
   const totalL1Debt = await loadTotalDebt(l1Provider, l1BlockNumber); // (high-precision 1e18)
   const totalL2Debt = Number("44623051603213924679706746") / 1e18;
-  console.log("totalL1Debt", totalL1Debt);
-  console.log("totalL2Debt", totalL2Debt);
 
   const lastDebtLedgerEntryL1 = await loadLastDebtLedgerEntry(
     l1Provider,
     l1BlockNumber
   );
   const lastDebtLedgerEntryL2 = "10432172923357179928181650" / 1e27;
-  console.log("lastDebtLedgerEntryL1", lastDebtLedgerEntryL1);
-  console.log("lastDebtLedgerEntryL2", lastDebtLedgerEntryL2);
+
   const issuanceRatioL1 = 0.25;
   const issuanceRatioL2 = 0.2;
 
@@ -196,18 +187,13 @@ async function main() {
   // @TODO update the comparison between OVM:ETH c-ratios at the time of snapshot
   const normalisedL2CRatio = 500 / 400;
   const scaledTotalL2Debt = totalL2Debt * normalisedL2CRatio;
-  console.log("scaledTotalL2Debt", scaledTotalL2Debt);
+
   let totalScore = 0;
+  let totalCollateral = 0;
 
   if (l1Results.length > 0 && l2Results.length > 0) {
     for (let i = 0; i < l1Results.length; i++) {
       const holder = l1Results[i];
-      if (
-        holder.id.toLowerCase() ===
-        "0xe0041ea9c685fd159e7cb45adf6119ae791f3c93".toLowerCase()
-      ) {
-        console.log("test holder l1", holder);
-      }
       const vote = computeScaledWeight(
         holder.initialDebtOwnership,
         holder.debtEntryAtIndex,
@@ -216,40 +202,25 @@ async function main() {
         lastDebtLedgerEntryL1,
         holder.collateral,
         issuanceRatioL1,
-        false,
-        holder.id.toLowerCase() ===
-          "0xe0041ea9c685fd159e7cb45adf6119ae791f3c93".toLowerCase()
+        false
       );
 
-      if (collateral[getAddress(holder.id)]) {
+      if (output[getAddress(holder.id)]) {
         console.log(
           "should never have a duplicate in L1 results but we do with:",
           holder.id
         );
-        collateral[getAddress(holder.id)] += holder.collateral;
+        output[getAddress(holder.id)].score += vote;
+        output[getAddress(holder.id)].collateral += holder.collateral;
       } else {
-        collateral[getAddress(holder.id)] = holder.collateral;
-      }
-
-      if (score[getAddress(holder.id)]) {
-        console.log(
-          "should never have a duplicate in L1 results but we do with:",
-          holder.id
-        );
-        score[getAddress(holder.id)] += vote;
-      } else {
-        score[getAddress(holder.id)] = vote;
+        output[getAddress(holder.id)].score = vote;
+        output[getAddress(holder.id)].collateral = holder.collateral;
       }
       totalScore += vote;
+      totalCollateral += holder.collateral;
     }
     for (let i = 0; i < l2Results.length; i++) {
       const holder = l2Results[i];
-      if (
-        holder.id.toLowerCase() ===
-        "0xe0041ea9c685fd159e7cb45adf6119ae791f3c93".toLowerCase()
-      ) {
-        console.log("test holder l2", holder);
-      }
       const vote = computeScaledWeight(
         holder.initialDebtOwnership,
         holder.debtEntryAtIndex,
@@ -258,43 +229,69 @@ async function main() {
         lastDebtLedgerEntryL2,
         holder.collateral,
         issuanceRatioL2,
-        true,
-        holder.id.toLowerCase() ===
-          "0xe0041ea9c685fd159e7cb45adf6119ae791f3c93".toLowerCase()
+        true
       );
 
-      if (collateral[getAddress(holder.id)]) {
+      if (output[getAddress(holder.id)]) {
         console.log(
-          "should never have a duplicate in L1 results but we do with:",
+          "should never have a duplicate in L2 results but we do with:",
           holder.id
         );
-        collateral[getAddress(holder.id)] += holder.collateral;
+        output[getAddress(holder.id)].score += vote;
+        output[getAddress(holder.id)].collateral += holder.collateral;
       } else {
-        collateral[getAddress(holder.id)] = holder.collateral;
-      }
-
-      if (score[getAddress(holder.id)]) {
-        console.log("We have a duplicate in L2 results for:", holder.id);
-        score[getAddress(holder.id)] += vote;
-      } else {
-        score[getAddress(holder.id)] = vote;
+        output[getAddress(holder.id)].score = vote;
+        output[getAddress(holder.id)].collateral = holder.collateral;
       }
       totalScore += vote;
+      totalCollateral += holder.collateral;
     }
   } else {
     throw new Error("not getting results from both networks");
   }
-  console.log("totalScore is:", totalScore);
+  console.log("total score is:", totalScore);
+  console.log("total collateral is:", totalCollateral);
+
+  // TODO sort by order of collateral and put into array format temporarily
+  const accountsValues = [];
+  Object.entries(output).map(([address, { score, collateral }]) => {
+    accountsValues.push({ address, score, collateral });
+  });
+
+  // need to sort in reverse order so the biggest holder
+  accountsValues.sort((a, b) => a.score - b.score);
+
+  // 0.001 / .98 for vAELIN loss
+  const FLOOR_AMOUNT = 0.0010204082 * 1e18;
+  const totalFloorDistribution = accountsValues.length * FLOOR_AMOUNT;
+  console.log("total floor distribution");
+
+  // NOTE this matches the contract amount of vAELIN exactly
+  const DISTRIBUTION_AMOUNT = 765306122448979591836;
+  const POST_FLOOR_DISTRIBUTION_AMOUNT =
+    DISTRIBUTION_AMOUNT - totalFloorDistribution;
+
+  let totalVAelinAmount = 0;
+
+  for (let i = 0; i < accountsValues.length; i++) {
+    let newValue =
+      Math.round(
+        POST_FLOOR_DISTRIBUTION_AMOUNT * (accountsValues[i].score / totalScore)
+      ) + FLOOR_AMOUNT;
+
+    if (i === accountsValues.length - 1) {
+      // fix js precision loss by using the difference on the last holder
+      // who is the largest whale, taking a tiny tiny tiny amount away from largest holder
+      newValue = DISTRIBUTION_AMOUNT - totalVAelinAmount;
+    }
+
+    accountsValues[i].vAELIN = Math.round(newValue);
+    totalVAelinAmount += accountsValues[i].vAELIN;
+  }
+
   fs.writeFileSync(
     `./scripts/helpers/staking-data.json`,
-    JSON.stringify(score),
-    function (err) {
-      if (err) return console.log(err);
-    }
-  );
-  fs.writeFileSync(
-    `./scripts/helpers/snx-balances-per-wallet.json`,
-    JSON.stringify(collateral),
+    JSON.stringify(output),
     function (err) {
       if (err) return console.log(err);
     }
