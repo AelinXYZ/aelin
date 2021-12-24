@@ -152,8 +152,8 @@ async function getSNXHolders(
 }
 
 async function main() {
-  // will save data in the form of { [address]: { collateral, score, vAelinAmount } }
-  const output = {};
+  const readableOutput = {};
+  const merkleOutput = {};
   const missingGraphData = require("./missing-wallets.json");
   const parsedMissingGraphData = missingGraphData.map((holder) => {
     holder.initialDebtOwnership = ethers.utils.formatEther(
@@ -220,15 +220,17 @@ async function main() {
         false
       );
 
-      if (output[getAddress(holder.id)]) {
+      if (readableOutput[getAddress(holder.id)]) {
         console.log(
           "should never have a duplicate in L1 results but we do with:",
           holder.id
         );
-        output[getAddress(holder.id)].score += Number(vote);
-        output[getAddress(holder.id)].collateral += Number(holder.collateral);
+        readableOutput[getAddress(holder.id)].score += Number(vote);
+        readableOutput[getAddress(holder.id)].collateral += Number(
+          holder.collateral
+        );
       } else {
-        output[getAddress(holder.id)] = {
+        readableOutput[getAddress(holder.id)] = {
           score: Number(vote),
           collateral: Number(holder.collateral),
         };
@@ -249,11 +251,13 @@ async function main() {
         true
       );
 
-      if (output[getAddress(holder.id)]) {
-        output[getAddress(holder.id)].score += Number(vote);
-        output[getAddress(holder.id)].collateral += Number(holder.collateral);
+      if (readableOutput[getAddress(holder.id)]) {
+        readableOutput[getAddress(holder.id)].score += Number(vote);
+        readableOutput[getAddress(holder.id)].collateral += Number(
+          holder.collateral
+        );
       } else {
-        output[getAddress(holder.id)] = {
+        readableOutput[getAddress(holder.id)] = {
           score: Number(vote),
           collateral: Number(holder.collateral),
         };
@@ -269,7 +273,7 @@ async function main() {
 
   // TODO sort by order of collateral and put into array format temporarily
   const accountsValues = [];
-  Object.entries(output).map(([address, { score, collateral }]) => {
+  Object.entries(readableOutput).map(([address, { score, collateral }]) => {
     accountsValues.push({
       address,
       score: Number(score),
@@ -306,9 +310,11 @@ async function main() {
       // fix js precision loss by using the difference on the last holder
       // who is the largest whale, taking a tiny tiny tiny amount away from largest holder
       newValue = DISTRIBUTION_AMOUNT - totalVAelinAmount * 1e18;
+      merkleOutput[accountsValues[i].address] = newValue;
       accountsValues[i].vAELIN = (newValue / 1e18).toString();
       totalVAelinAmount += Number(accountsValues[i].vAELIN);
     } else {
+      merkleOutput[accountsValues[i].address] = newValue;
       accountsValues[i].vAELIN = (Math.round(newValue) / 1e18).toString();
       totalVAelinAmount += Number(accountsValues[i].vAELIN);
     }
@@ -319,6 +325,13 @@ async function main() {
   fs.writeFileSync(
     `./scripts/helpers/staking-data.json`,
     JSON.stringify(accountsValues),
+    function (err) {
+      if (err) return console.log(err);
+    }
+  );
+  fs.writeFileSync(
+    `./scripts/helpers/merkle-data.json`,
+    JSON.stringify(merkleOutput),
     function (err) {
       if (err) return console.log(err);
     }
