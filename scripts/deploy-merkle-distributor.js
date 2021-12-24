@@ -11,10 +11,10 @@ async function main() {
     "MerkleDistributor"
   );
 
-  const owner = deployer.address;
-  const token = "0xf1f2fb3c8E90152e75D7675F5A7F3f9f95e65A81";
+  const owner = "0x5B8F3fb479571Eca6A06240b21926Db586Cdf10f";
+  const token = "0x780f70882fF4929D1A658a4E8EC8D4316b24748A";
   const merkleRoot =
-    "0x1108141c9e59900f8888254dc09978c13944f1d69f47b1c0c4f2ed769c66410e";
+    "0x3029819ce3dda49ac1f785ea37adc4ad84949bc7cfd3123711b57d7f9fd2c71c";
   const merkleDistributor = await MerkleDistributor.deploy(
     owner,
     token,
