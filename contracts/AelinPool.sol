@@ -379,6 +379,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         if (!useMax) {
             require(acceptAmount <= maxOpen, "accepting more than share");
         }
+        totalAmountAccepted += acceptAmount;
         mintDealTokens(recipient, acceptAmount);
     }
 
