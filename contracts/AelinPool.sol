@@ -375,6 +375,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             "ineligible: didn't max pro rata"
         );
         uint256 maxOpen = maxOpenAvail(recipient);
+        require(maxOpen > 0, "nothing left to accept");
         uint256 acceptAmount = useMax ? maxOpen : poolTokenAmount;
         if (!useMax) {
             require(acceptAmount <= maxOpen, "accepting more than share");
