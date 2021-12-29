@@ -8,7 +8,10 @@ async function main() {
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
   // TODO fill out the correct dao address for each deployment
-  const preDistributionAddress = "0x7856f2a12A7A18b4A115d295F548434a9b078fA1";
+  // const preDistributionAddress = "0x7856f2a12A7A18b4A115d295F548434a9b078fA1";
+
+  // Kovan test
+  const preDistributionAddress = "0xDB51F28Aa245498ca3068058e7e25B1e89Ca0BdA";
 
   const VirtualAelinToken = await ethers.getContractFactory(
     "VirtualAelinToken"
