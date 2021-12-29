@@ -18,6 +18,7 @@ describe("AelinDeal", function () {
   let holder: SignerWithAddress;
   let purchaser: SignerWithAddress;
   let purchaserTwo: SignerWithAddress;
+  let treasury: SignerWithAddress;
   let aelinDeal: AelinDeal;
   let purchaseToken: MockContract;
   let underlyingDealToken: ERC20;
@@ -81,7 +82,7 @@ describe("AelinDeal", function () {
   const expectedClaimUnderlying = underlyingRemovedBalance;
 
   before(async () => {
-    [deployer, sponsor, holder, purchaser, purchaserTwo] =
+    [deployer, sponsor, holder, purchaser, purchaserTwo, treasury] =
       await ethers.getSigners();
     purchaseToken = await deployMockContract(deployer, ERC20Artifact.abi);
     await purchaseToken.mock.decimals.returns(purchaseTokenDecimals);
@@ -124,7 +125,8 @@ describe("AelinDeal", function () {
         openRedemptionPeriod,
         holder.address,
         poolTokenMaxPurchaseAmount,
-        holderFundingExpiryBase + timestamp
+        holderFundingExpiryBase + timestamp,
+        treasury.address
       );
 
   const fundDealAndMintTokens = async () => {
@@ -562,6 +564,45 @@ describe("AelinDeal", function () {
         );
       });
 
+      it.only("only the treasury address can call the treasuryTransfer method", async function () {
+        await fundDealAndMintTokens();
+        // wait for redemption period and the vesting period to end
+        await ethers.provider.send("evm_increaseTime", [vestingEnd + 1]);
+        await ethers.provider.send("evm_mine", []);
+
+        await expect(
+          aelinDeal.connect(purchaser).treasuryTransfer(purchaser.address)
+        ).to.be.revertedWith("only Rewards address can access");
+      });
+      it("should allow the treasury to claim their partially vested tokens and send the vested tokens and unvested deal tokens in a single transaction", async function () {
+        // NOTE that this is deterministic but changes with codecov running so I am using
+        // high and low estimates so the test will always pass even when the value changes slightly
+        const partiallyClaimUnderlyingHigh = 202739900;
+        const partiallyClaimUnderlyingLow = 202739700;
+        await fundDealAndMintTokens();
+
+        await ethers.provider.send("evm_increaseTime", [
+          vestingEnd - oneDay * 180,
+        ]);
+        await ethers.provider.send("evm_mine", []);
+
+        await aelinDeal.connect(purchaser).claim();
+
+        const [log] = await aelinDeal.queryFilter(
+          aelinDeal.filters.ClaimedUnderlyingDealToken()
+        );
+        expect(log.args.underlyingDealTokenAddress).to.equal(
+          underlyingDealToken.address
+        );
+        expect(log.args.recipient).to.equal(purchaser.address);
+        expect(
+          log.args.underlyingDealTokensClaimed.toNumber()
+        ).to.be.greaterThan(partiallyClaimUnderlyingLow);
+        expect(log.args.underlyingDealTokensClaimed.toNumber()).to.be.lessThan(
+          partiallyClaimUnderlyingHigh
+        );
+      });
+
       it("should claim all the user deal tokens if they claim in the middle and then end of the claim period", async function () {
         await fundDealAndMintTokens();
         expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(
@@ -967,7 +1008,8 @@ describe("AelinDeal", function () {
           openRedemptionPeriod,
           holder.address,
           poolTokenMaxPurchaseAmount,
-          holderFundingExpiryBase + timestamp
+          holderFundingExpiryBase + timestamp,
+          treasury.address
         );
 
       await fundDealAndMintTokens();

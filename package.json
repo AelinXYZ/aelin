@@ -79,6 +79,7 @@
     "lodash": "^4.17.21",
     "merkletreejs": "0.2.23",
     "mocha": "7.2.0",
+    "openzeppelin-solidity-2.3.0": "npm:openzeppelin-solidity@2.3.0",
     "prettier": "2.3.2",
     "solidity-coverage": "0.7.17",
     "ts-node": "10.2.1",
