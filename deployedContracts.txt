@@ -28,3 +28,10 @@ VirtualAelinToken - 0xb7ABB959Def630d1402F202b8BC31BbaCBcDafBA
 OwnerRelayOnEthereum - 0x02b9E99a05458d763256B977E61c1d947a5a0d04
 OwnerRelayOnOptimism - 0x88FdC711EFF5877B464D299C7ac3077135C6C5ca
 OptimismTreasury - 0x55c1688587e6DfD52E44BF8B7028a8f7525296E7
+
+# TO verify on etherscan
+npx hardhat verify --network kovan <address> ...args
+
+# NOTE these commands are also needed for verifying either AELIN or vAELIN
+-- contract contracts/AelinToken.sol:AelinToken
+-- contract contracts/VirtualAelinToken.sol:VirtualAelinToken

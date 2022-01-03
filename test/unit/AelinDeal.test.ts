@@ -564,7 +564,7 @@ describe("AelinDeal", function () {
         );
       });
 
-      it.only("only the treasury address can call the treasuryTransfer method", async function () {
+      it("only the treasury address can call the treasuryTransfer method", async function () {
         await fundDealAndMintTokens();
         // wait for redemption period and the vesting period to end
         await ethers.provider.send("evm_increaseTime", [vestingEnd + 1]);
