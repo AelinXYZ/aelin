@@ -11,7 +11,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     uint256 constant BASE = 100 * 10**18;
     uint256 constant MAX_SPONSOR_FEE = 98 * 10**18;
     uint256 constant AELIN_FEE = 2 * 10**18;
+    uint8 constant MAX_DEALS = 5;
 
+    uint8 public numberOfDeals;
     address public purchaseToken;
     uint256 public purchaseTokenCap;
     uint8 public purchaseTokenDecimals;
@@ -192,6 +194,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         address _holder,
         uint256 _holderFundingDuration
     ) external onlySponsor dealReady returns (address) {
+        require(numberOfDeals < MAX_DEALS, "too many deals");
         require(_holder != address(0), "cant pass null holder address");
         require(
             _underlyingDealToken != address(0),
@@ -231,6 +234,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             );
         }
 
+        numberOfDeals += 1;
         poolExpiry = block.timestamp;
         holder = _holder;
         holderFundingExpiry = block.timestamp + _holderFundingDuration;

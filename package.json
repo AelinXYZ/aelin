@@ -17,6 +17,7 @@
     "optimism-bridge-set-contract-data": "hardhat run scripts/optimism-bridge-set-contract-data.js --network optimism",
     "collect-staker-data": "node scripts/helpers/collect-staker-data.js",
     "calculate-aelin-pool-distribution": "node scripts/helpers/calculate-aelin-pool-distribution.js",
+    "combine-pool-retro-missing": "node scripts/helpers/combine-pool-retro-missing.js",
     "deploy-owner-relay-on-ethereum": "hardhat run scripts/deploy-owner-relay-on-ethereum.js --network mainnet",
     "deploy-owner-relay-on-optimism": "hardhat run scripts/deploy-owner-relay-on-optimism.js --network optimism",
     "deploy-optimism-treasury": "hardhat run scripts/deploy-optimism-treasury.js --network optimism",

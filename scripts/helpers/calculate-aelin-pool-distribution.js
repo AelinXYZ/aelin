@@ -1,5 +1,5 @@
-const { id } = require("ethers/lib/utils");
 const fs = require("fs");
+const { ethers } = require("ethers");
 
 const openRedemptionPeriodTxsToRemove = [
   "0xd036894615103757c454d32b433a3051741271f8434369672b8ac5d84243894a".toLowerCase(), // $1950
@@ -16,7 +16,7 @@ async function main() {
   const claimedData = require("./aelin-pool-claimed.json");
   const accepted = claimedData.data.acceptDeals;
   const scores = {};
-  const EXTRA_FROM_ROUNDING = 260000;
+  const EXTRA_FROM_ROUNDING = 300000;
 
   const AELIN_AMOUNT = 250 * 10 ** 18;
   console.log("AELIN_AMOUNT", AELIN_AMOUNT);
@@ -32,10 +32,11 @@ async function main() {
       console.log("removing this tx");
       continue;
     }
-    if (scores[accepted[i].purchaser]) {
-      scores[accepted[i].purchaser] += Number(accepted[i].poolTokenAmount);
+    const formattedAddress = ethers.utils.getAddress(accepted[i].purchaser);
+    if (scores[formattedAddress]) {
+      scores[formattedAddress] += Number(accepted[i].poolTokenAmount);
     } else {
-      scores[accepted[i].purchaser] = Number(accepted[i].poolTokenAmount);
+      scores[formattedAddress] = Number(accepted[i].poolTokenAmount);
     }
     totalScore += Number(accepted[i].poolTokenAmount);
   }
@@ -43,21 +44,18 @@ async function main() {
   console.log("totalScore", totalScore);
 
   const aelinFinal = {};
-  let totalAmount = 0;
+
   const entries = Object.entries(scores);
   entries.forEach(([address, score]) => {
     const aelinAmount = Math.round((score / totalScore) * AELIN_AMOUNT);
     aelinFinal[address] = aelinAmount;
-    totalAmount += aelinAmount;
   });
-
-  console.log("totalAmount", totalAmount + EXTRA_FROM_ROUNDING);
 
   const sortedAelinFinal = [];
   Object.entries(aelinFinal).map(([address, amount]) => {
     sortedAelinFinal.push({
       address,
-      amount: Number(amount),
+      amount,
     });
   });
 
@@ -66,17 +64,22 @@ async function main() {
 
   const sortedAelinFinalObject = {};
   for (let i = 0; i < sortedAelinFinal.length; i++) {
-    sortedAelinFinalObject[sortedAelinFinal[i].address] = Number(
-      sortedAelinFinal[i].amount
-    );
+    const amount = Number(sortedAelinFinal[i].amount);
+    sortedAelinFinalObject[sortedAelinFinal[i].address] = amount;
   }
-
-  // NOTE due to hte use of Math.round() we only had a total of 249999999999999740000
-  // therefore we will add a total of 250000000000000000000 - 249999999999999740000 = 260000 AELIN to the smallest investor
+  // NOTE due to hte use of Math.round() we only had a total of 249999999999999700000
+  // therefore we will add a total of 250000000000000000000 - 249999999999999700000 = 300000 AELIN to the smallest investor
   sortedAelinFinalObject[
     sortedAelinFinal[sortedAelinFinal.length - 1].address
   ] += EXTRA_FROM_ROUNDING;
-  // smallest holder will now be 8592170269275 + 260000 = 8592170529275
+  // smallest holder will now be 8592170269275 + 300000 = 8592170569275
+
+  let finalTotal = 0;
+  Object.entries(sortedAelinFinalObject).map(([, amount]) => {
+    finalTotal += amount;
+  });
+
+  console.log("final total", finalTotal);
 
   fs.writeFileSync(
     `./scripts/helpers/aelin-pool-distribution.json`,

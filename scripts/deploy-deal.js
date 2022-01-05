@@ -19,7 +19,6 @@ async function main() {
   const AelinDeal = await ethers.getContractFactory("AelinDeal");
   const aelinDeal = await AelinDeal.deploy();
 
-  console.log("aelinDeal", aelinDeal);
   console.log("AelinDeal address:", aelinDeal.address);
 }
 
