@@ -10,6 +10,7 @@ AelinPoolFactory - 0x91fCeA33D02d11621b7f90ebd5E44eD393eD7b5e (v2)
 AelinPool - 0x4465A2a34684D5fDe76EfD1597553F6D81617412 (v2)
 AelinDeal - 0x1fa677ca369b97Ab30707373531cB050b1c3a7c6 (v2)
 
+
 Optimism:
 AelinTokenV1 (deprecated from first Aelin pool) - 0x04432a6fd94e8bC8559d10AC1D98f15Cd9C08363
 AelinToken - 0x61BAADcF22d2565B0F471b291C475db5555e0b76
@@ -27,9 +28,7 @@ AelinDeal - 0x3c8BEf5F8Df313ea6cb874d5035d3eeb963d8dAd (v2)
 Council Gnosis L2 - 0x5B8F3fb479571Eca6A06240b21926Db586Cdf10f
 
 
-
-
-#Kovan
+Kovan:
 AelinDeal - 0xe3a1c4fF151c53D0b65F42B601715F472078C336 (latest)
 AelinPool - 0x41AC86ba18eE264aFe78E8d39547abE547b2b25b (latest - uses 1 minute windows instead of 30 for ease of testing)
 AelinPoolFactory - 0xf73869004CfbEfba49d56931cb871Da53258Bc8f (latest)
