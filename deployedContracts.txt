@@ -30,13 +30,12 @@ Council Gnosis L2 - 0x5B8F3fb479571Eca6A06240b21926Db586Cdf10f
 
 
 #Kovan
+AelinDeal - 0xe3a1c4fF151c53D0b65F42B601715F472078C336 (latest)
+AelinPool - 0x41AC86ba18eE264aFe78E8d39547abE547b2b25b (latest - uses 1 minute windows instead of 30 for ease of testing)
+AelinPoolFactory - 0xf73869004CfbEfba49d56931cb871Da53258Bc8f (latest)
+
 AelinToken - 0xca21a836936Dd9D46772E8fCB1284A7A3AE13fd2
 VirtualAelinToken - 0xb7ABB959Def630d1402F202b8BC31BbaCBcDafBA
-
-# NEVER USED
-OwnerRelayOnEthereum - 0x02b9E99a05458d763256B977E61c1d947a5a0d04
-OwnerRelayOnOptimism - 0x88FdC711EFF5877B464D299C7ac3077135C6C5ca
-OptimismTreasury - 0x55c1688587e6DfD52E44BF8B7028a8f7525296E7
 
 # TO verify on etherscan
 npx hardhat verify --network kovan <address> ...args
