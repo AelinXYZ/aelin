@@ -156,6 +156,7 @@ describe("AelinDeal", function () {
         underlyingDealToken.address
       );
       expect(await aelinDeal.aelinPool()).to.equal(deployer.address);
+      // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
       expect(await aelinDeal.underlyingDealTokenTotal()).to.equal(
         underlyingDealTokenTotal.toString()
@@ -239,7 +240,7 @@ describe("AelinDeal", function () {
           .depositUnderlying(underlyingDealTokenTotal);
 
         expect(await aelinDeal.depositComplete()).to.equal(true);
-
+        // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
         const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
 
         const [depositDealTokenLog] = await aelinDeal.queryFilter(
@@ -468,6 +469,7 @@ describe("AelinDeal", function () {
       it("should block the holder from withdrawing when there are no excess tokens in the pool", async function () {
         try {
           await aelinDeal.connect(holder).withdraw();
+          // eslint-disable-next-line
         } catch (e: any) {
           expect(e.message).to.equal(
             "VM Exception while processing transaction: reverted with panic code 0x11 (Arithmetic operation underflowed or overflowed outside of an unchecked block)"

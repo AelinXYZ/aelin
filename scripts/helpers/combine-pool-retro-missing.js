@@ -50,17 +50,31 @@ async function main() {
 
   console.log("combinedScore", combinedScore);
 
-  let finalTotal = 0;
-  Object.entries(finalData).forEach(([, amount]) => {
-    finalTotal += amount;
+  const sortedAelinFinal = [];
+  Object.entries(finalData).forEach(([address, amount]) => {
+    sortedAelinFinal.push({
+      address,
+      amount,
+    });
   });
 
-  console.log("final total", finalTotal);
+  // need to sort in reverse order so the biggest holder
+  sortedAelinFinal.sort((a, b) => b.amount - a.amount);
+
+  let newFinalTotal = 0;
+  const sortedAelinFinalObject = {};
+  for (let i = 0; i < sortedAelinFinal.length; i++) {
+    const amount = Number(sortedAelinFinal[i].amount);
+    sortedAelinFinalObject[sortedAelinFinal[i].address] = amount;
+    newFinalTotal += amount;
+  }
+
+  console.log("new final total", newFinalTotal);
   // count total - make sure it is the same as the combined score
 
   fs.writeFileSync(
-    `./scripts/helpers/second-aelin-distribution.json`,
-    JSON.stringify(finalData),
+    `./scripts/helpers/second-aelin-distribution-updated.json`,
+    JSON.stringify(sortedAelinFinalObject),
     function (err) {
       if (err) return console.log(err);
     }
