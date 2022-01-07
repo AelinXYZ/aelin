@@ -11,7 +11,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     uint256 constant BASE = 100 * 10**18;
     uint256 constant MAX_SPONSOR_FEE = 98 * 10**18;
     uint256 constant AELIN_FEE = 2 * 10**18;
+    uint8 constant MAX_DEALS = 5;
 
+    uint8 public numberOfDeals;
     address public purchaseToken;
     uint256 public purchaseTokenCap;
     uint8 public purchaseTokenDecimals;
@@ -26,6 +28,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     uint256 public poolExpiry;
     uint256 public holderFundingExpiry;
     uint256 public totalAmountAccepted;
+    uint256 public totalAmountWithdrawn;
     uint256 public purchaseTokenTotalForDeal;
 
     bool public calledInitialize = false;
@@ -36,6 +39,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     address public holder;
 
     mapping(address => uint256) public amountAccepted;
+    mapping(address => uint256) public amountWithdrawn;
     mapping(address => bool) public openPeriodEligible;
     mapping(address => uint256) public allowList;
     bool public hasAllowList;
@@ -190,6 +194,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         address _holder,
         uint256 _holderFundingDuration
     ) external onlySponsor dealReady returns (address) {
+        require(numberOfDeals < MAX_DEALS, "too many deals");
         require(_holder != address(0), "cant pass null holder address");
         require(
             _underlyingDealToken != address(0),
@@ -229,6 +234,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             );
         }
 
+        numberOfDeals += 1;
         poolExpiry = block.timestamp;
         holder = _holder;
         holderFundingExpiry = block.timestamp + _holderFundingDuration;
@@ -255,7 +261,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             _openRedemptionPeriod,
             _holder,
             maxDealTotalSupply,
-            holderFundingExpiry
+            holderFundingExpiry,
+            aelinRewardsAddress
         );
 
         emit CreateDeal(
@@ -303,9 +310,11 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
      * @dev the if statement says if you have no balance or if the deal is not funded
      * or if the pro rata period is not active, then you have 0 available for this period
      */
-    function maxProRataAvail(address purchaser) public view returns (uint256) {
+    function maxProRataAmount(address purchaser) public view returns (uint256) {
         if (
-            balanceOf(purchaser) == 0 ||
+            (balanceOf(purchaser) == 0 &&
+                amountAccepted[purchaser] == 0 &&
+                amountWithdrawn[purchaser] == 0) ||
             holderFundingExpiry == 0 ||
             aelinDeal.proRataRedemptionStart() == 0 ||
             block.timestamp >= aelinDeal.proRataRedemptionExpiry()
@@ -314,7 +323,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         }
         return
             (proRataConversion *
-                (balanceOf(purchaser) + amountAccepted[purchaser])) /
+                (balanceOf(purchaser) +
+                    amountAccepted[purchaser] +
+                    amountWithdrawn[purchaser])) /
             1e18 -
             amountAccepted[purchaser];
     }
@@ -352,15 +363,22 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint256 poolTokenAmount,
         bool useMax
     ) internal {
-        uint256 maxProRata = maxProRataAvail(recipient);
+        uint256 maxProRata = maxProRataAmount(recipient);
+        uint256 maxAccept = maxProRata > balanceOf(recipient)
+            ? balanceOf(recipient)
+            : maxProRata;
         if (!useMax) {
-            require(poolTokenAmount <= maxProRata, "accepting more than share");
+            require(
+                poolTokenAmount <= maxProRata &&
+                    balanceOf(recipient) >= poolTokenAmount,
+                "accepting more than share"
+            );
         }
-        uint256 acceptAmount = useMax ? maxProRata : poolTokenAmount;
+        uint256 acceptAmount = useMax ? maxAccept : poolTokenAmount;
         amountAccepted[recipient] += acceptAmount;
         totalAmountAccepted += acceptAmount;
         mintDealTokens(recipient, acceptAmount);
-        if (proRataConversion != 1e18 && maxProRataAvail(recipient) == 0) {
+        if (proRataConversion != 1e18 && maxProRataAmount(recipient) == 0) {
             openPeriodEligible[recipient] = true;
         }
     }
@@ -375,10 +393,12 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             "ineligible: didn't max pro rata"
         );
         uint256 maxOpen = maxOpenAvail(recipient);
+        require(maxOpen > 0, "nothing left to accept");
         uint256 acceptAmount = useMax ? maxOpen : poolTokenAmount;
         if (!useMax) {
             require(acceptAmount <= maxOpen, "accepting more than share");
         }
+        totalAmountAccepted += acceptAmount;
         mintDealTokens(recipient, acceptAmount);
     }
 
@@ -486,6 +506,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         }
         _burn(msg.sender, purchaseTokenAmount);
         IERC20(purchaseToken).safeTransfer(msg.sender, purchaseTokenAmount);
+        amountWithdrawn[msg.sender] += purchaseTokenAmount;
+        totalAmountWithdrawn += purchaseTokenAmount;
         emit WithdrawFromPool(msg.sender, purchaseTokenAmount);
     }
 
@@ -508,7 +530,11 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         ) {
             return 0;
         } else if (block.timestamp < aelinDeal.proRataRedemptionExpiry()) {
-            return maxProRataAvail(purchaser);
+            uint256 maxProRata = maxProRataAmount(purchaser);
+            return
+                maxProRata > balanceOf(purchaser)
+                    ? balanceOf(purchaser)
+                    : maxProRata;
         } else if (!openPeriodEligible[purchaser]) {
             return 0;
         } else {

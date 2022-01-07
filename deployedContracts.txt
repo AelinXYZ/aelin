@@ -1,0 +1,44 @@
+NOTE all contracts are verified on etherscan
+
+Mainnet:
+AelinPoolFactory - 0x5541DA82549D732878c4104C9887c408790397AF (v1)
+AelinPool - 0x88FdC711EFF5877B464D299C7ac3077135C6C5ca (v1)
+AelinDeal - 0x2569f66b7Acd8954A7B3A48481823e30c4990742 (v1)
+Council Gnosis L1 - 0x51b0332E1b3349bcF01689E63e34d8859595e376
+
+AelinPoolFactory - 0x91fCeA33D02d11621b7f90ebd5E44eD393eD7b5e (v2)
+AelinPool - 0x4465A2a34684D5fDe76EfD1597553F6D81617412 (v2)
+AelinDeal - 0x1fa677ca369b97Ab30707373531cB050b1c3a7c6 (v2)
+
+
+Optimism:
+AelinTokenV1 (deprecated from first Aelin pool) - 0x04432a6fd94e8bC8559d10AC1D98f15Cd9C08363
+AelinToken - 0x61BAADcF22d2565B0F471b291C475db5555e0b76
+AelinPool - 0xE30bD5fb0A652a65eB378AB952A621f0b509521d (v1)
+AelinDeal - 0xBca527108Bcc3DE437C5Bfdb1A5489DE26DeEaE0 (v1)
+AelinPoolFactory - 0x87525307974a312AF13a78041F88B0BAe23ebb10 (v1)
+VirtualAelinToken - 0x780f70882fF4929D1A658a4E8EC8D4316b24748A
+MerkleDistributor - 0xe5bD5FC85d214ae28474bbe10E2DfcDE52577B4F (first vAELIN distribution)
+MerkleDistributor - 0x64839de745d09d89591511afDeFcE4EE2cb03924 (second AELIN distribution)
+StakingRewards - 0xFe757A40F3EdA520845b339c698b321663986a4d (Pool 1)
+
+AelinPoolFactory - 0x914FfC8dc0678911AAE77f51B8489d6e214Da20F (v2)
+AelinPool - 0x528D21fd31b0764BefBF5b584f962e3cE7Dda296 (v2)
+AelinDeal - 0x3c8BEf5F8Df313ea6cb874d5035d3eeb963d8dAd (v2)
+Council Gnosis L2 - 0x5B8F3fb479571Eca6A06240b21926Db586Cdf10f
+
+
+Kovan:
+AelinDeal - 0xe3a1c4fF151c53D0b65F42B601715F472078C336 (latest)
+AelinPool - 0x41AC86ba18eE264aFe78E8d39547abE547b2b25b (latest - uses 1 minute windows instead of 30 for ease of testing)
+AelinPoolFactory - 0xf73869004CfbEfba49d56931cb871Da53258Bc8f (latest)
+
+AelinToken - 0xca21a836936Dd9D46772E8fCB1284A7A3AE13fd2
+VirtualAelinToken - 0xb7ABB959Def630d1402F202b8BC31BbaCBcDafBA
+
+# TO verify on etherscan
+npx hardhat verify --network kovan <address> ...args
+
+# NOTE these commands are also needed for verifying either AELIN or vAELIN
+-- contract contracts/AelinToken.sol:AelinToken
+-- contract contracts/VirtualAelinToken.sol:VirtualAelinToken

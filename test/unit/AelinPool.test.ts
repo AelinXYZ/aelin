@@ -269,7 +269,7 @@ describe("AelinPool", function () {
       );
       expect(await aelinPool.sponsorFee()).to.equal(sponsorFee);
       expect(await aelinPool.sponsor()).to.equal(sponsor.address);
-
+      // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
       const expectedPoolExpiry = timestamp + purchaseExpiry + duration;
       expect(await aelinPool.poolExpiry()).to.equal(expectedPoolExpiry);
@@ -306,7 +306,7 @@ describe("AelinPool", function () {
       );
       expect(await aelinPool.sponsorFee()).to.equal(sponsorFee);
       expect(await aelinPool.sponsor()).to.equal(sponsor.address);
-
+      // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
       const expectedPoolExpiry = timestamp + purchaseExpiry + duration;
       expect(await aelinPool.poolExpiry()).to.equal(expectedPoolExpiry);
@@ -604,6 +604,7 @@ describe("AelinPool", function () {
       await ethers.provider.send("evm_mine", []);
 
       const tx = await createDealWithValidParams();
+      // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
       const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
 
       expect(await aelinPool.poolExpiry()).to.equal(timestamp);
@@ -705,6 +706,114 @@ describe("AelinPool", function () {
       );
       expect(dealDetailLog.args.holder).to.equal(holder.address);
       expect(dealDetailLog2.args.holder).to.equal(deployer.address);
+    });
+
+    it("should only allow 10 deals if the first 9 are not funded", async function () {
+      await successfullyInitializePool({});
+      await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
+      await ethers.provider.send("evm_increaseTime", [purchaseExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await createDealWithValidParams(); // 1
+      await ethers.provider.send("evm_increaseTime", [holderFundingExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await expect(
+        // 2
+        aelinPool
+          .connect(sponsor)
+          .createDeal(
+            underlyingDealToken.address,
+            purchaseTokenTotalForDeal,
+            underlyingDealTokenTotal,
+            vestingPeriod,
+            vestingCliff,
+            proRataRedemptionPeriod,
+            openRedemptionPeriod,
+            deployer.address,
+            holderFundingExpiry
+          )
+      ).to.not.be.reverted;
+
+      await ethers.provider.send("evm_increaseTime", [holderFundingExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await expect(
+        // 3
+        aelinPool
+          .connect(sponsor)
+          .createDeal(
+            underlyingDealToken.address,
+            purchaseTokenTotalForDeal,
+            underlyingDealTokenTotal,
+            vestingPeriod,
+            vestingCliff,
+            proRataRedemptionPeriod,
+            openRedemptionPeriod,
+            deployer.address,
+            holderFundingExpiry
+          )
+      ).to.not.be.reverted;
+
+      await ethers.provider.send("evm_increaseTime", [holderFundingExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await expect(
+        // 4
+        aelinPool
+          .connect(sponsor)
+          .createDeal(
+            underlyingDealToken.address,
+            purchaseTokenTotalForDeal,
+            underlyingDealTokenTotal,
+            vestingPeriod,
+            vestingCliff,
+            proRataRedemptionPeriod,
+            openRedemptionPeriod,
+            deployer.address,
+            holderFundingExpiry
+          )
+      ).to.not.be.reverted;
+
+      await ethers.provider.send("evm_increaseTime", [holderFundingExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await expect(
+        // 5
+        aelinPool
+          .connect(sponsor)
+          .createDeal(
+            underlyingDealToken.address,
+            purchaseTokenTotalForDeal,
+            underlyingDealTokenTotal,
+            vestingPeriod,
+            vestingCliff,
+            proRataRedemptionPeriod,
+            openRedemptionPeriod,
+            deployer.address,
+            holderFundingExpiry
+          )
+      ).to.not.be.reverted;
+
+      await ethers.provider.send("evm_increaseTime", [holderFundingExpiry + 1]);
+      await ethers.provider.send("evm_mine", []);
+
+      await expect(
+        // 6
+        aelinPool
+          .connect(sponsor)
+          .createDeal(
+            underlyingDealToken.address,
+            purchaseTokenTotalForDeal,
+            underlyingDealTokenTotal,
+            vestingPeriod,
+            vestingCliff,
+            proRataRedemptionPeriod,
+            openRedemptionPeriod,
+            deployer.address,
+            holderFundingExpiry
+          )
+      ).to.be.revertedWith("too many deals");
     });
   });
 

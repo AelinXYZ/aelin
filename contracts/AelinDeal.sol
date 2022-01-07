@@ -8,6 +8,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 contract AelinDeal is AelinERC20 {
     using SafeERC20 for IERC20;
     uint256 public maxTotalSupply;
+    address public aelinRewardsAddress;
 
     address public underlyingDealToken;
     uint256 public underlyingDealTokenTotal;
@@ -57,7 +58,8 @@ contract AelinDeal is AelinERC20 {
         uint256 _openRedemptionPeriod,
         address _holder,
         uint256 _maxDealTotalSupply,
-        uint256 _holderFundingDuration
+        uint256 _holderFundingDuration,
+        address _aelinRewardsAddress
     ) external initOnce {
         _setNameSymbolAndDecimals(
             string(abi.encodePacked("aeDeal-", _name)),
@@ -81,6 +83,7 @@ contract AelinDeal is AelinERC20 {
         proRataRedemptionPeriod = _proRataRedemptionPeriod;
         openRedemptionPeriod = _openRedemptionPeriod;
         holderFundingExpiry = _holderFundingDuration;
+        aelinRewardsAddress = _aelinRewardsAddress;
 
         depositComplete = false;
 
@@ -348,6 +351,28 @@ contract AelinDeal is AelinERC20 {
                 sender,
                 recipient,
                 balanceOf(sender) - claimableDealTokens
+            );
+    }
+
+    /**
+     * @dev a function only the treasury can use so they can send both the all
+     * unvested deal tokens as well as all the vested underlying deal tokens in a
+     * single transaction. we can use this when we are ready to distri
+     */
+    function treasuryTransfer(address recipient) external returns (bool) {
+        require(
+            msg.sender == aelinRewardsAddress,
+            "only Rewards address can access"
+        );
+        (
+            uint256 underlyingClaimable,
+            uint256 claimableDealTokens
+        ) = claimableTokens(msg.sender);
+        transfer(recipient, balanceOf(msg.sender) - claimableDealTokens);
+        return
+            IERC20(underlyingDealToken).transfer(
+                recipient,
+                underlyingClaimable
             );
     }
 
