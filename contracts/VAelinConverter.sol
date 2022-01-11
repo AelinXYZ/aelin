@@ -23,6 +23,7 @@ contract VAelinConverter is Owner {
     ) Owned(_owner) {
         vAELIN = _vAelin;
         AELIN = _aelin;
+        startTime = block.timestamp;
     }
 
     function convert(uint256 _amount) external {
