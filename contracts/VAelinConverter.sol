@@ -9,7 +9,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
  * @dev a contract for converting vAELIN to AELIN tokens
  */
 
-contract VAelinConverter is Owner {
+contract VAelinConverter is Owned {
     using SafeERC20 for IERC20;
 
     address public immutable vAELIN;
