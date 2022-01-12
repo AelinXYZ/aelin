@@ -27,7 +27,7 @@ contract VAelinConverter is Owned {
     }
 
     function convert(uint256 _amount) external {
-        uint256 aelinAmount = ((_amount * 100) / 98);
+        uint256 aelinAmount = ((_amount * 98) / 100);
         IERC20(vAELIN).transferFrom(msg.sender, address(this), _amount);
         IERC20(AELIN).transfer(msg.sender, aelinAmount);
 
