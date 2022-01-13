@@ -1266,44 +1266,6 @@ describe("integration test", () => {
           purchaseAmount
         );
       });
-
-      it("should block a transfer during the redeem window", async function () {
-        await aaveContract
-          .connect(aaveWhaleOne)
-          .approve(aelinDealProxyStorage.address, underlyingDealTokenTotal);
-
-        await aelinDealProxyStorage
-          .connect(aaveWhaleOne)
-          .depositUnderlying(underlyingDealTokenTotal);
-
-        expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
-          purchaseAmount
-        );
-        await expect(
-          aelinPoolProxyStorage
-            .connect(user1)
-            .transfer(user2.address, purchaseAmount)
-        ).to.be.revertedWith("no transfers after redeem starts");
-      });
-
-      it("should block a transferFrom during the redeem window", async function () {
-        await aaveContract
-          .connect(aaveWhaleOne)
-          .approve(aelinDealProxyStorage.address, underlyingDealTokenTotal);
-
-        await aelinDealProxyStorage
-          .connect(aaveWhaleOne)
-          .depositUnderlying(underlyingDealTokenTotal);
-
-        expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
-          purchaseAmount
-        );
-        await expect(
-          aelinPoolProxyStorage
-            .connect(user1)
-            .transferFrom(user1.address, user2.address, purchaseAmount)
-        ).to.be.revertedWith("no transfers after redeem starts");
-      });
     });
 
     describe("open redemption period over subscription", function () {

@@ -318,15 +318,8 @@ contract AelinDeal is AelinERC20 {
         _mint(dst, dealTokenAmount);
     }
 
-    /**
-     * @dev deal tokens cant be transferred after the vesting expiry since
-     * all tokens will be claimed at the start of the transfer leaving 0 to send
-     */
-    modifier transferWindow() {
-        require(
-            vestingExpiry > block.timestamp,
-            "no transfers after vest done"
-        );
+    modifier blockTransfer() {
+        require(false, "cannot transfer deal tokens");
         _;
     }
 
@@ -336,13 +329,18 @@ contract AelinDeal is AelinERC20 {
      * tokens. They must also pay for the receivers claim and burn any of their vested tokens in order to ensure
      * the claim calculation is always accurate for all parties in the system
      */
-    function transferMax(address recipient) external returns (bool) {
+    function transferMax(address recipient)
+        external
+        blockTransfer
+        returns (bool)
+    {
         (, uint256 claimableDealTokens) = claimableTokens(msg.sender);
         return transfer(recipient, balanceOf(msg.sender) - claimableDealTokens);
     }
 
     function transferFromMax(address sender, address recipient)
         external
+        blockTransfer
         returns (bool)
     {
         (, uint256 claimableDealTokens) = claimableTokens(sender);
@@ -354,33 +352,11 @@ contract AelinDeal is AelinERC20 {
             );
     }
 
-    /**
-     * @dev a function only the treasury can use so they can send both the all
-     * unvested deal tokens as well as all the vested underlying deal tokens in a
-     * single transaction. we can use this when we are ready to distri
-     */
-    function treasuryTransfer(address recipient) external returns (bool) {
-        require(
-            msg.sender == aelinRewardsAddress,
-            "only Rewards address can access"
-        );
-        (
-            uint256 underlyingClaimable,
-            uint256 claimableDealTokens
-        ) = claimableTokens(msg.sender);
-        transfer(recipient, balanceOf(msg.sender) - claimableDealTokens);
-        return
-            IERC20(underlyingDealToken).transfer(
-                recipient,
-                underlyingClaimable
-            );
-    }
-
     function transfer(address recipient, uint256 amount)
         public
         virtual
         override
-        transferWindow
+        blockTransfer
         returns (bool)
     {
         _claim(msg.sender);
@@ -392,7 +368,7 @@ contract AelinDeal is AelinERC20 {
         address sender,
         address recipient,
         uint256 amount
-    ) public virtual override transferWindow returns (bool) {
+    ) public virtual override blockTransfer returns (bool) {
         _claim(sender);
         _claim(recipient);
         return super.transferFrom(sender, recipient, amount);

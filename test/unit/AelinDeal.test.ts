@@ -567,16 +567,6 @@ describe("AelinDeal", function () {
         );
       });
 
-      it("only the treasury address can call the treasuryTransfer method", async function () {
-        await fundDealAndMintTokens();
-        // wait for redemption period and the vesting period to end
-        await ethers.provider.send("evm_increaseTime", [vestingEnd + 1]);
-        await ethers.provider.send("evm_mine", []);
-
-        await expect(
-          aelinDeal.connect(purchaser).treasuryTransfer(purchaser.address)
-        ).to.be.revertedWith("only Rewards address can access");
-      });
       it("should allow the treasury to claim their partially vested tokens and send the vested tokens and unvested deal tokens in a single transaction", async function () {
         // NOTE that this is deterministic but changes with codecov running so I am using
         // high and low estimates so the test will always pass even when the value changes slightly
@@ -637,7 +627,7 @@ describe("AelinDeal", function () {
         expect(Number(ethers.utils.formatEther(endingBalance))).to.equal(0);
       });
 
-      it("should handle multiple claim and transfers appropriately", async function () {
+      it("should error when transfer is called", async function () {
         // purchaser has 2 total, purchaserTwo has 4 total
         await fundDealAndMintTokens();
         await aelinDeal
@@ -663,141 +653,14 @@ describe("AelinDeal", function () {
         await ethers.provider.send("evm_mine", []);
         // after 1/4 is vested the purchaser deal token balance should be .75 * 2 + 1 in transfer = 2.5
         // while purchaser two deal token balance .75 * 4 - 1 in transfer = 2
-        await aelinDeal
-          .connect(purchaserTwo)
-          .transfer(purchaser.address, mintAmount.div(2));
-
-        const quarterBalancePurchaser = await aelinDeal.balanceOf(
-          purchaser.address
-        );
-        const quarterBalancePurchaserTwo = await aelinDeal.balanceOf(
-          purchaserTwo.address
-        );
-
-        // with 1/4 done the total amount vested for purchaser should be = 0.5
-        // with 1/4 done the total amount vested for purchaser should be = 1
-        const quarterAmountVestedPurchaser = await aelinDeal.amountVested(
-          purchaser.address
-        );
-        const quarterAmountVestedPurchaserTwo = await aelinDeal.amountVested(
-          purchaserTwo.address
-        );
-
-        expect(
-          Number(ethers.utils.formatEther(quarterBalancePurchaser))
-        ).to.be.greaterThan(2.5 * 0.99999);
-        expect(
-          Number(ethers.utils.formatEther(quarterBalancePurchaser))
-        ).to.be.lessThan(2.5 * 1.00001);
-
-        expect(
-          Number(ethers.utils.formatEther(quarterAmountVestedPurchaser))
-        ).to.be.greaterThan(0.5 * 0.99999);
-        expect(
-          Number(ethers.utils.formatEther(quarterAmountVestedPurchaser))
-        ).to.be.lessThan(0.5 * 1.00001);
-
-        expect(
-          Number(ethers.utils.formatEther(quarterBalancePurchaserTwo))
-        ).to.be.greaterThan(2 * 0.99999);
-        expect(
-          Number(ethers.utils.formatEther(quarterBalancePurchaserTwo))
-        ).to.be.lessThan(2 * 1.00001);
-
-        expect(
-          Number(ethers.utils.formatEther(quarterAmountVestedPurchaserTwo))
-        ).to.be.greaterThan(1 * 0.99999);
-        expect(
-          Number(ethers.utils.formatEther(quarterAmountVestedPurchaserTwo))
-        ).to.be.lessThan(1 * 1.00001);
-
-        // go through another 50% of the vesting period to 75% completion
-        await ethers.provider.send("evm_setNextBlockTimestamp", [
-          vestingCliff + (vestingPeriod / 4) * 3,
-        ]);
-        await ethers.provider.send("evm_mine", []);
-        // after 3/4 is vested the purchaser claims (2.5 + 0.5) * .75 - 0.5 = 1.75
-        // and transfers 0.5 leaving them with = 0.25
-        // while purchaser two deal claims (2 + 1) * .75 - 1 = 1.25
-        // and receives 0.5 leaving them with 1.25
-        await aelinDeal
-          .connect(purchaser)
-          .transfer(purchaserTwo.address, mintAmount.div(4));
-
-        const threeQuarterBalancePurchaser = await aelinDeal.balanceOf(
-          purchaser.address
-        );
-        const threeQuarterBalancePurchaserTwo = await aelinDeal.balanceOf(
-          purchaserTwo.address
-        );
-
-        // with 3/4 done the total amount vested for purchaser is 2.25
-        // with 3/4 done the total amount vested for purchaserTwo is 2.25
-        const threeQuarterAmountVestedPurchaser = await aelinDeal.amountVested(
-          purchaser.address
-        );
-        const threeQuarterAmountVestedPurchaserTwo =
-          await aelinDeal.amountVested(purchaserTwo.address);
-
-        expect(
-          Number(ethers.utils.formatEther(threeQuarterBalancePurchaser))
-        ).to.be.greaterThan(0.25 * 0.99999);
-        expect(
-          Number(ethers.utils.formatEther(threeQuarterBalancePurchaser))
-        ).to.be.lessThan(0.25 * 1.00001);
-
-        expect(
-          Number(ethers.utils.formatEther(threeQuarterAmountVestedPurchaser))
-        ).to.be.greaterThan(2.25 * 0.99999);
-        expect(
-          Number(ethers.utils.formatEther(threeQuarterAmountVestedPurchaser))
-        ).to.be.lessThan(2.25 * 1.00001);
-
-        expect(
-          Number(ethers.utils.formatEther(threeQuarterBalancePurchaserTwo))
-        ).to.be.greaterThan(1.25 * 0.99999);
-        expect(
-          Number(ethers.utils.formatEther(threeQuarterBalancePurchaserTwo))
-        ).to.be.lessThan(1.25 * 1.00001);
-
-        expect(
-          Number(ethers.utils.formatEther(threeQuarterAmountVestedPurchaserTwo))
-        ).to.be.greaterThan(2.25 * 0.99999);
-        expect(
-          Number(ethers.utils.formatEther(threeQuarterAmountVestedPurchaserTwo))
-        ).to.be.lessThan(2.25 * 1.00001);
-
-        // claim quarter through the period
-        await ethers.provider.send("evm_setNextBlockTimestamp", [
-          vestingCliff + vestingPeriod,
-        ]);
-        await ethers.provider.send("evm_mine", []);
-
         await expect(
           aelinDeal
-            .connect(purchaser)
-            .transfer(purchaserTwo.address, mintAmount.div(100))
-        ).to.be.revertedWith("no transfers after vest done");
-
-        await aelinDeal.connect(purchaser).claim();
-        await aelinDeal.connect(purchaserTwo).claim();
-
-        const endingBalancePurchaser = await aelinDeal.balanceOf(
-          purchaser.address
-        );
-        const endingBalancePurchaserTwo = await aelinDeal.balanceOf(
-          purchaserTwo.address
-        );
-
-        expect(
-          Number(ethers.utils.formatEther(endingBalancePurchaser))
-        ).to.equal(0);
-        expect(
-          Number(ethers.utils.formatEther(endingBalancePurchaserTwo))
-        ).to.equal(0);
+            .connect(purchaserTwo)
+            .transfer(purchaser.address, mintAmount.div(2))
+        ).to.be.revertedWith("cannot transfer deal tokens");
       });
 
-      it("should claim their minted tokens when doing a transfer", async function () {
+      it("should fail when doing a transfer", async function () {
         await fundDealAndMintTokens();
         const vestingCliffEVM = await aelinDeal.vestingCliff();
         const vestingPeriodEVM = await aelinDeal.vestingPeriod();
@@ -811,37 +674,12 @@ describe("AelinDeal", function () {
         await ethers.provider.send("evm_mine", []);
         expect(await aelinDeal.balanceOf(purchaser.address)).to.not.equal(0);
 
-        await aelinDeal.connect(purchaser).transferMax(deployer.address);
-
-        const [claimLog] = await aelinDeal.queryFilter(
-          aelinDeal.filters.ClaimedUnderlyingDealToken()
-        );
-        const transferLogs = await aelinDeal.queryFilter(
-          aelinDeal.filters.Transfer()
-        );
-
-        expect(claimLog.args.underlyingDealTokenAddress).to.equal(
-          underlyingDealToken.address
-        );
-        expect(claimLog.args.recipient).to.equal(purchaser.address);
-        expect(claimLog.args.underlyingDealTokensClaimed).to.not.equal(0);
-
-        expect(transferLogs[0].args.from).to.equal(nullAddress);
-        expect(transferLogs[0].args.to).to.equal(purchaser.address);
-        expect(transferLogs[0].args.value).to.not.equal(0);
-
-        expect(transferLogs[1].args.from).to.equal(purchaser.address);
-        expect(transferLogs[1].args.to).to.equal(nullAddress);
-        expect(transferLogs[1].args.value).to.not.equal(0);
-
-        expect(transferLogs[2].args.from).to.equal(purchaser.address);
-        expect(transferLogs[2].args.to).to.equal(deployer.address);
-        expect(transferLogs[2].args.value).to.not.equal(0);
-
-        expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
+        await expect(
+          aelinDeal.connect(purchaser).transferMax(deployer.address)
+        ).to.be.revertedWith("cannot transfer deal tokens");
       });
 
-      it("should error when the purchaser transfers after the vesting ends", async function () {
+      it("should error when the purchaser transfers deal tokens", async function () {
         await fundDealAndMintTokens();
 
         await ethers.provider.send("evm_increaseTime", [vestingEnd + 1]);
@@ -851,7 +689,7 @@ describe("AelinDeal", function () {
           aelinDeal
             .connect(purchaser)
             .transfer(purchaserTwo.address, mintAmount.div(100))
-        ).to.be.revertedWith("no transfers after vest done");
+        ).to.be.revertedWith("cannot transfer deal tokens");
       });
 
       it("should error when the purchaser transfers more than they have after claiming", async function () {
@@ -871,10 +709,10 @@ describe("AelinDeal", function () {
         // TODO add a method
         await expect(
           aelinDeal.connect(purchaser).transfer(deployer.address, mintAmount)
-        ).to.be.revertedWith("amount exceeds balance");
+        ).to.be.revertedWith("cannot transfer deal tokens");
       });
 
-      it("should claim their minted tokens when doing a transferFrom", async function () {
+      it("should fail when doing a transferFrom", async function () {
         await fundDealAndMintTokens();
         const vestingCliffEVM = await aelinDeal.vestingCliff();
         const vestingPeriodEVM = await aelinDeal.vestingPeriod();
@@ -892,40 +730,14 @@ describe("AelinDeal", function () {
 
         await aelinDeal.connect(purchaser).approve(deployer.address, balance);
 
-        await aelinDeal
-          .connect(deployer)
-          .transferFromMax(purchaser.address, holder.address);
-
-        const [claimLog] = await aelinDeal.queryFilter(
-          aelinDeal.filters.ClaimedUnderlyingDealToken()
-        );
-        const transferLogs = await aelinDeal.queryFilter(
-          aelinDeal.filters.Transfer()
-        );
-
-        expect(claimLog.args.underlyingDealTokenAddress).to.equal(
-          underlyingDealToken.address
-        );
-
-        expect(claimLog.args.recipient).to.equal(purchaser.address);
-        expect(claimLog.args.underlyingDealTokensClaimed).to.not.equal(0);
-
-        expect(transferLogs[0].args.from).to.equal(nullAddress);
-        expect(transferLogs[0].args.to).to.equal(purchaser.address);
-        expect(transferLogs[0].args.value).to.not.equal(0);
-
-        expect(transferLogs[1].args.from).to.equal(purchaser.address);
-        expect(transferLogs[1].args.to).to.equal(nullAddress);
-        expect(transferLogs[1].args.value).to.not.equal(0);
-
-        expect(transferLogs[2].args.from).to.equal(purchaser.address);
-        expect(transferLogs[2].args.to).to.equal(holder.address);
-        expect(transferLogs[2].args.value).to.not.equal(0);
-
-        expect(await aelinDeal.balanceOf(purchaser.address)).to.equal(0);
+        await expect(
+          aelinDeal
+            .connect(deployer)
+            .transferFromMax(purchaser.address, holder.address)
+        ).to.be.revertedWith("cannot transfer deal tokens");
       });
 
-      it("should error when transferFrom is called with too many tokens after claiming", async function () {
+      it("should error when transferFrom is called", async function () {
         await fundDealAndMintTokens();
 
         const vestingCliffEVM = await aelinDeal.vestingCliff();
@@ -947,7 +759,7 @@ describe("AelinDeal", function () {
           aelinDeal
             .connect(deployer)
             .transferFrom(purchaser.address, holder.address, mintAmount)
-        ).to.be.revertedWith("amount exceeds balance");
+        ).to.be.revertedWith("cannot transfer deal tokens");
       });
 
       it("should not allow a random wallet with no balance to claim", async function () {
