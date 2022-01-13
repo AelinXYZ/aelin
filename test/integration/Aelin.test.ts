@@ -1252,19 +1252,15 @@ describe("integration test", () => {
         )) as AelinDeal;
       });
 
-      it("should allow the user to transfer before the redeem window", async function () {
+      it("should not allow the user to transfer before the redeem window", async function () {
         expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
           purchaseAmount
         );
-        await aelinPoolProxyStorage
-          .connect(user1)
-          .transfer(user2.address, purchaseAmount);
-        expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
-          0
-        );
-        expect(await aelinPoolProxyStorage.balanceOf(user2.address)).to.equal(
-          purchaseAmount
-        );
+        await expect(
+          aelinPoolProxyStorage
+            .connect(user1)
+            .transfer(user2.address, purchaseAmount)
+        ).to.be.revertedWith("cannot transfer pool tokens");
       });
     });
 

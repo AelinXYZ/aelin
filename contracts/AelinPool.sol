@@ -541,10 +541,16 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         }
     }
 
+    modifier blockTransfer() {
+        require(false, "cannot transfer pool tokens");
+        _;
+    }
+
     function transfer(address dst, uint256 amount)
         public
         virtual
         override
+        blockTransfer
         returns (bool)
     {
         return super.transfer(dst, amount);
@@ -554,7 +560,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         address src,
         address dst,
         uint256 amount
-    ) public virtual override returns (bool) {
+    ) public virtual override blockTransfer returns (bool) {
         return super.transferFrom(src, dst, amount);
     }
 

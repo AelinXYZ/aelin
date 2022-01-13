@@ -909,6 +909,20 @@ describe("AelinPool", function () {
       expect(log.args.purchaseTokenAmount).to.equal(userPurchaseAmt);
     });
 
+    it("should block transferring pool tokens", async function () {
+      await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
+      const [log] = await aelinPool.queryFilter(
+        aelinPool.filters.PurchasePoolToken()
+      );
+
+      expect(log.args.purchaser).to.equal(user1.address);
+      expect(log.address).to.equal(aelinPool.address);
+      expect(log.args.purchaseTokenAmount).to.equal(userPurchaseAmt);
+      await expect(
+        aelinPool.transfer(deployer.address, userPurchaseAmt)
+      ).to.be.revertedWith("cannot transfer pool tokens");
+    });
+
     it("should fail the transaction when the cap has been exceeded", async function () {
       await purchaseToken
         .connect(user1)
