@@ -14,6 +14,7 @@ contract AelinDeal is AelinERC20 {
     uint256 public totalUnderlyingClaimed;
     address public holder;
     address public futureHolder;
+    address public aelinRewardsAddress;
 
     uint256 public underlyingPerDealExchangeRate;
 
@@ -57,7 +58,8 @@ contract AelinDeal is AelinERC20 {
         uint256 _openRedemptionPeriod,
         address _holder,
         uint256 _maxDealTotalSupply,
-        uint256 _holderFundingDuration
+        uint256 _holderFundingDuration,
+        address _aelinRewardsAddress
     ) external initOnce {
         _setNameSymbolAndDecimals(
             string(abi.encodePacked("aeDeal-", _name)),
@@ -81,6 +83,7 @@ contract AelinDeal is AelinERC20 {
         proRataRedemptionPeriod = _proRataRedemptionPeriod;
         openRedemptionPeriod = _openRedemptionPeriod;
         holderFundingExpiry = _holderFundingDuration;
+        aelinRewardsAddress = _aelinRewardsAddress;
 
         depositComplete = false;
 
@@ -316,8 +319,33 @@ contract AelinDeal is AelinERC20 {
     }
 
     modifier blockTransfer() {
-        require(false, "cannot transfer deal tokens");
+        if (msg.sender != aelinRewardsAddress) {
+            require(false, "cannot transfer deal tokens");
+        }
         _;
+    }
+
+    /**
+     * @dev a function only the treasury can use so they can send both the all
+     * unvested deal tokens as well as all the vested underlying deal tokens in a
+     * single transaction for distribution to $AELIN stakers.
+     */
+    function treasuryTransfer(address recipient) external returns (bool) {
+        require(
+            msg.sender == aelinRewardsAddress,
+            "only Rewards address can access"
+        );
+        (
+            uint256 underlyingClaimable,
+            uint256 claimableDealTokens
+        ) = claimableTokens(msg.sender);
+        transfer(recipient, balanceOf(msg.sender) - claimableDealTokens);
+        return
+            IERC20(underlyingDealToken).transferFrom(
+                msg.sender,
+                recipient,
+                underlyingClaimable
+            );
     }
 
     /**
