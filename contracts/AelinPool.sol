@@ -261,8 +261,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             _openRedemptionPeriod,
             _holder,
             maxDealTotalSupply,
-            holderFundingExpiry,
-            aelinRewardsAddress
+            holderFundingExpiry
         );
 
         emit CreateDeal(

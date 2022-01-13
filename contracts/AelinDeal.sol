@@ -8,7 +8,6 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 contract AelinDeal is AelinERC20 {
     using SafeERC20 for IERC20;
     uint256 public maxTotalSupply;
-    address public aelinRewardsAddress;
 
     address public underlyingDealToken;
     uint256 public underlyingDealTokenTotal;
@@ -58,8 +57,7 @@ contract AelinDeal is AelinERC20 {
         uint256 _openRedemptionPeriod,
         address _holder,
         uint256 _maxDealTotalSupply,
-        uint256 _holderFundingDuration,
-        address _aelinRewardsAddress
+        uint256 _holderFundingDuration
     ) external initOnce {
         _setNameSymbolAndDecimals(
             string(abi.encodePacked("aeDeal-", _name)),
@@ -83,7 +81,6 @@ contract AelinDeal is AelinERC20 {
         proRataRedemptionPeriod = _proRataRedemptionPeriod;
         openRedemptionPeriod = _openRedemptionPeriod;
         holderFundingExpiry = _holderFundingDuration;
-        aelinRewardsAddress = _aelinRewardsAddress;
 
         depositComplete = false;
 
