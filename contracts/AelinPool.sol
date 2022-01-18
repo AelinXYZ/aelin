@@ -542,15 +542,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         }
     }
 
-    /**
-     * @dev pool tokens may not be transferred once the deal redemption window starts.
-     * However, they may be withdrawn for purchase tokens which can then be transferred
-     */
-    modifier transferWindow() {
-        require(
-            aelinDeal.proRataRedemptionStart() == 0,
-            "no transfers after redeem starts"
-        );
+    modifier blockTransfer() {
+        require(false, "cannot transfer pool tokens");
         _;
     }
 
@@ -558,7 +551,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         public
         virtual
         override
-        transferWindow
+        blockTransfer
         returns (bool)
     {
         return super.transfer(dst, amount);
@@ -568,7 +561,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         address src,
         address dst,
         uint256 amount
-    ) public virtual override transferWindow returns (bool) {
+    ) public virtual override blockTransfer returns (bool) {
         return super.transferFrom(src, dst, amount);
     }
 

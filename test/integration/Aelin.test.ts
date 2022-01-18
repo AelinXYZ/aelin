@@ -1252,30 +1252,7 @@ describe("integration test", () => {
         )) as AelinDeal;
       });
 
-      it("should allow the user to transfer before the redeem window", async function () {
-        expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
-          purchaseAmount
-        );
-        await aelinPoolProxyStorage
-          .connect(user1)
-          .transfer(user2.address, purchaseAmount);
-        expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
-          0
-        );
-        expect(await aelinPoolProxyStorage.balanceOf(user2.address)).to.equal(
-          purchaseAmount
-        );
-      });
-
-      it("should block a transfer during the redeem window", async function () {
-        await aaveContract
-          .connect(aaveWhaleOne)
-          .approve(aelinDealProxyStorage.address, underlyingDealTokenTotal);
-
-        await aelinDealProxyStorage
-          .connect(aaveWhaleOne)
-          .depositUnderlying(underlyingDealTokenTotal);
-
+      it("should not allow the user to transfer before the redeem window", async function () {
         expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
           purchaseAmount
         );
@@ -1283,26 +1260,7 @@ describe("integration test", () => {
           aelinPoolProxyStorage
             .connect(user1)
             .transfer(user2.address, purchaseAmount)
-        ).to.be.revertedWith("no transfers after redeem starts");
-      });
-
-      it("should block a transferFrom during the redeem window", async function () {
-        await aaveContract
-          .connect(aaveWhaleOne)
-          .approve(aelinDealProxyStorage.address, underlyingDealTokenTotal);
-
-        await aelinDealProxyStorage
-          .connect(aaveWhaleOne)
-          .depositUnderlying(underlyingDealTokenTotal);
-
-        expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
-          purchaseAmount
-        );
-        await expect(
-          aelinPoolProxyStorage
-            .connect(user1)
-            .transferFrom(user1.address, user2.address, purchaseAmount)
-        ).to.be.revertedWith("no transfers after redeem starts");
+        ).to.be.revertedWith("cannot transfer pool tokens");
       });
     });
 
