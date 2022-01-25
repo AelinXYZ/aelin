@@ -16,7 +16,7 @@ const { deployContract } = waffle;
 
 chai.use(solidity);
 
-describe("vAelinConverter", function () {
+describe.only("vAelinConverter", function () {
   let deployer: SignerWithAddress;
   let holder: SignerWithAddress;
   let beneficiary: SignerWithAddress;
@@ -30,6 +30,11 @@ describe("vAelinConverter", function () {
     decimals
   );
   const vAelinAmount = ethers.utils.parseUnits("10", decimals);
+  const vAelinTransferAmount = ethers.utils.parseUnits("10.306122", decimals);
+  const aelinConvertAllAmount = ethers.utils.parseUnits(
+    "10.09999956",
+    decimals
+  );
   const aelinAmount = ethers.utils.parseUnits("9.8", decimals);
 
   before(async () => {
@@ -40,6 +45,9 @@ describe("vAelinConverter", function () {
     vAelinToken = (await deployContract(deployer, VirtualAelinTokenArtifact, [
       holder.address,
     ])) as VirtualAelinToken;
+    await vAelinToken
+      .connect(holder)
+      .transfer(beneficiary.address, vAelinTransferAmount);
     vAelinConverter = (await deployContract(deployer, VAelinConverterArtifact, [
       deployer.address,
       vAelinToken.address,
@@ -53,13 +61,15 @@ describe("vAelinConverter", function () {
   describe("conversion", function () {
     it("should handle the conversion properly", async function () {
       expect(await aelinToken.balanceOf(holder.address)).to.equal(0);
-      expect(await vAelinToken.balanceOf(holder.address)).to.equal(vAelinTotal);
+      expect(await vAelinToken.balanceOf(holder.address)).to.equal(
+        vAelinTotal.sub(vAelinTransferAmount)
+      );
       await vAelinToken
         .connect(holder)
         .approve(vAelinConverter.address, vAelinAmount);
       await vAelinConverter.connect(holder).convert(vAelinAmount);
       expect(await vAelinToken.balanceOf(holder.address)).to.equal(
-        vAelinTotal.sub(vAelinAmount)
+        vAelinTotal.sub(vAelinAmount).sub(vAelinTransferAmount)
       );
       expect(await aelinToken.balanceOf(holder.address)).to.equal(aelinAmount);
       const logs = await vAelinConverter.queryFilter(
@@ -68,9 +78,26 @@ describe("vAelinConverter", function () {
       expect(holder.address).to.equal(logs[0].args.sender);
       expect(aelinAmount).to.equal(logs[0].args.aelinReceived);
     });
+
+    it("should handle the convertAll method properly", async function () {
+      expect(await aelinToken.balanceOf(beneficiary.address)).to.equal(0);
+      expect(await vAelinToken.balanceOf(beneficiary.address)).to.equal(
+        vAelinTransferAmount
+      );
+      await vAelinToken
+        .connect(beneficiary)
+        .approve(vAelinConverter.address, vAelinTransferAmount);
+      await vAelinConverter.connect(beneficiary).convertAll();
+      expect(await vAelinToken.balanceOf(beneficiary.address)).to.equal(0);
+      expect(await aelinToken.balanceOf(beneficiary.address)).to.equal(
+        aelinConvertAllAmount
+      );
+    });
+
     it("should have the owner as the deployer", async function () {
       expect(await vAelinConverter.owner()).to.equal(deployer.address);
     });
+
     it("should be able to transfer ownership", async function () {
       expect(await vAelinConverter.owner()).to.equal(deployer.address);
       await vAelinConverter.connect(deployer).nominateNewOwner(holder.address);
@@ -78,9 +105,12 @@ describe("vAelinConverter", function () {
       await vAelinConverter.connect(holder).acceptOwnership();
       expect(await vAelinConverter.owner()).to.equal(holder.address);
     });
+
     it("should self destruct properly", async function () {
       const oneYear = 365 * 24 * 60 * 60; // one year
-      expect(await aelinToken.balanceOf(beneficiary.address)).to.equal(0);
+      expect(await aelinToken.balanceOf(beneficiary.address)).to.equal(
+        aelinConvertAllAmount
+      );
       expect(await vAelinConverter.owner()).to.equal(holder.address);
       await expect(
         vAelinConverter.connect(deployer)._selfDestruct(beneficiary.address)

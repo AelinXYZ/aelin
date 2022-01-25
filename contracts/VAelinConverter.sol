@@ -26,7 +26,11 @@ contract VAelinConverter is Owned {
         startTime = block.timestamp;
     }
 
-    function convert(uint256 _amount) external {
+    function convertAll() external {
+        convert(IERC20(vAELIN).balanceOf(msg.sender));
+    }
+
+    function convert(uint256 _amount) public {
         uint256 aelinAmount = ((_amount * 98) / 100);
         IERC20(vAELIN).transferFrom(msg.sender, address(this), _amount);
         IERC20(AELIN).transfer(msg.sender, aelinAmount);
