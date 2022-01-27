@@ -543,8 +543,15 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         }
     }
 
-    modifier blockTransfer() {
-        require(false, "cannot transfer pool tokens");
+    modifier transferWindow() {
+        require(
+            aelinDeal.proRataRedemptionStart() == 0 ||
+                (block.timestamp >= aelinDeal.proRataRedemptionExpiry() &&
+                    aelinDeal.openRedemptionStart() == 0) ||
+                (block.timestamp >= aelinDeal.openRedemptionExpiry() &&
+                    aelinDeal.openRedemptionStart() != 0),
+            "no transfers after redeem starts"
+        );
         _;
     }
 
@@ -552,7 +559,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         public
         virtual
         override
-        blockTransfer
+        transferWindow
         returns (bool)
     {
         return super.transfer(dst, amount);
@@ -562,7 +569,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         address src,
         address dst,
         uint256 amount
-    ) public virtual override blockTransfer returns (bool) {
+    ) public virtual override transferWindow returns (bool) {
         return super.transferFrom(src, dst, amount);
     }
 
