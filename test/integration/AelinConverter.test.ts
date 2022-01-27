@@ -16,7 +16,7 @@ const { deployContract } = waffle;
 
 chai.use(solidity);
 
-describe.only("vAelinConverter", function () {
+describe("vAelinConverter", function () {
   let deployer: SignerWithAddress;
   let holder: SignerWithAddress;
   let beneficiary: SignerWithAddress;
