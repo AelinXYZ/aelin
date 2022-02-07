@@ -550,7 +550,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
                     aelinDeal.openRedemptionStart() == 0) ||
                 (block.timestamp >= aelinDeal.openRedemptionExpiry() &&
                     aelinDeal.openRedemptionStart() != 0),
-            "no transfers after redeem starts"
+            "no transfers in redeem window"
         );
         _;
     }

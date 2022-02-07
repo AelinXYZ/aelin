@@ -1304,7 +1304,7 @@ describe("integration test", () => {
           aelinPoolProxyStorage
             .connect(user1)
             .transfer(user2.address, purchaseAmount)
-        ).to.be.revertedWith("no transfers after redeem starts");
+        ).to.be.revertedWith("no transfers in redeem window");
       });
 
       it("should block a transferFrom during the redeem window", async function () {
@@ -1327,10 +1327,10 @@ describe("integration test", () => {
           aelinPoolProxyStorage
             .connect(user3)
             .transferFrom(user1.address, user2.address, purchaseAmount)
-        ).to.be.revertedWith("no transfers after redeem starts");
+        ).to.be.revertedWith("no transfers in redeem window");
       });
 
-      it("should allow a transfer after the redeem window", async function () {
+      it("should allow a transfer after the redeem window but not during", async function () {
         await aaveContract
           .connect(aaveWhaleOne)
           .approve(aelinDealProxyStorage.address, underlyingDealTokenTotal);
@@ -1344,7 +1344,18 @@ describe("integration test", () => {
         );
 
         await ethers.provider.send("evm_increaseTime", [
-          proRataRedemptionPeriod + openRedemptionPeriod + 1,
+          proRataRedemptionPeriod,
+        ]);
+        await ethers.provider.send("evm_mine", []);
+
+        await expect(
+          aelinPoolProxyStorage
+            .connect(user1)
+            .transfer(user2.address, purchaseAmount)
+        ).to.be.revertedWith("no transfers in redeem window");
+
+        await ethers.provider.send("evm_increaseTime", [
+          openRedemptionPeriod + 1,
         ]);
         await ethers.provider.send("evm_mine", []);
 
@@ -1359,7 +1370,7 @@ describe("integration test", () => {
         );
       });
 
-      it("should allow a transferFrom after the redeem window", async function () {
+      it("should allow a transferFrom after the redeem window but not during", async function () {
         await aaveContract
           .connect(aaveWhaleOne)
           .approve(aelinDealProxyStorage.address, underlyingDealTokenTotal);
@@ -1373,13 +1384,24 @@ describe("integration test", () => {
         );
 
         await ethers.provider.send("evm_increaseTime", [
-          proRataRedemptionPeriod + openRedemptionPeriod + 1,
+          proRataRedemptionPeriod,
         ]);
         await ethers.provider.send("evm_mine", []);
 
         await aelinPoolProxyStorage
           .connect(user1)
           .approve(user3.address, purchaseAmount);
+
+        await expect(
+          aelinPoolProxyStorage
+            .connect(user3)
+            .transferFrom(user1.address, user2.address, purchaseAmount)
+        ).to.be.revertedWith("no transfers in redeem window");
+
+        await ethers.provider.send("evm_increaseTime", [
+          openRedemptionPeriod + 1,
+        ]);
+        await ethers.provider.send("evm_mine", []);
 
         await aelinPoolProxyStorage
           .connect(user3)
