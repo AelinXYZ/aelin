@@ -24,6 +24,7 @@
     "deploy-virtual-aelin:kovan": "hardhat run scripts/deploy-virtual-aelin.js --network kovan",
     "deploy-virtual-aelin:optimism": "hardhat run scripts/deploy-virtual-aelin.js --network optimism",
     "deploy-vaelin-converter:kovan": "hardhat run scripts/deploy-vaelin-converter.js --network kovan",
+    "deploy-vaelin-converter:optimism": "hardhat run scripts/deploy-vaelin-converter.js --network optimism",
     "deploy-merkle-distributor:optimism": "hardhat run scripts/deploy-merkle-distributor.js --network optimism",
     "deploy-merkle-distributor:kovan": "hardhat run scripts/deploy-merkle-distributor.js --network kovan",
     "deploy-aelin-token:optimism": "hardhat run scripts/deploy-aelin-token.js --network optimism",
