@@ -1,0 +1,17 @@
+name = "AelinCannon"
+description = "Deploy Aelin factory contracts using Cannon"
+version = "0.0.1"
+tags = ["aelin", "cannon"]
+
+[contract.dealLogic]
+artifact = "AelinDeal" # Specifies the name of the contract to be deployed
+step = 0 
+
+[contract.poolLogic]
+artifact = "AelinPool" # Specifies the name of the contract to be deployed
+step = 1
+
+[contract.poolFactory]
+artifact = "AelinPoolFactory" # Specifies the name of the contract to be deployed
+args = ["<%= outputs.self.contracts.poolLogic.address %>", "<%= outputs.self.contracts.dealLogic.address %>", "0x000000000000000000000000000000000000dead"]
+step = 2

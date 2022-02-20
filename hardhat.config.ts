@@ -8,6 +8,7 @@ import "hardhat-gas-reporter";
 import "hardhat-interact";
 import "solidity-coverage";
 import "@nomiclabs/hardhat-etherscan";
+import "hardhat-cannon";
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
