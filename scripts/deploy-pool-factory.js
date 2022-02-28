@@ -40,8 +40,13 @@ async function main() {
   // const rewardsAddress = "0x5B8F3fb479571Eca6A06240b21926Db586Cdf10f";
 
   // kovan deployed contracts
-  const poolLogicAddress = "0x0ad6487267c5F92e588F1e72d60FC39d54cBE8EF";
-  const dealLogicAddress = "0xB32F6CfC7Db506be9D3F45EC5d008165A26DE098";
+  // const poolLogicAddress = "0x0ad6487267c5F92e588F1e72d60FC39d54cBE8EF";
+  // const dealLogicAddress = "0xB32F6CfC7Db506be9D3F45EC5d008165A26DE098";
+  // const rewardsAddress = "0x7856f2a12A7A18b4A115d295F548434a9b078fA1";
+
+  // goerli deployed contracts
+  const poolLogicAddress = "0xE46d449924A74D3155B2605E12399D22401f16E4";
+  const dealLogicAddress = "0xBE68F3E4B5CEbaAB155582a4220cDf8E439861A5";
   const rewardsAddress = "0x7856f2a12A7A18b4A115d295F548434a9b078fA1";
 
   const AelinPoolFactory = await ethers.getContractFactory("AelinPoolFactory");

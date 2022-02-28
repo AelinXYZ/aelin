@@ -34,14 +34,17 @@
     "deploy-deal:mainnet": "hardhat run scripts/deploy-deal.js --network mainnet",
     "deploy-deal:optimism": "hardhat run scripts/deploy-deal.js --network optimism",
     "deploy-deal:kovan": "hardhat run scripts/deploy-deal.js --network kovan",
+    "deploy-deal:goerli": "hardhat run scripts/deploy-deal.js --network goerli",
     "deploy-deal:mainnet-fork": "hardhat run scripts/deploy-deal.js",
     "deploy-pool:optimism": "hardhat run scripts/deploy-pool.js --network optimism",
     "deploy-pool:mainnet": "hardhat run scripts/deploy-pool.js --network mainnet",
     "deploy-pool:kovan": "hardhat run scripts/deploy-pool.js --network kovan",
+    "deploy-pool:goerli": "hardhat run scripts/deploy-pool.js --network goerli",
     "deploy-pool:mainnet-fork": "hardhat run scripts/deploy-pool.js",
     "deploy-pool-factory:optimism": "hardhat run scripts/deploy-pool-factory.js --network optimism",
     "deploy-pool-factory:mainnet": "hardhat run scripts/deploy-pool-factory.js --network mainnet",
     "deploy-pool-factory:kovan": "hardhat run scripts/deploy-pool-factory.js --network kovan",
+    "deploy-pool-factory:goerli": "hardhat run scripts/deploy-pool-factory.js --network goerli",
     "deploy-pool-factory:mainnet-fork": "hardhat run scripts/deploy-pool-factory.js"
   },
   "repository": {
