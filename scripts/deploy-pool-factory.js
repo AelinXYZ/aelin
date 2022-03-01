@@ -47,7 +47,7 @@ async function main() {
   // goerli deployed contracts
   const poolLogicAddress = "0xE46d449924A74D3155B2605E12399D22401f16E4";
   const dealLogicAddress = "0xBE68F3E4B5CEbaAB155582a4220cDf8E439861A5";
-  const rewardsAddress = "0x7856f2a12A7A18b4A115d295F548434a9b078fA1";
+  const rewardsAddress = "0x9d6DC72ED8ff3464cFd814c9Bb1Db0aFB157Cb97";
 
   const AelinPoolFactory = await ethers.getContractFactory("AelinPoolFactory");
   const aelinPoolFactory = await AelinPoolFactory.deploy(
