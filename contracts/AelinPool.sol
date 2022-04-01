@@ -188,7 +188,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint256 _purchaseTokenTotalForDeal,
         uint256 _underlyingDealTokenTotal,
         uint256 _vestingPeriod,
-        uint256 _vestingCliff,
+        uint256 _vestingCliffPeriod,
         uint256 _proRataRedemptionPeriod,
         uint256 _openRedemptionPeriod,
         address _holder,
@@ -209,7 +209,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
                 30 days >= _proRataRedemptionPeriod,
             "30 mins - 30 days for prorata"
         );
-        require(1825 days >= _vestingCliff, "max 5 year cliff");
+        require(1825 days >= _vestingCliffPeriod, "max 5 year cliff");
         require(1825 days >= _vestingPeriod, "max 5 year vesting");
         require(
             30 minutes <= _holderFundingDuration &&
@@ -256,7 +256,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             _underlyingDealToken,
             _underlyingDealTokenTotal,
             _vestingPeriod,
-            _vestingCliff,
+            _vestingCliffPeriod,
             _proRataRedemptionPeriod,
             _openRedemptionPeriod,
             _holder,
@@ -278,7 +278,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             _purchaseTokenTotalForDeal,
             _underlyingDealTokenTotal,
             _vestingPeriod,
-            _vestingCliff,
+            _vestingCliffPeriod,
             _proRataRedemptionPeriod,
             _openRedemptionPeriod,
             _holder,
@@ -605,7 +605,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint256 purchaseTokenTotalForDeal,
         uint256 underlyingDealTokenTotal,
         uint256 vestingPeriod,
-        uint256 vestingCliff,
+        uint256 vestingCliffPeriod,
         uint256 proRataRedemptionPeriod,
         uint256 openRedemptionPeriod,
         address indexed holder,

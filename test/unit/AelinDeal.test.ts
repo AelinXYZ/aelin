@@ -166,7 +166,7 @@ describe("AelinDeal", function () {
         proRataRedemptionPeriod +
         openRedemptionPeriod +
         vestingCliff;
-      expect(await aelinDeal.vestingCliff()).to.equal(actualVestingCliff);
+      expect(await aelinDeal.vestingCliffExpiry()).to.equal(actualVestingCliff);
       expect(await aelinDeal.vestingPeriod()).to.equal(vestingPeriod);
       expect(await aelinDeal.vestingExpiry()).to.equal(
         actualVestingCliff + vestingPeriod
@@ -672,7 +672,7 @@ describe("AelinDeal", function () {
           mintAmount.mul(2)
         );
 
-        const vestingCliffEVM = await aelinDeal.vestingCliff();
+        const vestingCliffEVM = await aelinDeal.vestingCliffExpiry();
         const vestingPeriodEVM = await aelinDeal.vestingPeriod();
         const vestingCliff = vestingCliffEVM.toNumber();
         const vestingPeriod = vestingPeriodEVM.toNumber();
@@ -693,7 +693,7 @@ describe("AelinDeal", function () {
 
       it("should fail when doing a transfer", async function () {
         await fundDealAndMintTokens();
-        const vestingCliffEVM = await aelinDeal.vestingCliff();
+        const vestingCliffEVM = await aelinDeal.vestingCliffExpiry();
         const vestingPeriodEVM = await aelinDeal.vestingPeriod();
         const vestingCliff = vestingCliffEVM.toNumber();
         const vestingPeriod = vestingPeriodEVM.toNumber();
@@ -726,7 +726,7 @@ describe("AelinDeal", function () {
       it("should error when the purchaser transfers more than they have after claiming", async function () {
         await fundDealAndMintTokens();
 
-        const vestingCliffEVM = await aelinDeal.vestingCliff();
+        const vestingCliffEVM = await aelinDeal.vestingCliffExpiry();
         const vestingPeriodEVM = await aelinDeal.vestingPeriod();
         const vestingCliff = vestingCliffEVM.toNumber();
         const vestingPeriod = vestingPeriodEVM.toNumber();
@@ -745,7 +745,7 @@ describe("AelinDeal", function () {
 
       it("should fail when doing a transferFrom", async function () {
         await fundDealAndMintTokens();
-        const vestingCliffEVM = await aelinDeal.vestingCliff();
+        const vestingCliffEVM = await aelinDeal.vestingCliffExpiry();
         const vestingPeriodEVM = await aelinDeal.vestingPeriod();
         const vestingCliff = vestingCliffEVM.toNumber();
         const vestingPeriod = vestingPeriodEVM.toNumber();
@@ -771,7 +771,7 @@ describe("AelinDeal", function () {
       it("should error when transferFrom is called", async function () {
         await fundDealAndMintTokens();
 
-        const vestingCliffEVM = await aelinDeal.vestingCliff();
+        const vestingCliffEVM = await aelinDeal.vestingCliffExpiry();
         const vestingPeriodEVM = await aelinDeal.vestingPeriod();
         const vestingCliff = vestingCliffEVM.toNumber();
         const vestingPeriod = vestingPeriodEVM.toNumber();

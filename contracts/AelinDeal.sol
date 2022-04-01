@@ -19,7 +19,8 @@ contract AelinDeal is AelinERC20 {
     uint256 public underlyingPerDealExchangeRate;
 
     address public aelinPool;
-    uint256 public vestingCliff;
+    uint256 public vestingCliffExpiry;
+    uint256 public vestingCliffPeriod;
     uint256 public vestingPeriod;
     uint256 public vestingExpiry;
     uint256 public holderFundingExpiry;
@@ -53,7 +54,7 @@ contract AelinDeal is AelinERC20 {
         address _underlyingDealToken,
         uint256 _underlyingDealTokenTotal,
         uint256 _vestingPeriod,
-        uint256 _vestingCliff,
+        uint256 _vestingCliffPeriod,
         uint256 _proRataRedemptionPeriod,
         uint256 _openRedemptionPeriod,
         address _holder,
@@ -73,13 +74,8 @@ contract AelinDeal is AelinERC20 {
         maxTotalSupply = _maxDealTotalSupply;
 
         aelinPool = msg.sender;
-        vestingCliff =
-            block.timestamp +
-            _proRataRedemptionPeriod +
-            _openRedemptionPeriod +
-            _vestingCliff;
+        vestingCliffPeriod = _vestingCliffPeriod;
         vestingPeriod = _vestingPeriod;
-        vestingExpiry = vestingCliff + _vestingPeriod;
         proRataRedemptionPeriod = _proRataRedemptionPeriod;
         openRedemptionPeriod = _openRedemptionPeriod;
         holderFundingExpiry = _holderFundingDuration;
@@ -163,6 +159,12 @@ contract AelinDeal is AelinERC20 {
             depositComplete = true;
             proRataRedemptionStart = block.timestamp;
             proRataRedemptionExpiry = block.timestamp + proRataRedemptionPeriod;
+            vestingCliffExpiry =
+                block.timestamp +
+                proRataRedemptionPeriod +
+                openRedemptionPeriod +
+                vestingCliffPeriod;
+            vestingExpiry = vestingCliffExpiry + vestingPeriod;
 
             if (openRedemptionPeriod > 0) {
                 openRedemptionStart = proRataRedemptionExpiry;
@@ -261,10 +263,10 @@ contract AelinDeal is AelinERC20 {
             : block.timestamp;
         if (
             balanceOf(purchaser) > 0 &&
-            (maxTime > vestingCliff ||
-                (maxTime == vestingCliff && vestingPeriod == 0))
+            (maxTime > vestingCliffExpiry ||
+                (maxTime == vestingCliffExpiry && vestingPeriod == 0))
         ) {
-            uint256 timeElapsed = maxTime - vestingCliff;
+            uint256 timeElapsed = maxTime - vestingCliffExpiry;
             dealTokensClaimable = vestingPeriod == 0
                 ? balanceOf(purchaser)
                 : ((balanceOf(purchaser) + amountVested[purchaser]) *

@@ -650,7 +650,7 @@ describe("AelinPool", function () {
         underlyingDealTokenTotal
       );
       expect(dealDetailLog.args.vestingPeriod).to.equal(vestingPeriod);
-      expect(dealDetailLog.args.vestingCliff).to.equal(vestingCliff);
+      expect(dealDetailLog.args.vestingCliffPeriod).to.equal(vestingCliff);
       expect(dealDetailLog.args.proRataRedemptionPeriod).to.equal(
         proRataRedemptionPeriod
       );
