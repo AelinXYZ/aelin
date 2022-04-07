@@ -156,21 +156,11 @@ describe("AelinDeal", function () {
         underlyingDealToken.address
       );
       expect(await aelinDeal.aelinPool()).to.equal(deployer.address);
-      // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
-      const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
       expect(await aelinDeal.underlyingDealTokenTotal()).to.equal(
         underlyingDealTokenTotal.toString()
       );
-      const actualVestingCliff =
-        timestamp +
-        proRataRedemptionPeriod +
-        openRedemptionPeriod +
-        vestingCliff;
-      expect(await aelinDeal.vestingCliffExpiry()).to.equal(actualVestingCliff);
+      expect(await aelinDeal.vestingCliffPeriod()).to.equal(vestingCliff);
       expect(await aelinDeal.vestingPeriod()).to.equal(vestingPeriod);
-      expect(await aelinDeal.vestingExpiry()).to.equal(
-        actualVestingCliff + vestingPeriod
-      );
       expect(await aelinDeal.proRataRedemptionPeriod()).to.equal(
         proRataRedemptionPeriod
       );
@@ -541,8 +531,8 @@ describe("AelinDeal", function () {
       it("should allow the purchaser to claim their partially vested tokens", async function () {
         // NOTE that this is deterministic but changes with codecov running so I am using
         // high and low estimates so the test will always pass even when the value changes slightly
-        const partiallyClaimUnderlyingHigh = 202739900;
-        const partiallyClaimUnderlyingLow = 202739700;
+        const partiallyClaimUnderlyingHigh = 202739800;
+        const partiallyClaimUnderlyingLow = 202739600;
         await fundDealAndMintTokens();
 
         await ethers.provider.send("evm_increaseTime", [
@@ -581,8 +571,9 @@ describe("AelinDeal", function () {
       it("should allow the treasury to claim their partially vested tokens and send the remaining vested tokens and claimed underlying deal tokens in a single transaction", async function () {
         // NOTE that this is deterministic but changes with codecov running so I am using
         // high and low estimates so the test will always pass even when the value changes slightly
-        const partiallyClaimUnderlyingHigh = 202739900;
-        const partiallyClaimUnderlyingLow = 202739700;
+        const partiallyClaimUnderlyingHigh = 202739800;
+        const partiallyClaimUnderlyingLow = 202739600;
+
         await fundDealAndMintTokens();
         expect(await underlyingDealToken.balanceOf(treasury.address)).to.equal(
           0
@@ -819,8 +810,8 @@ describe("AelinDeal", function () {
       it("should return the correct amount of tokens claimable after partially vested", async function () {
         // NOTE that this is deterministic but changes with codecov running so I am using
         // high and low estimates so the test will always pass even when the value changes slightly
-        const partialClaimEstHigh = 202739850;
-        const partialClaimEstLow = 202739750;
+        const partialClaimEstHigh = 202739800;
+        const partialClaimEstLow = 202739600;
         await fundDealAndMintTokens();
 
         await ethers.provider.send("evm_increaseTime", [
