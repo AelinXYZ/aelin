@@ -113,6 +113,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     ) external onlyPoolFactoryOnce {
         for (uint256 i = 0; i < _allowList.length; i++) {
             allowList[_allowList[i]] = _allowListAmounts[i];
+            emit AllowlistAddress(
+                _allowList[i],
+                _allowListAmounts[i]
+            );
         }
     }
 
@@ -610,5 +614,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint256 openRedemptionPeriod,
         address indexed holder,
         uint256 holderFundingDuration
+    );
+    event AllowlistAddress(
+        address indexed purchaser,
+        uint256 allowlistAmount
     );
 }
