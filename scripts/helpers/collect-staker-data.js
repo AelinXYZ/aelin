@@ -22,9 +22,9 @@ const synthetixSnxL1 =
 const synthetixSnxL2 =
   "https://api.thegraph.com/subgraphs/name/synthetixio-team/optimism-main";
 
-const ARCHIVE_NODE_URL = "https://ethnode.synthetix.io";
-const ARCHIVE_NODE_USER = "snx";
-const ARCHIVE_NODE_PASS = "snx321";
+const ARCHIVE_NODE_URL = "";
+const ARCHIVE_NODE_USER = "";
+const ARCHIVE_NODE_PASS = "";
 
 const MAX_LENGTH = 1000;
 

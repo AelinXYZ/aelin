@@ -79,6 +79,8 @@ jobs:
       ALCHEMY_URL: ${{ secrets.ALCHEMY_URL }}
       ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      OP_API_KEY: ${{ secrets.OP_API_KEY }}
+      OP_PRIVATE_KEY: ${{ secrets.OP_PRIVATE_KEY }}
 
     container:
       image: ghcr.io/synthetixio/docker-sec-tools/alpine:14.17
