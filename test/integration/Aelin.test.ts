@@ -195,19 +195,19 @@ describe("integration test", () => {
         ]
       )) as AelinPoolFactory;
 
-      await aelinPoolFactory
-        .connect(sponsor)
-        .createPool(
+      await aelinPoolFactory.connect(sponsor).createPool(
+        {
           name,
           symbol,
           purchaseTokenCap,
-          usdcContract.address,
+          purchaseToken: usdcContract.address,
           duration,
           sponsorFee,
-          purchaseExpiry,
-          [],
-          []
-        );
+          purchaseDuration: purchaseExpiry,
+        },
+        [],
+        []
+      );
 
       const [createPoolLog] = await aelinPoolFactory.queryFilter(
         aelinPoolFactory.filters.CreatePool()
@@ -627,19 +627,19 @@ describe("integration test", () => {
         ]
       )) as AelinPoolFactory;
 
-      await aelinPoolFactory
-        .connect(sponsor)
-        .createPool(
+      await aelinPoolFactory.connect(sponsor).createPool(
+        {
           name,
           symbol,
-          0,
-          usdcContract.address,
+          purchaseTokenCap: 0,
+          purchaseToken: usdcContract.address,
           duration,
           sponsorFee,
-          purchaseExpiry,
-          [],
-          []
-        );
+          purchaseDuration: purchaseExpiry,
+        },
+        [],
+        []
+      );
 
       const [createPoolLog] = await aelinPoolFactory.queryFilter(
         aelinPoolFactory.filters.CreatePool()
@@ -1011,19 +1011,19 @@ describe("integration test", () => {
         ]
       )) as AelinPoolFactory;
 
-      await aelinPoolFactory
-        .connect(sponsor)
-        .createPool(
+      await aelinPoolFactory.connect(sponsor).createPool(
+        {
           name,
           symbol,
-          0,
-          usdcContract.address,
+          purchaseTokenCap: 0,
+          purchaseToken: usdcContract.address,
           duration,
           sponsorFee,
-          purchaseExpiry,
-          [user13.address, user14.address],
-          [fundUSDCAmount, fundUSDCAmount.div(2)]
-        );
+          purchaseDuration: purchaseExpiry,
+        },
+        [user13.address, user14.address],
+        [fundUSDCAmount, fundUSDCAmount.div(2)]
+      );
 
       const [createPoolLog] = await aelinPoolFactory.queryFilter(
         aelinPoolFactory.filters.CreatePool()
@@ -1192,19 +1192,19 @@ describe("integration test", () => {
           ]
         )) as AelinPoolFactory;
 
-        await aelinPoolFactory
-          .connect(sponsor)
-          .createPool(
+        await aelinPoolFactory.connect(sponsor).createPool(
+          {
             name,
             symbol,
-            purchaseAmount,
-            usdcContract.address,
+            purchaseTokenCap: purchaseAmount,
+            purchaseToken: usdcContract.address,
             duration,
             sponsorFee,
-            purchaseExpiry,
-            [],
-            []
-          );
+            purchaseDuration: purchaseExpiry,
+          },
+          [],
+          []
+        );
 
         const [createPoolLog] = await aelinPoolFactory.queryFilter(
           aelinPoolFactory.filters.CreatePool()
@@ -1428,19 +1428,19 @@ describe("integration test", () => {
           ]
         )) as AelinPoolFactory;
 
-        await aelinPoolFactory
-          .connect(sponsor)
-          .createPool(
+        await aelinPoolFactory.connect(sponsor).createPool(
+          {
             name,
             symbol,
-            purchaseAmount.mul(4),
-            usdcContract.address,
+            purchaseTokenCap: purchaseAmount.mul(4),
+            purchaseToken: usdcContract.address,
             duration,
             sponsorFee,
-            purchaseExpiry,
-            [],
-            []
-          );
+            purchaseDuration: purchaseExpiry,
+          },
+          [],
+          []
+        );
 
         const [createPoolLog] = await aelinPoolFactory.queryFilter(
           aelinPoolFactory.filters.CreatePool()
@@ -1593,19 +1593,19 @@ describe("integration test", () => {
           ]
         )) as AelinPoolFactory;
 
-        await aelinPoolFactory
-          .connect(sponsor)
-          .createPool(
+        await aelinPoolFactory.connect(sponsor).createPool(
+          {
             name,
             symbol,
-            purchaseAmount.mul(4),
-            usdcContract.address,
+            purchaseTokenCap: purchaseAmount.mul(4),
+            purchaseToken: usdcContract.address,
             duration,
             sponsorFee,
-            purchaseExpiry,
-            [],
-            []
-          );
+            purchaseDuration: purchaseExpiry,
+          },
+          [],
+          []
+        );
 
         const [createPoolLog] = await aelinPoolFactory.queryFilter(
           aelinPoolFactory.filters.CreatePool()
