@@ -111,20 +111,20 @@ describe("AelinPool", function () {
       .connect(user1)
       .approve(aelinPool.address, userPurchaseAmt);
 
-    const tx = await aelinPool
-      .connect(deployer)
-      .initialize(
+    const tx = await aelinPool.connect(deployer).initialize(
+      {
         name,
         symbol,
         purchaseTokenCap,
-        purchaseToken.address,
+        purchaseToken: purchaseToken.address,
         duration,
         sponsorFee,
-        sponsor.address,
-        purchaseExpiry,
-        aelinDealLogic.address,
-        mockAelinRewardsAddress
-      );
+        purchaseDuration: purchaseExpiry,
+      },
+      sponsor.address,
+      aelinDealLogic.address,
+      mockAelinRewardsAddress
+    );
 
     if (useAllowList) {
       // TODO connect with the factory
@@ -166,14 +166,16 @@ describe("AelinPool", function () {
     it("should revert if duration is greater than 1 year", async function () {
       await expect(
         aelinPool.initialize(
-          name,
-          symbol,
-          purchaseTokenCap,
-          purchaseToken.address,
-          365 * 24 * 60 * 60 + 1, // 1 second greater than 365 days
-          sponsorFee,
+          {
+            name,
+            symbol,
+            purchaseTokenCap,
+            purchaseToken: purchaseToken.address,
+            duration: 365 * 24 * 60 * 60 + 1, // 1 second greater than 365 days,
+            sponsorFee,
+            purchaseDuration: purchaseExpiry,
+          },
           sponsor.address,
-          purchaseExpiry,
           aelinDealLogic.address,
           mockAelinRewardsAddress
         )
@@ -188,14 +190,16 @@ describe("AelinPool", function () {
       await mockTokenTooManyDecimals.mock.decimals.returns(19);
       await expect(
         aelinPool.initialize(
-          name,
-          symbol,
-          purchaseTokenCap,
-          mockTokenTooManyDecimals.address,
-          365 * 24 * 60 * 60 - 100,
-          sponsorFee,
+          {
+            name,
+            symbol,
+            purchaseTokenCap,
+            purchaseToken: mockTokenTooManyDecimals.address,
+            duration: 365 * 24 * 60 * 60 - 100,
+            sponsorFee,
+            purchaseDuration: purchaseExpiry,
+          },
           sponsor.address,
-          purchaseExpiry,
           aelinDealLogic.address,
           mockAelinRewardsAddress
         )
@@ -205,14 +209,16 @@ describe("AelinPool", function () {
     it("should revert if purchase expiry is less than 30 min", async function () {
       await expect(
         aelinPool.initialize(
-          name,
-          symbol,
-          purchaseTokenCap,
-          purchaseToken.address,
-          duration,
-          sponsorFee,
+          {
+            name,
+            symbol,
+            purchaseTokenCap,
+            purchaseToken: purchaseToken.address,
+            duration,
+            sponsorFee,
+            purchaseDuration: 30 * 60 - 1, // 1 second less than 30min,
+          },
           sponsor.address,
-          30 * 60 - 1, // 1 second less than 30min,
           aelinDealLogic.address,
           mockAelinRewardsAddress
         )
@@ -222,14 +228,16 @@ describe("AelinPool", function () {
     it("should revert if purchase expiry greater than 30 days", async function () {
       await expect(
         aelinPool.initialize(
-          name,
-          symbol,
-          purchaseTokenCap,
-          purchaseToken.address,
-          duration,
-          sponsorFee,
+          {
+            name,
+            symbol,
+            purchaseTokenCap,
+            purchaseToken: purchaseToken.address,
+            duration,
+            sponsorFee,
+            purchaseDuration: 30 * 24 * 60 * 60 + 1, // 1 second more than 30 days,
+          },
           sponsor.address,
-          30 * 24 * 60 * 60 + 1, // 1 second more than 30 days
           aelinDealLogic.address,
           mockAelinRewardsAddress
         )
@@ -239,14 +247,16 @@ describe("AelinPool", function () {
     it("should revert if sponsor fee is too high", async function () {
       await expect(
         aelinPool.initialize(
-          name,
-          symbol,
-          purchaseTokenCap,
-          purchaseToken.address,
-          duration,
-          ethers.utils.parseEther("98.1"),
+          {
+            name,
+            symbol,
+            purchaseTokenCap,
+            purchaseToken: purchaseToken.address,
+            duration,
+            sponsorFee: ethers.utils.parseEther("98.1"),
+            purchaseDuration: purchaseExpiry,
+          },
           sponsor.address,
-          purchaseExpiry,
           aelinDealLogic.address,
           mockAelinRewardsAddress
         )
