@@ -605,7 +605,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         uint256 purchaseTokenTotalForDeal,
         uint256 underlyingDealTokenTotal,
         uint256 vestingPeriod,
-        uint256 vestingCliffPeriod,
+        uint256 vestingCliff,
         uint256 proRataRedemptionPeriod,
         uint256 openRedemptionPeriod,
         address indexed holder,
