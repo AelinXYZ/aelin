@@ -86,9 +86,7 @@ contract AelinDeal is AelinERC20 {
         /**
          * calculates the amount of underlying deal tokens you get per wrapped deal token accepted
          */
-        underlyingPerDealExchangeRate =
-            (_underlyingDealTokenTotal * 1e18) /
-            maxTotalSupply;
+        underlyingPerDealExchangeRate = (_underlyingDealTokenTotal * 1e18) / maxTotalSupply;
         emit SetHolder(_holder);
     }
 
@@ -125,37 +123,17 @@ contract AelinDeal is AelinERC20 {
      * the deposit still needs to be finalized by calling this method with
      * _underlyingDealTokenAmount set to 0
      */
-    function depositUnderlying(uint256 _underlyingDealTokenAmount)
-        external
-        finalizeDeposit
-        lock
-        returns (bool)
-    {
+    function depositUnderlying(uint256 _underlyingDealTokenAmount) external finalizeDeposit lock returns (bool) {
         if (_underlyingDealTokenAmount > 0) {
-            uint256 currentBalance = IERC20(underlyingDealToken).balanceOf(
-                address(this)
-            );
-            IERC20(underlyingDealToken).safeTransferFrom(
-                msg.sender,
-                address(this),
-                _underlyingDealTokenAmount
-            );
-            uint256 balanceAfterTransfer = IERC20(underlyingDealToken)
-                .balanceOf(address(this));
-            uint256 underlyingDealTokenAmount = balanceAfterTransfer -
-                currentBalance;
+            uint256 currentBalance = IERC20(underlyingDealToken).balanceOf(address(this));
+            IERC20(underlyingDealToken).safeTransferFrom(msg.sender, address(this), _underlyingDealTokenAmount);
+            uint256 balanceAfterTransfer = IERC20(underlyingDealToken).balanceOf(address(this));
+            uint256 underlyingDealTokenAmount = balanceAfterTransfer - currentBalance;
 
-            emit DepositDealToken(
-                underlyingDealToken,
-                msg.sender,
-                underlyingDealTokenAmount
-            );
+            emit DepositDealToken(underlyingDealToken, msg.sender, underlyingDealTokenAmount);
         }
 
-        if (
-            IERC20(underlyingDealToken).balanceOf(address(this)) >=
-            underlyingDealTokenTotal
-        ) {
+        if (IERC20(underlyingDealToken).balanceOf(address(this)) >= underlyingDealTokenTotal) {
             depositComplete = true;
             proRataRedemptionStart = block.timestamp;
             proRataRedemptionExpiry = block.timestamp + proRataRedemptionPeriod;
@@ -168,9 +146,7 @@ contract AelinDeal is AelinERC20 {
 
             if (openRedemptionPeriod > 0) {
                 openRedemptionStart = proRataRedemptionExpiry;
-                openRedemptionExpiry =
-                    proRataRedemptionExpiry +
-                    openRedemptionPeriod;
+                openRedemptionExpiry = proRataRedemptionExpiry + openRedemptionPeriod;
             }
             emit DealFullyFunded(
                 aelinPool,
@@ -195,20 +171,14 @@ contract AelinDeal is AelinERC20 {
     function withdraw() external onlyHolder {
         uint256 withdrawAmount;
         if (!depositComplete && block.timestamp >= holderFundingExpiry) {
-            withdrawAmount = IERC20(underlyingDealToken).balanceOf(
-                address(this)
-            );
+            withdrawAmount = IERC20(underlyingDealToken).balanceOf(address(this));
         } else {
             withdrawAmount =
                 IERC20(underlyingDealToken).balanceOf(address(this)) -
                 (underlyingDealTokenTotal - totalUnderlyingClaimed);
         }
         IERC20(underlyingDealToken).safeTransfer(holder, withdrawAmount);
-        emit WithdrawUnderlyingDealToken(
-            underlyingDealToken,
-            holder,
-            withdrawAmount
-        );
+        emit WithdrawUnderlyingDealToken(underlyingDealToken, holder, withdrawAmount);
     }
 
     /**
@@ -221,20 +191,13 @@ contract AelinDeal is AelinERC20 {
     function withdrawExpiry() external onlyHolder {
         require(proRataRedemptionExpiry > 0, "redemption period not started");
         require(
-            openRedemptionExpiry > 0
-                ? block.timestamp >= openRedemptionExpiry
-                : block.timestamp >= proRataRedemptionExpiry,
+            openRedemptionExpiry > 0 ? block.timestamp >= openRedemptionExpiry : block.timestamp >= proRataRedemptionExpiry,
             "redeem window still active"
         );
-        uint256 withdrawAmount = IERC20(underlyingDealToken).balanceOf(
-            address(this)
-        ) - ((underlyingPerDealExchangeRate * totalSupply()) / 1e18);
+        uint256 withdrawAmount = IERC20(underlyingDealToken).balanceOf(address(this)) -
+            ((underlyingPerDealExchangeRate * totalSupply()) / 1e18);
         IERC20(underlyingDealToken).safeTransfer(holder, withdrawAmount);
-        emit WithdrawUnderlyingDealToken(
-            underlyingDealToken,
-            holder,
-            withdrawAmount
-        );
+        emit WithdrawUnderlyingDealToken(underlyingDealToken, holder, withdrawAmount);
     }
 
     modifier onlyHolder() {
@@ -258,24 +221,15 @@ contract AelinDeal is AelinERC20 {
     {
         underlyingClaimable = 0;
         dealTokensClaimable = 0;
-        uint256 maxTime = block.timestamp > vestingExpiry
-            ? vestingExpiry
-            : block.timestamp;
-        if (
-            balanceOf(purchaser) > 0 &&
-            (maxTime > vestingCliffExpiry ||
-                (maxTime == vestingCliffExpiry && vestingPeriod == 0))
-        ) {
+
+        uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        if (balanceOf(purchaser) > 0 && (maxTime > vestingCliffExpiry || (maxTime == vestingCliffExpiry && vestingPeriod == 0))) {
             uint256 timeElapsed = maxTime - vestingCliffExpiry;
+            
             dealTokensClaimable = vestingPeriod == 0
                 ? balanceOf(purchaser)
-                : ((balanceOf(purchaser) + amountVested[purchaser]) *
-                    timeElapsed) /
-                    vestingPeriod -
-                    amountVested[purchaser];
-            underlyingClaimable =
-                (underlyingPerDealExchangeRate * dealTokensClaimable) /
-                1e18;
+                : ((balanceOf(purchaser) + amountVested[purchaser]) * timeElapsed) / vestingPeriod - amountVested[purchaser];
+            underlyingClaimable = (underlyingPerDealExchangeRate * dealTokensClaimable) / 1e18;
         }
     }
 
@@ -289,23 +243,13 @@ contract AelinDeal is AelinERC20 {
     }
 
     function _claim(address recipient) internal returns (uint256) {
-        (
-            uint256 underlyingDealTokensClaimed,
-            uint256 dealTokensClaimed
-        ) = claimableTokens(recipient);
+        (uint256 underlyingDealTokensClaimed, uint256 dealTokensClaimed) = claimableTokens(recipient);
         if (dealTokensClaimed > 0) {
             amountVested[recipient] += dealTokensClaimed;
             _burn(recipient, dealTokensClaimed);
-            IERC20(underlyingDealToken).safeTransfer(
-                recipient,
-                underlyingDealTokensClaimed
-            );
+            IERC20(underlyingDealToken).safeTransfer(recipient, underlyingDealTokensClaimed);
             totalUnderlyingClaimed += underlyingDealTokensClaimed;
-            emit ClaimedUnderlyingDealToken(
-                underlyingDealToken,
-                recipient,
-                underlyingDealTokensClaimed
-            );
+            emit ClaimedUnderlyingDealToken(underlyingDealToken, recipient, underlyingDealTokensClaimed);
         }
         return dealTokensClaimed;
     }
@@ -333,21 +277,10 @@ contract AelinDeal is AelinERC20 {
      * single transaction for distribution to $AELIN stakers.
      */
     function treasuryTransfer(address recipient) external returns (bool) {
-        require(
-            msg.sender == aelinRewardsAddress,
-            "only Rewards address can access"
-        );
-        (
-            uint256 underlyingClaimable,
-            uint256 claimableDealTokens
-        ) = claimableTokens(msg.sender);
+        require(msg.sender == aelinRewardsAddress, "only Rewards address can access");
+        (uint256 underlyingClaimable, uint256 claimableDealTokens) = claimableTokens(msg.sender);
         transfer(recipient, balanceOf(msg.sender) - claimableDealTokens);
-        return
-            IERC20(underlyingDealToken).transferFrom(
-                msg.sender,
-                recipient,
-                underlyingClaimable
-            );
+        return IERC20(underlyingDealToken).transferFrom(msg.sender, recipient, underlyingClaimable);
     }
 
     /**
@@ -356,36 +289,17 @@ contract AelinDeal is AelinERC20 {
      * tokens. They must also pay for the receivers claim and burn any of their vested tokens in order to ensure
      * the claim calculation is always accurate for all parties in the system
      */
-    function transferMax(address recipient)
-        external
-        blockTransfer
-        returns (bool)
-    {
+    function transferMax(address recipient) external blockTransfer returns (bool) {
         (, uint256 claimableDealTokens) = claimableTokens(msg.sender);
         return transfer(recipient, balanceOf(msg.sender) - claimableDealTokens);
     }
 
-    function transferFromMax(address sender, address recipient)
-        external
-        blockTransfer
-        returns (bool)
-    {
+    function transferFromMax(address sender, address recipient) external blockTransfer returns (bool) {
         (, uint256 claimableDealTokens) = claimableTokens(sender);
-        return
-            transferFrom(
-                sender,
-                recipient,
-                balanceOf(sender) - claimableDealTokens
-            );
+        return transferFrom(sender, recipient, balanceOf(sender) - claimableDealTokens);
     }
 
-    function transfer(address recipient, uint256 amount)
-        public
-        virtual
-        override
-        blockTransfer
-        returns (bool)
-    {
+    function transfer(address recipient, uint256 amount) public virtual override blockTransfer returns (bool) {
         _claim(msg.sender);
         _claim(recipient);
         return super.transfer(recipient, amount);

@@ -111,20 +111,20 @@ describe("AelinPool", function () {
       .connect(user1)
       .approve(aelinPool.address, userPurchaseAmt);
 
-    const tx = await aelinPool
-      .connect(deployer)
-      .initialize(
+    const tx = await aelinPool.connect(deployer).initialize(
+      {
         name,
         symbol,
         purchaseTokenCap,
-        purchaseToken.address,
+        purchaseToken: purchaseToken.address,
         duration,
         sponsorFee,
-        sponsor.address,
-        purchaseExpiry,
-        aelinDealLogic.address,
-        mockAelinRewardsAddress
-      );
+        purchaseDuration: purchaseExpiry,
+      },
+      sponsor.address,
+      aelinDealLogic.address,
+      mockAelinRewardsAddress
+    );
 
     if (useAllowList) {
       // TODO connect with the factory
@@ -166,14 +166,16 @@ describe("AelinPool", function () {
     it("should revert if duration is greater than 1 year", async function () {
       await expect(
         aelinPool.initialize(
-          name,
-          symbol,
-          purchaseTokenCap,
-          purchaseToken.address,
-          365 * 24 * 60 * 60 + 1, // 1 second greater than 365 days
-          sponsorFee,
+          {
+            name,
+            symbol,
+            purchaseTokenCap,
+            purchaseToken: purchaseToken.address,
+            duration: 365 * 24 * 60 * 60 + 1, // 1 second greater than 365 days,
+            sponsorFee,
+            purchaseDuration: purchaseExpiry,
+          },
           sponsor.address,
-          purchaseExpiry,
           aelinDealLogic.address,
           mockAelinRewardsAddress
         )
@@ -188,14 +190,16 @@ describe("AelinPool", function () {
       await mockTokenTooManyDecimals.mock.decimals.returns(19);
       await expect(
         aelinPool.initialize(
-          name,
-          symbol,
-          purchaseTokenCap,
-          mockTokenTooManyDecimals.address,
-          365 * 24 * 60 * 60 - 100,
-          sponsorFee,
+          {
+            name,
+            symbol,
+            purchaseTokenCap,
+            purchaseToken: mockTokenTooManyDecimals.address,
+            duration: 365 * 24 * 60 * 60 - 100,
+            sponsorFee,
+            purchaseDuration: purchaseExpiry,
+          },
           sponsor.address,
-          purchaseExpiry,
           aelinDealLogic.address,
           mockAelinRewardsAddress
         )
@@ -205,14 +209,16 @@ describe("AelinPool", function () {
     it("should revert if purchase expiry is less than 30 min", async function () {
       await expect(
         aelinPool.initialize(
-          name,
-          symbol,
-          purchaseTokenCap,
-          purchaseToken.address,
-          duration,
-          sponsorFee,
+          {
+            name,
+            symbol,
+            purchaseTokenCap,
+            purchaseToken: purchaseToken.address,
+            duration,
+            sponsorFee,
+            purchaseDuration: 30 * 60 - 1, // 1 second less than 30min,
+          },
           sponsor.address,
-          30 * 60 - 1, // 1 second less than 30min,
           aelinDealLogic.address,
           mockAelinRewardsAddress
         )
@@ -222,14 +228,16 @@ describe("AelinPool", function () {
     it("should revert if purchase expiry greater than 30 days", async function () {
       await expect(
         aelinPool.initialize(
-          name,
-          symbol,
-          purchaseTokenCap,
-          purchaseToken.address,
-          duration,
-          sponsorFee,
+          {
+            name,
+            symbol,
+            purchaseTokenCap,
+            purchaseToken: purchaseToken.address,
+            duration,
+            sponsorFee,
+            purchaseDuration: 30 * 24 * 60 * 60 + 1, // 1 second more than 30 days,
+          },
           sponsor.address,
-          30 * 24 * 60 * 60 + 1, // 1 second more than 30 days
           aelinDealLogic.address,
           mockAelinRewardsAddress
         )
@@ -239,14 +247,16 @@ describe("AelinPool", function () {
     it("should revert if sponsor fee is too high", async function () {
       await expect(
         aelinPool.initialize(
-          name,
-          symbol,
-          purchaseTokenCap,
-          purchaseToken.address,
-          duration,
-          ethers.utils.parseEther("98.1"),
+          {
+            name,
+            symbol,
+            purchaseTokenCap,
+            purchaseToken: purchaseToken.address,
+            duration,
+            sponsorFee: ethers.utils.parseEther("98.1"),
+            purchaseDuration: purchaseExpiry,
+          },
           sponsor.address,
-          purchaseExpiry,
           aelinDealLogic.address,
           mockAelinRewardsAddress
         )
@@ -297,6 +307,14 @@ describe("AelinPool", function () {
       expect(await aelinPool.allowList(allowList[0])).to.equal(
         allowListAmounts[0]
       );
+      const [allowLog1, allowLog2, allowLog3] = await aelinPool.queryFilter(aelinPool.filters.AllowlistAddress());
+      expect(allowLog1.args.purchaser).to.equal(deployer.address);
+      expect(allowLog1.args.allowlistAmount).to.equal(purchaseTokenCap);
+      expect(allowLog2.args.purchaser).to.equal(holder.address);
+      expect(allowLog2.args.allowlistAmount).to.equal(purchaseTokenCap.div(2));
+      expect(allowLog3.args.purchaser).to.equal(nonsponsor.address);
+      expect(allowLog3.args.allowlistAmount).to.equal(ethers.constants.MaxInt256);
+      
       const returnAddress = await aelinPool.purchaseToken();
       expect(returnAddress.toLowerCase()).to.equal(
         purchaseToken.address.toLowerCase()
@@ -907,20 +925,6 @@ describe("AelinPool", function () {
       expect(log.args.purchaser).to.equal(user1.address);
       expect(log.address).to.equal(aelinPool.address);
       expect(log.args.purchaseTokenAmount).to.equal(userPurchaseAmt);
-    });
-
-    it("should block transferring pool tokens", async function () {
-      await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
-      const [log] = await aelinPool.queryFilter(
-        aelinPool.filters.PurchasePoolToken()
-      );
-
-      expect(log.args.purchaser).to.equal(user1.address);
-      expect(log.address).to.equal(aelinPool.address);
-      expect(log.args.purchaseTokenAmount).to.equal(userPurchaseAmt);
-      await expect(
-        aelinPool.transfer(deployer.address, userPurchaseAmt)
-      ).to.be.revertedWith("cannot transfer pool tokens");
     });
 
     it("should fail the transaction when the cap has been exceeded", async function () {

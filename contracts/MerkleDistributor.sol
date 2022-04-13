@@ -36,9 +36,7 @@ contract MerkleDistributor is Owned, Pausable, IMerkleDistributor {
     function _setClaimed(uint256 index) private {
         uint256 claimedWordIndex = index / 256;
         uint256 claimedBitIndex = index % 256;
-        claimedBitMap[claimedWordIndex] =
-            claimedBitMap[claimedWordIndex] |
-            (1 << claimedBitIndex);
+        claimedBitMap[claimedWordIndex] = claimedBitMap[claimedWordIndex] | (1 << claimedBitIndex);
     }
 
     function claim(
@@ -51,32 +49,20 @@ contract MerkleDistributor is Owned, Pausable, IMerkleDistributor {
 
         // Verify the merkle proof.
         bytes32 node = keccak256(abi.encodePacked(index, account, amount));
-        require(
-            MerkleProof.verify(merkleProof, merkleRoot, node),
-            "MerkleDistributor: Invalid proof."
-        );
+        require(MerkleProof.verify(merkleProof, merkleRoot, node), "MerkleDistributor: Invalid proof.");
 
         // Mark it claimed and send the token.
         _setClaimed(index);
-        require(
-            IERC20(token).transfer(account, amount),
-            "MerkleDistributor: Transfer failed."
-        );
+        require(IERC20(token).transfer(account, amount), "MerkleDistributor: Transfer failed.");
 
         emit Claimed(index, account, amount);
     }
 
     function _selfDestruct(address payable beneficiary) external onlyOwner {
         //only callable a year after end time
-        require(
-            block.timestamp > (startTime + 30 days),
-            "Contract can only be selfdestruct after a year"
-        );
+        require(block.timestamp > (startTime + 30 days), "Contract can only be selfdestruct after a year");
 
-        IERC20(token).transfer(
-            beneficiary,
-            IERC20(token).balanceOf(address(this))
-        );
+        IERC20(token).transfer(beneficiary, IERC20(token).balanceOf(address(this)));
 
         selfdestruct(beneficiary);
     }

@@ -195,19 +195,19 @@ describe("integration test", () => {
         ]
       )) as AelinPoolFactory;
 
-      await aelinPoolFactory
-        .connect(sponsor)
-        .createPool(
+      await aelinPoolFactory.connect(sponsor).createPool(
+        {
           name,
           symbol,
           purchaseTokenCap,
-          usdcContract.address,
+          purchaseToken: usdcContract.address,
           duration,
           sponsorFee,
-          purchaseExpiry,
-          [],
-          []
-        );
+          purchaseDuration: purchaseExpiry,
+        },
+        [],
+        []
+      );
 
       const [createPoolLog] = await aelinPoolFactory.queryFilter(
         aelinPoolFactory.filters.CreatePool()
@@ -627,19 +627,19 @@ describe("integration test", () => {
         ]
       )) as AelinPoolFactory;
 
-      await aelinPoolFactory
-        .connect(sponsor)
-        .createPool(
+      await aelinPoolFactory.connect(sponsor).createPool(
+        {
           name,
           symbol,
-          0,
-          usdcContract.address,
+          purchaseTokenCap: 0,
+          purchaseToken: usdcContract.address,
           duration,
           sponsorFee,
-          purchaseExpiry,
-          [],
-          []
-        );
+          purchaseDuration: purchaseExpiry,
+        },
+        [],
+        []
+      );
 
       const [createPoolLog] = await aelinPoolFactory.queryFilter(
         aelinPoolFactory.filters.CreatePool()
@@ -1011,19 +1011,19 @@ describe("integration test", () => {
         ]
       )) as AelinPoolFactory;
 
-      await aelinPoolFactory
-        .connect(sponsor)
-        .createPool(
+      await aelinPoolFactory.connect(sponsor).createPool(
+        {
           name,
           symbol,
-          0,
-          usdcContract.address,
+          purchaseTokenCap: 0,
+          purchaseToken: usdcContract.address,
           duration,
           sponsorFee,
-          purchaseExpiry,
-          [user13.address, user14.address],
-          [fundUSDCAmount, fundUSDCAmount.div(2)]
-        );
+          purchaseDuration: purchaseExpiry,
+        },
+        [user13.address, user14.address],
+        [fundUSDCAmount, fundUSDCAmount.div(2)]
+      );
 
       const [createPoolLog] = await aelinPoolFactory.queryFilter(
         aelinPoolFactory.filters.CreatePool()
@@ -1192,19 +1192,19 @@ describe("integration test", () => {
           ]
         )) as AelinPoolFactory;
 
-        await aelinPoolFactory
-          .connect(sponsor)
-          .createPool(
+        await aelinPoolFactory.connect(sponsor).createPool(
+          {
             name,
             symbol,
-            purchaseAmount,
-            usdcContract.address,
+            purchaseTokenCap: purchaseAmount,
+            purchaseToken: usdcContract.address,
             duration,
             sponsorFee,
-            purchaseExpiry,
-            [],
-            []
-          );
+            purchaseDuration: purchaseExpiry,
+          },
+          [],
+          []
+        );
 
         const [createPoolLog] = await aelinPoolFactory.queryFilter(
           aelinPoolFactory.filters.CreatePool()
@@ -1252,7 +1252,51 @@ describe("integration test", () => {
         )) as AelinDeal;
       });
 
-      it("should not allow the user to transfer before the redeem window", async function () {
+      it("should allow the user to transfer before the redeem window", async function () {
+        expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
+          purchaseAmount
+        );
+        await aelinPoolProxyStorage
+          .connect(user1)
+          .transfer(user2.address, purchaseAmount);
+        expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
+          0
+        );
+        expect(await aelinPoolProxyStorage.balanceOf(user2.address)).to.equal(
+          purchaseAmount
+        );
+      });
+
+      it("should allow the user to transferFrom before the redeem window", async function () {
+        expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
+          purchaseAmount
+        );
+        await aelinPoolProxyStorage
+          .connect(user1)
+          .approve(user3.address, purchaseAmount);
+
+        await aelinPoolProxyStorage
+          .connect(user3)
+          .transferFrom(user1.address, user2.address, purchaseAmount);
+
+        expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
+          0
+        );
+        expect(await aelinPoolProxyStorage.balanceOf(user2.address)).to.equal(
+          purchaseAmount
+        );
+      });
+
+      it("should block a transfer during the redeem window", async function () {
+        await aaveContract
+          .connect(aaveWhaleOne)
+          .approve(aelinDealProxyStorage.address, underlyingDealTokenTotal);
+
+        // NOTE that deposit underlying kickstarts the redemption window
+        await aelinDealProxyStorage
+          .connect(aaveWhaleOne)
+          .depositUnderlying(underlyingDealTokenTotal);
+
         expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
           purchaseAmount
         );
@@ -1260,7 +1304,115 @@ describe("integration test", () => {
           aelinPoolProxyStorage
             .connect(user1)
             .transfer(user2.address, purchaseAmount)
-        ).to.be.revertedWith("cannot transfer pool tokens");
+        ).to.be.revertedWith("no transfers in redeem window");
+      });
+
+      it("should block a transferFrom during the redeem window", async function () {
+        await aaveContract
+          .connect(aaveWhaleOne)
+          .approve(aelinDealProxyStorage.address, underlyingDealTokenTotal);
+
+        await aelinDealProxyStorage
+          .connect(aaveWhaleOne)
+          .depositUnderlying(underlyingDealTokenTotal);
+
+        expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
+          purchaseAmount
+        );
+        await aelinPoolProxyStorage
+          .connect(user1)
+          .approve(user3.address, purchaseAmount);
+
+        await expect(
+          aelinPoolProxyStorage
+            .connect(user3)
+            .transferFrom(user1.address, user2.address, purchaseAmount)
+        ).to.be.revertedWith("no transfers in redeem window");
+      });
+
+      it("should allow a transfer after the redeem window but not during", async function () {
+        await aaveContract
+          .connect(aaveWhaleOne)
+          .approve(aelinDealProxyStorage.address, underlyingDealTokenTotal);
+
+        await aelinDealProxyStorage
+          .connect(aaveWhaleOne)
+          .depositUnderlying(underlyingDealTokenTotal);
+
+        expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
+          purchaseAmount
+        );
+
+        await ethers.provider.send("evm_increaseTime", [
+          proRataRedemptionPeriod,
+        ]);
+        await ethers.provider.send("evm_mine", []);
+
+        await expect(
+          aelinPoolProxyStorage
+            .connect(user1)
+            .transfer(user2.address, purchaseAmount)
+        ).to.be.revertedWith("no transfers in redeem window");
+
+        await ethers.provider.send("evm_increaseTime", [
+          openRedemptionPeriod + 1,
+        ]);
+        await ethers.provider.send("evm_mine", []);
+
+        await aelinPoolProxyStorage
+          .connect(user1)
+          .transfer(user2.address, purchaseAmount);
+        expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
+          0
+        );
+        expect(await aelinPoolProxyStorage.balanceOf(user2.address)).to.equal(
+          purchaseAmount
+        );
+      });
+
+      it("should allow a transferFrom after the redeem window but not during", async function () {
+        await aaveContract
+          .connect(aaveWhaleOne)
+          .approve(aelinDealProxyStorage.address, underlyingDealTokenTotal);
+
+        await aelinDealProxyStorage
+          .connect(aaveWhaleOne)
+          .depositUnderlying(underlyingDealTokenTotal);
+
+        expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
+          purchaseAmount
+        );
+
+        await ethers.provider.send("evm_increaseTime", [
+          proRataRedemptionPeriod,
+        ]);
+        await ethers.provider.send("evm_mine", []);
+
+        await aelinPoolProxyStorage
+          .connect(user1)
+          .approve(user3.address, purchaseAmount);
+
+        await expect(
+          aelinPoolProxyStorage
+            .connect(user3)
+            .transferFrom(user1.address, user2.address, purchaseAmount)
+        ).to.be.revertedWith("no transfers in redeem window");
+
+        await ethers.provider.send("evm_increaseTime", [
+          openRedemptionPeriod + 1,
+        ]);
+        await ethers.provider.send("evm_mine", []);
+
+        await aelinPoolProxyStorage
+          .connect(user3)
+          .transferFrom(user1.address, user2.address, purchaseAmount);
+
+        expect(await aelinPoolProxyStorage.balanceOf(user1.address)).to.equal(
+          0
+        );
+        expect(await aelinPoolProxyStorage.balanceOf(user2.address)).to.equal(
+          purchaseAmount
+        );
       });
     });
 
@@ -1276,19 +1428,19 @@ describe("integration test", () => {
           ]
         )) as AelinPoolFactory;
 
-        await aelinPoolFactory
-          .connect(sponsor)
-          .createPool(
+        await aelinPoolFactory.connect(sponsor).createPool(
+          {
             name,
             symbol,
-            purchaseAmount.mul(4),
-            usdcContract.address,
+            purchaseTokenCap: purchaseAmount.mul(4),
+            purchaseToken: usdcContract.address,
             duration,
             sponsorFee,
-            purchaseExpiry,
-            [],
-            []
-          );
+            purchaseDuration: purchaseExpiry,
+          },
+          [],
+          []
+        );
 
         const [createPoolLog] = await aelinPoolFactory.queryFilter(
           aelinPoolFactory.filters.CreatePool()
@@ -1441,19 +1593,19 @@ describe("integration test", () => {
           ]
         )) as AelinPoolFactory;
 
-        await aelinPoolFactory
-          .connect(sponsor)
-          .createPool(
+        await aelinPoolFactory.connect(sponsor).createPool(
+          {
             name,
             symbol,
-            purchaseAmount.mul(4),
-            usdcContract.address,
+            purchaseTokenCap: purchaseAmount.mul(4),
+            purchaseToken: usdcContract.address,
             duration,
             sponsorFee,
-            purchaseExpiry,
-            [],
-            []
-          );
+            purchaseDuration: purchaseExpiry,
+          },
+          [],
+          []
+        );
 
         const [createPoolLog] = await aelinPoolFactory.queryFilter(
           aelinPoolFactory.filters.CreatePool()
