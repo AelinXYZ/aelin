@@ -37,7 +37,7 @@ const config: HardhatUserConfig = {
     timeout: 1000000,
   },
   etherscan: {
-    apiKey: `${process.env.ETHERSCAN_API_KEY_MAINNET}`,
+    apiKey: `${process.env.ETHERSCAN_API_KEY}`,
   },
   networks: {
     optimism: {
