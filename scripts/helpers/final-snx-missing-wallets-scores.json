@@ -1,752 +1,752 @@
 [
-  {
-    "address": "0xff03CD2abB3c78c1Ff2EA5522bf5F6A4616d666E",
-    "score": 0.4428202596044161,
-    "collateral": 1.12
-  },
-  {
-    "address": "0x8a08E6dD0A99CF6F3E26e8A16Ae2F4F72331471a",
-    "score": 0.4434221452341964,
-    "collateral": 1.1215223149590225
-  },
-  {
-    "address": "0x53dc3204f2f294f6A5649a36AC295f74A0dB92e0",
-    "score": 0.5072567204369827,
-    "collateral": 1.0263803691311597
-  },
-  {
-    "address": "0x1F44Bcd464fA5BfFA4b759E605EFA18bB313bf35",
-    "score": 0.5148156781503833,
-    "collateral": 1.302093901583267
-  },
-  {
-    "address": "0x8F32e629118E01ADeadaC6ADB4415728599A70Da",
-    "score": 0.6051520522573999,
-    "collateral": 1.5305765348987408
-  },
-  {
-    "address": "0x4e7f666cd88254377a2B3B87d301a38Ca440DA9F",
-    "score": 0.7647691192161723,
-    "collateral": 1.9342868690951176
-  },
-  {
-    "address": "0xBdA593b90e5104E15d56EB54685fAF305cD2d791",
-    "score": 0.7932691508476014,
-    "collateral": 2.0063703719043966
-  },
-  {
-    "address": "0x67c4C62Ede7D28998c259606F368E05204d800ed",
-    "score": 0.7949022611561775,
-    "collateral": 2.0105009045662015
-  },
-  {
-    "address": "0x5b56EDe3410572b3257DAf19d0E0Fb31738fE86C",
-    "score": 0.7949658095429184,
-    "collateral": 2.01066163387252
-  },
-  {
-    "address": "0x8fccf7c5112C1cdAb7be4648FE213CF00325232f",
-    "score": 0.7949844983301754,
-    "collateral": 2.010708902355101
-  },
-  {
-    "address": "0x76775E2567932a4755B30F0AF162Df46Ee69b40E",
-    "score": 0.8680234312927775,
-    "collateral": 2.1954421053733912
-  },
-  {
-    "address": "0xe76D4165967fB1ed8D5a56d5DEa87e3bc8ECd3AC",
-    "score": 0.8982746788181976,
-    "collateral": 2.2719548585584817
-  },
-  {
-    "address": "0xc09Fd212213c287Dbc1Bc6F1938E58153Ae9EC63",
-    "score": 0.9032920203585475,
-    "collateral": 2.2846449340537
-  },
-  {
-    "address": "0x352A45cC1AA286C643a9471A04435Dd88A027d88",
-    "score": 0.9292260179188022,
-    "collateral": 2.350238313393283
-  },
-  {
-    "address": "0xEae03EB54eB26B38057544895E834aF42fc46A69",
-    "score": 1.0999086182362388,
-    "collateral": 2.7819360693322315
-  },
-  {
-    "address": "0x3D51847413663696741ccC5081c1E9744B01c3E7",
-    "score": 1.218669601165578,
-    "collateral": 3.0823114428521414
-  },
-  {
-    "address": "0x872b52541EE3b7377c881BA6f9077226d9843687",
-    "score": 1.4219816779181351,
-    "collateral": 3.5965370705736084
-  },
-  {
-    "address": "0xDb37CE5526Feff312Efe2593fcD1D36A6419bf93",
-    "score": 1.590063403452205,
-    "collateral": 4.021656582418728
-  },
-  {
-    "address": "0xF3E16a28b09bE3836e66f091613c230128141Fc1",
-    "score": 1.6022762249981504,
-    "collateral": 4.052545774669502
-  },
-  {
-    "address": "0x3628822A233913be9fF3672f1F7b47EaAEACa555",
-    "score": 1.8187323916174933,
-    "collateral": 4.600015998435313
-  },
-  {
-    "address": "0xe729986A4B0aEc7F13321C9376f1b6c7ac4f8585",
-    "score": 1.8850136940196691,
-    "collateral": 4.767657512300901
-  },
-  {
-    "address": "0x64ebBA26736c2F2762027B84A0F44135d7ab6aae",
-    "score": 2.0294264235910093,
-    "collateral": 5.132912384027841
-  },
-  {
-    "address": "0x0B01168b77425d8a4Df02F794d2ceD416EC6e7d4",
-    "score": 2.3891354375927136,
-    "collateral": 6.0427038557229436
-  },
-  {
-    "address": "0xcE63C4EEA4ba94751C145aC0bC3F60727762cb02",
-    "score": 2.7228754516643012,
-    "collateral": 6.886813418582814
-  },
-  {
-    "address": "0xc290F1CCCb7eE14c15E20A193BA3163f068BD95C",
-    "score": 3.112502722192879,
-    "collateral": 7.872275428342348
-  },
-  {
-    "address": "0x0fc0B2b6428c94b13cB644Eb2Bc489Df7FfD03a5",
-    "score": 3.16236894753059,
-    "collateral": 6.39871938
-  },
-  {
-    "address": "0x3bd62675dFA7FD7C5466CbF8DA3450bF05179276",
-    "score": 3.2718045433691803,
-    "collateral": 8.275188429379932
-  },
-  {
-    "address": "0x29058D45756A049bD60baAA9be69f643227d0E95",
-    "score": 3.678008204206035,
-    "collateral": 9.302576156724871
-  },
-  {
-    "address": "0xb83Ac7549db7774aB59117483933bCF11f27C090",
-    "score": 3.9537523178965723,
-    "collateral": 10
-  },
-  {
-    "address": "0x66bEE9727049C20806d8fC58E144574Fbe4131fa",
-    "score": 3.968811454454633,
-    "collateral": 10.038088214301883
-  },
-  {
-    "address": "0x9382579Caaa20FB7342342251Ac20ebCEBF9E597",
-    "score": 3.9757550510617303,
-    "collateral": 10.055650256758785
-  },
-  {
-    "address": "0xf359AfA5307D99B05C73A258A5CDf5Af4818d903",
-    "score": 4.012520497946978,
-    "collateral": 10.148639002459495
-  },
-  {
-    "address": "0x2817B01d1CB65a15297cBB27f8601f28a371D56A",
-    "score": 4.092434549736618,
-    "collateral": 10.350761050995288
-  },
-  {
-    "address": "0x53AEf5d1a7Dd608749C7B8F82E33321C68Fe7151",
-    "score": 4.094572122032138,
-    "collateral": 10.356167490558649
-  },
-  {
-    "address": "0x821C3960c80eAb1Bee3ffb3C3B6168839e48c074",
-    "score": 4.095715111286222,
-    "collateral": 10.35905838802056
-  },
-  {
-    "address": "0xb3BCa5F22b3618c6e288c50EdaDc3C053054D4e8",
-    "score": 4.0989455724262935,
-    "collateral": 10.367229008940463
-  },
-  {
-    "address": "0x02c538E3afBB180c8Edc856DE5699eD6eD675ad6",
-    "score": 4.107707673209178,
-    "collateral": 10.38939049018253
-  },
-  {
-    "address": "0x5cDAC5102E0CF069e97dC66b3659D7F222a691d8",
-    "score": 4.1127077470514966,
-    "collateral": 10.402036891475008
-  },
-  {
-    "address": "0x3ECb564760e32CA424963E73c18eF81a01Dceb32",
-    "score": 4.119222250708678,
-    "collateral": 10.418513653632552
-  },
-  {
-    "address": "0xf7cD8299e141b3c8751E9aB3F3C5A195B906a228",
-    "score": 4.126545440157905,
-    "collateral": 10.437035778592374
-  },
-  {
-    "address": "0x37C3692855946fd20a9D6C40E7F7a61083ef9dF2",
-    "score": 4.128732498892444,
-    "collateral": 10.44256738138054
-  },
-  {
-    "address": "0xd12b32B8c5dEcf00C58760Cd6AB4D1d33D61A71E",
-    "score": 4.130843027943082,
-    "collateral": 10.44790542200864
-  },
-  {
-    "address": "0x228729939bf4cBF49344B988CEB347f05248b4f2",
-    "score": 4.181029593111206,
-    "collateral": 10.574839435909704
-  },
-  {
-    "address": "0x0259F0AA33Fd15A35395Ca4dB04142c6eAF8e2Cf",
-    "score": 4.1878067057391135,
-    "collateral": 10.591980399943365
-  },
-  {
-    "address": "0x3568Fb7Aa0FB959Ad6a426fCBDa6C03290E0038b",
-    "score": 4.258177716256462,
-    "collateral": 10.76996577904467
-  },
-  {
-    "address": "0x133dB67423d77EFDfD81656514a794968fc01D5d",
-    "score": 4.279410298687923,
-    "collateral": 10.82366813752411
-  },
-  {
-    "address": "0xe705a89C7a4bdD7C75bcD270417731ee7e825E6D",
-    "score": 4.287922115296833,
-    "collateral": 10.845196589294806
-  },
-  {
-    "address": "0xa32C6864aB84F972d1495b74C8954fbeF0bB6Ee7",
-    "score": 4.292129544416139,
-    "collateral": 10.85583819954505
-  },
-  {
-    "address": "0xB93F7838DE2EaB6eB22c6018174425c66049a6F2",
-    "score": 4.293839385878764,
-    "collateral": 10.860162803933862
-  },
-  {
-    "address": "0x560c445E733FD53158fa456B1d1C349998b24add",
-    "score": 4.302289648997575,
-    "collateral": 10.881535571976412
-  },
-  {
-    "address": "0x7400811466c67BEB0d334e81E5b3d39860De730e",
-    "score": 4.307343478368298,
-    "collateral": 10.89431793405774
-  },
-  {
-    "address": "0x9B42eF5d4c0daEAA84E1fD5B73c847c0b172f1BE",
-    "score": 4.349127549686229,
-    "collateral": 11
-  },
-  {
-    "address": "0x70c82C62aff7c61876C0F628d7bc85d455080d65",
-    "score": 4.374429795598269,
-    "collateral": 11.063995525965323
-  },
-  {
-    "address": "0xB0a9f94670cF88D25f85933a7229A44348e74D7c",
-    "score": 4.391473661210449,
-    "collateral": 11.107103602146603
-  },
-  {
-    "address": "0x3eAA76c4C75CC8E79f6cF68996313CAE78DaB50c",
-    "score": 4.3942345250222905,
-    "collateral": 11.114086497355654
-  },
-  {
-    "address": "0x8D046075513Fa8f6C333c40CbD7A40C01BBA9e5A",
-    "score": 4.398820869468922,
-    "collateral": 11.125686476509308
-  },
-  {
-    "address": "0x1F1C5858Cc70Bf63366c2801589f49dA227f2801",
-    "score": 4.424164843514871,
-    "collateral": 11.189787543061275
-  },
-  {
-    "address": "0x99f113488b47CD695e990ba426eA317eD8e1Cba4",
-    "score": 4.445362803934594,
-    "collateral": 11.243402334063159
-  },
-  {
-    "address": "0x31C207716CFE8Cf54aC30159e74c6eA394396206",
-    "score": 4.461235310518429,
-    "collateral": 11.283547758732247
-  },
-  {
-    "address": "0x23Ce2BF474748343d8ef207AC24257cc0AC992a9",
-    "score": 4.488907769261713,
-    "collateral": 11.35353812868543
-  },
-  {
-    "address": "0x2B53a5E9B419dBB313BaAF362bcecc7617cF227F",
-    "score": 4.559140563512123,
-    "collateral": 11.531173925274164
-  },
-  {
-    "address": "0xF892A9E6e47bC02b18C34A294a968160e12BE18f",
-    "score": 4.600205428728661,
-    "collateral": 11.635036944286911
-  },
-  {
-    "address": "0x7DD6c4adbcC99C68c6126bb2Fb161a70B0BB5D08",
-    "score": 4.6724661109576395,
-    "collateral": 11.81780176215851
-  },
-  {
-    "address": "0x43Be1b10e9b78e7dBb278df4114b5a78E05f0372",
-    "score": 4.675803504002579,
-    "collateral": 11.826242839840166
-  },
-  {
-    "address": "0xf005d37FB0a1EED159E9896A5FaB1573bDFb759e",
-    "score": 4.681403827080503,
-    "collateral": 11.84040741725331
-  },
-  {
-    "address": "0xB0C88F9337D22FBDD8F489cD803B342444AB0927",
-    "score": 4.6841449106614945,
-    "collateral": 11.847340283453814
-  },
-  {
-    "address": "0x761B632CE35230422afA4487E9BAe38D378514Bd",
-    "score": 4.697536485832607,
-    "collateral": 11.881210829948333
-  },
-  {
-    "address": "0xb5888BEf547E7FC0BC32728F5426ebc7E9E10cF2",
-    "score": 4.745869768929019,
-    "collateral": 12.003457443317695
-  },
-  {
-    "address": "0xEb23dFFA1aEaf92e337bA37957334dA137ab7949",
-    "score": 4.752762579768965,
-    "collateral": 12.02089103623333
-  },
-  {
-    "address": "0x1562Da35092243ad9629D094D73efCBBdF2C397a",
-    "score": 4.778622959637951,
-    "collateral": 12.086298218549555
-  },
-  {
-    "address": "0x4B3A67409B79F9661c4AbF044Df767843FABdB81",
-    "score": 4.7806568572273225,
-    "collateral": 12.09144243959791
-  },
-  {
-    "address": "0x95D5412D3efc7C612a6Ff823a9675e47C1a07061",
-    "score": 4.840617027336758,
-    "collateral": 12.24309627445759
-  },
-  {
-    "address": "0x7f2E46E8C8751d55d6984E575d6d7c2AcDCBEcDe",
-    "score": 4.996831641646605,
-    "collateral": 12.638200979430497
-  },
-  {
-    "address": "0xC2820133F72eBF89fE4fE4CD6E03498dcfb995Fd",
-    "score": 5.036344024115162,
-    "collateral": 12.738137392467056
-  },
-  {
-    "address": "0x27DdDd4f8611c9E25b6A53620147c988FA4b59F9",
-    "score": 5.044631126283362,
-    "collateral": 12.75909748683283
-  },
-  {
-    "address": "0xf656033E57e85bB9E93381565fCA26Eec14002A0",
-    "score": 5.055441294823097,
-    "collateral": 12.786439028918819
-  },
-  {
-    "address": "0xc9520aF4c6A8752A18b523F0331209c6F431893e",
-    "score": 5.0845054662134315,
-    "collateral": 12.859949378211
-  },
-  {
-    "address": "0x3176ea98647A8A600dB10F246ac1D6CF75F10eBC",
-    "score": 5.098135755541284,
-    "collateral": 12.894423690792884
-  },
-  {
-    "address": "0xCD14F8a7660c9224f0C69147318349506E9686ec",
-    "score": 5.1627153499842935,
-    "collateral": 13.05776117187558
-  },
-  {
-    "address": "0xa988122d82Ae5534b8AEdBe15f37b0c8d7e7E795",
-    "score": 5.2142118980644465,
-    "collateral": 13.188008450763173
-  },
-  {
-    "address": "0x3f23c113CCBBc30317C6b45802E8044320ae5934",
-    "score": 5.21978482845557,
-    "collateral": 13.202103745417562
-  },
-  {
-    "address": "0xDB1af3fE51Fe2141c3F691bD4d65FB4AC35634c0",
-    "score": 5.245597496147216,
-    "collateral": 13.267390252047749
-  },
-  {
-    "address": "0x47D228fb786BB14117625147f1055638F46b6893",
-    "score": 5.251500994849799,
-    "collateral": 13.282321634258668
-  },
-  {
-    "address": "0x05Dd84Aa953d75c659147045260352d89941e75E",
-    "score": 5.254024995207034,
-    "collateral": 13.288705444255593
-  },
-  {
-    "address": "0x7d9Eb40A115486237020f93a57209cffab5ae4f8",
-    "score": 5.28373099141625,
-    "collateral": 13.36383912441748
-  },
-  {
-    "address": "0xe379340DA0dC2677923F8D6D9139683edDA029eb",
-    "score": 5.339080879404322,
-    "collateral": 13.503832435929514
-  },
-  {
-    "address": "0xb638EDa8C10005CB456b1913ad60a8f3d6a92714",
-    "score": 5.476796227686557,
-    "collateral": 13.852148003545798
-  },
-  {
-    "address": "0x7E02944a2Bc30C1c4Ef0b6480Ff1E325C4b04B9A",
-    "score": 5.5269227357542,
-    "collateral": 13.978930118451547
-  },
-  {
-    "address": "0xE8356f4C612B42Ea5E8bFc4C5212a13B876a4CFe",
-    "score": 5.529737909559316,
-    "collateral": 13.986050376825782
-  },
-  {
-    "address": "0xb1F5d9e3F8909dCba999671B34CA58ec5E339bAc",
-    "score": 5.664809461202451,
-    "collateral": 14.327679140549137
-  },
-  {
-    "address": "0xd041FB6CC5668614AC1d07449E432fc73Be1D8D1",
-    "score": 5.705816657508604,
-    "collateral": 14.431396300879426
-  },
-  {
-    "address": "0x17d08026E6C31b4F64C94E1b0B52f61C64B95F75",
-    "score": 5.778805295985179,
-    "collateral": 14.616002296925748
-  },
-  {
-    "address": "0x149Aea1ce3efB6BC7010D894C92e7E5559f9D64d",
-    "score": 5.794787600086666,
-    "collateral": 14.656425426187397
-  },
-  {
-    "address": "0x1A4B38D2ac1dc1030dD1499d45A27dc7AEB1407A",
-    "score": 5.918543913365927,
-    "collateral": 14.969435203555289
-  },
-  {
-    "address": "0x28f2EBA5F450A1112F1D356d8404589fD4c09F18",
-    "score": 5.954903081404344,
-    "collateral": 15.061396371365015
-  },
-  {
-    "address": "0x057880E32656dEE0cAcD1188cc231E13a80dAC65",
-    "score": 5.987790952165288,
-    "collateral": 15.144577785162934
-  },
-  {
-    "address": "0xADC6048406Dd93bE66cf55997709649dc4fB5423",
-    "score": 6.004890260141446,
-    "collateral": 15.187826088549972
-  },
-  {
-    "address": "0x286B3c189591eE5745Bd5b7143FAdded65Dd4893",
-    "score": 6.078785863466806,
-    "collateral": 15.374726019005587
-  },
-  {
-    "address": "0xd42627f3AAA1b80160414B329bfE7D6Aad770991",
-    "score": 6.118950549557323,
-    "collateral": 15.476312266350195
-  },
-  {
-    "address": "0x37bEc8038a182209d6dF9e5aC648b59054C955a0",
-    "score": 6.20422502964234,
-    "collateral": 15.691992140122322
-  },
-  {
-    "address": "0x68D01bd2c6d32F9CE44dfb9cdc1206230c42baDE",
-    "score": 6.396796850784198,
-    "collateral": 16.17905305253756
-  },
-  {
-    "address": "0x97468f2F722dCD25843BD271603a1d2EB8520BF1",
-    "score": 6.910707214259522,
-    "collateral": 17.47885719340172
-  },
-  {
-    "address": "0xFB63aa1f2d4681FBc322dE786a4Af01a959b56b3",
-    "score": 7.2978435945371745,
-    "collateral": 18.45801913666582
-  },
-  {
-    "address": "0x9f2CcFb7ECac70f3Ce87f30Bd6Ea67FeC3A4fB9C",
-    "score": 7.575903255373142,
-    "collateral": 19.161299561130786
-  },
-  {
-    "address": "0x9303f5fc1A80d06F74da321248Fc1cFd089b4727",
-    "score": 8.949205436024933,
-    "collateral": 22.634714358601965
-  },
-  {
-    "address": "0x597dC4159a4b85c086c3C679a0B6c8Fe2836886F",
-    "score": 9.019380791858902,
-    "collateral": 22.81220487948341
-  },
-  {
-    "address": "0x373D35DD3cf75cf828BE9bb8C45F920D82FF682b",
-    "score": 9.389569191898753,
-    "collateral": 18.99880101117529
-  },
-  {
-    "address": "0x87D9C2D9990A9f3A18F1377Ff20d9945F9eB3792",
-    "score": 9.64962226191014,
-    "collateral": 24.40623864633943
-  },
-  {
-    "address": "0x900D1719363E97176Cbe2274cc4483245Ad3270E",
-    "score": 14.31758184277582,
-    "collateral": 36.21264229923459
-  },
-  {
-    "address": "0x20564D3de7Dd48C7fc717aA8F9F0AD87ddBd6063",
-    "score": 14.32401358872442,
-    "collateral": 36.228909747044824
-  },
-  {
-    "address": "0x4Be80A823e619Ef57A61cc19B6bfB72974dF0604",
-    "score": 14.327252322746467,
-    "collateral": 36.237101292092774
-  },
-  {
-    "address": "0x06427Ae8972e78Bd5BF3706Eb98919188D55738f",
-    "score": 14.436424883972544,
-    "collateral": 36.51322521804512
-  },
-  {
-    "address": "0x7302bC5b47F5588174A148C90747a88CB528A8c1",
-    "score": 15.031502609863683,
-    "collateral": 38.01832133445467
-  },
-  {
-    "address": "0x1750F9f65bE225fA3c3914Dc77C13d739da8FBEE",
-    "score": 16.357492518460134,
-    "collateral": 41.37207190348851
-  },
-  {
-    "address": "0x96F245034302A5A582a1D8e989a754e6E2260BF5",
-    "score": 17.21694319840697,
-    "collateral": 43.545831438339874
-  },
-  {
-    "address": "0x1e39cC29009ED4760c186d8771295c1E224882d4",
-    "score": 17.58641300660005,
-    "collateral": 44.48031032949521
-  },
-  {
-    "address": "0xfE5E43344436E421d7fe4012c20e5474Cac873D1",
-    "score": 18.146971686334997,
-    "collateral": 45.898099393310844
-  },
-  {
-    "address": "0xfb15339d187A76AF62698F73D700E1F8536f03BD",
-    "score": 18.82001089994946,
-    "collateral": 47.600379049443994
-  },
-  {
-    "address": "0x2BE21Ec97C340301E903F65F66901a23C48f4873",
-    "score": 23.075840836682563,
-    "collateral": 58.364406723785606
-  },
-  {
-    "address": "0x1dddcE0c0b2Dd639Ab3F96d5CEA4535A7E5316F9",
-    "score": 30.467381884316616,
-    "collateral": 77.05940947895672
-  },
-  {
-    "address": "0xC9D5B8765C1a32b256C78aA38d64fB008E38baaE",
-    "score": 35.508891734358585,
-    "collateral": 71.84849
-  },
-  {
-    "address": "0xc5cf8D4bef8C4897BB596c8e2a671767AD691964",
-    "score": 40.182964481351135,
-    "collateral": 101.63247783495149
-  },
-  {
-    "address": "0xCA2bF247dA8fF7d361aFab7Af13b25aA28f973a2",
-    "score": 42.750572631330016,
-    "collateral": 108.12658253229596
-  },
-  {
-    "address": "0xB9581d8311cc3b9E677aF6b0c55f1B93b69aD6f6",
-    "score": 46.34275591644382,
-    "collateral": 117.21208662129484
-  },
-  {
-    "address": "0x1138f2c7E2198d6B1d7dE80377454d280F6877d1",
-    "score": 55.39098675914905,
-    "collateral": 140.0972602872036
-  },
-  {
-    "address": "0x2D52F7BaE61912f7217351443eA8a226996a3Def",
-    "score": 100.0194243295895,
-    "collateral": 252.9734193941634
-  },
-  {
-    "address": "0xFe3DdB7883c3f09e1fdc9908B570C6C79fB25f7C",
-    "score": 103.46761789142764,
-    "collateral": 261.6947384971076
-  },
-  {
-    "address": "0x86ce21DFa7385aaE9a1744806D3Fc10862407491",
-    "score": 105.13290539474039,
-    "collateral": 212.7253240803348
-  },
-  {
-    "address": "0xA4854a30a62C0C5a62CCEE9582a2EFacBa5d41b1",
-    "score": 109.30984243379326,
-    "collateral": 276.47114347301095
-  },
-  {
-    "address": "0x8961ce440FE7A401fC1edA5e641E2020D12BA167",
-    "score": 110.95541040233594,
-    "collateral": 280.6331845829056
-  },
-  {
-    "address": "0xDBB056eb9C451cFE75AD06C7925562A48b65A625",
-    "score": 123.72585440885045,
-    "collateral": 312.932739486002
-  },
-  {
-    "address": "0x86f6e74730A472EC0135e8b76345635a7e2DE6EF",
-    "score": 189.5980935617856,
-    "collateral": 383.6317064244496
-  },
-  {
-    "address": "0x581e0F4638A7c8Be735879275B1d47Be09E80d14",
-    "score": 234.57227193301406,
-    "collateral": 593.2902546050442
-  },
-  {
-    "address": "0x3A0Fa91aA7A9aEC51324D3EA0aA777978C5C4f10",
-    "score": 280.83294643015796,
-    "collateral": 710.2947373789044
-  },
-  {
-    "address": "0xb975A436e6a93D89F9Ee710E6a6e26d1560CeAC5",
-    "score": 296.792296299129,
-    "collateral": 750.6598098108101
-  },
-  {
-    "address": "0xC33a19c47D3b1C7359637f983E4cC136679E0e80",
-    "score": 382.06363167312804,
-    "collateral": 966.3317298449009
-  },
-  {
-    "address": "0x2a9D299ea0195CdAE7b2914eD3625Be8ea5a3850",
-    "score": 406.5973281828032,
-    "collateral": 1028.3834076867927
-  },
-  {
-    "address": "0xC2634B9d0A0cFb756cDed34656E09828072A8a9B",
-    "score": 452.655871733242,
-    "collateral": 1144.8766521977245
-  },
-  {
-    "address": "0x679bCDAe56EDf5c847e769Ca9eB82Ab58C93351a",
-    "score": 528.1088487112686,
-    "collateral": 1335.7155589155036
-  },
-  {
-    "address": "0xB2ec4683e634899A82f9b5D6abF1Aa22fE219A83",
-    "score": 656.1409290092394,
-    "collateral": 1659.5397896808863
-  },
-  {
-    "address": "0x63dd696cd80d9473299F79373bFFEB6a6F40f55D",
-    "score": 658.797046263196,
-    "collateral": 1666.2577554015352
-  },
-  {
-    "address": "0x7534c942767128ac9B2c4b5D42966214e1888e22",
-    "score": 687.2105205152458,
-    "collateral": 1738.1223335731042
-  },
-  {
-    "address": "0xCe3F17FF0f62bc9b2e27c64ed9b6838828aC73ba",
-    "score": 705.7887222173766,
-    "collateral": 1785.1111184244894
-  },
-  {
-    "address": "0x636bF582087E3D52E9790dFC9e86F1a1565cF96F",
-    "score": 879.8544204411216,
-    "collateral": 2225.365550741457
-  },
-  {
-    "address": "0x653609Ae7EB3A6f5Ba30a0546f0593CF8EC0A85B",
-    "score": 1234.8393672281586,
-    "collateral": 3123.2087089489287
-  },
-  {
-    "address": "0x265B1827f8b33B1ff1ABAdAAF6BF15E7F6967204",
-    "score": 1381.3864751725794,
-    "collateral": 3493.861942033557
-  },
-  {
-    "address": "0x412dd7CFBB93579448BD43325580C2ec988f0535",
-    "score": 1460.1965985396512,
-    "collateral": 3693.191887438431
-  },
-  {
-    "address": "0x87f16c31e32Ae543278F5194cf94862F1Cb1EEe0",
-    "score": 2929.92095229491,
-    "collateral": 7410.481782160931
-  },
-  {
-    "address": "0xF608c749893b8475d3aa43fd04dD2D37028436b6",
-    "score": 2966.242578159368,
-    "collateral": 7502.347996693514
-  },
-  {
-    "address": "0x93b220bc7c36ea8e4c64192301B680273a184EC3",
-    "score": 4617.722734407907,
-    "collateral": 11679.34246539898
-  }
+	{
+		"address": "0xff03CD2abB3c78c1Ff2EA5522bf5F6A4616d666E",
+		"score": 0.4428202596044161,
+		"collateral": 1.12
+	},
+	{
+		"address": "0x8a08E6dD0A99CF6F3E26e8A16Ae2F4F72331471a",
+		"score": 0.4434221452341964,
+		"collateral": 1.1215223149590225
+	},
+	{
+		"address": "0x53dc3204f2f294f6A5649a36AC295f74A0dB92e0",
+		"score": 0.5072567204369827,
+		"collateral": 1.0263803691311597
+	},
+	{
+		"address": "0x1F44Bcd464fA5BfFA4b759E605EFA18bB313bf35",
+		"score": 0.5148156781503833,
+		"collateral": 1.302093901583267
+	},
+	{
+		"address": "0x8F32e629118E01ADeadaC6ADB4415728599A70Da",
+		"score": 0.6051520522573999,
+		"collateral": 1.5305765348987408
+	},
+	{
+		"address": "0x4e7f666cd88254377a2B3B87d301a38Ca440DA9F",
+		"score": 0.7647691192161723,
+		"collateral": 1.9342868690951176
+	},
+	{
+		"address": "0xBdA593b90e5104E15d56EB54685fAF305cD2d791",
+		"score": 0.7932691508476014,
+		"collateral": 2.0063703719043966
+	},
+	{
+		"address": "0x67c4C62Ede7D28998c259606F368E05204d800ed",
+		"score": 0.7949022611561775,
+		"collateral": 2.0105009045662015
+	},
+	{
+		"address": "0x5b56EDe3410572b3257DAf19d0E0Fb31738fE86C",
+		"score": 0.7949658095429184,
+		"collateral": 2.01066163387252
+	},
+	{
+		"address": "0x8fccf7c5112C1cdAb7be4648FE213CF00325232f",
+		"score": 0.7949844983301754,
+		"collateral": 2.010708902355101
+	},
+	{
+		"address": "0x76775E2567932a4755B30F0AF162Df46Ee69b40E",
+		"score": 0.8680234312927775,
+		"collateral": 2.1954421053733912
+	},
+	{
+		"address": "0xe76D4165967fB1ed8D5a56d5DEa87e3bc8ECd3AC",
+		"score": 0.8982746788181976,
+		"collateral": 2.2719548585584817
+	},
+	{
+		"address": "0xc09Fd212213c287Dbc1Bc6F1938E58153Ae9EC63",
+		"score": 0.9032920203585475,
+		"collateral": 2.2846449340537
+	},
+	{
+		"address": "0x352A45cC1AA286C643a9471A04435Dd88A027d88",
+		"score": 0.9292260179188022,
+		"collateral": 2.350238313393283
+	},
+	{
+		"address": "0xEae03EB54eB26B38057544895E834aF42fc46A69",
+		"score": 1.0999086182362388,
+		"collateral": 2.7819360693322315
+	},
+	{
+		"address": "0x3D51847413663696741ccC5081c1E9744B01c3E7",
+		"score": 1.218669601165578,
+		"collateral": 3.0823114428521414
+	},
+	{
+		"address": "0x872b52541EE3b7377c881BA6f9077226d9843687",
+		"score": 1.4219816779181351,
+		"collateral": 3.5965370705736084
+	},
+	{
+		"address": "0xDb37CE5526Feff312Efe2593fcD1D36A6419bf93",
+		"score": 1.590063403452205,
+		"collateral": 4.021656582418728
+	},
+	{
+		"address": "0xF3E16a28b09bE3836e66f091613c230128141Fc1",
+		"score": 1.6022762249981504,
+		"collateral": 4.052545774669502
+	},
+	{
+		"address": "0x3628822A233913be9fF3672f1F7b47EaAEACa555",
+		"score": 1.8187323916174933,
+		"collateral": 4.600015998435313
+	},
+	{
+		"address": "0xe729986A4B0aEc7F13321C9376f1b6c7ac4f8585",
+		"score": 1.8850136940196691,
+		"collateral": 4.767657512300901
+	},
+	{
+		"address": "0x64ebBA26736c2F2762027B84A0F44135d7ab6aae",
+		"score": 2.0294264235910093,
+		"collateral": 5.132912384027841
+	},
+	{
+		"address": "0x0B01168b77425d8a4Df02F794d2ceD416EC6e7d4",
+		"score": 2.3891354375927136,
+		"collateral": 6.0427038557229436
+	},
+	{
+		"address": "0xcE63C4EEA4ba94751C145aC0bC3F60727762cb02",
+		"score": 2.7228754516643012,
+		"collateral": 6.886813418582814
+	},
+	{
+		"address": "0xc290F1CCCb7eE14c15E20A193BA3163f068BD95C",
+		"score": 3.112502722192879,
+		"collateral": 7.872275428342348
+	},
+	{
+		"address": "0x0fc0B2b6428c94b13cB644Eb2Bc489Df7FfD03a5",
+		"score": 3.16236894753059,
+		"collateral": 6.39871938
+	},
+	{
+		"address": "0x3bd62675dFA7FD7C5466CbF8DA3450bF05179276",
+		"score": 3.2718045433691803,
+		"collateral": 8.275188429379932
+	},
+	{
+		"address": "0x29058D45756A049bD60baAA9be69f643227d0E95",
+		"score": 3.678008204206035,
+		"collateral": 9.302576156724871
+	},
+	{
+		"address": "0xb83Ac7549db7774aB59117483933bCF11f27C090",
+		"score": 3.9537523178965723,
+		"collateral": 10
+	},
+	{
+		"address": "0x66bEE9727049C20806d8fC58E144574Fbe4131fa",
+		"score": 3.968811454454633,
+		"collateral": 10.038088214301883
+	},
+	{
+		"address": "0x9382579Caaa20FB7342342251Ac20ebCEBF9E597",
+		"score": 3.9757550510617303,
+		"collateral": 10.055650256758785
+	},
+	{
+		"address": "0xf359AfA5307D99B05C73A258A5CDf5Af4818d903",
+		"score": 4.012520497946978,
+		"collateral": 10.148639002459495
+	},
+	{
+		"address": "0x2817B01d1CB65a15297cBB27f8601f28a371D56A",
+		"score": 4.092434549736618,
+		"collateral": 10.350761050995288
+	},
+	{
+		"address": "0x53AEf5d1a7Dd608749C7B8F82E33321C68Fe7151",
+		"score": 4.094572122032138,
+		"collateral": 10.356167490558649
+	},
+	{
+		"address": "0x821C3960c80eAb1Bee3ffb3C3B6168839e48c074",
+		"score": 4.095715111286222,
+		"collateral": 10.35905838802056
+	},
+	{
+		"address": "0xb3BCa5F22b3618c6e288c50EdaDc3C053054D4e8",
+		"score": 4.0989455724262935,
+		"collateral": 10.367229008940463
+	},
+	{
+		"address": "0x02c538E3afBB180c8Edc856DE5699eD6eD675ad6",
+		"score": 4.107707673209178,
+		"collateral": 10.38939049018253
+	},
+	{
+		"address": "0x5cDAC5102E0CF069e97dC66b3659D7F222a691d8",
+		"score": 4.1127077470514966,
+		"collateral": 10.402036891475008
+	},
+	{
+		"address": "0x3ECb564760e32CA424963E73c18eF81a01Dceb32",
+		"score": 4.119222250708678,
+		"collateral": 10.418513653632552
+	},
+	{
+		"address": "0xf7cD8299e141b3c8751E9aB3F3C5A195B906a228",
+		"score": 4.126545440157905,
+		"collateral": 10.437035778592374
+	},
+	{
+		"address": "0x37C3692855946fd20a9D6C40E7F7a61083ef9dF2",
+		"score": 4.128732498892444,
+		"collateral": 10.44256738138054
+	},
+	{
+		"address": "0xd12b32B8c5dEcf00C58760Cd6AB4D1d33D61A71E",
+		"score": 4.130843027943082,
+		"collateral": 10.44790542200864
+	},
+	{
+		"address": "0x228729939bf4cBF49344B988CEB347f05248b4f2",
+		"score": 4.181029593111206,
+		"collateral": 10.574839435909704
+	},
+	{
+		"address": "0x0259F0AA33Fd15A35395Ca4dB04142c6eAF8e2Cf",
+		"score": 4.1878067057391135,
+		"collateral": 10.591980399943365
+	},
+	{
+		"address": "0x3568Fb7Aa0FB959Ad6a426fCBDa6C03290E0038b",
+		"score": 4.258177716256462,
+		"collateral": 10.76996577904467
+	},
+	{
+		"address": "0x133dB67423d77EFDfD81656514a794968fc01D5d",
+		"score": 4.279410298687923,
+		"collateral": 10.82366813752411
+	},
+	{
+		"address": "0xe705a89C7a4bdD7C75bcD270417731ee7e825E6D",
+		"score": 4.287922115296833,
+		"collateral": 10.845196589294806
+	},
+	{
+		"address": "0xa32C6864aB84F972d1495b74C8954fbeF0bB6Ee7",
+		"score": 4.292129544416139,
+		"collateral": 10.85583819954505
+	},
+	{
+		"address": "0xB93F7838DE2EaB6eB22c6018174425c66049a6F2",
+		"score": 4.293839385878764,
+		"collateral": 10.860162803933862
+	},
+	{
+		"address": "0x560c445E733FD53158fa456B1d1C349998b24add",
+		"score": 4.302289648997575,
+		"collateral": 10.881535571976412
+	},
+	{
+		"address": "0x7400811466c67BEB0d334e81E5b3d39860De730e",
+		"score": 4.307343478368298,
+		"collateral": 10.89431793405774
+	},
+	{
+		"address": "0x9B42eF5d4c0daEAA84E1fD5B73c847c0b172f1BE",
+		"score": 4.349127549686229,
+		"collateral": 11
+	},
+	{
+		"address": "0x70c82C62aff7c61876C0F628d7bc85d455080d65",
+		"score": 4.374429795598269,
+		"collateral": 11.063995525965323
+	},
+	{
+		"address": "0xB0a9f94670cF88D25f85933a7229A44348e74D7c",
+		"score": 4.391473661210449,
+		"collateral": 11.107103602146603
+	},
+	{
+		"address": "0x3eAA76c4C75CC8E79f6cF68996313CAE78DaB50c",
+		"score": 4.3942345250222905,
+		"collateral": 11.114086497355654
+	},
+	{
+		"address": "0x8D046075513Fa8f6C333c40CbD7A40C01BBA9e5A",
+		"score": 4.398820869468922,
+		"collateral": 11.125686476509308
+	},
+	{
+		"address": "0x1F1C5858Cc70Bf63366c2801589f49dA227f2801",
+		"score": 4.424164843514871,
+		"collateral": 11.189787543061275
+	},
+	{
+		"address": "0x99f113488b47CD695e990ba426eA317eD8e1Cba4",
+		"score": 4.445362803934594,
+		"collateral": 11.243402334063159
+	},
+	{
+		"address": "0x31C207716CFE8Cf54aC30159e74c6eA394396206",
+		"score": 4.461235310518429,
+		"collateral": 11.283547758732247
+	},
+	{
+		"address": "0x23Ce2BF474748343d8ef207AC24257cc0AC992a9",
+		"score": 4.488907769261713,
+		"collateral": 11.35353812868543
+	},
+	{
+		"address": "0x2B53a5E9B419dBB313BaAF362bcecc7617cF227F",
+		"score": 4.559140563512123,
+		"collateral": 11.531173925274164
+	},
+	{
+		"address": "0xF892A9E6e47bC02b18C34A294a968160e12BE18f",
+		"score": 4.600205428728661,
+		"collateral": 11.635036944286911
+	},
+	{
+		"address": "0x7DD6c4adbcC99C68c6126bb2Fb161a70B0BB5D08",
+		"score": 4.6724661109576395,
+		"collateral": 11.81780176215851
+	},
+	{
+		"address": "0x43Be1b10e9b78e7dBb278df4114b5a78E05f0372",
+		"score": 4.675803504002579,
+		"collateral": 11.826242839840166
+	},
+	{
+		"address": "0xf005d37FB0a1EED159E9896A5FaB1573bDFb759e",
+		"score": 4.681403827080503,
+		"collateral": 11.84040741725331
+	},
+	{
+		"address": "0xB0C88F9337D22FBDD8F489cD803B342444AB0927",
+		"score": 4.6841449106614945,
+		"collateral": 11.847340283453814
+	},
+	{
+		"address": "0x761B632CE35230422afA4487E9BAe38D378514Bd",
+		"score": 4.697536485832607,
+		"collateral": 11.881210829948333
+	},
+	{
+		"address": "0xb5888BEf547E7FC0BC32728F5426ebc7E9E10cF2",
+		"score": 4.745869768929019,
+		"collateral": 12.003457443317695
+	},
+	{
+		"address": "0xEb23dFFA1aEaf92e337bA37957334dA137ab7949",
+		"score": 4.752762579768965,
+		"collateral": 12.02089103623333
+	},
+	{
+		"address": "0x1562Da35092243ad9629D094D73efCBBdF2C397a",
+		"score": 4.778622959637951,
+		"collateral": 12.086298218549555
+	},
+	{
+		"address": "0x4B3A67409B79F9661c4AbF044Df767843FABdB81",
+		"score": 4.7806568572273225,
+		"collateral": 12.09144243959791
+	},
+	{
+		"address": "0x95D5412D3efc7C612a6Ff823a9675e47C1a07061",
+		"score": 4.840617027336758,
+		"collateral": 12.24309627445759
+	},
+	{
+		"address": "0x7f2E46E8C8751d55d6984E575d6d7c2AcDCBEcDe",
+		"score": 4.996831641646605,
+		"collateral": 12.638200979430497
+	},
+	{
+		"address": "0xC2820133F72eBF89fE4fE4CD6E03498dcfb995Fd",
+		"score": 5.036344024115162,
+		"collateral": 12.738137392467056
+	},
+	{
+		"address": "0x27DdDd4f8611c9E25b6A53620147c988FA4b59F9",
+		"score": 5.044631126283362,
+		"collateral": 12.75909748683283
+	},
+	{
+		"address": "0xf656033E57e85bB9E93381565fCA26Eec14002A0",
+		"score": 5.055441294823097,
+		"collateral": 12.786439028918819
+	},
+	{
+		"address": "0xc9520aF4c6A8752A18b523F0331209c6F431893e",
+		"score": 5.0845054662134315,
+		"collateral": 12.859949378211
+	},
+	{
+		"address": "0x3176ea98647A8A600dB10F246ac1D6CF75F10eBC",
+		"score": 5.098135755541284,
+		"collateral": 12.894423690792884
+	},
+	{
+		"address": "0xCD14F8a7660c9224f0C69147318349506E9686ec",
+		"score": 5.1627153499842935,
+		"collateral": 13.05776117187558
+	},
+	{
+		"address": "0xa988122d82Ae5534b8AEdBe15f37b0c8d7e7E795",
+		"score": 5.2142118980644465,
+		"collateral": 13.188008450763173
+	},
+	{
+		"address": "0x3f23c113CCBBc30317C6b45802E8044320ae5934",
+		"score": 5.21978482845557,
+		"collateral": 13.202103745417562
+	},
+	{
+		"address": "0xDB1af3fE51Fe2141c3F691bD4d65FB4AC35634c0",
+		"score": 5.245597496147216,
+		"collateral": 13.267390252047749
+	},
+	{
+		"address": "0x47D228fb786BB14117625147f1055638F46b6893",
+		"score": 5.251500994849799,
+		"collateral": 13.282321634258668
+	},
+	{
+		"address": "0x05Dd84Aa953d75c659147045260352d89941e75E",
+		"score": 5.254024995207034,
+		"collateral": 13.288705444255593
+	},
+	{
+		"address": "0x7d9Eb40A115486237020f93a57209cffab5ae4f8",
+		"score": 5.28373099141625,
+		"collateral": 13.36383912441748
+	},
+	{
+		"address": "0xe379340DA0dC2677923F8D6D9139683edDA029eb",
+		"score": 5.339080879404322,
+		"collateral": 13.503832435929514
+	},
+	{
+		"address": "0xb638EDa8C10005CB456b1913ad60a8f3d6a92714",
+		"score": 5.476796227686557,
+		"collateral": 13.852148003545798
+	},
+	{
+		"address": "0x7E02944a2Bc30C1c4Ef0b6480Ff1E325C4b04B9A",
+		"score": 5.5269227357542,
+		"collateral": 13.978930118451547
+	},
+	{
+		"address": "0xE8356f4C612B42Ea5E8bFc4C5212a13B876a4CFe",
+		"score": 5.529737909559316,
+		"collateral": 13.986050376825782
+	},
+	{
+		"address": "0xb1F5d9e3F8909dCba999671B34CA58ec5E339bAc",
+		"score": 5.664809461202451,
+		"collateral": 14.327679140549137
+	},
+	{
+		"address": "0xd041FB6CC5668614AC1d07449E432fc73Be1D8D1",
+		"score": 5.705816657508604,
+		"collateral": 14.431396300879426
+	},
+	{
+		"address": "0x17d08026E6C31b4F64C94E1b0B52f61C64B95F75",
+		"score": 5.778805295985179,
+		"collateral": 14.616002296925748
+	},
+	{
+		"address": "0x149Aea1ce3efB6BC7010D894C92e7E5559f9D64d",
+		"score": 5.794787600086666,
+		"collateral": 14.656425426187397
+	},
+	{
+		"address": "0x1A4B38D2ac1dc1030dD1499d45A27dc7AEB1407A",
+		"score": 5.918543913365927,
+		"collateral": 14.969435203555289
+	},
+	{
+		"address": "0x28f2EBA5F450A1112F1D356d8404589fD4c09F18",
+		"score": 5.954903081404344,
+		"collateral": 15.061396371365015
+	},
+	{
+		"address": "0x057880E32656dEE0cAcD1188cc231E13a80dAC65",
+		"score": 5.987790952165288,
+		"collateral": 15.144577785162934
+	},
+	{
+		"address": "0xADC6048406Dd93bE66cf55997709649dc4fB5423",
+		"score": 6.004890260141446,
+		"collateral": 15.187826088549972
+	},
+	{
+		"address": "0x286B3c189591eE5745Bd5b7143FAdded65Dd4893",
+		"score": 6.078785863466806,
+		"collateral": 15.374726019005587
+	},
+	{
+		"address": "0xd42627f3AAA1b80160414B329bfE7D6Aad770991",
+		"score": 6.118950549557323,
+		"collateral": 15.476312266350195
+	},
+	{
+		"address": "0x37bEc8038a182209d6dF9e5aC648b59054C955a0",
+		"score": 6.20422502964234,
+		"collateral": 15.691992140122322
+	},
+	{
+		"address": "0x68D01bd2c6d32F9CE44dfb9cdc1206230c42baDE",
+		"score": 6.396796850784198,
+		"collateral": 16.17905305253756
+	},
+	{
+		"address": "0x97468f2F722dCD25843BD271603a1d2EB8520BF1",
+		"score": 6.910707214259522,
+		"collateral": 17.47885719340172
+	},
+	{
+		"address": "0xFB63aa1f2d4681FBc322dE786a4Af01a959b56b3",
+		"score": 7.2978435945371745,
+		"collateral": 18.45801913666582
+	},
+	{
+		"address": "0x9f2CcFb7ECac70f3Ce87f30Bd6Ea67FeC3A4fB9C",
+		"score": 7.575903255373142,
+		"collateral": 19.161299561130786
+	},
+	{
+		"address": "0x9303f5fc1A80d06F74da321248Fc1cFd089b4727",
+		"score": 8.949205436024933,
+		"collateral": 22.634714358601965
+	},
+	{
+		"address": "0x597dC4159a4b85c086c3C679a0B6c8Fe2836886F",
+		"score": 9.019380791858902,
+		"collateral": 22.81220487948341
+	},
+	{
+		"address": "0x373D35DD3cf75cf828BE9bb8C45F920D82FF682b",
+		"score": 9.389569191898753,
+		"collateral": 18.99880101117529
+	},
+	{
+		"address": "0x87D9C2D9990A9f3A18F1377Ff20d9945F9eB3792",
+		"score": 9.64962226191014,
+		"collateral": 24.40623864633943
+	},
+	{
+		"address": "0x900D1719363E97176Cbe2274cc4483245Ad3270E",
+		"score": 14.31758184277582,
+		"collateral": 36.21264229923459
+	},
+	{
+		"address": "0x20564D3de7Dd48C7fc717aA8F9F0AD87ddBd6063",
+		"score": 14.32401358872442,
+		"collateral": 36.228909747044824
+	},
+	{
+		"address": "0x4Be80A823e619Ef57A61cc19B6bfB72974dF0604",
+		"score": 14.327252322746467,
+		"collateral": 36.237101292092774
+	},
+	{
+		"address": "0x06427Ae8972e78Bd5BF3706Eb98919188D55738f",
+		"score": 14.436424883972544,
+		"collateral": 36.51322521804512
+	},
+	{
+		"address": "0x7302bC5b47F5588174A148C90747a88CB528A8c1",
+		"score": 15.031502609863683,
+		"collateral": 38.01832133445467
+	},
+	{
+		"address": "0x1750F9f65bE225fA3c3914Dc77C13d739da8FBEE",
+		"score": 16.357492518460134,
+		"collateral": 41.37207190348851
+	},
+	{
+		"address": "0x96F245034302A5A582a1D8e989a754e6E2260BF5",
+		"score": 17.21694319840697,
+		"collateral": 43.545831438339874
+	},
+	{
+		"address": "0x1e39cC29009ED4760c186d8771295c1E224882d4",
+		"score": 17.58641300660005,
+		"collateral": 44.48031032949521
+	},
+	{
+		"address": "0xfE5E43344436E421d7fe4012c20e5474Cac873D1",
+		"score": 18.146971686334997,
+		"collateral": 45.898099393310844
+	},
+	{
+		"address": "0xfb15339d187A76AF62698F73D700E1F8536f03BD",
+		"score": 18.82001089994946,
+		"collateral": 47.600379049443994
+	},
+	{
+		"address": "0x2BE21Ec97C340301E903F65F66901a23C48f4873",
+		"score": 23.075840836682563,
+		"collateral": 58.364406723785606
+	},
+	{
+		"address": "0x1dddcE0c0b2Dd639Ab3F96d5CEA4535A7E5316F9",
+		"score": 30.467381884316616,
+		"collateral": 77.05940947895672
+	},
+	{
+		"address": "0xC9D5B8765C1a32b256C78aA38d64fB008E38baaE",
+		"score": 35.508891734358585,
+		"collateral": 71.84849
+	},
+	{
+		"address": "0xc5cf8D4bef8C4897BB596c8e2a671767AD691964",
+		"score": 40.182964481351135,
+		"collateral": 101.63247783495149
+	},
+	{
+		"address": "0xCA2bF247dA8fF7d361aFab7Af13b25aA28f973a2",
+		"score": 42.750572631330016,
+		"collateral": 108.12658253229596
+	},
+	{
+		"address": "0xB9581d8311cc3b9E677aF6b0c55f1B93b69aD6f6",
+		"score": 46.34275591644382,
+		"collateral": 117.21208662129484
+	},
+	{
+		"address": "0x1138f2c7E2198d6B1d7dE80377454d280F6877d1",
+		"score": 55.39098675914905,
+		"collateral": 140.0972602872036
+	},
+	{
+		"address": "0x2D52F7BaE61912f7217351443eA8a226996a3Def",
+		"score": 100.0194243295895,
+		"collateral": 252.9734193941634
+	},
+	{
+		"address": "0xFe3DdB7883c3f09e1fdc9908B570C6C79fB25f7C",
+		"score": 103.46761789142764,
+		"collateral": 261.6947384971076
+	},
+	{
+		"address": "0x86ce21DFa7385aaE9a1744806D3Fc10862407491",
+		"score": 105.13290539474039,
+		"collateral": 212.7253240803348
+	},
+	{
+		"address": "0xA4854a30a62C0C5a62CCEE9582a2EFacBa5d41b1",
+		"score": 109.30984243379326,
+		"collateral": 276.47114347301095
+	},
+	{
+		"address": "0x8961ce440FE7A401fC1edA5e641E2020D12BA167",
+		"score": 110.95541040233594,
+		"collateral": 280.6331845829056
+	},
+	{
+		"address": "0xDBB056eb9C451cFE75AD06C7925562A48b65A625",
+		"score": 123.72585440885045,
+		"collateral": 312.932739486002
+	},
+	{
+		"address": "0x86f6e74730A472EC0135e8b76345635a7e2DE6EF",
+		"score": 189.5980935617856,
+		"collateral": 383.6317064244496
+	},
+	{
+		"address": "0x581e0F4638A7c8Be735879275B1d47Be09E80d14",
+		"score": 234.57227193301406,
+		"collateral": 593.2902546050442
+	},
+	{
+		"address": "0x3A0Fa91aA7A9aEC51324D3EA0aA777978C5C4f10",
+		"score": 280.83294643015796,
+		"collateral": 710.2947373789044
+	},
+	{
+		"address": "0xb975A436e6a93D89F9Ee710E6a6e26d1560CeAC5",
+		"score": 296.792296299129,
+		"collateral": 750.6598098108101
+	},
+	{
+		"address": "0xC33a19c47D3b1C7359637f983E4cC136679E0e80",
+		"score": 382.06363167312804,
+		"collateral": 966.3317298449009
+	},
+	{
+		"address": "0x2a9D299ea0195CdAE7b2914eD3625Be8ea5a3850",
+		"score": 406.5973281828032,
+		"collateral": 1028.3834076867927
+	},
+	{
+		"address": "0xC2634B9d0A0cFb756cDed34656E09828072A8a9B",
+		"score": 452.655871733242,
+		"collateral": 1144.8766521977245
+	},
+	{
+		"address": "0x679bCDAe56EDf5c847e769Ca9eB82Ab58C93351a",
+		"score": 528.1088487112686,
+		"collateral": 1335.7155589155036
+	},
+	{
+		"address": "0xB2ec4683e634899A82f9b5D6abF1Aa22fE219A83",
+		"score": 656.1409290092394,
+		"collateral": 1659.5397896808863
+	},
+	{
+		"address": "0x63dd696cd80d9473299F79373bFFEB6a6F40f55D",
+		"score": 658.797046263196,
+		"collateral": 1666.2577554015352
+	},
+	{
+		"address": "0x7534c942767128ac9B2c4b5D42966214e1888e22",
+		"score": 687.2105205152458,
+		"collateral": 1738.1223335731042
+	},
+	{
+		"address": "0xCe3F17FF0f62bc9b2e27c64ed9b6838828aC73ba",
+		"score": 705.7887222173766,
+		"collateral": 1785.1111184244894
+	},
+	{
+		"address": "0x636bF582087E3D52E9790dFC9e86F1a1565cF96F",
+		"score": 879.8544204411216,
+		"collateral": 2225.365550741457
+	},
+	{
+		"address": "0x653609Ae7EB3A6f5Ba30a0546f0593CF8EC0A85B",
+		"score": 1234.8393672281586,
+		"collateral": 3123.2087089489287
+	},
+	{
+		"address": "0x265B1827f8b33B1ff1ABAdAAF6BF15E7F6967204",
+		"score": 1381.3864751725794,
+		"collateral": 3493.861942033557
+	},
+	{
+		"address": "0x412dd7CFBB93579448BD43325580C2ec988f0535",
+		"score": 1460.1965985396512,
+		"collateral": 3693.191887438431
+	},
+	{
+		"address": "0x87f16c31e32Ae543278F5194cf94862F1Cb1EEe0",
+		"score": 2929.92095229491,
+		"collateral": 7410.481782160931
+	},
+	{
+		"address": "0xF608c749893b8475d3aa43fd04dD2D37028436b6",
+		"score": 2966.242578159368,
+		"collateral": 7502.347996693514
+	},
+	{
+		"address": "0x93b220bc7c36ea8e4c64192301B680273a184EC3",
+		"score": 4617.722734407907,
+		"collateral": 11679.34246539898
+	}
 ]
