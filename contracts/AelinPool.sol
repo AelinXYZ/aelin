@@ -11,8 +11,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     using SafeERC20 for IERC20;
     uint256 constant BASE = 100 * 10**18;
     uint256 constant MAX_SPONSOR_FEE = 98 * 10**18;
-    uint256 constant AELIN_FEE = 2 * 10**18;
     uint8 constant MAX_DEALS = 5;
+    uint256 public aelinFee = 2 * 10**18;
 
     uint8 public numberOfDeals;
     address public purchaseToken;
@@ -97,7 +97,11 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     }
 
     function updateAllowList(address[] memory _allowList, uint256[] memory _allowListAmounts) external onlyPoolFactoryOnce {
+        aelinFee = 0;
         for (uint256 i = 0; i < _allowList.length; i++) {
+            if (aelinFee < 2 * 10**18) {
+              aelinFee += 0.2 * 10**18;
+            }
             allowList[_allowList[i]] = _allowListAmounts[i];
             emit AllowlistAddress(
                 _allowList[i],
@@ -342,7 +346,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     function mintDealTokens(address recipient, uint256 poolTokenAmount) internal {
         _burn(recipient, poolTokenAmount);
         uint256 poolTokenDealFormatted = convertPoolToDeal(poolTokenAmount, purchaseTokenDecimals);
-        uint256 aelinFeeAmt = (poolTokenDealFormatted * AELIN_FEE) / BASE;
+        uint256 aelinFeeAmt = (poolTokenDealFormatted * aelinFee) / BASE;
         uint256 sponsorFeeAmt = (poolTokenDealFormatted * sponsorFee) / BASE;
 
         aelinDeal.mint(sponsor, sponsorFeeAmt);
