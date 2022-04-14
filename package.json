@@ -9,7 +9,7 @@
 		"test:integ": "hardhat test ./test/integration/*.test.ts",
 		"compile": "hardhat compile",
 		"build": "waffle",
-		"coverage": "hardhat coverage",
+		"coverage": "hardhat coverage --show-stack-traces",
 		"coverage:unit": "hardhat coverage  --testfiles 'test/unit/*.ts'",
 		"format": "prettier --write \"contracts/**/*.sol\" \"**/*.js\" \"**/*.md\" \"**/*.yml\" \"**/*.json\"",
 		"lint": "solhint \"contracts/*.sol\" && solhint \"contracts/test-helpers/*.sol\" && solhint --config contracts/interfaces/.solhint.json \"contracts/interfaces/*.sol\" && eslint \"**/*.js\"",

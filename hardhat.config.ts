@@ -41,19 +41,19 @@ const config: HardhatUserConfig = {
     apiKey: `${process.env.ETHERSCAN_API_KEY}`,
   },
   networks: {
-    optimism: {
-      url: `https://optimism-mainnet.infura.io/v3/${process.env.OP_API_KEY}`,
-      accounts: [`0x${process.env.OP_PRIVATE_KEY}`],
-    },
-    mainnet: {
-      url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
-      accounts: [`0x${process.env.OP_PRIVATE_KEY}`],
-      gasMultiplier: 1.5,
-    },
-    kovan: {
-      url: `https://eth-kovan.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
-      accounts: [`0x${process.env.KOVAN_PRIVATE_KEY}`],
-    },
+    // optimism: {
+    //   url: `https://optimism-mainnet.infura.io/v3/${process.env.OP_API_KEY}`,
+    //   accounts: [`0x${process.env.OP_PRIVATE_KEY}`],
+    // },
+    // mainnet: {
+    //   url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
+    //   accounts: [`0x${process.env.OP_PRIVATE_KEY}`],
+    //   gasMultiplier: 1.5,
+    // },
+    // kovan: {
+    //   url: `https://eth-kovan.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+    //   accounts: [`0x${process.env.KOVAN_PRIVATE_KEY}`],
+    // },
     hardhat: {
       initialBaseFeePerGas: 0,
       forking: {

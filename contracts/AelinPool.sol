@@ -5,9 +5,9 @@ import "./AelinERC20.sol";
 import "./AelinDeal.sol";
 import "./MinimalProxyFactory.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./interfaces/IAelinPoolFactory.sol";
+import "./interfaces/IAelinPool.sol";
 
-contract AelinPool is AelinERC20, MinimalProxyFactory {
+contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     using SafeERC20 for IERC20;
     uint256 constant BASE = 100 * 10**18;
     uint256 constant MAX_SPONSOR_FEE = 98 * 10**18;
@@ -64,7 +64,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
      * - max sponsor fee is 98000 representing 98%
      */
     function initialize(
-        IAelinPoolFactory.PoolData memory _poolData,
+        PoolData memory _poolData,
         address _sponsor,
         address _aelinDealLogicAddress,
         address _aelinRewardsAddress

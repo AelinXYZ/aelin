@@ -2,10 +2,11 @@
 pragma solidity 0.8.6;
 
 import "./AelinERC20.sol";
+import "./interfaces/IAelinDeal.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract AelinDeal is AelinERC20 {
+contract AelinDeal is AelinERC20, IAelinDeal {
     using SafeERC20 for IERC20;
     uint256 public maxTotalSupply;
 

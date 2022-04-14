@@ -3,12 +3,12 @@ pragma solidity 0.8.6;
 
 import "./MinimalProxyFactory.sol";
 import "./AelinPool.sol";
-import "./interfaces/IAelinPoolFactory.sol";
+import "./interfaces/IAelinPool.sol";
 
 /**
  * @dev the factory contract allows an Aelin sponsor to permissionlessly create new pools
  */
-contract AelinPoolFactory is MinimalProxyFactory, IAelinPoolFactory {
+contract AelinPoolFactory is MinimalProxyFactory {
     address public immutable AELIN_REWARDS;
     address public immutable AELIN_POOL_LOGIC;
     address public immutable AELIN_DEAL_LOGIC;
@@ -30,10 +30,10 @@ contract AelinPoolFactory is MinimalProxyFactory, IAelinPoolFactory {
      * @dev the method a sponsor calls to create a pool
      */
     function createPool(
-        PoolData memory _poolData,
+        IAelinPool.PoolData memory _poolData,
         address[] memory _allowList,
         uint256[] memory _allowListAmounts
-    ) external override returns (address) {
+    ) external returns (address) {
         require(_poolData.purchaseToken != address(0), "cant pass null token address");
         address aelinPoolAddress = _cloneAsMinimalProxy(AELIN_POOL_LOGIC, "Could not create new deal");
         AelinPool aelinPool = AelinPool(aelinPoolAddress);
