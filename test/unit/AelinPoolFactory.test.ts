@@ -60,19 +60,17 @@ describe("AelinPoolFactory", function () {
   });
 
   it("Should call the createPool method", async function () {
-    const result = await aelinPoolFactory.connect(sponsor).createPool(
-      {
-        name,
-        symbol,
-        purchaseTokenCap,
-        purchaseToken: purchaseToken.address,
-        duration,
-        sponsorFee,
-        purchaseDuration: purchaseExpiry,
-      },
-      [],
-      []
-    );
+    const result = await aelinPoolFactory.connect(sponsor).createPool({
+      name,
+      symbol,
+      purchaseTokenCap,
+      purchaseToken: purchaseToken.address,
+      duration,
+      sponsorFee,
+      purchaseDuration: purchaseExpiry,
+      allowListAddresses: [],
+      allowListAmounts: [],
+    });
 
     expect(result.value).to.equal(0);
 
@@ -94,19 +92,17 @@ describe("AelinPoolFactory", function () {
 
   it("Should revert when purchse token is zero address", async function () {
     await expect(
-      aelinPoolFactory.connect(sponsor).createPool(
-        {
-          name,
-          symbol,
-          purchaseTokenCap,
-          purchaseToken: nullAddress,
-          duration,
-          sponsorFee,
-          purchaseDuration: purchaseExpiry,
-        },
-        [],
-        []
-      )
+      aelinPoolFactory.connect(sponsor).createPool({
+        name,
+        symbol,
+        purchaseTokenCap,
+        purchaseToken: nullAddress,
+        duration,
+        sponsorFee,
+        purchaseDuration: purchaseExpiry,
+        allowListAddresses: [],
+        allowListAmounts: [],
+      })
     ).to.be.revertedWith("cant pass null token address");
   });
 
@@ -137,19 +133,17 @@ describe("AelinPoolFactory", function () {
   });
 
   it("Should work with an allow list and amounts of equal array length", async function () {
-    const result = await aelinPoolFactory.connect(sponsor).createPool(
-      {
-        name,
-        symbol,
-        purchaseTokenCap,
-        purchaseToken: purchaseToken.address,
-        duration,
-        sponsorFee,
-        purchaseDuration: purchaseExpiry,
-      },
-      allowList,
-      allowListAmounts
-    );
+    const result = await aelinPoolFactory.connect(sponsor).createPool({
+      name,
+      symbol,
+      purchaseTokenCap,
+      purchaseToken: purchaseToken.address,
+      duration,
+      sponsorFee,
+      purchaseDuration: purchaseExpiry,
+      allowListAddresses: allowList,
+      allowListAmounts: allowListAmounts,
+    });
     expect(result.value).to.equal(0);
 
     const [, log] = await aelinPoolFactory.queryFilter(
@@ -169,19 +163,19 @@ describe("AelinPoolFactory", function () {
   });
   it("Should error with an allow list and amounts of mismatching length", async function () {
     await expect(
-      aelinPoolFactory.connect(sponsor).createPool(
-        {
-          name,
-          symbol,
-          purchaseTokenCap,
-          purchaseToken: purchaseToken.address,
-          duration,
-          sponsorFee,
-          purchaseDuration: purchaseExpiry,
-        },
-        [...allowList, deployer.address],
-        allowListAmounts
-      )
-    ).to.be.revertedWith("allowList array length issue");
+      aelinPoolFactory.connect(sponsor).createPool({
+        name,
+        symbol,
+        purchaseTokenCap,
+        purchaseToken: purchaseToken.address,
+        duration,
+        sponsorFee,
+        purchaseDuration: purchaseExpiry,
+        allowListAddresses: [...allowList, deployer.address],
+        allowListAmounts: allowListAmounts,
+      })
+    ).to.be.revertedWith(
+      "allowListAddresses and allowListAmounts arrays should have the same length"
+    );
   });
 });

@@ -5,9 +5,10 @@ import "./AelinERC20.sol";
 import "./AelinDeal.sol";
 import "./MinimalProxyFactory.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./interfaces/IAelinPoolFactory.sol";
+import "./interfaces/IAelinPool.sol";
+import "./interfaces/IAelinDeal.sol";
 
-contract AelinPool is AelinERC20, MinimalProxyFactory {
+contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     using SafeERC20 for IERC20;
     uint256 constant BASE = 100 * 10**18;
     uint256 constant MAX_SPONSOR_FEE = 98 * 10**18;
@@ -64,12 +65,15 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
      * - max sponsor fee is 98000 representing 98%
      */
     function initialize(
-        IAelinPoolFactory.PoolData memory _poolData,
+        PoolData memory _poolData,
         address _sponsor,
         address _aelinDealLogicAddress,
         address _aelinRewardsAddress
     ) external initOnce {
-        require(30 minutes <= _poolData.purchaseDuration && 30 days >= _poolData.purchaseDuration, "outside purchase expiry window");
+        require(
+            30 minutes <= _poolData.purchaseDuration && 30 days >= _poolData.purchaseDuration,
+            "outside purchase expiry window"
+        );
         require(365 days >= _poolData.duration, "max 1 year duration");
         require(_poolData.sponsorFee <= MAX_SPONSOR_FEE, "exceeds max sponsor fee");
         purchaseTokenDecimals = IERC20Decimals(_poolData.purchaseToken).decimals();
@@ -93,17 +97,19 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         aelinDealLogicAddress = _aelinDealLogicAddress;
         aelinRewardsAddress = _aelinRewardsAddress;
 
-        emit SetSponsor(_sponsor);
-    }
-
-    function updateAllowList(address[] memory _allowList, uint256[] memory _allowListAmounts) external onlyPoolFactoryOnce {
-        for (uint256 i = 0; i < _allowList.length; i++) {
-            allowList[_allowList[i]] = _allowListAmounts[i];
-            emit AllowlistAddress(
-                _allowList[i],
-                _allowListAmounts[i]
+        if (_poolData.allowListAddresses.length > 0 || _poolData.allowListAmounts.length > 0) {
+            require(
+                _poolData.allowListAddresses.length == _poolData.allowListAmounts.length,
+                "allowListAddresses and allowListAmounts arrays should have the same length"
             );
+            for (uint256 i = 0; i < _poolData.allowListAddresses.length; i++) {
+                allowList[_poolData.allowListAddresses[i]] = _poolData.allowListAmounts[i];
+                emit AllowlistAddress(_poolData.allowListAddresses[i], _poolData.allowListAmounts[i]);
+            }
+            hasAllowList = true;
         }
+
+        emit SetSponsor(_sponsor);
     }
 
     modifier dealReady() {
@@ -121,12 +127,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
     modifier onlySponsor() {
         require(msg.sender == sponsor, "only sponsor can access");
-        _;
-    }
-
-    modifier onlyPoolFactoryOnce() {
-        require(msg.sender == poolFactory && !hasAllowList && totalSupply() == 0, "only pool factory can access");
-        hasAllowList = true;
         _;
     }
 
@@ -202,10 +202,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
 
         address aelinDealStorageProxy = _cloneAsMinimalProxy(aelinDealLogicAddress, "Could not create new deal");
         aelinDeal = AelinDeal(aelinDealStorageProxy);
-
-        aelinDeal.initialize(
-            storedName,
-            storedSymbol,
+        IAelinDeal.DealData memory dealData = IAelinDeal.DealData(
             _underlyingDealToken,
             _underlyingDealTokenTotal,
             _vestingPeriod,
@@ -214,9 +211,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
             _openRedemptionPeriod,
             _holder,
             maxDealTotalSupply,
-            holderFundingExpiry,
-            aelinRewardsAddress
+            holderFundingExpiry
         );
+
+        aelinDeal.initialize(storedName, storedSymbol, dealData, aelinRewardsAddress);
 
         emit CreateDeal(
             string(abi.encodePacked("aeDeal-", storedName)),
@@ -443,10 +441,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
     modifier transferWindow() {
         require(
             aelinDeal.proRataRedemptionStart() == 0 ||
-                (block.timestamp >= aelinDeal.proRataRedemptionExpiry() &&
-                    aelinDeal.openRedemptionStart() == 0) ||
-                (block.timestamp >= aelinDeal.openRedemptionExpiry() &&
-                    aelinDeal.openRedemptionStart() != 0),
+                (block.timestamp >= aelinDeal.proRataRedemptionExpiry() && aelinDeal.openRedemptionStart() == 0) ||
+                (block.timestamp >= aelinDeal.openRedemptionExpiry() && aelinDeal.openRedemptionStart() != 0),
             "no transfers in redeem window"
         );
         _;
@@ -495,8 +491,5 @@ contract AelinPool is AelinERC20, MinimalProxyFactory {
         address indexed holder,
         uint256 holderFundingDuration
     );
-    event AllowlistAddress(
-        address indexed purchaser,
-        uint256 allowlistAmount
-    );
+    event AllowlistAddress(address indexed purchaser, uint256 allowlistAmount);
 }
