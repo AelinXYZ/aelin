@@ -99,6 +99,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     function updateAllowList(address[] memory _allowList, uint256[] memory _allowListAmounts) external onlyPoolFactoryOnce {
         for (uint256 i = 0; i < _allowList.length; i++) {
             allowList[_allowList[i]] = _allowListAmounts[i];
+            emit AllowlistAddress(
+                _allowList[i],
+                _allowListAmounts[i]
+            );
         }
     }
 
@@ -436,12 +440,19 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         }
     }
 
-    modifier blockTransfer() {
-        require(false, "cannot transfer pool tokens");
+    modifier transferWindow() {
+        require(
+            aelinDeal.proRataRedemptionStart() == 0 ||
+                (block.timestamp >= aelinDeal.proRataRedemptionExpiry() &&
+                    aelinDeal.openRedemptionStart() == 0) ||
+                (block.timestamp >= aelinDeal.openRedemptionExpiry() &&
+                    aelinDeal.openRedemptionStart() != 0),
+            "no transfers in redeem window"
+        );
         _;
     }
 
-    function transfer(address dst, uint256 amount) public virtual override blockTransfer returns (bool) {
+    function transfer(address dst, uint256 amount) public virtual override transferWindow returns (bool) {
         return super.transfer(dst, amount);
     }
 
@@ -449,7 +460,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         address src,
         address dst,
         uint256 amount
-    ) public virtual override blockTransfer returns (bool) {
+    ) public virtual override transferWindow returns (bool) {
         return super.transferFrom(src, dst, amount);
     }
 
@@ -483,5 +494,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256 openRedemptionPeriod,
         address indexed holder,
         uint256 holderFundingDuration
+    );
+    event AllowlistAddress(
+        address indexed purchaser,
+        uint256 allowlistAmount
     );
 }

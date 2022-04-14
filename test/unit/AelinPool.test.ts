@@ -307,6 +307,14 @@ describe("AelinPool", function () {
       expect(await aelinPool.allowList(allowList[0])).to.equal(
         allowListAmounts[0]
       );
+      const [allowLog1, allowLog2, allowLog3] = await aelinPool.queryFilter(aelinPool.filters.AllowlistAddress());
+      expect(allowLog1.args.purchaser).to.equal(deployer.address);
+      expect(allowLog1.args.allowlistAmount).to.equal(purchaseTokenCap);
+      expect(allowLog2.args.purchaser).to.equal(holder.address);
+      expect(allowLog2.args.allowlistAmount).to.equal(purchaseTokenCap.div(2));
+      expect(allowLog3.args.purchaser).to.equal(nonsponsor.address);
+      expect(allowLog3.args.allowlistAmount).to.equal(ethers.constants.MaxInt256);
+      
       const returnAddress = await aelinPool.purchaseToken();
       expect(returnAddress.toLowerCase()).to.equal(
         purchaseToken.address.toLowerCase()
@@ -917,20 +925,6 @@ describe("AelinPool", function () {
       expect(log.args.purchaser).to.equal(user1.address);
       expect(log.address).to.equal(aelinPool.address);
       expect(log.args.purchaseTokenAmount).to.equal(userPurchaseAmt);
-    });
-
-    it("should block transferring pool tokens", async function () {
-      await aelinPool.connect(user1).purchasePoolTokens(userPurchaseAmt);
-      const [log] = await aelinPool.queryFilter(
-        aelinPool.filters.PurchasePoolToken()
-      );
-
-      expect(log.args.purchaser).to.equal(user1.address);
-      expect(log.address).to.equal(aelinPool.address);
-      expect(log.args.purchaseTokenAmount).to.equal(userPurchaseAmt);
-      await expect(
-        aelinPool.transfer(deployer.address, userPurchaseAmt)
-      ).to.be.revertedWith("cannot transfer pool tokens");
     });
 
     it("should fail the transaction when the cap has been exceeded", async function () {
