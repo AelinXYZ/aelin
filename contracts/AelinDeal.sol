@@ -248,12 +248,22 @@ contract AelinDeal is AelinERC20, IAelinDeal {
 
     /**
      * @dev allows the purchaser to mint deal tokens. this method is also used
-     * to send deal tokens to the sponsor and the aelin rewards pool. It may only
-     * be called from the pool contract that created this deal
+     * to send deal tokens to the sponsor. It may only be called from the pool
+     * contract that created this deal
      */
     function mint(address dst, uint256 dealTokenAmount) external onlyPool {
         require(depositComplete, "deposit not complete");
         _mint(dst, dealTokenAmount);
+    }
+
+    /**
+     * @dev allows the protocol to handle protocol fees coming in deal tokens. 
+     * It may only be called from the pool contract that created this deal
+     */
+    function protocolMint(address dst, uint256 dealTokenAmount) external onlyPool {
+        require(depositComplete, "deposit not complete");
+        uint256 underlyingProtocolFees = (underlyingPerDealExchangeRate * dealTokenAmount) / 1e18;
+        IERC20(underlyingDealToken).transferFrom(address(this), dst, underlyingProtocolFees);
     }
 
     modifier blockTransfer() {
