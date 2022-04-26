@@ -33,7 +33,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     uint256 public totalAmountWithdrawn;
     uint256 public purchaseTokenTotalForDeal;
 
-    bool public calledInitialize = false;
+    bool private calledInitialize;
 
     address public aelinRewardsAddress;
     address public aelinDealLogicAddress;

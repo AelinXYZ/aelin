@@ -34,7 +34,7 @@ contract AelinDeal is AelinERC20, IAelinDeal {
     uint256 public openRedemptionStart;
     uint256 public openRedemptionExpiry;
 
-    bool public calledInitialize;
+    bool private calledInitialize;
     bool public depositComplete;
     mapping(address => uint256) public amountVested;
 
