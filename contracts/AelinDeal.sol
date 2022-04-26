@@ -2,10 +2,11 @@
 pragma solidity 0.8.6;
 
 import "./AelinERC20.sol";
+import "./interfaces/IAelinDeal.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract AelinDeal is AelinERC20 {
+contract AelinDeal is AelinERC20, IAelinDeal {
     using SafeERC20 for IERC20;
     uint256 public maxTotalSupply;
 
@@ -49,36 +50,28 @@ contract AelinDeal is AelinERC20 {
      * NOTE the deal tokens wrapping the underlying are always 18 decimals
      */
     function initialize(
-        string memory _name,
-        string memory _symbol,
-        address _underlyingDealToken,
-        uint256 _underlyingDealTokenTotal,
-        uint256 _vestingPeriod,
-        uint256 _vestingCliffPeriod,
-        uint256 _proRataRedemptionPeriod,
-        uint256 _openRedemptionPeriod,
-        address _holder,
-        uint256 _maxDealTotalSupply,
-        uint256 _holderFundingDuration,
+        string memory _poolName,
+        string memory _poolSymbol,
+        DealData memory _dealData,
         address _aelinRewardsAddress
     ) external initOnce {
         _setNameSymbolAndDecimals(
-            string(abi.encodePacked("aeDeal-", _name)),
-            string(abi.encodePacked("aeD-", _symbol)),
+            string(abi.encodePacked("aeDeal-", _poolName)),
+            string(abi.encodePacked("aeD-", _poolSymbol)),
             DEAL_TOKEN_DECIMALS
         );
 
-        holder = _holder;
-        underlyingDealToken = _underlyingDealToken;
-        underlyingDealTokenTotal = _underlyingDealTokenTotal;
-        maxTotalSupply = _maxDealTotalSupply;
+        holder = _dealData.holder;
+        underlyingDealToken = _dealData.underlyingDealToken;
+        underlyingDealTokenTotal = _dealData.underlyingDealTokenTotal;
+        maxTotalSupply = _dealData.maxDealTotalSupply;
 
         aelinPool = msg.sender;
-        vestingCliffPeriod = _vestingCliffPeriod;
-        vestingPeriod = _vestingPeriod;
-        proRataRedemptionPeriod = _proRataRedemptionPeriod;
-        openRedemptionPeriod = _openRedemptionPeriod;
-        holderFundingExpiry = _holderFundingDuration;
+        vestingCliffPeriod = _dealData.vestingCliffPeriod;
+        vestingPeriod = _dealData.vestingPeriod;
+        proRataRedemptionPeriod = _dealData.proRataRedemptionPeriod;
+        openRedemptionPeriod = _dealData.openRedemptionPeriod;
+        holderFundingExpiry = _dealData.holderFundingDuration;
         aelinRewardsAddress = _aelinRewardsAddress;
 
         depositComplete = false;
@@ -86,8 +79,8 @@ contract AelinDeal is AelinERC20 {
         /**
          * calculates the amount of underlying deal tokens you get per wrapped deal token accepted
          */
-        underlyingPerDealExchangeRate = (_underlyingDealTokenTotal * 1e18) / maxTotalSupply;
-        emit SetHolder(_holder);
+        underlyingPerDealExchangeRate = (_dealData.underlyingDealTokenTotal * 1e18) / maxTotalSupply;
+        emit SetHolder(_dealData.holder);
     }
 
     modifier initOnce() {
@@ -137,11 +130,7 @@ contract AelinDeal is AelinERC20 {
             depositComplete = true;
             proRataRedemptionStart = block.timestamp;
             proRataRedemptionExpiry = block.timestamp + proRataRedemptionPeriod;
-            vestingCliffExpiry =
-                block.timestamp +
-                proRataRedemptionPeriod +
-                openRedemptionPeriod +
-                vestingCliffPeriod;
+            vestingCliffExpiry = block.timestamp + proRataRedemptionPeriod + openRedemptionPeriod + vestingCliffPeriod;
             vestingExpiry = vestingCliffExpiry + vestingPeriod;
 
             if (openRedemptionPeriod > 0) {
@@ -223,9 +212,12 @@ contract AelinDeal is AelinERC20 {
         dealTokensClaimable = 0;
 
         uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
-        if (balanceOf(purchaser) > 0 && (maxTime > vestingCliffExpiry || (maxTime == vestingCliffExpiry && vestingPeriod == 0))) {
+        if (
+            balanceOf(purchaser) > 0 &&
+            (maxTime > vestingCliffExpiry || (maxTime == vestingCliffExpiry && vestingPeriod == 0))
+        ) {
             uint256 timeElapsed = maxTime - vestingCliffExpiry;
-            
+
             dealTokensClaimable = vestingPeriod == 0
                 ? balanceOf(purchaser)
                 : ((balanceOf(purchaser) + amountVested[purchaser]) * timeElapsed) / vestingPeriod - amountVested[purchaser];

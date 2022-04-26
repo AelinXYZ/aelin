@@ -120,18 +120,13 @@ describe("AelinPool", function () {
         duration,
         sponsorFee,
         purchaseDuration: purchaseExpiry,
+        allowListAddresses: useAllowList ? allowList : [],
+        allowListAmounts: useAllowList ? allowListAmounts : [],
       },
       sponsor.address,
       aelinDealLogic.address,
       mockAelinRewardsAddress
     );
-
-    if (useAllowList) {
-      // TODO connect with the factory
-      await aelinPool
-        .connect(deployer)
-        .updateAllowList(allowList, allowListAmounts);
-    }
 
     return tx;
   };
@@ -174,6 +169,8 @@ describe("AelinPool", function () {
             duration: 365 * 24 * 60 * 60 + 1, // 1 second greater than 365 days,
             sponsorFee,
             purchaseDuration: purchaseExpiry,
+            allowListAddresses: [],
+            allowListAmounts: [],
           },
           sponsor.address,
           aelinDealLogic.address,
@@ -198,6 +195,8 @@ describe("AelinPool", function () {
             duration: 365 * 24 * 60 * 60 - 100,
             sponsorFee,
             purchaseDuration: purchaseExpiry,
+            allowListAddresses: [],
+            allowListAmounts: [],
           },
           sponsor.address,
           aelinDealLogic.address,
@@ -217,6 +216,8 @@ describe("AelinPool", function () {
             duration,
             sponsorFee,
             purchaseDuration: 30 * 60 - 1, // 1 second less than 30min,
+            allowListAddresses: [],
+            allowListAmounts: [],
           },
           sponsor.address,
           aelinDealLogic.address,
@@ -236,6 +237,8 @@ describe("AelinPool", function () {
             duration,
             sponsorFee,
             purchaseDuration: 30 * 24 * 60 * 60 + 1, // 1 second more than 30 days,
+            allowListAddresses: [],
+            allowListAmounts: [],
           },
           sponsor.address,
           aelinDealLogic.address,
@@ -255,6 +258,8 @@ describe("AelinPool", function () {
             duration,
             sponsorFee: ethers.utils.parseEther("98.1"),
             purchaseDuration: purchaseExpiry,
+            allowListAddresses: [],
+            allowListAmounts: [],
           },
           sponsor.address,
           aelinDealLogic.address,
@@ -307,14 +312,18 @@ describe("AelinPool", function () {
       expect(await aelinPool.allowList(allowList[0])).to.equal(
         allowListAmounts[0]
       );
-      const [allowLog1, allowLog2, allowLog3] = await aelinPool.queryFilter(aelinPool.filters.AllowlistAddress());
+      const [allowLog1, allowLog2, allowLog3] = await aelinPool.queryFilter(
+        aelinPool.filters.AllowlistAddress()
+      );
       expect(allowLog1.args.purchaser).to.equal(deployer.address);
       expect(allowLog1.args.allowlistAmount).to.equal(purchaseTokenCap);
       expect(allowLog2.args.purchaser).to.equal(holder.address);
       expect(allowLog2.args.allowlistAmount).to.equal(purchaseTokenCap.div(2));
       expect(allowLog3.args.purchaser).to.equal(nonsponsor.address);
-      expect(allowLog3.args.allowlistAmount).to.equal(ethers.constants.MaxInt256);
-      
+      expect(allowLog3.args.allowlistAmount).to.equal(
+        ethers.constants.MaxInt256
+      );
+
       const returnAddress = await aelinPool.purchaseToken();
       expect(returnAddress.toLowerCase()).to.equal(
         purchaseToken.address.toLowerCase()

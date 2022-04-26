@@ -112,22 +112,22 @@ describe("AelinDeal", function () {
   }: {
     timestamp: number;
   }) =>
-    aelinDeal
-      .connect(deployer)
-      .initialize(
-        name,
-        symbol,
-        underlyingDealToken.address,
+    aelinDeal.connect(deployer).initialize(
+      name,
+      symbol,
+      {
+        underlyingDealToken: underlyingDealToken.address,
         underlyingDealTokenTotal,
         vestingPeriod,
-        vestingCliff,
+        vestingCliffPeriod: vestingCliff,
         proRataRedemptionPeriod,
         openRedemptionPeriod,
-        holder.address,
-        poolTokenMaxPurchaseAmount,
-        holderFundingExpiryBase + timestamp,
-        treasury.address
-      );
+        holder: holder.address,
+        maxDealTotalSupply: poolTokenMaxPurchaseAmount,
+        holderFundingDuration: holderFundingExpiryBase + timestamp,
+      },
+      treasury.address
+    );
 
   const fundDealAndMintTokens = async () => {
     await underlyingDealToken
@@ -832,22 +832,22 @@ describe("AelinDeal", function () {
   describe("custom deal initializations", function () {
     it("should allow a purchaser to claim their tokens right away if there is no vesting schedule", async function () {
       const { timestamp } = await ethers.provider.getBlock("latest");
-      aelinDeal
-        .connect(deployer)
-        .initialize(
-          name,
-          symbol,
-          underlyingDealToken.address,
+      aelinDeal.connect(deployer).initialize(
+        name,
+        symbol,
+        {
+          underlyingDealToken: underlyingDealToken.address,
           underlyingDealTokenTotal,
-          0,
-          0,
+          vestingPeriod: 0,
+          vestingCliffPeriod: 0,
           proRataRedemptionPeriod,
           openRedemptionPeriod,
-          holder.address,
-          poolTokenMaxPurchaseAmount,
-          holderFundingExpiryBase + timestamp,
-          treasury.address
-        );
+          holder: holder.address,
+          maxDealTotalSupply: poolTokenMaxPurchaseAmount,
+          holderFundingDuration: holderFundingExpiryBase + timestamp,
+        },
+        treasury.address
+      );
 
       await fundDealAndMintTokens();
       await ethers.provider.send("evm_increaseTime", [
