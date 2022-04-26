@@ -13,4 +13,10 @@ interface IAelinDeal {
         uint256 maxDealTotalSupply;
         uint256 holderFundingDuration;
     }
+
+    struct Timeline {
+        uint256 period;
+        uint256 start;
+        uint256 expiry;
+    }
 }

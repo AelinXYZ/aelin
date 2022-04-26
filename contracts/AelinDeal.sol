@@ -26,17 +26,12 @@ contract AelinDeal is AelinERC20, IAelinDeal {
     uint256 public vestingExpiry;
     uint256 public holderFundingExpiry;
 
-    uint256 public proRataRedemptionPeriod;
-    uint256 public proRataRedemptionStart;
-    uint256 public proRataRedemptionExpiry;
-
-    uint256 public openRedemptionPeriod;
-    uint256 public openRedemptionStart;
-    uint256 public openRedemptionExpiry;
-
     bool private calledInitialize;
     bool public depositComplete;
     mapping(address => uint256) public amountVested;
+
+    Timeline public openRedemption;
+    Timeline public proRataRedemption;
 
     /**
      * @dev the constructor will always be blank due to the MinimalProxyFactory pattern
@@ -69,8 +64,8 @@ contract AelinDeal is AelinERC20, IAelinDeal {
         aelinPool = msg.sender;
         vestingCliffPeriod = _dealData.vestingCliffPeriod;
         vestingPeriod = _dealData.vestingPeriod;
-        proRataRedemptionPeriod = _dealData.proRataRedemptionPeriod;
-        openRedemptionPeriod = _dealData.openRedemptionPeriod;
+        proRataRedemption.period = _dealData.proRataRedemptionPeriod;
+        openRedemption.period = _dealData.openRedemptionPeriod;
         holderFundingExpiry = _dealData.holderFundingDuration;
         aelinRewardsAddress = _aelinRewardsAddress;
 
@@ -128,21 +123,21 @@ contract AelinDeal is AelinERC20, IAelinDeal {
 
         if (IERC20(underlyingDealToken).balanceOf(address(this)) >= underlyingDealTokenTotal) {
             depositComplete = true;
-            proRataRedemptionStart = block.timestamp;
-            proRataRedemptionExpiry = block.timestamp + proRataRedemptionPeriod;
-            vestingCliffExpiry = block.timestamp + proRataRedemptionPeriod + openRedemptionPeriod + vestingCliffPeriod;
+            proRataRedemption.start = block.timestamp;
+            proRataRedemption.expiry = block.timestamp + proRataRedemption.period;
+            vestingCliffExpiry = block.timestamp + proRataRedemption.period + openRedemption.period + vestingCliffPeriod;
             vestingExpiry = vestingCliffExpiry + vestingPeriod;
 
-            if (openRedemptionPeriod > 0) {
-                openRedemptionStart = proRataRedemptionExpiry;
-                openRedemptionExpiry = proRataRedemptionExpiry + openRedemptionPeriod;
+            if (openRedemption.period > 0) {
+                openRedemption.start = proRataRedemption.expiry;
+                openRedemption.expiry = proRataRedemption.expiry + openRedemption.period;
             }
             emit DealFullyFunded(
                 aelinPool,
-                proRataRedemptionStart,
-                proRataRedemptionExpiry,
-                openRedemptionStart,
-                openRedemptionExpiry
+                proRataRedemption.start,
+                proRataRedemption.expiry,
+                openRedemption.start,
+                openRedemption.expiry
             );
             return true;
         }
@@ -178,9 +173,9 @@ contract AelinDeal is AelinERC20, IAelinDeal {
      * - both the pro rata and open redemption windows are no longer active
      */
     function withdrawExpiry() external onlyHolder {
-        require(proRataRedemptionExpiry > 0, "redemption period not started");
+        require(proRataRedemption.expiry > 0, "redemption period not started");
         require(
-            openRedemptionExpiry > 0 ? block.timestamp >= openRedemptionExpiry : block.timestamp >= proRataRedemptionExpiry,
+            openRedemption.expiry > 0 ? block.timestamp >= openRedemption.expiry : block.timestamp >= proRataRedemption.expiry,
             "redeem window still active"
         );
         uint256 withdrawAmount = IERC20(underlyingDealToken).balanceOf(address(this)) -
