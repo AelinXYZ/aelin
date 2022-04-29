@@ -33,7 +33,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     uint256 public totalAmountWithdrawn;
     uint256 public purchaseTokenTotalForDeal;
 
-    bool public calledInitialize = false;
+    bool private calledInitialize;
 
     address public aelinRewardsAddress;
     address public aelinDealLogicAddress;
@@ -262,11 +262,13 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
      * or if the pro rata period is not active, then you have 0 available for this period
      */
     function maxProRataAmount(address purchaser) public view returns (uint256) {
+        ( , uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
+
         if (
             (balanceOf(purchaser) == 0 && amountAccepted[purchaser] == 0 && amountWithdrawn[purchaser] == 0) ||
             holderFundingExpiry == 0 ||
-            aelinDeal.proRataRedemptionStart() == 0 ||
-            block.timestamp >= aelinDeal.proRataRedemptionExpiry()
+            proRataRedemptionStart == 0 ||
+            block.timestamp >= proRataRedemptionExpiry
         ) {
             return 0;
         }
@@ -288,9 +290,12 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256 poolTokenAmount,
         bool useMax
     ) internal dealFunded lock {
-        if (block.timestamp >= aelinDeal.proRataRedemptionStart() && block.timestamp < aelinDeal.proRataRedemptionExpiry()) {
+        ( , uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
+        ( , uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
+
+        if (block.timestamp >= proRataRedemptionStart && block.timestamp < proRataRedemptionExpiry) {
             _acceptDealTokensProRata(recipient, poolTokenAmount, useMax);
-        } else if (aelinDeal.openRedemptionStart() > 0 && block.timestamp < aelinDeal.openRedemptionExpiry()) {
+        } else if (openRedemptionStart > 0 && block.timestamp < openRedemptionExpiry) {
             _acceptDealTokensOpen(recipient, poolTokenAmount, useMax);
         } else {
             revert("outside of redeem window");
@@ -421,14 +426,18 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
          * or if the period is outside of a redemption window so nothing is available.
          * It then checks if you are in the pro rata period and open period eligibility
          */
+        
+        ( , uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
+        ( , uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
+
         if (
             holderFundingExpiry == 0 ||
-            aelinDeal.proRataRedemptionStart() == 0 ||
-            (block.timestamp >= aelinDeal.proRataRedemptionExpiry() && aelinDeal.openRedemptionStart() == 0) ||
-            (block.timestamp >= aelinDeal.openRedemptionExpiry() && aelinDeal.openRedemptionStart() != 0)
+            proRataRedemptionStart == 0 ||
+            (block.timestamp >= proRataRedemptionExpiry && openRedemptionStart == 0) ||
+            (block.timestamp >= openRedemptionExpiry && openRedemptionStart != 0)
         ) {
             return 0;
-        } else if (block.timestamp < aelinDeal.proRataRedemptionExpiry()) {
+        } else if (block.timestamp < proRataRedemptionExpiry) {
             uint256 maxProRata = maxProRataAmount(purchaser);
             return maxProRata > balanceOf(purchaser) ? balanceOf(purchaser) : maxProRata;
         } else if (!openPeriodEligible[purchaser]) {
@@ -439,10 +448,13 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     }
 
     modifier transferWindow() {
+        ( , uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
+        ( , uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
+
         require(
-            aelinDeal.proRataRedemptionStart() == 0 ||
-                (block.timestamp >= aelinDeal.proRataRedemptionExpiry() && aelinDeal.openRedemptionStart() == 0) ||
-                (block.timestamp >= aelinDeal.openRedemptionExpiry() && aelinDeal.openRedemptionStart() != 0),
+            proRataRedemptionStart == 0 ||
+                (block.timestamp >= proRataRedemptionExpiry && openRedemptionStart == 0) ||
+                (block.timestamp >= openRedemptionExpiry && openRedemptionStart != 0),
             "no transfers in redeem window"
         );
         _;

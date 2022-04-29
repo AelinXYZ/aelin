@@ -148,6 +148,9 @@ describe("AelinDeal", function () {
         timestamp: latestTimestamp,
       });
 
+      const [proRataPeriod, , ] = await aelinDeal.proRataRedemption();
+      const [openPeriod, , ] = await aelinDeal.openRedemption();
+
       // TODO test the aelinDeal.AELIN_POOL() variable
       expect(await aelinDeal.name()).to.equal(`aeDeal-${name}`);
       expect(await aelinDeal.symbol()).to.equal(`aeD-${symbol}`);
@@ -161,12 +164,8 @@ describe("AelinDeal", function () {
       );
       expect(await aelinDeal.vestingCliffPeriod()).to.equal(vestingCliff);
       expect(await aelinDeal.vestingPeriod()).to.equal(vestingPeriod);
-      expect(await aelinDeal.proRataRedemptionPeriod()).to.equal(
-        proRataRedemptionPeriod
-      );
-      expect(await aelinDeal.openRedemptionPeriod()).to.equal(
-        openRedemptionPeriod
-      );
+      expect(proRataPeriod).to.equal(proRataRedemptionPeriod);
+      expect(openPeriod).to.equal(openRedemptionPeriod);
       expect(await aelinDeal.underlyingPerDealExchangeRate()).to.equal(
         underlyingPerDealExchangeRate
       );
