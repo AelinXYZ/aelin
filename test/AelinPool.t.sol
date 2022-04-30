@@ -2,17 +2,392 @@
 pragma solidity 0.8.6;
 
 import "ds-test/test.sol";
+import "forge-std/Test.sol";
 import {AelinPool} from "../contracts/AelinPool.sol";
+import {AelinDeal} from "../contracts/AelinDeal.sol";
+import {AelinPoolFactory} from "../contracts/AelinPoolFactory.sol";
+import {IAelinDeal} from "../contracts/interfaces/IAelinDeal.sol";
+import {IAelinPool} from "../contracts/interfaces/IAelinPool.sol";
+import {MockERC20} from "./mocks/MockERC20.sol";
+import {Vm} from "forge-std/Vm.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract ContractTest is DSTest {
+
+contract AelinPoolTest is DSTest {
+
+    address public aelinRewards = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
+    address public poolAddress;
 
     AelinPool public pool;
+    AelinDeal public deal;
+    AelinPoolFactory public poolFactory;
+    Vm public vm = Vm(HEVM_ADDRESS);
+
+    MockERC20 public dealToken;
+    MockERC20 public purchaseToken;
+
+    using stdStorage for StdStorage;
+    StdStorage public stdstore;
+
+    function writeTokenBalance(
+        address who,
+        address token,
+        uint256 amt
+    ) internal {
+        stdstore
+            .target(token)
+            .sig(IERC20(token).balanceOf.selector)
+            .with_key(who)
+            .checked_write(amt);
+    }
 
     function setUp() public {
         pool = new AelinPool();
+        deal = new AelinDeal();
+        poolFactory = new AelinPoolFactory(address(pool), address(deal), aelinRewards);
+        dealToken = new MockERC20("MockDeal", "MD");
+        purchaseToken = new MockERC20("MockPool", "MP");
+
+        writeTokenBalance(address(this), address(purchaseToken), 1e75);
+
+        address[] memory allowListAddresses;
+        uint256[] memory allowListAmounts;
+
+        IAelinPool.PoolData memory poolData;
+        poolData = IAelinPool.PoolData({
+            name: "POOL",
+            symbol: "POOL",
+            purchaseTokenCap: 1e35,
+            purchaseToken: address(purchaseToken),
+            duration: 30 days,
+            sponsorFee: 2e18,
+            purchaseDuration: 20 days,
+            allowListAddresses: allowListAddresses,
+            allowListAmounts: allowListAmounts
+        });
+
+        poolAddress = poolFactory.createPool(poolData);
+
+        purchaseToken.approve(address(poolAddress), type(uint256).max);
     }
 
-    function testExample() public {
-        emit log_address(pool.purchaseToken());
+    /*//////////////////////////////////////////////////////////////
+                            initialize
+    //////////////////////////////////////////////////////////////*/
+
+    function testInitialize() public {
+        assertEq(AelinPool(poolAddress).name(), "aePool-POOL");
+        assertEq(AelinPool(poolAddress).symbol(), "aeP-POOL");
+        assertEq(AelinPool(poolAddress).decimals(), 18);
+        assertEq(AelinPool(poolAddress).poolFactory(), address(poolFactory));
+        assertEq(AelinPool(poolAddress).purchaseTokenCap(), 1e35);
+        assertEq(AelinPool(poolAddress).purchaseToken(), address(purchaseToken));
+        assertEq(AelinPool(poolAddress).purchaseExpiry(), block.timestamp + 20 days);
+        assertEq(AelinPool(poolAddress).poolExpiry(), block.timestamp + 20 days + 30 days);
+        assertEq(AelinPool(poolAddress).sponsorFee(), 2e18);
+        assertEq(AelinPool(poolAddress).sponsor(), address(this));
+        assertEq(AelinPool(poolAddress).aelinDealLogicAddress(), address(deal));
+        assertEq(AelinPool(poolAddress).aelinRewardsAddress(), address(aelinRewards));
+        assertTrue(!AelinPool(poolAddress).hasAllowList());
     }
+
+    /*//////////////////////////////////////////////////////////////
+                          purchasePoolTokens
+    //////////////////////////////////////////////////////////////*/
+
+    function testFuzzPurchasePoolTokens(uint256 purchaseTokenAmount, uint256 timestamp) public {
+        vm.assume(purchaseTokenAmount <= 1e27);
+        vm.assume(timestamp < AelinPool(poolAddress).purchaseExpiry());
+        assertTrue(!AelinPool(poolAddress).hasAllowList());
+
+        uint256 balanceOfPoolBeforePurchase = IERC20(purchaseToken).balanceOf(address(poolAddress));
+
+        vm.warp(timestamp);
+        AelinPool(poolAddress).purchasePoolTokens(purchaseTokenAmount);
+
+        assertEq(AelinPool(poolAddress).balanceOf(address(this)), purchaseTokenAmount);
+        assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), balanceOfPoolBeforePurchase + purchaseTokenAmount);
+        if(purchaseTokenAmount == 1e27) assertEq(AelinPool(poolAddress).purchaseExpiry(), timestamp);
+        assertEq(AelinPool(poolAddress).totalSupply(), AelinPool(poolAddress).balanceOf(address(this)));
+    }
+
+    function testFuzzMultiplePurchasePoolTokens(uint256 purchaseTokenAmount, uint256 numberOfTimes) public {
+        vm.assume(purchaseTokenAmount <= 1e27);
+        vm.assume(numberOfTimes <= 1000);
+
+        uint256 balanceOfPoolBeforePurchase = IERC20(purchaseToken).balanceOf(address(poolAddress));
+        uint256 purchaseTokenTotal;
+
+        for(uint256 i; i < numberOfTimes; ) {
+            purchaseTokenTotal += purchaseTokenAmount;
+            AelinPool(poolAddress).purchasePoolTokens(purchaseTokenAmount);
+
+            assertEq(AelinPool(poolAddress).balanceOf(address(this)), purchaseTokenTotal);
+            assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), balanceOfPoolBeforePurchase + purchaseTokenTotal);
+            if(purchaseTokenAmount == 1e27) assertEq(AelinPool(poolAddress).purchaseExpiry(), block.timestamp);
+            assertEq(AelinPool(poolAddress).totalSupply(), AelinPool(poolAddress).balanceOf(address(this)));
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            createDeal
+    //////////////////////////////////////////////////////////////*/
+
+    function testCreateDeal() public {
+        AelinPool(poolAddress).purchasePoolTokens(1e27);
+        
+        vm.warp(20 days);
+        address dealAddress = AelinPool(poolAddress).createDeal(
+            address(dealToken), 
+            1e27, 
+            1e27, 
+            10 days, 
+            20 days, 
+            30 days, 
+            0, 
+            address(this), 
+            30 days
+        );
+
+        (uint256 proRataPeriod, , ) = AelinDeal(dealAddress).proRataRedemption();
+        (uint256 openPeriod, , ) = AelinDeal(dealAddress).openRedemption();
+
+        assertEq(AelinPool(poolAddress).numberOfDeals(), 1);
+        assertEq(AelinPool(poolAddress).poolExpiry(), block.timestamp);
+        assertEq(AelinPool(poolAddress).holder(), address(this));
+        assertEq(AelinPool(poolAddress).holderFundingExpiry(), block.timestamp + 30 days);
+        assertEq(AelinPool(poolAddress).purchaseTokenTotalForDeal(), 1e27);
+        assertEq(AelinDeal(dealAddress).holder(), address(this));
+        assertEq(AelinDeal(dealAddress).underlyingDealToken(), address(dealToken));
+        assertEq(AelinDeal(dealAddress).underlyingDealTokenTotal(), 1e27);
+        assertEq(AelinDeal(dealAddress).maxTotalSupply(), 1e27);
+        assertEq(AelinDeal(dealAddress).aelinPool(), address(poolAddress));
+        assertEq(AelinDeal(dealAddress).vestingCliffPeriod(), 20 days);
+        assertEq(AelinDeal(dealAddress).vestingPeriod(), 10 days);
+        assertEq(proRataPeriod, 30 days);
+        assertEq(openPeriod, 0);
+        assertEq(AelinDeal(dealAddress).holderFundingExpiry(), block.timestamp + 30 days);
+        assertEq(AelinDeal(dealAddress).aelinRewardsAddress(), address(aelinRewards));
+        assertEq(AelinDeal(dealAddress).underlyingPerDealExchangeRate(), (1e27 * 1e18) / AelinDeal(dealAddress).maxTotalSupply());
+        assertTrue(!AelinDeal(dealAddress).depositComplete());
+    }
+
+    function testFuzzCreateDealDuration(
+        uint256 holderFundingDuration, 
+        uint256 proRataRedemptionPeriod
+    ) public {
+        vm.assume(holderFundingDuration >= 30 minutes);
+        vm.assume(holderFundingDuration <= 30 days);
+        vm.assume(proRataRedemptionPeriod >= 30 minutes);
+        vm.assume(proRataRedemptionPeriod <= 30 days);
+
+        AelinPool(poolAddress).purchasePoolTokens(1e27);
+
+        vm.warp(20 days);
+        address dealAddress = AelinPool(poolAddress).createDeal(
+            address(dealToken), 
+            1e27, 
+            1e27, 
+            0, 
+            0, 
+            proRataRedemptionPeriod, 
+            0, 
+            address(this), 
+            holderFundingDuration
+        );
+
+        (uint256 proRataPeriod, , ) = AelinDeal(dealAddress).proRataRedemption();
+        (uint256 openPeriod, , ) = AelinDeal(dealAddress).openRedemption();
+
+        assertEq(AelinPool(poolAddress).numberOfDeals(), 1);
+        assertEq(AelinPool(poolAddress).poolExpiry(), block.timestamp);
+        assertEq(AelinPool(poolAddress).holder(), address(this));
+        assertEq(AelinPool(poolAddress).holderFundingExpiry(), block.timestamp + holderFundingDuration);
+        assertEq(AelinPool(poolAddress).purchaseTokenTotalForDeal(), 1e27);
+        assertEq(AelinDeal(dealAddress).holder(), address(this));
+        assertEq(AelinDeal(dealAddress).underlyingDealToken(), address(dealToken));
+        assertEq(AelinDeal(dealAddress).underlyingDealTokenTotal(), 1e27);
+        assertEq(AelinDeal(dealAddress).maxTotalSupply(), 1e27);
+        assertEq(AelinDeal(dealAddress).aelinPool(), address(poolAddress));
+        assertEq(AelinDeal(dealAddress).vestingCliffPeriod(), 0);
+        assertEq(AelinDeal(dealAddress).vestingPeriod(), 0);
+        assertEq(proRataPeriod, proRataRedemptionPeriod);
+        assertEq(openPeriod, 0);
+        assertEq(AelinDeal(dealAddress).holderFundingExpiry(), block.timestamp + holderFundingDuration);
+        assertEq(AelinDeal(dealAddress).aelinRewardsAddress(), address(aelinRewards));
+        assertEq(AelinDeal(dealAddress).underlyingPerDealExchangeRate(), (1e27 * 1e18) / AelinDeal(dealAddress).maxTotalSupply());
+        assertTrue(!AelinDeal(dealAddress).depositComplete());
+    }
+
+    function testFuzzCreateDealVesting(
+        uint256 vestingCliffPeriod, 
+        uint256 vestingPeriod
+    ) public {
+        vm.assume(vestingPeriod <= 1825 days);
+        vm.assume(vestingCliffPeriod <= 1825 days);
+
+        AelinPool(poolAddress).purchasePoolTokens(1e27);
+
+        vm.warp(20 days);
+        address dealAddress = AelinPool(poolAddress).createDeal(
+            address(dealToken), 
+            1e27, 
+            1e27, 
+            vestingPeriod, 
+            vestingCliffPeriod, 
+            30 days, 
+            0, 
+            address(this), 
+            30 days
+        );
+
+        (uint256 proRataPeriod, , ) = AelinDeal(dealAddress).proRataRedemption();
+        (uint256 openPeriod, , ) = AelinDeal(dealAddress).openRedemption();
+
+        assertEq(AelinPool(poolAddress).numberOfDeals(), 1);
+        assertEq(AelinPool(poolAddress).poolExpiry(), block.timestamp);
+        assertEq(AelinPool(poolAddress).holder(), address(this));
+        assertEq(AelinPool(poolAddress).holderFundingExpiry(), block.timestamp + 30 days);
+        assertEq(AelinPool(poolAddress).purchaseTokenTotalForDeal(), 1e27);
+        assertEq(AelinDeal(dealAddress).holder(), address(this));
+        assertEq(AelinDeal(dealAddress).underlyingDealToken(), address(dealToken));
+        assertEq(AelinDeal(dealAddress).underlyingDealTokenTotal(), 1e27);
+        assertEq(AelinDeal(dealAddress).maxTotalSupply(), 1e27);
+        assertEq(AelinDeal(dealAddress).aelinPool(), address(poolAddress));
+        assertEq(AelinDeal(dealAddress).vestingCliffPeriod(), vestingCliffPeriod);
+        assertEq(AelinDeal(dealAddress).vestingPeriod(), vestingPeriod);
+        assertEq(proRataPeriod, 30 days);
+        assertEq(openPeriod, 0);
+        assertEq(AelinDeal(dealAddress).holderFundingExpiry(), block.timestamp + 30 days);
+        assertEq(AelinDeal(dealAddress).aelinRewardsAddress(), address(aelinRewards));
+        assertEq(AelinDeal(dealAddress).underlyingPerDealExchangeRate(), (1e27 * 1e18) / AelinDeal(dealAddress).maxTotalSupply());
+        assertTrue(!AelinDeal(dealAddress).depositComplete());
+    }
+
+    function testFuzzCreateDealTokenTotal(
+        uint256 purchaseTokenTotalForDeal, 
+        uint256 underlyingDealTokenTotal,
+        uint256 openRedemptionPeriod
+    ) public {
+        vm.assume(purchaseTokenTotalForDeal > 0);
+        vm.assume(purchaseTokenTotalForDeal <= 1e27);
+        vm.assume(underlyingDealTokenTotal > 0);
+        vm.assume(underlyingDealTokenTotal <= 1e35);
+        if(purchaseTokenTotalForDeal == 1e27) vm.assume(openRedemptionPeriod == 0);
+        vm.assume(openRedemptionPeriod >= 30 minutes);
+        vm.assume(openRedemptionPeriod <= 30 days);
+
+        AelinPool(poolAddress).purchasePoolTokens(1e27);
+
+        vm.warp(20 days);
+        address dealAddress = AelinPool(poolAddress).createDeal(
+            address(dealToken), 
+            purchaseTokenTotalForDeal, 
+            underlyingDealTokenTotal, 
+            20 days, 
+            20 days, 
+            20 days, 
+            openRedemptionPeriod, 
+            address(this), 
+            30 days
+        );
+
+        (uint256 proRataPeriod, , ) = AelinDeal(dealAddress).proRataRedemption();
+        (uint256 openPeriod, , ) = AelinDeal(dealAddress).openRedemption();
+
+        assertEq(AelinPool(poolAddress).numberOfDeals(), 1);
+        assertEq(AelinPool(poolAddress).poolExpiry(), block.timestamp);
+        assertEq(AelinPool(poolAddress).holder(), address(this));
+        assertEq(AelinPool(poolAddress).holderFundingExpiry(), block.timestamp + 30 days);
+        assertEq(AelinPool(poolAddress).purchaseTokenTotalForDeal(), purchaseTokenTotalForDeal);
+        assertEq(AelinDeal(dealAddress).holder(), address(this));
+        assertEq(AelinDeal(dealAddress).underlyingDealToken(), address(dealToken));
+        assertEq(AelinDeal(dealAddress).underlyingDealTokenTotal(), underlyingDealTokenTotal);
+        assertEq(AelinDeal(dealAddress).maxTotalSupply(), purchaseTokenTotalForDeal);
+        assertEq(AelinDeal(dealAddress).aelinPool(), address(poolAddress));
+        assertEq(AelinDeal(dealAddress).vestingCliffPeriod(), 20 days);
+        assertEq(AelinDeal(dealAddress).vestingPeriod(), 20 days);
+        assertEq(proRataPeriod, 20 days);
+        assertEq(openPeriod, openRedemptionPeriod);
+        assertEq(AelinDeal(dealAddress).holderFundingExpiry(), block.timestamp + 30 days);
+        assertEq(AelinDeal(dealAddress).aelinRewardsAddress(), address(aelinRewards));
+        assertEq(AelinDeal(dealAddress).underlyingPerDealExchangeRate(), (underlyingDealTokenTotal * 1e18) / AelinDeal(dealAddress).maxTotalSupply());
+        assertTrue(!AelinDeal(dealAddress).depositComplete());
+    }
+
+    function testFailCreateDeal() public {
+        vm.prank(address(0x1337));
+
+        pool.createDeal(
+            address(dealToken), 
+            1e27, 
+            1e27, 
+            10 days, 
+            20 days, 
+            30 days, 
+            0, 
+            address(this), 
+            30 days
+        );
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            maxDealAccept
+    //////////////////////////////////////////////////////////////*/
+
+    function testMaxDealAccept() public {
+        AelinPool(poolAddress).purchasePoolTokens(1e27);
+        
+        vm.warp(20 days);
+        AelinPool(poolAddress).createDeal(address(dealToken), 1e27, 1e27, 10 days, 20 days, 30 days, 0, address(this), 30 days);
+
+        uint256 maxDeal = AelinPool(poolAddress).maxDealAccept(address(this));
+        
+        assertEq(maxDeal, 0);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              sponsor
+    //////////////////////////////////////////////////////////////*/
+
+    function testFuzzSetSponsor(address futureSponsor) public {
+        AelinPool(poolAddress).setSponsor(futureSponsor);
+        assertEq(AelinPool(poolAddress).futureSponsor(), futureSponsor);
+        assertEq(AelinPool(poolAddress).sponsor(), address(this));
+    }
+
+    function testFailSetSponsor() public {
+        vm.prank(address(0x1337));
+        AelinPool(poolAddress).setSponsor(msg.sender);
+        assertEq(AelinPool(poolAddress).futureSponsor(), msg.sender);
+    }
+
+    function testFuzzAcceptSponsor(address futureSponsor) public {
+        AelinPool(poolAddress).setSponsor(futureSponsor);
+        vm.prank(address(futureSponsor));
+        AelinPool(poolAddress).acceptSponsor();
+        assertEq(AelinPool(poolAddress).sponsor(), address(futureSponsor));
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                          acceptDealTokens
+    //////////////////////////////////////////////////////////////*/
+
+    // TODO
+
+    /*//////////////////////////////////////////////////////////////
+                          maxProRataAmount
+    //////////////////////////////////////////////////////////////*/
+
+    // TODO
+
+    /*//////////////////////////////////////////////////////////////
+                          withdrawfromPool
+    //////////////////////////////////////////////////////////////*/
+
+    // TODO
 }

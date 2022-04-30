@@ -4,7 +4,7 @@ pragma solidity 0.8.6;
 import "ds-test/test.sol";
 import {AelinDeal} from "../contracts/AelinDeal.sol";
 
-contract ContractTest is DSTest {
+contract AelinDealTest is DSTest {
 
     AelinDeal public deal;
 
