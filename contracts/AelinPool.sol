@@ -70,6 +70,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         address _aelinDealLogicAddress,
         address _aelinRewardsAddress
     ) external initOnce {
+        require(_poolData.purchaseToken != address(0), "cant pass null purchaseToken address");
+        require(_sponsor != address(0), "cant pass null sponsor address");
+        require(_aelinDealLogicAddress != address(0), "cant pass null aelinDealLogicAddress");
+        require(_aelinRewardsAddress != address(0), "cant pass null aelinRewardsAddress");
         require(
             30 minutes <= _poolData.purchaseDuration && 30 days >= _poolData.purchaseDuration,
             "outside purchase expiry window"
@@ -364,6 +368,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
      * - the cap has not been exceeded
      */
     function purchasePoolTokens(uint256 _purchaseTokenAmount) external lock {
+        require(_purchaseTokenAmount > 0, "amount should be greater than 0");
         if (hasAllowList) {
             require(_purchaseTokenAmount <= allowList[msg.sender], "more than allocation");
             allowList[msg.sender] -= _purchaseTokenAmount;
@@ -426,7 +431,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
          * or if the period is outside of a redemption window so nothing is available.
          * It then checks if you are in the pro rata period and open period eligibility
          */
-        
+
         ( , uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
         ( , uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
 

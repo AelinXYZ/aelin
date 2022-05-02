@@ -179,6 +179,90 @@ describe("AelinPool", function () {
       ).to.be.revertedWith("max 1 year duration");
     });
 
+    it("should revert if purchaseTokenAddress is null", async function () {
+      await expect(
+        aelinPool.initialize(
+          {
+            name,
+            symbol,
+            purchaseTokenCap,
+            purchaseToken: nullAddress,
+            duration: 365 * 24 * 60 * 60 + 1, // 1 second greater than 365 days,
+            sponsorFee,
+            purchaseDuration: purchaseExpiry,
+            allowListAddresses: [],
+            allowListAmounts: [],
+          },
+          sponsor.address,
+          aelinDealLogic.address,
+          mockAelinRewardsAddress
+        )
+      ).to.be.revertedWith("cant pass null purchaseToken address");
+    });
+
+    it("should revert if sponsor address is null", async function () {
+      await expect(
+        aelinPool.initialize(
+          {
+            name,
+            symbol,
+            purchaseTokenCap,
+            purchaseToken: purchaseToken.address,
+            duration: 365 * 24 * 60 * 60 + 1, // 1 second greater than 365 days,
+            sponsorFee,
+            purchaseDuration: purchaseExpiry,
+            allowListAddresses: [],
+            allowListAmounts: [],
+          },
+          nullAddress,
+          aelinDealLogic.address,
+          mockAelinRewardsAddress
+        )
+      ).to.be.revertedWith("cant pass null sponsor address");
+    });
+
+    it("should revert if aelinDealLogicAddress is null", async function () {
+      await expect(
+        aelinPool.initialize(
+          {
+            name,
+            symbol,
+            purchaseTokenCap,
+            purchaseToken: purchaseToken.address,
+            duration: 365 * 24 * 60 * 60 + 1, // 1 second greater than 365 days,
+            sponsorFee,
+            purchaseDuration: purchaseExpiry,
+            allowListAddresses: [],
+            allowListAmounts: [],
+          },
+          sponsor.address,
+          nullAddress,
+          mockAelinRewardsAddress
+        )
+      ).to.be.revertedWith("cant pass null aelinDealLogicAddress");
+    });
+
+    it("should revert if aelinDealLogicAddress is null", async function () {
+      await expect(
+        aelinPool.initialize(
+          {
+            name,
+            symbol,
+            purchaseTokenCap,
+            purchaseToken: purchaseToken.address,
+            duration: 365 * 24 * 60 * 60 + 1, // 1 second greater than 365 days,
+            sponsorFee,
+            purchaseDuration: purchaseExpiry,
+            allowListAddresses: [],
+            allowListAmounts: [],
+          },
+          sponsor.address,
+          aelinDealLogic.address,
+          nullAddress
+        )
+      ).to.be.revertedWith("cant pass null aelinRewardsAddress");
+    });
+
     it("should revert if purchase token is more than 18 decimals due to conversion issues", async function () {
       const mockTokenTooManyDecimals = await deployMockContract(
         holder,
@@ -934,6 +1018,14 @@ describe("AelinPool", function () {
       expect(log.args.purchaser).to.equal(user1.address);
       expect(log.address).to.equal(aelinPool.address);
       expect(log.args.purchaseTokenAmount).to.equal(userPurchaseAmt);
+    });
+
+    it("should revert if purchase amount equals 0", async function () {
+      await expect(
+        aelinPool
+          .connect(user1)
+          .purchasePoolTokens(ethers.utils.parseUnits("0"))
+      ).to.be.revertedWith("amount should be greater than 0");
     });
 
     it("should fail the transaction when the cap has been exceeded", async function () {

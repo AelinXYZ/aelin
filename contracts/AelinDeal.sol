@@ -50,6 +50,8 @@ contract AelinDeal is AelinERC20, IAelinDeal {
         DealData memory _dealData,
         address _aelinRewardsAddress
     ) external initOnce {
+        require(_dealData.underlyingDealToken != address(0), "cant pass null underlyingDealToken address");
+        require(_dealData.holder != address(0), "cant pass null holder address");
         _setNameSymbolAndDecimals(
             string(abi.encodePacked("aeDeal-", _poolName)),
             string(abi.encodePacked("aeD-", _poolSymbol)),
@@ -198,24 +200,28 @@ contract AelinDeal is AelinERC20, IAelinDeal {
      * @dev a view showing the number of claimable deal tokens and the
      * amount of the underlying deal token a purchser gets in return
      */
-    function claimableTokens(address purchaser)
+    function claimableTokens(address _purchaser)
         public
         view
         returns (uint256 underlyingClaimable, uint256 dealTokensClaimable)
     {
+        return _claimableTokens(_purchaser);
+    }
+
+    function _claimableTokens(address _purchaser) internal view returns (uint256 underlyingClaimable, uint256 dealTokensClaimable) {
         underlyingClaimable = 0;
         dealTokensClaimable = 0;
 
         uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
         if (
-            balanceOf(purchaser) > 0 &&
+            balanceOf(_purchaser) > 0 &&
             (maxTime > vestingCliffExpiry || (maxTime == vestingCliffExpiry && vestingPeriod == 0))
         ) {
             uint256 timeElapsed = maxTime - vestingCliffExpiry;
 
             dealTokensClaimable = vestingPeriod == 0
-                ? balanceOf(purchaser)
-                : ((balanceOf(purchaser) + amountVested[purchaser]) * timeElapsed) / vestingPeriod - amountVested[purchaser];
+                ? balanceOf(_purchaser)
+                : ((balanceOf(_purchaser) + amountVested[_purchaser]) * timeElapsed) / vestingPeriod - amountVested[_purchaser];
             underlyingClaimable = (underlyingPerDealExchangeRate * dealTokensClaimable) / 1e18;
         }
     }
@@ -230,7 +236,7 @@ contract AelinDeal is AelinERC20, IAelinDeal {
     }
 
     function _claim(address recipient) internal returns (uint256) {
-        (uint256 underlyingDealTokensClaimed, uint256 dealTokensClaimed) = claimableTokens(recipient);
+        (uint256 underlyingDealTokensClaimed, uint256 dealTokensClaimed) = _claimableTokens(recipient);
         if (dealTokensClaimed > 0) {
             amountVested[recipient] += dealTokensClaimed;
             _burn(recipient, dealTokensClaimed);
@@ -265,7 +271,7 @@ contract AelinDeal is AelinERC20, IAelinDeal {
      */
     function treasuryTransfer(address recipient) external returns (bool) {
         require(msg.sender == aelinRewardsAddress, "only Rewards address can access");
-        (uint256 underlyingClaimable, uint256 claimableDealTokens) = claimableTokens(msg.sender);
+        (uint256 underlyingClaimable, uint256 claimableDealTokens) = _claimableTokens(msg.sender);
         transfer(recipient, balanceOf(msg.sender) - claimableDealTokens);
         return IERC20(underlyingDealToken).transferFrom(msg.sender, recipient, underlyingClaimable);
     }
@@ -277,12 +283,12 @@ contract AelinDeal is AelinERC20, IAelinDeal {
      * the claim calculation is always accurate for all parties in the system
      */
     function transferMax(address recipient) external blockTransfer returns (bool) {
-        (, uint256 claimableDealTokens) = claimableTokens(msg.sender);
+        (, uint256 claimableDealTokens) = _claimableTokens(msg.sender);
         return transfer(recipient, balanceOf(msg.sender) - claimableDealTokens);
     }
 
     function transferFromMax(address sender, address recipient) external blockTransfer returns (bool) {
-        (, uint256 claimableDealTokens) = claimableTokens(sender);
+        (, uint256 claimableDealTokens) = _claimableTokens(sender);
         return transferFrom(sender, recipient, balanceOf(sender) - claimableDealTokens);
     }
 

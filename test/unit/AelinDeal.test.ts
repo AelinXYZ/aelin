@@ -144,12 +144,12 @@ describe("AelinDeal", function () {
       const { timestamp: latestTimestamp } = await ethers.provider.getBlock(
         "latest"
       );
-      const tx = await successfullyInitializeDeal({
+      await successfullyInitializeDeal({
         timestamp: latestTimestamp,
       });
 
-      const [proRataPeriod, , ] = await aelinDeal.proRataRedemption();
-      const [openPeriod, , ] = await aelinDeal.openRedemption();
+      const [proRataPeriod, ,] = await aelinDeal.proRataRedemption();
+      const [openPeriod, ,] = await aelinDeal.openRedemption();
 
       // TODO test the aelinDeal.AELIN_POOL() variable
       expect(await aelinDeal.name()).to.equal(`aeDeal-${name}`);
@@ -181,6 +181,47 @@ describe("AelinDeal", function () {
           timestamp,
         })
       ).to.be.revertedWith("can only initialize once");
+    });
+
+    it("should revert if underlying deal token address is null", async function () {
+      await expect(
+        aelinDeal.connect(deployer).initialize(
+          name,
+          symbol,
+          {
+            underlyingDealToken: nullAddress,
+            underlyingDealTokenTotal,
+            vestingPeriod: 0,
+            vestingCliffPeriod: 0,
+            proRataRedemptionPeriod,
+            openRedemptionPeriod,
+            holder: holder.address,
+            maxDealTotalSupply: poolTokenMaxPurchaseAmount,
+            holderFundingDuration: holderFundingExpiryBase,
+          },
+          treasury.address
+        )
+      ).to.be.revertedWith("cant pass null underlyingDealToken address");
+    });
+    it("should revert if holder address is null", async function () {
+      await expect(
+        aelinDeal.connect(deployer).initialize(
+          name,
+          symbol,
+          {
+            underlyingDealToken: underlyingDealToken.address,
+            underlyingDealTokenTotal,
+            vestingPeriod: 0,
+            vestingCliffPeriod: 0,
+            proRataRedemptionPeriod,
+            openRedemptionPeriod,
+            holder: nullAddress,
+            maxDealTotalSupply: poolTokenMaxPurchaseAmount,
+            holderFundingDuration: holderFundingExpiryBase,
+          },
+          treasury.address
+        )
+      ).to.be.revertedWith("cant pass null holder address");
     });
   });
 
