@@ -65,7 +65,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
      * - max sponsor fee is 98000 representing 98%
      */
     function initialize(
-        PoolData memory _poolData,
+        PoolData calldata _poolData,
         address _sponsor,
         address _aelinDealLogicAddress,
         address _aelinRewardsAddress
@@ -97,14 +97,17 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         aelinDealLogicAddress = _aelinDealLogicAddress;
         aelinRewardsAddress = _aelinRewardsAddress;
 
-        if (_poolData.allowListAddresses.length > 0 || _poolData.allowListAmounts.length > 0) {
+        address[] memory tmpAllowListAddresses = _poolData.allowListAddresses;
+        uint256[] memory tmpAllowListAmounts = _poolData.allowListAmounts;
+
+        if (tmpAllowListAddresses.length > 0 || tmpAllowListAmounts.length > 0) {
             require(
-                _poolData.allowListAddresses.length == _poolData.allowListAmounts.length,
+                tmpAllowListAddresses.length == tmpAllowListAmounts.length,
                 "allowListAddresses and allowListAmounts arrays should have the same length"
             );
-            for (uint256 i = 0; i < _poolData.allowListAddresses.length; i++) {
-                allowList[_poolData.allowListAddresses[i]] = _poolData.allowListAmounts[i];
-                emit AllowlistAddress(_poolData.allowListAddresses[i], _poolData.allowListAmounts[i]);
+            for (uint256 i = 0; i < tmpAllowListAddresses.length; i++) {
+                allowList[tmpAllowListAddresses[i]] = tmpAllowListAmounts[i];
+                emit AllowlistAddress(tmpAllowListAddresses[i], tmpAllowListAmounts[i]);
             }
             hasAllowList = true;
         }

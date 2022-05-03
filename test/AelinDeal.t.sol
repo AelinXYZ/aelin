@@ -71,7 +71,7 @@ contract AelinDealTest is DSTest {
         purchaseToken.approve(address(poolAddress), type(uint256).max);
         AelinPool(poolAddress).purchasePoolTokens(1e27);
 
-        vm.warp(20 days);
+        vm.warp(block.timestamp + 20 days);
         dealAddress = AelinPool(poolAddress).createDeal(
             address(dealToken), 
             1e25, 
@@ -103,7 +103,7 @@ contract AelinDealTest is DSTest {
         assertEq(AelinDeal(dealAddress).vestingPeriod(), 10 days);
         assertEq(proRataPeriod, 30 days);
         assertEq(openPeriod, 10 days);
-        assertEq(AelinDeal(dealAddress).holderFundingExpiry(), 30 days + 20 days);
+        assertEq(AelinDeal(dealAddress).holderFundingExpiry(), block.timestamp + 30 days);
         assertEq(AelinDeal(dealAddress).aelinRewardsAddress(), address(aelinRewards));
         assertEq(AelinDeal(dealAddress).underlyingPerDealExchangeRate(), (1e35 * 1e18) / AelinDeal(dealAddress).maxTotalSupply());
         assertTrue(!AelinDeal(dealAddress).depositComplete());
@@ -129,7 +129,7 @@ contract AelinDealTest is DSTest {
     }
 
     function testDepositUnderlying() public {
-        vm.warp(10 days);
+        vm.warp(block.timestamp + 10 days);
         bool deposited = AelinDeal(dealAddress).depositUnderlying(1e35);
 
         (uint256 proRataPeriod, uint256 proRataStart, uint256 proRataExpiry) = AelinDeal(dealAddress).proRataRedemption();
@@ -150,7 +150,7 @@ contract AelinDealTest is DSTest {
 
     function testFuzzDepositUnderlying(uint256 amount) public {
         vm.assume(amount <= 1e35);
-        vm.warp(10 days);
+        vm.warp(block.timestamp + 10 days);
         bool deposited = AelinDeal(dealAddress).depositUnderlying(amount);
 
         (uint256 proRataPeriod, uint256 proRataStart, uint256 proRataExpiry) = AelinDeal(dealAddress).proRataRedemption();

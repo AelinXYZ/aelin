@@ -97,17 +97,17 @@ contract AelinPoolTest is DSTest {
 
     function testFuzzPurchasePoolTokens(uint256 purchaseTokenAmount, uint256 timestamp) public {
         vm.assume(purchaseTokenAmount <= 1e27);
-        vm.assume(timestamp < AelinPool(poolAddress).purchaseExpiry());
+        vm.assume(timestamp < 20 days);
         assertTrue(!AelinPool(poolAddress).hasAllowList());
 
         uint256 balanceOfPoolBeforePurchase = IERC20(purchaseToken).balanceOf(address(poolAddress));
 
-        vm.warp(timestamp);
+        vm.warp(block.timestamp + timestamp);
         AelinPool(poolAddress).purchasePoolTokens(purchaseTokenAmount);
 
         assertEq(AelinPool(poolAddress).balanceOf(address(this)), purchaseTokenAmount);
         assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), balanceOfPoolBeforePurchase + purchaseTokenAmount);
-        if(purchaseTokenAmount == 1e27) assertEq(AelinPool(poolAddress).purchaseExpiry(), timestamp);
+        if(purchaseTokenAmount == 1e27) assertEq(AelinPool(poolAddress).purchaseExpiry(), block.timestamp + timestamp);
         assertEq(AelinPool(poolAddress).totalSupply(), AelinPool(poolAddress).balanceOf(address(this)));
     }
 
@@ -140,7 +140,7 @@ contract AelinPoolTest is DSTest {
     function testCreateDeal() public {
         AelinPool(poolAddress).purchasePoolTokens(1e27);
         
-        vm.warp(20 days);
+        vm.warp(block.timestamp + 20 days);
         address dealAddress = AelinPool(poolAddress).createDeal(
             address(dealToken), 
             1e27, 
@@ -187,7 +187,7 @@ contract AelinPoolTest is DSTest {
 
         AelinPool(poolAddress).purchasePoolTokens(1e27);
 
-        vm.warp(20 days);
+        vm.warp(block.timestamp + 20 days);
         address dealAddress = AelinPool(poolAddress).createDeal(
             address(dealToken), 
             1e27, 
@@ -232,7 +232,7 @@ contract AelinPoolTest is DSTest {
 
         AelinPool(poolAddress).purchasePoolTokens(1e27);
 
-        vm.warp(20 days);
+        vm.warp(block.timestamp + 20 days);
         address dealAddress = AelinPool(poolAddress).createDeal(
             address(dealToken), 
             1e27, 
@@ -283,7 +283,7 @@ contract AelinPoolTest is DSTest {
 
         AelinPool(poolAddress).purchasePoolTokens(1e27);
 
-        vm.warp(20 days);
+        vm.warp(block.timestamp + 20 days);
         address dealAddress = AelinPool(poolAddress).createDeal(
             address(dealToken), 
             purchaseTokenTotalForDeal, 
@@ -342,12 +342,14 @@ contract AelinPoolTest is DSTest {
     function testMaxDealAccept() public {
         AelinPool(poolAddress).purchasePoolTokens(1e27);
         
-        vm.warp(20 days);
+        vm.warp(block.timestamp + 20 days);
         AelinPool(poolAddress).createDeal(address(dealToken), 1e27, 1e27, 10 days, 20 days, 30 days, 0, address(this), 30 days);
 
         uint256 maxDeal = AelinPool(poolAddress).maxDealAccept(address(this));
         
         assertEq(maxDeal, 0);
+
+        // TODO (Additional checks if required)
     }
 
     /*//////////////////////////////////////////////////////////////
