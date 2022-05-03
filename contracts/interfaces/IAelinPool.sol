@@ -12,5 +12,16 @@ interface IAelinPool {
         uint256 purchaseDuration;
         address[] allowListAddresses;
         uint256[] allowListAmounts;
+        NftData[] nftData;
+    }
+
+    struct NftData {
+        // if 0, then unlimited purchase
+        uint256 purchaseAmount;
+        address collectionAddress;
+        // if true, then `purchaseAmount` is per token
+        // else `purchaseAmount` is per account regardless of the NFTs held
+        bool purchaseAmountPerToken;
+        // can add tokenId for 1155, but cannot be 0 because there are many 721s with tokenid 0
     }
 }
