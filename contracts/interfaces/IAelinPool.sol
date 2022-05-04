@@ -15,6 +15,7 @@ interface IAelinPool {
         NftData[] nftData;
     }
 
+    // collectionAddress should be unique, otherwise will override
     struct NftData {
         // if 0, then unlimited purchase
         uint256 purchaseAmount;

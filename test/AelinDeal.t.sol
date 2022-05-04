@@ -52,6 +52,7 @@ contract AelinDealTest is DSTest {
 
         address[] memory allowListAddresses;
         uint256[] memory allowListAmounts;
+        IAelinPool.NftData[] memory nftData;
 
         IAelinPool.PoolData memory poolData;
         poolData = IAelinPool.PoolData({
@@ -63,7 +64,8 @@ contract AelinDealTest is DSTest {
             sponsorFee: 2e18,
             purchaseDuration: 20 days,
             allowListAddresses: allowListAddresses,
-            allowListAmounts: allowListAmounts
+            allowListAmounts: allowListAmounts,
+            nftData: nftData
         });
 
         poolAddress = poolFactory.createPool(poolData);

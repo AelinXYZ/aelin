@@ -47,8 +47,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     mapping(address => uint256) public allowList;
     // msg.sender -> purchaseAmount
     mapping(address => uint256) public nftAllowList;
-    // collectionAddress -> tokenId -> purchaseAmount
-    mapping(address => mapping(uint256 => uint256)) public nftPurchaseAmountPerToken;
     // collectionAddress -> nftData struct
     mapping(address => NftData) public nftCollectionDetails;
     // collectionAddress -> tokenId -> bool
@@ -408,62 +406,55 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         emit PurchasePoolToken(msg.sender, purchaseTokenAmount);
     }
 
-    // covers scenario 1 and 3 where one qualified nft can purchase tokens
-    function purchasePoolTokensWithMultipleNfts(
-        address _collectionAddress, 
-        uint256 _tokenId, 
-        uint256 _purchaseTokenAmount
-    ) external lock {
-        require(hasNftList, "does not have an NFT list");
+    /**
+     * @dev allows anyone to become a purchaser with a qualified erc721
+     * nft in the pool depending on the scenarios
+     *
+     * Scenarios:
+     * 1. each wallet holding a qualified NFT to deposit an unlimited amount of purchase tokens
+     * 2. certain amount of purchase tokens per wallet regardless of the number of qualified NFTs held
+     * 3. certain amount of Investment tokens per qualified NFT held
+     */
+    function purchasePoolScenario1and2for721(address _collectionAddress, uint256 _purchaseTokenAmount) public {
+        require(hasNftList, "pool does not have an NFT list");
         require(block.timestamp < purchaseExpiry, "not in purchase window");
-        require(NftCheck.supports721(_collectionAddress) || NftCheck.supports1155(_collectionAddress), "should be either 721 or 1155");
-        require(!nftIdUsedForPurchase[_collectionAddress][_tokenId], "token id already used");
+        require(IERC721(_collectionAddress).balanceOf(msg.sender) > 0, "should own atleast 1 nft");
 
         NftData memory tmpNftData = nftCollectionDetails[_collectionAddress];
-        require(tmpNftData.purchaseAmountPerToken, "purchase amount does not depend on the number of tokens held");
-
-        if(NftCheck.supports721(_collectionAddress)) {
-            require(IERC721(_collectionAddress).ownerOf(_tokenId) == msg.sender, "not the owner of the token");
-
-            nftIdUsedForPurchase[_collectionAddress][_tokenId] = true;   
-        }
-
-        if(NftCheck.supports1155(_collectionAddress)) {
-            require(IERC1155(_collectionAddress).balanceOf(msg.sender, _tokenId) > 0, "not the owner of the token id");
-        }
+        require(tmpNftData.collectionAddress == _collectionAddress, "collection not in the pool");
 
         if(tmpNftData.purchaseAmount > 0) {
-            require(nftPurchaseAmountPerToken[_collectionAddress][_tokenId] 
-                    + _purchaseTokenAmount <= tmpNftData.purchaseAmount, 
-                    "purchase amount should be less than the allocation");
-            nftPurchaseAmountPerToken[_collectionAddress][_tokenId] += _purchaseTokenAmount;
+            require(nftAllowList[msg.sender] + _purchaseTokenAmount <= tmpNftData.purchaseAmount, 
+                        "purchase amount should be less than the allocation");
+                nftAllowList[msg.sender] += _purchaseTokenAmount;
         }
+
+        // is blacklisting required here? else, anyone can transfer nfts and purchase more
 
         IERC20(purchaseToken).safeTransferFrom(msg.sender, address(this), _purchaseTokenAmount);
         _mint(msg.sender, _purchaseTokenAmount);
     }
 
-    // works only for 721 since there's no token Id
-    function purchasePoolTokensWithSingleNftCollection(address _collectionAddress, uint256 _purchaseTokenAmount) external lock {
-        require(hasNftList, "does not have an NFT list");
+    function purchasePoolScenario3for721(address _collectionAddress, uint256[] calldata _tokenIds, uint256 _purchaseAmountPerToken) public {
+        require(hasNftList, "pool does not have an NFT list");
         require(block.timestamp < purchaseExpiry, "not in purchase window");
-
+        require(_tokenIds.length > 0, "number of token ids should be more than 0");
+        
         NftData memory tmpNftData = nftCollectionDetails[_collectionAddress];
+        require(tmpNftData.collectionAddress == _collectionAddress, "collection not in the pool");
+        require(tmpNftData.purchaseAmountPerToken, "purchaseAmount is not per token");
 
-        if(NftCheck.supports721(_collectionAddress)) {
-            require(IERC721(_collectionAddress).balanceOf(msg.sender) > 0, "does not own a single token");
+        for(uint256 i = 0; i < _tokenIds.length; i++) {
+            require(IERC721(_collectionAddress).ownerOf(_tokenIds[i]) == msg.sender, "has to be the owner of the token");
+            require(!nftIdUsedForPurchase[_collectionAddress][_tokenIds[i]], "tokenId already used");
+            require(_purchaseAmountPerToken <= tmpNftData.purchaseAmount, 
+                        "purchase amount per token should be less than the allocation");
 
-            if(tmpNftData.purchaseAmount > 0) {
-                require(nftAllowList[msg.sender] + _purchaseTokenAmount <= tmpNftData.purchaseAmount, 
-                        "purchase amount should be less than the allocation");
-                nftAllowList[msg.sender] += _purchaseTokenAmount;
-            }
-
-            // blackList remaining 
-
-            IERC20(purchaseToken).safeTransferFrom(msg.sender, address(this), _purchaseTokenAmount);
-            _mint(msg.sender, _purchaseTokenAmount);
+            nftIdUsedForPurchase[_collectionAddress][_tokenIds[i]] = true;
         }
+
+        IERC20(purchaseToken).safeTransferFrom(msg.sender, address(this), _purchaseAmountPerToken * _tokenIds.length);
+        _mint(msg.sender, _purchaseAmountPerToken * _tokenIds.length);
     }
 
     /**
