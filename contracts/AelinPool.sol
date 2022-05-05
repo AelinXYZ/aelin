@@ -122,9 +122,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
 
         NftData[] memory tmpNftData = _poolData.nftData;
 
-        if(tmpNftData.length > 0) {
+        if (tmpNftData.length > 0) {
             require(tmpNftData.length <= 5, "max 5 collections allowed");
-            for(uint256 i = 0; i < tmpNftData.length; i++) {
+            for (uint256 i = 0; i < tmpNftData.length; i++) {
                 nftCollectionDetails[tmpNftData[i].collectionAddress] = tmpNftData[i];
             }
             hasNftList = true;
@@ -283,7 +283,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
      * or if the pro rata period is not active, then you have 0 available for this period
      */
     function maxProRataAmount(address purchaser) public view returns (uint256) {
-        ( , uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
+        (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
 
         if (
             (balanceOf(purchaser) == 0 && amountAccepted[purchaser] == 0 && amountWithdrawn[purchaser] == 0) ||
@@ -311,8 +311,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256 poolTokenAmount,
         bool useMax
     ) internal dealFunded lock {
-        ( , uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
-        ( , uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
+        (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
+        (, uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
 
         if (block.timestamp >= proRataRedemptionStart && block.timestamp < proRataRedemptionExpiry) {
             _acceptDealTokensProRata(recipient, poolTokenAmount, useMax);
@@ -423,10 +423,12 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         NftData memory tmpNftData = nftCollectionDetails[_collectionAddress];
         require(tmpNftData.collectionAddress == _collectionAddress, "collection not in the pool");
 
-        if(tmpNftData.purchaseAmount > 0) {
-            require(nftAllowList[msg.sender] + _purchaseTokenAmount <= tmpNftData.purchaseAmount, 
-                        "purchase amount should be less than the allocation");
-                nftAllowList[msg.sender] += _purchaseTokenAmount;
+        if (tmpNftData.purchaseAmount > 0) {
+            require(
+                nftAllowList[msg.sender] + _purchaseTokenAmount <= tmpNftData.purchaseAmount,
+                "purchase amount should be less than the allocation"
+            );
+            nftAllowList[msg.sender] += _purchaseTokenAmount;
         }
 
         // is blacklisting required here? else, anyone can transfer nfts and purchase more
@@ -435,20 +437,26 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         _mint(msg.sender, _purchaseTokenAmount);
     }
 
-    function purchasePoolScenario3for721(address _collectionAddress, uint256[] calldata _tokenIds, uint256 _purchaseAmountPerToken) public {
+    function purchasePoolScenario3for721(
+        address _collectionAddress,
+        uint256[] calldata _tokenIds,
+        uint256 _purchaseAmountPerToken
+    ) public {
         require(hasNftList, "pool does not have an NFT list");
         require(block.timestamp < purchaseExpiry, "not in purchase window");
         require(_tokenIds.length > 0, "number of token ids should be more than 0");
-        
+
         NftData memory tmpNftData = nftCollectionDetails[_collectionAddress];
         require(tmpNftData.collectionAddress == _collectionAddress, "collection not in the pool");
         require(tmpNftData.purchaseAmountPerToken, "purchaseAmount is not per token");
 
-        for(uint256 i = 0; i < _tokenIds.length; i++) {
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
             require(IERC721(_collectionAddress).ownerOf(_tokenIds[i]) == msg.sender, "has to be the owner of the token");
             require(!nftIdUsedForPurchase[_collectionAddress][_tokenIds[i]], "tokenId already used");
-            require(_purchaseAmountPerToken <= tmpNftData.purchaseAmount, 
-                        "purchase amount per token should be less than the allocation");
+            require(
+                _purchaseAmountPerToken <= tmpNftData.purchaseAmount,
+                "purchase amount per token should be less than the allocation"
+            );
 
             nftIdUsedForPurchase[_collectionAddress][_tokenIds[i]] = true;
         }
@@ -498,9 +506,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
          * or if the period is outside of a redemption window so nothing is available.
          * It then checks if you are in the pro rata period and open period eligibility
          */
-        
-        ( , uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
-        ( , uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
+
+        (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
+        (, uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
 
         if (
             holderFundingExpiry == 0 ||
@@ -520,8 +528,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     }
 
     modifier transferWindow() {
-        ( , uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
-        ( , uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
+        (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
+        (, uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
 
         require(
             proRataRedemptionStart == 0 ||

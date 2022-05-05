@@ -12,7 +12,6 @@ import {MockERC20} from "./mocks/MockERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract AelinDealTest is DSTest {
-
     address public aelinRewards = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
     address public poolAddress;
     address public dealAddress;
@@ -33,11 +32,7 @@ contract AelinDealTest is DSTest {
         address token,
         uint256 amt
     ) internal {
-        stdstore
-            .target(token)
-            .sig(IERC20(token).balanceOf.selector)
-            .with_key(who)
-            .checked_write(amt);
+        stdstore.target(token).sig(IERC20(token).balanceOf.selector).with_key(who).checked_write(amt);
     }
 
     function setUp() public {
@@ -75,14 +70,14 @@ contract AelinDealTest is DSTest {
 
         vm.warp(block.timestamp + 20 days);
         dealAddress = AelinPool(poolAddress).createDeal(
-            address(dealToken), 
-            1e25, 
-            1e35, 
-            10 days, 
-            20 days, 
-            30 days, 
-            10 days, 
-            address(this), 
+            address(dealToken),
+            1e25,
+            1e35,
+            10 days,
+            20 days,
+            30 days,
+            10 days,
+            address(this),
             30 days
         );
 
@@ -107,7 +102,10 @@ contract AelinDealTest is DSTest {
         assertEq(openPeriod, 10 days);
         assertEq(AelinDeal(dealAddress).holderFundingExpiry(), block.timestamp + 30 days);
         assertEq(AelinDeal(dealAddress).aelinRewardsAddress(), address(aelinRewards));
-        assertEq(AelinDeal(dealAddress).underlyingPerDealExchangeRate(), (1e35 * 1e18) / AelinDeal(dealAddress).maxTotalSupply());
+        assertEq(
+            AelinDeal(dealAddress).underlyingPerDealExchangeRate(),
+            (1e35 * 1e18) / AelinDeal(dealAddress).maxTotalSupply()
+        );
         assertTrue(!AelinDeal(dealAddress).depositComplete());
     }
 
@@ -143,8 +141,14 @@ contract AelinDealTest is DSTest {
         assertEq(proRataPeriod, 30 days);
         assertEq(proRataStart, block.timestamp);
         assertEq(proRataExpiry, block.timestamp + proRataPeriod);
-        assertEq(AelinDeal(dealAddress).vestingCliffExpiry(), proRataExpiry + openPeriod + AelinDeal(dealAddress).vestingCliffPeriod());
-        assertEq(AelinDeal(dealAddress).vestingExpiry(), AelinDeal(dealAddress).vestingCliffExpiry() + AelinDeal(dealAddress).vestingPeriod());
+        assertEq(
+            AelinDeal(dealAddress).vestingCliffExpiry(),
+            proRataExpiry + openPeriod + AelinDeal(dealAddress).vestingCliffPeriod()
+        );
+        assertEq(
+            AelinDeal(dealAddress).vestingExpiry(),
+            AelinDeal(dealAddress).vestingCliffExpiry() + AelinDeal(dealAddress).vestingPeriod()
+        );
         assertEq(openStart, proRataExpiry);
         assertEq(openExpiry, proRataExpiry + openPeriod);
         assertTrue(deposited);
@@ -158,15 +162,21 @@ contract AelinDealTest is DSTest {
         (uint256 proRataPeriod, uint256 proRataStart, uint256 proRataExpiry) = AelinDeal(dealAddress).proRataRedemption();
         (uint256 openPeriod, uint256 openStart, uint256 openExpiry) = AelinDeal(dealAddress).openRedemption();
 
-        if(amount == 1e35) {    
+        if (amount == 1e35) {
             assertEq(IERC20(dealToken).balanceOf(address(this)), 1e75 - 1e35);
             assertEq(IERC20(dealToken).balanceOf(address(dealAddress)), 1e35);
             assertTrue(AelinDeal(dealAddress).depositComplete());
             assertEq(proRataPeriod, 30 days);
             assertEq(proRataStart, block.timestamp);
             assertEq(proRataExpiry, block.timestamp + proRataPeriod);
-            assertEq(AelinDeal(dealAddress).vestingCliffExpiry(), proRataExpiry + openPeriod + AelinDeal(dealAddress).vestingCliffPeriod());
-            assertEq(AelinDeal(dealAddress).vestingExpiry(), AelinDeal(dealAddress).vestingCliffExpiry() + AelinDeal(dealAddress).vestingPeriod());
+            assertEq(
+                AelinDeal(dealAddress).vestingCliffExpiry(),
+                proRataExpiry + openPeriod + AelinDeal(dealAddress).vestingCliffPeriod()
+            );
+            assertEq(
+                AelinDeal(dealAddress).vestingExpiry(),
+                AelinDeal(dealAddress).vestingCliffExpiry() + AelinDeal(dealAddress).vestingPeriod()
+            );
             assertEq(openStart, proRataExpiry);
             assertEq(openExpiry, proRataExpiry + openPeriod);
             assertTrue(deposited);

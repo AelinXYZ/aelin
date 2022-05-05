@@ -175,7 +175,9 @@ contract AelinDeal is AelinERC20, IAelinDeal {
     function withdrawExpiry() external onlyHolder {
         require(proRataRedemption.expiry > 0, "redemption period not started");
         require(
-            openRedemption.expiry > 0 ? block.timestamp >= openRedemption.expiry : block.timestamp >= proRataRedemption.expiry,
+            openRedemption.expiry > 0
+                ? block.timestamp >= openRedemption.expiry
+                : block.timestamp >= proRataRedemption.expiry,
             "redeem window still active"
         );
         uint256 withdrawAmount = IERC20(underlyingDealToken).balanceOf(address(this)) -

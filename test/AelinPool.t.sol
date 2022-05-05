@@ -13,9 +13,7 @@ import {MockERC721} from "./mocks/MockERC721.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-
 contract AelinPoolTest is DSTest {
-
     address public aelinRewards = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
     address public poolAddress;
 
@@ -37,11 +35,7 @@ contract AelinPoolTest is DSTest {
         address token,
         uint256 amt
     ) internal {
-        stdstore
-            .target(token)
-            .sig(IERC20(token).balanceOf.selector)
-            .with_key(who)
-            .checked_write(amt);
+        stdstore.target(token).sig(IERC20(token).balanceOf.selector).with_key(who).checked_write(amt);
     }
 
     function setUp() public {
@@ -123,7 +117,7 @@ contract AelinPoolTest is DSTest {
 
         assertEq(AelinPool(poolAddress).balanceOf(address(this)), purchaseTokenAmount);
         assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), balanceOfPoolBeforePurchase + purchaseTokenAmount);
-        if(purchaseTokenAmount == 1e27) assertEq(AelinPool(poolAddress).purchaseExpiry(), block.timestamp + timestamp);
+        if (purchaseTokenAmount == 1e27) assertEq(AelinPool(poolAddress).purchaseExpiry(), block.timestamp + timestamp);
         assertEq(AelinPool(poolAddress).totalSupply(), AelinPool(poolAddress).balanceOf(address(this)));
     }
 
@@ -134,13 +128,16 @@ contract AelinPoolTest is DSTest {
         uint256 balanceOfPoolBeforePurchase = IERC20(purchaseToken).balanceOf(address(poolAddress));
         uint256 purchaseTokenTotal;
 
-        for(uint256 i; i < numberOfTimes; ) {
+        for (uint256 i; i < numberOfTimes; ) {
             purchaseTokenTotal += purchaseTokenAmount;
             AelinPool(poolAddress).purchasePoolTokens(purchaseTokenAmount);
 
             assertEq(AelinPool(poolAddress).balanceOf(address(this)), purchaseTokenTotal);
-            assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), balanceOfPoolBeforePurchase + purchaseTokenTotal);
-            if(purchaseTokenAmount == 1e27) assertEq(AelinPool(poolAddress).purchaseExpiry(), block.timestamp);
+            assertEq(
+                IERC20(purchaseToken).balanceOf(address(poolAddress)),
+                balanceOfPoolBeforePurchase + purchaseTokenTotal
+            );
+            if (purchaseTokenAmount == 1e27) assertEq(AelinPool(poolAddress).purchaseExpiry(), block.timestamp);
             assertEq(AelinPool(poolAddress).totalSupply(), AelinPool(poolAddress).balanceOf(address(this)));
 
             unchecked {
@@ -218,7 +215,7 @@ contract AelinPoolTest is DSTest {
         assertEq(AelinPool(poolAddress).nftAllowList(address(this)), 0);
     }
 
-     /*//////////////////////////////////////////////////////////////
+    /*//////////////////////////////////////////////////////////////
                          purchaseScenario3
     //////////////////////////////////////////////////////////////*/
 
@@ -337,17 +334,17 @@ contract AelinPoolTest is DSTest {
 
     function testCreateDeal() public {
         AelinPool(poolAddress).purchasePoolTokens(1e27);
-        
+
         vm.warp(block.timestamp + 20 days);
         address dealAddress = AelinPool(poolAddress).createDeal(
-            address(dealToken), 
-            1e27, 
-            1e27, 
-            10 days, 
-            20 days, 
-            30 days, 
-            0, 
-            address(this), 
+            address(dealToken),
+            1e27,
+            1e27,
+            10 days,
+            20 days,
+            30 days,
+            0,
+            address(this),
             30 days
         );
 
@@ -370,14 +367,14 @@ contract AelinPoolTest is DSTest {
         assertEq(openPeriod, 0);
         assertEq(AelinDeal(dealAddress).holderFundingExpiry(), block.timestamp + 30 days);
         assertEq(AelinDeal(dealAddress).aelinRewardsAddress(), address(aelinRewards));
-        assertEq(AelinDeal(dealAddress).underlyingPerDealExchangeRate(), (1e27 * 1e18) / AelinDeal(dealAddress).maxTotalSupply());
+        assertEq(
+            AelinDeal(dealAddress).underlyingPerDealExchangeRate(),
+            (1e27 * 1e18) / AelinDeal(dealAddress).maxTotalSupply()
+        );
         assertTrue(!AelinDeal(dealAddress).depositComplete());
     }
 
-    function testFuzzCreateDealDuration(
-        uint256 holderFundingDuration, 
-        uint256 proRataRedemptionPeriod
-    ) public {
+    function testFuzzCreateDealDuration(uint256 holderFundingDuration, uint256 proRataRedemptionPeriod) public {
         vm.assume(holderFundingDuration >= 30 minutes);
         vm.assume(holderFundingDuration <= 30 days);
         vm.assume(proRataRedemptionPeriod >= 30 minutes);
@@ -387,14 +384,14 @@ contract AelinPoolTest is DSTest {
 
         vm.warp(block.timestamp + 20 days);
         address dealAddress = AelinPool(poolAddress).createDeal(
-            address(dealToken), 
-            1e27, 
-            1e27, 
-            0, 
-            0, 
-            proRataRedemptionPeriod, 
-            0, 
-            address(this), 
+            address(dealToken),
+            1e27,
+            1e27,
+            0,
+            0,
+            proRataRedemptionPeriod,
+            0,
+            address(this),
             holderFundingDuration
         );
 
@@ -417,14 +414,14 @@ contract AelinPoolTest is DSTest {
         assertEq(openPeriod, 0);
         assertEq(AelinDeal(dealAddress).holderFundingExpiry(), block.timestamp + holderFundingDuration);
         assertEq(AelinDeal(dealAddress).aelinRewardsAddress(), address(aelinRewards));
-        assertEq(AelinDeal(dealAddress).underlyingPerDealExchangeRate(), (1e27 * 1e18) / AelinDeal(dealAddress).maxTotalSupply());
+        assertEq(
+            AelinDeal(dealAddress).underlyingPerDealExchangeRate(),
+            (1e27 * 1e18) / AelinDeal(dealAddress).maxTotalSupply()
+        );
         assertTrue(!AelinDeal(dealAddress).depositComplete());
     }
 
-    function testFuzzCreateDealVesting(
-        uint256 vestingCliffPeriod, 
-        uint256 vestingPeriod
-    ) public {
+    function testFuzzCreateDealVesting(uint256 vestingCliffPeriod, uint256 vestingPeriod) public {
         vm.assume(vestingPeriod <= 1825 days);
         vm.assume(vestingCliffPeriod <= 1825 days);
 
@@ -432,14 +429,14 @@ contract AelinPoolTest is DSTest {
 
         vm.warp(block.timestamp + 20 days);
         address dealAddress = AelinPool(poolAddress).createDeal(
-            address(dealToken), 
-            1e27, 
-            1e27, 
-            vestingPeriod, 
-            vestingCliffPeriod, 
-            30 days, 
-            0, 
-            address(this), 
+            address(dealToken),
+            1e27,
+            1e27,
+            vestingPeriod,
+            vestingCliffPeriod,
+            30 days,
+            0,
+            address(this),
             30 days
         );
 
@@ -462,12 +459,15 @@ contract AelinPoolTest is DSTest {
         assertEq(openPeriod, 0);
         assertEq(AelinDeal(dealAddress).holderFundingExpiry(), block.timestamp + 30 days);
         assertEq(AelinDeal(dealAddress).aelinRewardsAddress(), address(aelinRewards));
-        assertEq(AelinDeal(dealAddress).underlyingPerDealExchangeRate(), (1e27 * 1e18) / AelinDeal(dealAddress).maxTotalSupply());
+        assertEq(
+            AelinDeal(dealAddress).underlyingPerDealExchangeRate(),
+            (1e27 * 1e18) / AelinDeal(dealAddress).maxTotalSupply()
+        );
         assertTrue(!AelinDeal(dealAddress).depositComplete());
     }
 
     function testFuzzCreateDealTokenTotal(
-        uint256 purchaseTokenTotalForDeal, 
+        uint256 purchaseTokenTotalForDeal,
         uint256 underlyingDealTokenTotal,
         uint256 openRedemptionPeriod
     ) public {
@@ -475,7 +475,7 @@ contract AelinPoolTest is DSTest {
         vm.assume(purchaseTokenTotalForDeal <= 1e27);
         vm.assume(underlyingDealTokenTotal > 0);
         vm.assume(underlyingDealTokenTotal <= 1e35);
-        if(purchaseTokenTotalForDeal == 1e27) vm.assume(openRedemptionPeriod == 0);
+        if (purchaseTokenTotalForDeal == 1e27) vm.assume(openRedemptionPeriod == 0);
         vm.assume(openRedemptionPeriod >= 30 minutes);
         vm.assume(openRedemptionPeriod <= 30 days);
 
@@ -483,14 +483,14 @@ contract AelinPoolTest is DSTest {
 
         vm.warp(block.timestamp + 20 days);
         address dealAddress = AelinPool(poolAddress).createDeal(
-            address(dealToken), 
-            purchaseTokenTotalForDeal, 
-            underlyingDealTokenTotal, 
-            20 days, 
-            20 days, 
-            20 days, 
-            openRedemptionPeriod, 
-            address(this), 
+            address(dealToken),
+            purchaseTokenTotalForDeal,
+            underlyingDealTokenTotal,
+            20 days,
+            20 days,
+            20 days,
+            openRedemptionPeriod,
+            address(this),
             30 days
         );
 
@@ -513,24 +513,17 @@ contract AelinPoolTest is DSTest {
         assertEq(openPeriod, openRedemptionPeriod);
         assertEq(AelinDeal(dealAddress).holderFundingExpiry(), block.timestamp + 30 days);
         assertEq(AelinDeal(dealAddress).aelinRewardsAddress(), address(aelinRewards));
-        assertEq(AelinDeal(dealAddress).underlyingPerDealExchangeRate(), (underlyingDealTokenTotal * 1e18) / AelinDeal(dealAddress).maxTotalSupply());
+        assertEq(
+            AelinDeal(dealAddress).underlyingPerDealExchangeRate(),
+            (underlyingDealTokenTotal * 1e18) / AelinDeal(dealAddress).maxTotalSupply()
+        );
         assertTrue(!AelinDeal(dealAddress).depositComplete());
     }
 
     function testFailCreateDeal() public {
         vm.prank(address(0x1337));
 
-        pool.createDeal(
-            address(dealToken), 
-            1e27, 
-            1e27, 
-            10 days, 
-            20 days, 
-            30 days, 
-            0, 
-            address(this), 
-            30 days
-        );
+        pool.createDeal(address(dealToken), 1e27, 1e27, 10 days, 20 days, 30 days, 0, address(this), 30 days);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -539,12 +532,22 @@ contract AelinPoolTest is DSTest {
 
     function testMaxDealAccept() public {
         AelinPool(poolAddress).purchasePoolTokens(1e27);
-        
+
         vm.warp(block.timestamp + 20 days);
-        AelinPool(poolAddress).createDeal(address(dealToken), 1e27, 1e27, 10 days, 20 days, 30 days, 0, address(this), 30 days);
+        AelinPool(poolAddress).createDeal(
+            address(dealToken),
+            1e27,
+            1e27,
+            10 days,
+            20 days,
+            30 days,
+            0,
+            address(this),
+            30 days
+        );
 
         uint256 maxDeal = AelinPool(poolAddress).maxDealAccept(address(this));
-        
+
         assertEq(maxDeal, 0);
 
         // TODO (Additional checks if required)

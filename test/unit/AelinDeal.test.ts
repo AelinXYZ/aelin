@@ -148,8 +148,8 @@ describe("AelinDeal", function () {
         timestamp: latestTimestamp,
       });
 
-      const [proRataPeriod, , ] = await aelinDeal.proRataRedemption();
-      const [openPeriod, , ] = await aelinDeal.openRedemption();
+      const [proRataPeriod, ,] = await aelinDeal.proRataRedemption();
+      const [openPeriod, ,] = await aelinDeal.openRedemption();
 
       // TODO test the aelinDeal.AELIN_POOL() variable
       expect(await aelinDeal.name()).to.equal(`aeDeal-${name}`);

@@ -70,7 +70,7 @@ describe("AelinPoolFactory", function () {
       purchaseDuration: purchaseExpiry,
       allowListAddresses: [],
       allowListAmounts: [],
-      nftData: []
+      nftData: [],
     });
 
     expect(result.value).to.equal(0);
@@ -103,7 +103,7 @@ describe("AelinPoolFactory", function () {
         purchaseDuration: purchaseExpiry,
         allowListAddresses: [],
         allowListAmounts: [],
-        nftData: []
+        nftData: [],
       })
     ).to.be.revertedWith("cant pass null token address");
   });
@@ -145,7 +145,7 @@ describe("AelinPoolFactory", function () {
       purchaseDuration: purchaseExpiry,
       allowListAddresses: allowList,
       allowListAmounts: allowListAmounts,
-      nftData: []
+      nftData: [],
     });
     expect(result.value).to.equal(0);
 
@@ -176,7 +176,7 @@ describe("AelinPoolFactory", function () {
         purchaseDuration: purchaseExpiry,
         allowListAddresses: [...allowList, deployer.address],
         allowListAmounts: allowListAmounts,
-        nftData: []
+        nftData: [],
       })
     ).to.be.revertedWith(
       "allowListAddresses and allowListAmounts arrays should have the same length"
