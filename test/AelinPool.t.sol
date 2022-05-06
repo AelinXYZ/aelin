@@ -592,5 +592,118 @@ contract AelinPoolTest is DSTest {
                           withdrawfromPool
     //////////////////////////////////////////////////////////////*/
 
-    // TODO
+    function testWithdrawMaxFromPool() public {
+        AelinPool(poolAddress).purchasePoolTokens(1e27);
+
+        vm.warp(block.timestamp + 50 days);
+
+        AelinPool(poolAddress).withdrawMaxFromPool();
+
+        assertEq(AelinPool(poolAddress).amountWithdrawn(address(this)), 1e27);
+        assertEq(AelinPool(poolAddress).totalAmountWithdrawn(), 1e27);
+        assertEq(AelinPool(poolAddress).balanceOf(address(this)), 0);
+        assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), 0);
+        assertEq(IERC20(purchaseToken).balanceOf(address(this)), 1e75);
+    }
+
+    function testWithdrawFromPool() public {
+        AelinPool(poolAddress).purchasePoolTokens(1e27);
+
+        vm.warp(block.timestamp + 50 days);
+        AelinPool(poolAddress).withdrawFromPool(1e20);
+
+        assertEq(AelinPool(poolAddress).amountWithdrawn(address(this)), 1e20);
+        assertEq(AelinPool(poolAddress).totalAmountWithdrawn(), 1e20);
+        assertEq(AelinPool(poolAddress).balanceOf(address(this)), 1e27 - 1e20);
+        assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), 1e27 - 1e20);
+        assertEq(IERC20(purchaseToken).balanceOf(address(this)), 1e75 - 1e27 + 1e20);
+    }
+
+    function testFuzzWithdrawMaxFromPool(uint256 amount) public {
+        vm.assume(amount > 0);
+        vm.assume(amount <= 1e27);
+        AelinPool(poolAddress).purchasePoolTokens(amount);
+
+        vm.warp(block.timestamp + 50 days);
+        AelinPool(poolAddress).withdrawMaxFromPool();
+
+        assertEq(AelinPool(poolAddress).amountWithdrawn(address(this)), amount);
+        assertEq(AelinPool(poolAddress).totalAmountWithdrawn(), amount);
+        assertEq(AelinPool(poolAddress).balanceOf(address(this)), 0);
+        assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), 0);
+        assertEq(IERC20(purchaseToken).balanceOf(address(this)), 1e75);
+    }
+
+    function testFuzzWithdrawFromPool(uint256 purchaseAmount, uint256 withdrawAmount) public {
+        vm.assume(purchaseAmount > 0);
+        vm.assume(withdrawAmount > 0);
+        vm.assume(purchaseAmount <= 1e27);
+        vm.assume(withdrawAmount <= purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokens(purchaseAmount);
+
+        vm.warp(block.timestamp + 50 days);
+        AelinPool(poolAddress).withdrawFromPool(withdrawAmount);
+
+        assertEq(AelinPool(poolAddress).amountWithdrawn(address(this)), withdrawAmount);
+        assertEq(AelinPool(poolAddress).totalAmountWithdrawn(), withdrawAmount);
+        assertEq(AelinPool(poolAddress).balanceOf(address(this)), purchaseAmount - withdrawAmount);
+        assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), purchaseAmount - withdrawAmount);
+        assertEq(IERC20(purchaseToken).balanceOf(address(this)), 1e75 - purchaseAmount + withdrawAmount);
+    }
+
+    function testFailWithdrawFromPool() public {
+        AelinPool(poolAddress).purchasePoolTokens(1e27);
+
+        vm.warp(block.timestamp + 50 days);
+        vm.prank(address(0xBEEF));
+        AelinPool(poolAddress).withdrawFromPool(1e27);
+    }
+
+    function testFuzzWithdrawMaxDiffAddress(uint256 purchaseAmount, address testAddress) public {
+        vm.assume(purchaseAmount > 0);
+        vm.assume(purchaseAmount <= 1e27);
+        vm.assume(testAddress != address(0));
+
+        vm.startPrank(testAddress);
+        writeTokenBalance(testAddress, address(purchaseToken), 1e75);
+        purchaseToken.approve(address(poolAddress), type(uint256).max);
+        AelinPool(poolAddress).purchasePoolTokens(purchaseAmount);
+
+        vm.warp(block.timestamp + 50 days);
+        AelinPool(poolAddress).withdrawMaxFromPool();
+
+        assertEq(AelinPool(poolAddress).amountWithdrawn(testAddress), purchaseAmount);
+        assertEq(AelinPool(poolAddress).totalAmountWithdrawn(), purchaseAmount);
+        assertEq(AelinPool(poolAddress).balanceOf(testAddress), 0);
+        assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), 0);
+        assertEq(IERC20(purchaseToken).balanceOf(testAddress), 1e75);
+        vm.stopPrank();
+    }
+
+    function testFuzzWithdrawDiffAddress(
+        uint256 purchaseAmount,
+        uint256 withdrawAmount,
+        address testAddress
+    ) public {
+        vm.assume(purchaseAmount > 0);
+        vm.assume(withdrawAmount > 0);
+        vm.assume(purchaseAmount <= 1e27);
+        vm.assume(withdrawAmount <= purchaseAmount);
+        vm.assume(testAddress != address(0));
+
+        vm.startPrank(testAddress);
+        writeTokenBalance(testAddress, address(purchaseToken), 1e75);
+        purchaseToken.approve(address(poolAddress), type(uint256).max);
+        AelinPool(poolAddress).purchasePoolTokens(purchaseAmount);
+
+        vm.warp(block.timestamp + 50 days);
+        AelinPool(poolAddress).withdrawFromPool(withdrawAmount);
+
+        assertEq(AelinPool(poolAddress).amountWithdrawn(testAddress), withdrawAmount);
+        assertEq(AelinPool(poolAddress).totalAmountWithdrawn(), withdrawAmount);
+        assertEq(AelinPool(poolAddress).balanceOf(testAddress), purchaseAmount - withdrawAmount);
+        assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), purchaseAmount - withdrawAmount);
+        assertEq(IERC20(purchaseToken).balanceOf(testAddress), 1e75 - purchaseAmount + withdrawAmount);
+        vm.stopPrank();
+    }
 }
