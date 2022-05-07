@@ -7,10 +7,12 @@ import "./MinimalProxyFactory.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IAelinPool.sol";
 import "./interfaces/IAelinDeal.sol";
+import "./interfaces/ICryptoPunks.sol";
 import "./libraries/NftCheck.sol";
 
 contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     using SafeERC20 for IERC20;
+    address constant CRYPTO_PUNKS = address(0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB);
     uint256 constant BASE = 100 * 10**18;
     uint256 constant MAX_SPONSOR_FEE = 98 * 10**18;
     uint256 constant AELIN_FEE = 2 * 10**18;
@@ -49,8 +51,15 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     mapping(address => uint256) public nftAllowList;
     // collectionAddress -> nftData struct
     mapping(address => NftData) public nftCollectionDetails;
+    // walletAddress -> bool
+    mapping(address => bool) public nftWalletUsedForPurchase;
     // collectionAddress -> tokenId -> bool
-    mapping(address => mapping(uint256 => bool)) public nftIdUsedForPurchase;
+    /**
+     * @dev For 721, it is used for blacklisting the tokenId of a collection
+     * and for 1155, it is used for identifying the eligible tokenIds for
+     * participating in the pool
+     */
+    mapping(address => mapping(uint256 => bool)) public nftId;
     bool public hasNftList;
     bool public hasAllowList;
 
@@ -123,9 +132,39 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         NftData[] memory tmpNftData = _poolData.nftData;
 
         if (tmpNftData.length > 0) {
-            require(tmpNftData.length <= 5, "max 5 collections allowed");
-            for (uint256 i = 0; i < tmpNftData.length; i++) {
-                nftCollectionDetails[tmpNftData[i].collectionAddress] = tmpNftData[i];
+            // if the first address supports punks or 721, the entire pool only supports 721 or punks
+            if (tmpNftData[0].collectionAddress == CRYPTO_PUNKS || NftCheck.supports721(tmpNftData[0].collectionAddress)) {
+                for (uint256 i = 0; i < tmpNftData.length; i++) {
+                    require(
+                        tmpNftData[i].collectionAddress == CRYPTO_PUNKS ||
+                            NftCheck.supports721(tmpNftData[i].collectionAddress),
+                        "can only contain 721"
+                    );
+                    nftCollectionDetails[tmpNftData[i].collectionAddress] = tmpNftData[i];
+                    emit PoolWith721(
+                        tmpNftData[i].collectionAddress,
+                        tmpNftData[i].purchaseAmount,
+                        tmpNftData[i].purchaseAmountPerToken
+                    );
+                }
+            }
+            // if the first address supports 1155, the entire pool only supports 1155
+            if (NftCheck.supports1155(tmpNftData[0].collectionAddress)) {
+                for (uint256 i = 0; i < tmpNftData.length; i++) {
+                    require(NftCheck.supports1155(tmpNftData[i].collectionAddress), "can only contain 721");
+                    nftCollectionDetails[tmpNftData[i].collectionAddress] = tmpNftData[i];
+
+                    for (uint256 j = 0; j < tmpNftData[i].tokenIds.length; j++) {
+                        nftId[tmpNftData[i].collectionAddress][tmpNftData[i].tokenIds[j]] = true;
+                    }
+                    emit PoolWith1155(
+                        tmpNftData[i].collectionAddress,
+                        tmpNftData[i].purchaseAmount,
+                        tmpNftData[i].purchaseAmountPerToken,
+                        tmpNftData[i].tokenIds,
+                        tmpNftData[i].minTokensEligible
+                    );
+                }
             }
             hasNftList = true;
         }
@@ -415,15 +454,27 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
      * 2. certain amount of purchase tokens per wallet regardless of the number of qualified NFTs held
      * 3. certain amount of Investment tokens per qualified NFT held
      */
-    function purchasePoolScenario1and2for721(address _collectionAddress, uint256 _purchaseTokenAmount) public {
+
+    function purchasePoolTokensWithNft(
+        address _collectionAddress,
+        uint256[] calldata _tokenIds,
+        uint256 _purchaseTokenAmount
+    ) external lock {
         require(hasNftList, "pool does not have an NFT list");
         require(block.timestamp < purchaseExpiry, "not in purchase window");
-        require(IERC721(_collectionAddress).balanceOf(msg.sender) > 0, "should own atleast 1 nft");
+        require(!nftWalletUsedForPurchase[msg.sender], "wallet already used");
 
         NftData memory tmpNftData = nftCollectionDetails[_collectionAddress];
         require(tmpNftData.collectionAddress == _collectionAddress, "collection not in the pool");
 
-        if (tmpNftData.purchaseAmount > 0) {
+        if (tmpNftData.purchaseAmountPerToken) {
+            require(
+                _purchaseTokenAmount <= tmpNftData.purchaseAmount * _tokenIds.length,
+                "purchase amount per token should be less than the allocation"
+            );
+        }
+
+        if (!tmpNftData.purchaseAmountPerToken && tmpNftData.purchaseAmount > 0) {
             require(
                 nftAllowList[msg.sender] + _purchaseTokenAmount <= tmpNftData.purchaseAmount,
                 "purchase amount should be less than the allocation"
@@ -431,38 +482,44 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
             nftAllowList[msg.sender] += _purchaseTokenAmount;
         }
 
-        // is blacklisting required here? else, anyone can transfer nfts and purchase more
+        if (NftCheck.supports721(_collectionAddress)) _purchasePoolWith721(_collectionAddress, _tokenIds);
+        if (NftCheck.supports1155(_collectionAddress)) _purchasePoolWith1155(_collectionAddress, _tokenIds, tmpNftData);
+        if (_collectionAddress == CRYPTO_PUNKS) _purchasePoolWithPunks(_collectionAddress, _tokenIds);
 
+        nftWalletUsedForPurchase[msg.sender] = true;
         IERC20(purchaseToken).safeTransferFrom(msg.sender, address(this), _purchaseTokenAmount);
         _mint(msg.sender, _purchaseTokenAmount);
+        emit PurchasePoolToken(msg.sender, _purchaseTokenAmount);
     }
 
-    function purchasePoolScenario3for721(
-        address _collectionAddress,
-        uint256[] calldata _tokenIds,
-        uint256 _purchaseAmountPerToken
-    ) public {
-        require(hasNftList, "pool does not have an NFT list");
-        require(block.timestamp < purchaseExpiry, "not in purchase window");
-        require(_tokenIds.length > 0, "number of token ids should be more than 0");
-
-        NftData memory tmpNftData = nftCollectionDetails[_collectionAddress];
-        require(tmpNftData.collectionAddress == _collectionAddress, "collection not in the pool");
-        require(tmpNftData.purchaseAmountPerToken, "purchaseAmount is not per token");
-
+    function _purchasePoolWith721(address _collectionAddress, uint256[] calldata _tokenIds) internal {
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             require(IERC721(_collectionAddress).ownerOf(_tokenIds[i]) == msg.sender, "has to be the owner of the token");
-            require(!nftIdUsedForPurchase[_collectionAddress][_tokenIds[i]], "tokenId already used");
-            require(
-                _purchaseAmountPerToken <= tmpNftData.purchaseAmount,
-                "purchase amount per token should be less than the allocation"
-            );
-
-            nftIdUsedForPurchase[_collectionAddress][_tokenIds[i]] = true;
+            require(!nftId[_collectionAddress][_tokenIds[i]], "tokenId already used");
+            nftId[_collectionAddress][_tokenIds[i]] = true;
         }
+    }
 
-        IERC20(purchaseToken).safeTransferFrom(msg.sender, address(this), _purchaseAmountPerToken * _tokenIds.length);
-        _mint(msg.sender, _purchaseAmountPerToken * _tokenIds.length);
+    function _purchasePoolWith1155(
+        address _collectionAddress,
+        uint256[] calldata _tokenIds,
+        NftData memory tmpNftData
+    ) internal view {
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            require(nftId[_collectionAddress][_tokenIds[i]], "tokenId not in the pool");
+            require(
+                IERC1155(_collectionAddress).balanceOf(msg.sender, _tokenIds[i]) >= tmpNftData.minTokensEligible,
+                "has to be the owner of the token"
+            );
+        }
+    }
+
+    function _purchasePoolWithPunks(address _punksAddress, uint256[] calldata _tokenIds) internal {
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            require(ICryptoPunks(_punksAddress).punkIndexToAddress(_tokenIds[i]) == msg.sender, "not the owner");
+            require(!nftId[_punksAddress][_tokenIds[i]], "tokenId already used");
+            nftId[_punksAddress][_tokenIds[i]] = true;
+        }
     }
 
     /**
@@ -584,4 +641,12 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256 holderFundingDuration
     );
     event AllowlistAddress(address indexed purchaser, uint256 allowlistAmount);
+    event PoolWith721(address indexed collectionAddress, uint256 purchaseAmount, bool purchaseAmountPerToken);
+    event PoolWith1155(
+        address indexed collectionAddress,
+        uint256 purchaseAmount,
+        bool purchaseAmountPerToken,
+        uint256[] tokenIds,
+        uint256 minTokensEligible
+    );
 }

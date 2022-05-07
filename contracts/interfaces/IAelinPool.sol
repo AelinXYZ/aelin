@@ -23,6 +23,9 @@ interface IAelinPool {
         // if true, then `purchaseAmount` is per token
         // else `purchaseAmount` is per account regardless of the NFTs held
         bool purchaseAmountPerToken;
-        // can add tokenId for 1155, but cannot be 0 because there are many 721s with tokenid 0
+        // both variables below are only applicable for 1155
+        uint256[] tokenIds;
+        // min number of tokens required for participating
+        uint256 minTokensEligible;
     }
 }

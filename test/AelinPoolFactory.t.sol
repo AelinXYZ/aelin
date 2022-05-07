@@ -8,10 +8,12 @@ import {AelinPoolFactory} from "../contracts/AelinPoolFactory.sol";
 import {IAelinPool} from "../contracts/interfaces/IAelinPool.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
 import {MockERC721} from "./mocks/MockERC721.sol";
+import {MockERC1155} from "./mocks/MockERC1155.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 contract AelinPoolFactoryTest is DSTest {
     address public aelinRewards = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
+    address public punks = address(0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB);
 
     AelinPool public pool;
     AelinDeal public deal;
@@ -19,6 +21,8 @@ contract AelinPoolFactoryTest is DSTest {
     MockERC20 public purchaseToken;
     MockERC721 public collectionAddress1;
     MockERC721 public collectionAddress2;
+    MockERC1155 public collectionAddress3;
+    MockERC1155 public collectionAddress4;
     Vm public vm = Vm(HEVM_ADDRESS);
 
     address[] public allowListAddresses;
@@ -31,6 +35,8 @@ contract AelinPoolFactoryTest is DSTest {
         purchaseToken = new MockERC20("MockPool", "MP");
         collectionAddress1 = new MockERC721("TestCollection", "TC");
         collectionAddress2 = new MockERC721("TestCollection", "TC");
+        collectionAddress3 = new MockERC1155("");
+        collectionAddress4 = new MockERC1155("");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -134,7 +140,7 @@ contract AelinPoolFactoryTest is DSTest {
         }
     }
 
-    function testCreatePoolWithNft() public {
+    function testCreatePoolWith721() public {
         IAelinPool.NftData[] memory nftData = new IAelinPool.NftData[](2);
 
         nftData[0].collectionAddress = address(collectionAddress1);
@@ -161,10 +167,12 @@ contract AelinPoolFactoryTest is DSTest {
 
         address poolAddress = poolFactory.createPool(poolData);
 
-        (uint256 tmpPurchaseAmount1, address tmpCollection1, bool tmpPerToken1) = AelinPool(poolAddress)
-            .nftCollectionDetails(address(collectionAddress1));
-        (uint256 tmpPurchaseAmount2, address tmpCollection2, bool tmpPerToken2) = AelinPool(poolAddress)
-            .nftCollectionDetails(address(collectionAddress2));
+        (uint256 tmpPurchaseAmount1, address tmpCollection1, bool tmpPerToken1, uint256 tmpMinTokensEligible1) = AelinPool(
+            poolAddress
+        ).nftCollectionDetails(address(collectionAddress1));
+        (uint256 tmpPurchaseAmount2, address tmpCollection2, bool tmpPerToken2, uint256 tmpMinTokensEligible2) = AelinPool(
+            poolAddress
+        ).nftCollectionDetails(address(collectionAddress2));
 
         assertEq(AelinPool(poolAddress).name(), "aePool-POOL");
         assertEq(AelinPool(poolAddress).symbol(), "aeP-POOL");
@@ -184,48 +192,21 @@ contract AelinPoolFactoryTest is DSTest {
         assertEq(tmpCollection2, address(collectionAddress2));
         assertTrue(tmpPerToken1);
         assertTrue(!tmpPerToken2);
+        assertEq(tmpMinTokensEligible1, 0);
+        assertEq(tmpMinTokensEligible2, 0);
         assertTrue(!AelinPool(poolAddress).hasAllowList());
         assertTrue(AelinPool(poolAddress).hasNftList());
     }
 
-    function testFailCreatePoolWithNft() public {
-        IAelinPool.NftData[] memory nftData = new IAelinPool.NftData[](6);
-
-        IAelinPool.PoolData memory poolData;
-        poolData = IAelinPool.PoolData({
-            name: "POOL",
-            symbol: "POOL",
-            purchaseTokenCap: 1e27,
-            purchaseToken: address(purchaseToken),
-            duration: 30 days,
-            sponsorFee: 2e18,
-            purchaseDuration: 20 days,
-            allowListAddresses: allowListAddresses,
-            allowListAmounts: allowListAmounts,
-            nftData: nftData
-        });
-
-        poolFactory.createPool(poolData);
-    }
-
-    function testFuzzCreatePoolWithNft(
-        address collection1,
-        address collection2,
-        uint256 purchase1,
-        uint256 purchase2
-    ) public {
-        vm.assume(collection1 != collection2);
-        vm.assume(purchase1 < 1e40);
-        vm.assume(purchase2 < 1e40);
-
+    function testCreatePoolWithPunksAnd721() public {
         IAelinPool.NftData[] memory nftData = new IAelinPool.NftData[](2);
 
-        nftData[0].collectionAddress = collection1;
-        nftData[0].purchaseAmount = 11;
+        nftData[0].collectionAddress = address(collectionAddress1);
+        nftData[0].purchaseAmount = 1e20;
         nftData[0].purchaseAmountPerToken = true;
 
-        nftData[1].collectionAddress = collection2;
-        nftData[1].purchaseAmount = 11;
+        nftData[1].collectionAddress = address(punks);
+        nftData[1].purchaseAmount = 1e22;
         nftData[1].purchaseAmountPerToken = false;
 
         IAelinPool.PoolData memory poolData;
@@ -244,10 +225,12 @@ contract AelinPoolFactoryTest is DSTest {
 
         address poolAddress = poolFactory.createPool(poolData);
 
-        (uint256 tmpPurchaseAmount1, address tmpCollection1, bool tmpPerToken1) = AelinPool(poolAddress)
-            .nftCollectionDetails(collection1);
-        (uint256 tmpPurchaseAmount2, address tmpCollection2, bool tmpPerToken2) = AelinPool(poolAddress)
-            .nftCollectionDetails(collection2);
+        (uint256 tmpPurchaseAmount1, address tmpCollection1, bool tmpPerToken1, uint256 tmpMinTokensEligible1) = AelinPool(
+            poolAddress
+        ).nftCollectionDetails(address(collectionAddress1));
+        (uint256 tmpPurchaseAmount2, address tmpCollection2, bool tmpPerToken2, uint256 tmpMinTokensEligible2) = AelinPool(
+            poolAddress
+        ).nftCollectionDetails(address(punks));
 
         assertEq(AelinPool(poolAddress).name(), "aePool-POOL");
         assertEq(AelinPool(poolAddress).symbol(), "aeP-POOL");
@@ -261,14 +244,86 @@ contract AelinPoolFactoryTest is DSTest {
         assertEq(AelinPool(poolAddress).sponsor(), address(this));
         assertEq(AelinPool(poolAddress).aelinDealLogicAddress(), address(deal));
         assertEq(AelinPool(poolAddress).aelinRewardsAddress(), address(aelinRewards));
-        assertEq(tmpPurchaseAmount1, 11);
-        assertEq(tmpPurchaseAmount2, 11);
-        assertEq(tmpCollection1, address(collection1));
-        assertEq(tmpCollection2, address(collection2));
+        assertEq(tmpPurchaseAmount1, 1e20);
+        assertEq(tmpPurchaseAmount2, 1e22);
+        assertEq(tmpCollection1, address(collectionAddress1));
+        assertEq(tmpCollection2, address(punks));
         assertTrue(tmpPerToken1);
         assertTrue(!tmpPerToken2);
+        assertEq(tmpMinTokensEligible1, 0);
+        assertEq(tmpMinTokensEligible2, 0);
         assertTrue(!AelinPool(poolAddress).hasAllowList());
         assertTrue(AelinPool(poolAddress).hasNftList());
+    }
+
+    function testCreatePoolWith1155() public {
+        IAelinPool.NftData[] memory nftData = new IAelinPool.NftData[](2);
+
+        nftData[0].collectionAddress = address(collectionAddress3);
+        nftData[0].purchaseAmount = 1e20;
+        nftData[0].purchaseAmountPerToken = true;
+        nftData[0].tokenIds = new uint256[](2);
+        nftData[0].tokenIds[0] = 1;
+        nftData[0].tokenIds[1] = 2;
+        nftData[0].minTokensEligible = 100;
+
+        nftData[1].collectionAddress = address(collectionAddress4);
+        nftData[1].purchaseAmount = 1e22;
+        nftData[1].purchaseAmountPerToken = false;
+        nftData[1].tokenIds = new uint256[](2);
+        nftData[1].tokenIds[0] = 10;
+        nftData[1].tokenIds[1] = 20;
+        nftData[1].minTokensEligible = 1000;
+
+        IAelinPool.PoolData memory poolData;
+        poolData = IAelinPool.PoolData({
+            name: "POOL",
+            symbol: "POOL",
+            purchaseTokenCap: 1e27,
+            purchaseToken: address(purchaseToken),
+            duration: 30 days,
+            sponsorFee: 2e18,
+            purchaseDuration: 20 days,
+            allowListAddresses: allowListAddresses,
+            allowListAmounts: allowListAmounts,
+            nftData: nftData
+        });
+
+        address poolAddress = poolFactory.createPool(poolData);
+
+        (uint256 tmpPurchaseAmount1, address tmpCollection1, bool tmpPerToken1, uint256 tmpMinTokensEligible1) = AelinPool(
+            poolAddress
+        ).nftCollectionDetails(address(collectionAddress3));
+        (uint256 tmpPurchaseAmount2, address tmpCollection2, bool tmpPerToken2, uint256 tmpMinTokensEligible2) = AelinPool(
+            poolAddress
+        ).nftCollectionDetails(address(collectionAddress4));
+
+        assertEq(AelinPool(poolAddress).name(), "aePool-POOL");
+        assertEq(AelinPool(poolAddress).symbol(), "aeP-POOL");
+        assertEq(AelinPool(poolAddress).decimals(), 18);
+        assertEq(AelinPool(poolAddress).poolFactory(), address(poolFactory));
+        assertEq(AelinPool(poolAddress).purchaseTokenCap(), 1e27);
+        assertEq(AelinPool(poolAddress).purchaseToken(), address(purchaseToken));
+        assertEq(AelinPool(poolAddress).purchaseExpiry(), block.timestamp + 20 days);
+        assertEq(AelinPool(poolAddress).poolExpiry(), block.timestamp + 20 days + 30 days);
+        assertEq(AelinPool(poolAddress).sponsorFee(), 2e18);
+        assertEq(AelinPool(poolAddress).sponsor(), address(this));
+        assertEq(AelinPool(poolAddress).aelinDealLogicAddress(), address(deal));
+        assertEq(AelinPool(poolAddress).aelinRewardsAddress(), address(aelinRewards));
+        assertEq(tmpPurchaseAmount1, 1e20);
+        assertEq(tmpPurchaseAmount2, 1e22);
+        assertEq(tmpCollection1, address(collectionAddress3));
+        assertEq(tmpCollection2, address(collectionAddress4));
+        assertTrue(tmpPerToken1);
+        assertTrue(!tmpPerToken2);
+        assertEq(tmpMinTokensEligible1, 100);
+        assertEq(tmpMinTokensEligible2, 1000);
+        assertTrue(!AelinPool(poolAddress).hasAllowList());
+        assertTrue(AelinPool(poolAddress).hasNftList());
+        assertTrue(AelinPool(poolAddress).nftId(tmpCollection1, 1));
+        assertTrue(AelinPool(poolAddress).nftId(tmpCollection1, 2));
+        assertTrue(AelinPool(poolAddress).nftId(tmpCollection2, 10));
+        assertTrue(AelinPool(poolAddress).nftId(tmpCollection2, 10));
     }
 
     function testFuzzCreatePoolTimestamp(uint256 timestamp) public {
