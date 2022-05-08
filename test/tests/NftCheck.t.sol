@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.6;
 
-import "ds-test/test.sol";
 import "forge-std/Test.sol";
-import "../contracts/libraries/NftCheck.sol";
+import "contracts/libraries/NftCheck.sol";
 
-contract NftCheckTest is DSTest {
+contract NftCheckTest is Test {
     // add `--fork-url` before testing
 
     // 721
@@ -31,7 +30,7 @@ contract NftCheckTest is DSTest {
         assertTrue((NftCheck.supports1155(adidas)));
         assertTrue((NftCheck.supports1155(rtfkt)));
     }
-    
+
     function testFail1155() public {
         assertTrue((NftCheck.supports1155(bayc)));
         assertTrue((NftCheck.supports1155(mayc)));

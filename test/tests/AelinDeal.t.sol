@@ -1,49 +1,32 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.6;
 
-import "ds-test/test.sol";
 import "forge-std/Test.sol";
-import {AelinDeal} from "../contracts/AelinDeal.sol";
-import {AelinPool} from "../contracts/AelinPool.sol";
-import {AelinPoolFactory} from "../contracts/AelinPoolFactory.sol";
-import {IAelinDeal} from "../contracts/interfaces/IAelinDeal.sol";
-import {IAelinPool} from "../contracts/interfaces/IAelinPool.sol";
-import {MockERC20} from "./mocks/MockERC20.sol";
+import {AelinDeal} from "contracts/AelinDeal.sol";
+import {AelinPool} from "contracts/AelinPool.sol";
+import {AelinPoolFactory} from "contracts/AelinPoolFactory.sol";
+import {IAelinDeal} from "contracts/interfaces/IAelinDeal.sol";
+import {IAelinPool} from "contracts/interfaces/IAelinPool.sol";
+import {MockERC20} from "../mocks/MockERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract AelinDealTest is DSTest {
+contract AelinDealTest is Test {
     address public aelinRewards = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
     address public poolAddress;
     address public dealAddress;
 
-    AelinPool public pool;
-    AelinDeal public deal;
     AelinPoolFactory public poolFactory;
-    Vm public vm = Vm(HEVM_ADDRESS);
 
     MockERC20 public dealToken;
     MockERC20 public purchaseToken;
 
-    using stdStorage for StdStorage;
-    StdStorage public stdstore;
-
-    function writeTokenBalance(
-        address who,
-        address token,
-        uint256 amt
-    ) internal {
-        stdstore.target(token).sig(IERC20(token).balanceOf.selector).with_key(who).checked_write(amt);
-    }
-
     function setUp() public {
-        pool = new AelinPool();
-        deal = new AelinDeal();
-        poolFactory = new AelinPoolFactory(address(pool), address(deal), aelinRewards);
+        poolFactory = new AelinPoolFactory(address(new AelinPool()), address(new AelinDeal()), aelinRewards);
         dealToken = new MockERC20("MockDeal", "MD");
         purchaseToken = new MockERC20("MockPool", "MP");
 
-        writeTokenBalance(address(this), address(purchaseToken), 1e75);
-        writeTokenBalance(address(this), address(dealToken), 1e75);
+        deal(address(purchaseToken), address(this), 1e75);
+        deal(address(dealToken), address(this), 1e75);
 
         address[] memory allowListAddresses;
         uint256[] memory allowListAmounts;

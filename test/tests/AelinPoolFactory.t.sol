@@ -1,42 +1,44 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.6;
 
-import "ds-test/test.sol";
-import {AelinPool} from "../contracts/AelinPool.sol";
-import {AelinDeal} from "../contracts/AelinDeal.sol";
-import {AelinPoolFactory} from "../contracts/AelinPoolFactory.sol";
-import {IAelinPool} from "../contracts/interfaces/IAelinPool.sol";
-import {MockERC20} from "./mocks/MockERC20.sol";
-import {MockERC721} from "./mocks/MockERC721.sol";
-import {MockERC1155} from "./mocks/MockERC1155.sol";
-import {Vm} from "forge-std/Vm.sol";
+import "forge-std/test.sol";
+import {AelinPool} from "contracts/AelinPool.sol";
+import {AelinDeal} from "contracts/AelinDeal.sol";
+import {AelinPoolFactory} from "contracts/AelinPoolFactory.sol";
+import {IAelinPool} from "contracts/interfaces/IAelinPool.sol";
+import {MockERC20} from "../mocks/MockERC20.sol";
+import {MockERC721} from "../mocks/MockERC721.sol";
+import {MockERC1155} from "../mocks/MockERC1155.sol";
 
-contract AelinPoolFactoryTest is DSTest {
+contract AelinPoolFactoryTest is Test {
     address public aelinRewards = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
     address public punks = address(0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB);
 
-    AelinPool public pool;
-    AelinDeal public deal;
+    AelinPool public testPool;
+    AelinDeal public testDeal;
     AelinPoolFactory public poolFactory;
     MockERC20 public purchaseToken;
     MockERC721 public collectionAddress1;
     MockERC721 public collectionAddress2;
     MockERC1155 public collectionAddress3;
     MockERC1155 public collectionAddress4;
-    Vm public vm = Vm(HEVM_ADDRESS);
 
     address[] public allowListAddresses;
     uint256[] public allowListAmounts;
 
     function setUp() public {
-        pool = new AelinPool();
-        deal = new AelinDeal();
-        poolFactory = new AelinPoolFactory(address(pool), address(deal), aelinRewards);
+        testPool = new AelinPool();
+        testDeal = new AelinDeal();
+        poolFactory = new AelinPoolFactory(address(testPool), address(testDeal), aelinRewards);
         purchaseToken = new MockERC20("MockPool", "MP");
         collectionAddress1 = new MockERC721("TestCollection", "TC");
         collectionAddress2 = new MockERC721("TestCollection", "TC");
         collectionAddress3 = new MockERC1155("");
         collectionAddress4 = new MockERC1155("");
+
+        assertEq(poolFactory.AELIN_POOL_LOGIC(), address(testPool));
+        assertEq(poolFactory.AELIN_DEAL_LOGIC(), address(testDeal));
+        assertEq(poolFactory.AELIN_REWARDS(), address(aelinRewards));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -83,7 +85,7 @@ contract AelinPoolFactoryTest is DSTest {
         assertEq(AelinPool(poolAddress).poolExpiry(), block.timestamp + purchaseDuration + duration);
         assertEq(AelinPool(poolAddress).sponsorFee(), sponsorFee);
         assertEq(AelinPool(poolAddress).sponsor(), address(this));
-        assertEq(AelinPool(poolAddress).aelinDealLogicAddress(), address(deal));
+        assertEq(AelinPool(poolAddress).aelinDealLogicAddress(), address(testDeal));
         assertEq(AelinPool(poolAddress).aelinRewardsAddress(), address(aelinRewards));
         assertTrue(!AelinPool(poolAddress).hasAllowList());
     }
@@ -128,7 +130,7 @@ contract AelinPoolFactoryTest is DSTest {
         assertEq(AelinPool(poolAddress).poolExpiry(), block.timestamp + 20 days + 30 days);
         assertEq(AelinPool(poolAddress).sponsorFee(), 2e18);
         assertEq(AelinPool(poolAddress).sponsor(), address(this));
-        assertEq(AelinPool(poolAddress).aelinDealLogicAddress(), address(deal));
+        assertEq(AelinPool(poolAddress).aelinDealLogicAddress(), address(testDeal));
         assertEq(AelinPool(poolAddress).aelinRewardsAddress(), address(aelinRewards));
         assertTrue(AelinPool(poolAddress).hasAllowList());
 
@@ -184,7 +186,7 @@ contract AelinPoolFactoryTest is DSTest {
         assertEq(AelinPool(poolAddress).poolExpiry(), block.timestamp + 20 days + 30 days);
         assertEq(AelinPool(poolAddress).sponsorFee(), 2e18);
         assertEq(AelinPool(poolAddress).sponsor(), address(this));
-        assertEq(AelinPool(poolAddress).aelinDealLogicAddress(), address(deal));
+        assertEq(AelinPool(poolAddress).aelinDealLogicAddress(), address(testDeal));
         assertEq(AelinPool(poolAddress).aelinRewardsAddress(), address(aelinRewards));
         assertEq(tmpPurchaseAmount1, 1e20);
         assertEq(tmpPurchaseAmount2, 1e22);
@@ -242,7 +244,7 @@ contract AelinPoolFactoryTest is DSTest {
         assertEq(AelinPool(poolAddress).poolExpiry(), block.timestamp + 20 days + 30 days);
         assertEq(AelinPool(poolAddress).sponsorFee(), 2e18);
         assertEq(AelinPool(poolAddress).sponsor(), address(this));
-        assertEq(AelinPool(poolAddress).aelinDealLogicAddress(), address(deal));
+        assertEq(AelinPool(poolAddress).aelinDealLogicAddress(), address(testDeal));
         assertEq(AelinPool(poolAddress).aelinRewardsAddress(), address(aelinRewards));
         assertEq(tmpPurchaseAmount1, 1e20);
         assertEq(tmpPurchaseAmount2, 1e22);
@@ -308,7 +310,7 @@ contract AelinPoolFactoryTest is DSTest {
         assertEq(AelinPool(poolAddress).poolExpiry(), block.timestamp + 20 days + 30 days);
         assertEq(AelinPool(poolAddress).sponsorFee(), 2e18);
         assertEq(AelinPool(poolAddress).sponsor(), address(this));
-        assertEq(AelinPool(poolAddress).aelinDealLogicAddress(), address(deal));
+        assertEq(AelinPool(poolAddress).aelinDealLogicAddress(), address(testDeal));
         assertEq(AelinPool(poolAddress).aelinRewardsAddress(), address(aelinRewards));
         assertEq(tmpPurchaseAmount1, 1e20);
         assertEq(tmpPurchaseAmount2, 1e22);
@@ -358,7 +360,7 @@ contract AelinPoolFactoryTest is DSTest {
         assertEq(AelinPool(poolAddress).poolExpiry(), timestamp + 20 days + 30 days);
         assertEq(AelinPool(poolAddress).sponsorFee(), 2e18);
         assertEq(AelinPool(poolAddress).sponsor(), address(this));
-        assertEq(AelinPool(poolAddress).aelinDealLogicAddress(), address(deal));
+        assertEq(AelinPool(poolAddress).aelinDealLogicAddress(), address(testDeal));
         assertEq(AelinPool(poolAddress).aelinRewardsAddress(), address(aelinRewards));
         assertTrue(!AelinPool(poolAddress).hasAllowList());
     }
