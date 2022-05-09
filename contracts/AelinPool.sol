@@ -11,7 +11,7 @@ import "./interfaces/IAelinDeal.sol";
 contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     using SafeERC20 for IERC20;
     uint256 constant BASE = 100 * 10**18;
-    uint256 constant MAX_SPONSOR_FEE = 98 * 10**18;
+    uint256 constant MAX_SPONSOR_FEE = 15 * 10**18;
     uint256 constant AELIN_FEE = 2 * 10**18;
     uint8 constant MAX_DEALS = 5;
 
