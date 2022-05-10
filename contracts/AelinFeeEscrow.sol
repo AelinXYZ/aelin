@@ -9,9 +9,15 @@ contract AelinFeeEscrow {
     uint256 public vestingExpiry;
     address public treasury;
     address public futureTreasury;
+    address public escrowedToken;
 
-    bool public calledInitialize;
+    bool private calledInitialize;
 
+    /**
+     * @dev the constructor will always be blank due to the MinimalProxyFactory pattern
+     * this allows the underlying logic of this contract to only be deployed once
+     * and each new escrow created is simply a storage wrapper
+     */
     constructor() {}
 
     /**
@@ -27,9 +33,10 @@ contract AelinFeeEscrow {
         emit SetTreasury(futureTreasury);
     }
 
-    function initialize(address _treasury) external initOnce {
+    function initialize(address _treasury, address _escrowedToken) external initOnce {
         treasury = treasury;
         vestingExpiry = block.timestamp + 180 days;
+        escrowedToken = _escrowedToken;
     }
 
     modifier initOnce() {
@@ -53,9 +60,13 @@ contract AelinFeeEscrow {
         address to,
         uint256 amount
     ) external onlyTreasury {
-        require(block.timestamp > vestingExpiry, "cannot access funds yet");
+        if (token == escrowedToken) {
+          require(block.timestamp > vestingExpiry, "cannot access funds yet");
+        }
         IERC20(token).transfer(to, amount);
     }
+    // Maybe we could have a method to only receive funds from the AelinDeal contract's
+    // protocolMint function and pass in any address needed for that on initialize
 
     event SetTreasury(address indexed treasury);
 } 
