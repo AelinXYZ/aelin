@@ -26,6 +26,11 @@ interface IAelinPool {
         // both variables below are only applicable for 1155
         uint256[] tokenIds;
         // min number of tokens required for participating
-        uint256 minTokensEligible;
+        uint256[] minTokensEligible;
+    }
+
+    struct NftArgs {
+        address collectionAddress;
+        uint256[] tokenIds;
     }
 }

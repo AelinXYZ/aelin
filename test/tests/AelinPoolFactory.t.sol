@@ -169,12 +169,10 @@ contract AelinPoolFactoryTest is Test {
 
         address poolAddress = poolFactory.createPool(poolData);
 
-        (uint256 tmpPurchaseAmount1, address tmpCollection1, bool tmpPerToken1, uint256 tmpMinTokensEligible1) = AelinPool(
-            poolAddress
-        ).nftCollectionDetails(address(collectionAddress1));
-        (uint256 tmpPurchaseAmount2, address tmpCollection2, bool tmpPerToken2, uint256 tmpMinTokensEligible2) = AelinPool(
-            poolAddress
-        ).nftCollectionDetails(address(collectionAddress2));
+        (uint256 tmpPurchaseAmount1, address tmpCollection1, bool tmpPerToken1) = AelinPool(poolAddress)
+            .nftCollectionDetails(address(collectionAddress1));
+        (uint256 tmpPurchaseAmount2, address tmpCollection2, bool tmpPerToken2) = AelinPool(poolAddress)
+            .nftCollectionDetails(address(collectionAddress2));
 
         assertEq(AelinPool(poolAddress).name(), "aePool-POOL");
         assertEq(AelinPool(poolAddress).symbol(), "aeP-POOL");
@@ -194,8 +192,6 @@ contract AelinPoolFactoryTest is Test {
         assertEq(tmpCollection2, address(collectionAddress2));
         assertTrue(tmpPerToken1);
         assertTrue(!tmpPerToken2);
-        assertEq(tmpMinTokensEligible1, 0);
-        assertEq(tmpMinTokensEligible2, 0);
         assertTrue(!AelinPool(poolAddress).hasAllowList());
         assertTrue(AelinPool(poolAddress).hasNftList());
     }
@@ -227,12 +223,10 @@ contract AelinPoolFactoryTest is Test {
 
         address poolAddress = poolFactory.createPool(poolData);
 
-        (uint256 tmpPurchaseAmount1, address tmpCollection1, bool tmpPerToken1, uint256 tmpMinTokensEligible1) = AelinPool(
-            poolAddress
-        ).nftCollectionDetails(address(collectionAddress1));
-        (uint256 tmpPurchaseAmount2, address tmpCollection2, bool tmpPerToken2, uint256 tmpMinTokensEligible2) = AelinPool(
-            poolAddress
-        ).nftCollectionDetails(address(punks));
+        (uint256 tmpPurchaseAmount1, address tmpCollection1, bool tmpPerToken1) = AelinPool(poolAddress)
+            .nftCollectionDetails(address(collectionAddress1));
+        (uint256 tmpPurchaseAmount2, address tmpCollection2, bool tmpPerToken2) = AelinPool(poolAddress)
+            .nftCollectionDetails(address(punks));
 
         assertEq(AelinPool(poolAddress).name(), "aePool-POOL");
         assertEq(AelinPool(poolAddress).symbol(), "aeP-POOL");
@@ -252,8 +246,6 @@ contract AelinPoolFactoryTest is Test {
         assertEq(tmpCollection2, address(punks));
         assertTrue(tmpPerToken1);
         assertTrue(!tmpPerToken2);
-        assertEq(tmpMinTokensEligible1, 0);
-        assertEq(tmpMinTokensEligible2, 0);
         assertTrue(!AelinPool(poolAddress).hasAllowList());
         assertTrue(AelinPool(poolAddress).hasNftList());
     }
@@ -265,17 +257,21 @@ contract AelinPoolFactoryTest is Test {
         nftData[0].purchaseAmount = 1e20;
         nftData[0].purchaseAmountPerToken = true;
         nftData[0].tokenIds = new uint256[](2);
+        nftData[0].minTokensEligible = new uint256[](2);
         nftData[0].tokenIds[0] = 1;
         nftData[0].tokenIds[1] = 2;
-        nftData[0].minTokensEligible = 100;
+        nftData[0].minTokensEligible[0] = 100;
+        nftData[0].minTokensEligible[1] = 200;
 
         nftData[1].collectionAddress = address(collectionAddress4);
         nftData[1].purchaseAmount = 1e22;
         nftData[1].purchaseAmountPerToken = false;
         nftData[1].tokenIds = new uint256[](2);
+        nftData[1].minTokensEligible = new uint256[](2);
         nftData[1].tokenIds[0] = 10;
         nftData[1].tokenIds[1] = 20;
-        nftData[1].minTokensEligible = 1000;
+        nftData[1].minTokensEligible[0] = 1000;
+        nftData[1].minTokensEligible[1] = 2000;
 
         IAelinPool.PoolData memory poolData;
         poolData = IAelinPool.PoolData({
@@ -293,12 +289,10 @@ contract AelinPoolFactoryTest is Test {
 
         address poolAddress = poolFactory.createPool(poolData);
 
-        (uint256 tmpPurchaseAmount1, address tmpCollection1, bool tmpPerToken1, uint256 tmpMinTokensEligible1) = AelinPool(
-            poolAddress
-        ).nftCollectionDetails(address(collectionAddress3));
-        (uint256 tmpPurchaseAmount2, address tmpCollection2, bool tmpPerToken2, uint256 tmpMinTokensEligible2) = AelinPool(
-            poolAddress
-        ).nftCollectionDetails(address(collectionAddress4));
+        (uint256 tmpPurchaseAmount1, address tmpCollection1, bool tmpPerToken1) = AelinPool(poolAddress)
+            .nftCollectionDetails(address(collectionAddress3));
+        (uint256 tmpPurchaseAmount2, address tmpCollection2, bool tmpPerToken2) = AelinPool(poolAddress)
+            .nftCollectionDetails(address(collectionAddress4));
 
         assertEq(AelinPool(poolAddress).name(), "aePool-POOL");
         assertEq(AelinPool(poolAddress).symbol(), "aeP-POOL");
@@ -318,8 +312,6 @@ contract AelinPoolFactoryTest is Test {
         assertEq(tmpCollection2, address(collectionAddress4));
         assertTrue(tmpPerToken1);
         assertTrue(!tmpPerToken2);
-        assertEq(tmpMinTokensEligible1, 100);
-        assertEq(tmpMinTokensEligible2, 1000);
         assertTrue(!AelinPool(poolAddress).hasAllowList());
         assertTrue(AelinPool(poolAddress).hasNftList());
         assertTrue(AelinPool(poolAddress).nftId(tmpCollection1, 1));

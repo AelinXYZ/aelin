@@ -179,11 +179,73 @@ contract AelinDealTest is Test {
         assertTrue(!deposited);
     }
 
+    function testFuzzDepositUnderlyingExtra(uint256 amount) public {
+        vm.assume(amount > 1e35);
+        vm.assume(amount <= 1e75);
+        vm.warp(block.timestamp + 10 days);
+        bool deposited = AelinDeal(dealAddress).depositUnderlying(amount);
+
+        (uint256 proRataPeriod, uint256 proRataStart, uint256 proRataExpiry) = AelinDeal(dealAddress).proRataRedemption();
+        (uint256 openPeriod, uint256 openStart, uint256 openExpiry) = AelinDeal(dealAddress).openRedemption();
+
+        assertEq(IERC20(dealToken).balanceOf(address(this)), 1e75 - amount);
+        assertEq(IERC20(dealToken).balanceOf(address(dealAddress)), amount);
+        assertTrue(AelinDeal(dealAddress).depositComplete());
+        assertEq(proRataPeriod, 30 days);
+        assertEq(proRataStart, block.timestamp);
+        assertEq(proRataExpiry, block.timestamp + proRataPeriod);
+        assertEq(
+            AelinDeal(dealAddress).vestingCliffExpiry(),
+            proRataExpiry + openPeriod + AelinDeal(dealAddress).vestingCliffPeriod()
+        );
+        assertEq(
+            AelinDeal(dealAddress).vestingExpiry(),
+            AelinDeal(dealAddress).vestingCliffExpiry() + AelinDeal(dealAddress).vestingPeriod()
+        );
+        assertEq(openStart, proRataExpiry);
+        assertEq(openExpiry, proRataExpiry + openPeriod);
+        assertTrue(deposited);
+    }
+
     /*//////////////////////////////////////////////////////////////
                               withdraw
     //////////////////////////////////////////////////////////////*/
 
-    // TODO
+    function testWithdraw(uint256 amount) public {
+        vm.assume(amount > 0);
+        vm.assume(amount <= 1e75);
+        vm.warp(block.timestamp + 10 days);
+        AelinDeal(dealAddress).depositUnderlying(amount);
+
+        vm.warp(block.timestamp + 30 days);
+        AelinDeal(dealAddress).withdraw();
+
+        if (amount == 1e35) {
+            assertEq(IERC20(dealToken).balanceOf(address(this)), 1e75 - 1e35);
+            assertEq(IERC20(dealToken).balanceOf(address(dealAddress)), 1e35);
+        }
+
+        if (amount < 1e35) {
+            assertEq(IERC20(dealToken).balanceOf(address(this)), 1e75);
+            assertEq(IERC20(dealToken).balanceOf(address(dealAddress)), 0);
+        }
+
+        if (amount > 1e35) {
+            assertEq(IERC20(dealToken).balanceOf(address(this)), 1e75 - 1e35);
+            assertEq(IERC20(dealToken).balanceOf(address(dealAddress)), 1e35);
+        }
+    }
+
+    function testFailWithdraw() public {
+        vm.warp(block.timestamp + 10 days);
+        AelinDeal(dealAddress).depositUnderlying(1e35);
+
+        deal(address(dealToken), address(0xBEEF), 1e75);
+
+        vm.warp(block.timestamp + 30 days);
+        vm.prank(address(0xBEEF));
+        AelinDeal(dealAddress).withdraw();
+    }
 
     /*//////////////////////////////////////////////////////////////
                               claim
