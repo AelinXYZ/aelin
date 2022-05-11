@@ -30,7 +30,7 @@ contract AelinDealTest is Test {
 
         address[] memory allowListAddresses;
         uint256[] memory allowListAmounts;
-        IAelinPool.NftData[] memory nftData;
+        IAelinPool.NftCollectionRules[] memory nftCollectionRules;
 
         IAelinPool.PoolData memory poolData;
         poolData = IAelinPool.PoolData({
@@ -43,7 +43,7 @@ contract AelinDealTest is Test {
             purchaseDuration: 20 days,
             allowListAddresses: allowListAddresses,
             allowListAmounts: allowListAmounts,
-            nftData: nftData
+            nftCollectionRules: nftCollectionRules
         });
 
         poolAddress = poolFactory.createPool(poolData);

@@ -205,7 +205,7 @@ describe("integration test", () => {
         purchaseDuration: purchaseExpiry,
         allowListAddresses: [],
         allowListAmounts: [],
-        nftData: []
+        nftCollectionRules: [],
       });
 
       const [createPoolLog] = await aelinPoolFactory.queryFilter(
@@ -636,7 +636,7 @@ describe("integration test", () => {
         purchaseDuration: purchaseExpiry,
         allowListAddresses: [],
         allowListAmounts: [],
-        nftData: []
+        nftCollectionRules: [],
       });
 
       const [createPoolLog] = await aelinPoolFactory.queryFilter(
@@ -1019,7 +1019,7 @@ describe("integration test", () => {
         purchaseDuration: purchaseExpiry,
         allowListAddresses: [user13.address, user14.address],
         allowListAmounts: [fundUSDCAmount, fundUSDCAmount.div(2)],
-        nftData: []
+        nftCollectionRules: [],
       });
 
       const [createPoolLog] = await aelinPoolFactory.queryFilter(
@@ -1199,7 +1199,7 @@ describe("integration test", () => {
           purchaseDuration: purchaseExpiry,
           allowListAddresses: [],
           allowListAmounts: [],
-          nftData: []
+          nftCollectionRules: [],
         });
 
         const [createPoolLog] = await aelinPoolFactory.queryFilter(
@@ -1434,7 +1434,7 @@ describe("integration test", () => {
           purchaseDuration: purchaseExpiry,
           allowListAddresses: [],
           allowListAmounts: [],
-          nftData: []
+          nftCollectionRules: [],
         });
 
         const [createPoolLog] = await aelinPoolFactory.queryFilter(
@@ -1598,7 +1598,7 @@ describe("integration test", () => {
           purchaseDuration: purchaseExpiry,
           allowListAddresses: [],
           allowListAmounts: [],
-          nftData: []
+          nftCollectionRules: [],
         });
 
         const [createPoolLog] = await aelinPoolFactory.queryFilter(

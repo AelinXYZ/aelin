@@ -42,49 +42,49 @@ contract AelinPoolPurchase is Test {
 
         address[] memory allowListAddresses;
         uint256[] memory allowListAmounts;
-        IAelinPool.NftData[] memory nftData = new IAelinPool.NftData[](3);
-        IAelinPool.NftData[] memory nftDataWith1155 = new IAelinPool.NftData[](2);
-        IAelinPool.NftData[] memory nftDataWithPunks = new IAelinPool.NftData[](2);
+        IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](3);
+        IAelinPool.NftCollectionRules[] memory nftCollectionRules1155 = new IAelinPool.NftCollectionRules[](2);
+        IAelinPool.NftCollectionRules[] memory nftCollectionRulesPunks = new IAelinPool.NftCollectionRules[](2);
 
-        nftData[0].collectionAddress = address(collectionAddress1);
-        nftData[0].purchaseAmount = 0;
-        nftData[0].purchaseAmountPerToken = false;
+        nftCollectionRules[0].collectionAddress = address(collectionAddress1);
+        nftCollectionRules[0].purchaseAmount = 0;
+        nftCollectionRules[0].purchaseAmountPerToken = false;
 
-        nftData[1].collectionAddress = address(collectionAddress2);
-        nftData[1].purchaseAmount = 1e22;
-        nftData[1].purchaseAmountPerToken = false;
+        nftCollectionRules[1].collectionAddress = address(collectionAddress2);
+        nftCollectionRules[1].purchaseAmount = 1e22;
+        nftCollectionRules[1].purchaseAmountPerToken = false;
 
-        nftData[2].collectionAddress = address(collectionAddress3);
-        nftData[2].purchaseAmount = 1e22;
-        nftData[2].purchaseAmountPerToken = true;
+        nftCollectionRules[2].collectionAddress = address(collectionAddress3);
+        nftCollectionRules[2].purchaseAmount = 1e22;
+        nftCollectionRules[2].purchaseAmountPerToken = true;
 
-        nftDataWith1155[0].collectionAddress = address(collectionAddress4);
-        nftDataWith1155[0].purchaseAmount = 1e22;
-        nftDataWith1155[0].purchaseAmountPerToken = true;
-        nftDataWith1155[0].tokenIds = new uint256[](2);
-        nftDataWith1155[0].minTokensEligible = new uint256[](2);
-        nftDataWith1155[0].tokenIds[0] = 1;
-        nftDataWith1155[0].tokenIds[1] = 2;
-        nftDataWith1155[0].minTokensEligible[0] = 100;
-        nftDataWith1155[0].minTokensEligible[1] = 200;
+        nftCollectionRules1155[0].collectionAddress = address(collectionAddress4);
+        nftCollectionRules1155[0].purchaseAmount = 1e22;
+        nftCollectionRules1155[0].purchaseAmountPerToken = true;
+        nftCollectionRules1155[0].tokenIds = new uint256[](2);
+        nftCollectionRules1155[0].minTokensEligible = new uint256[](2);
+        nftCollectionRules1155[0].tokenIds[0] = 1;
+        nftCollectionRules1155[0].tokenIds[1] = 2;
+        nftCollectionRules1155[0].minTokensEligible[0] = 100;
+        nftCollectionRules1155[0].minTokensEligible[1] = 200;
 
-        nftDataWith1155[1].collectionAddress = address(collectionAddress5);
-        nftDataWith1155[1].purchaseAmount = 1e22;
-        nftDataWith1155[1].purchaseAmountPerToken = false;
-        nftDataWith1155[1].tokenIds = new uint256[](2);
-        nftDataWith1155[1].minTokensEligible = new uint256[](2);
-        nftDataWith1155[1].tokenIds[0] = 1;
-        nftDataWith1155[1].tokenIds[1] = 2;
-        nftDataWith1155[1].minTokensEligible[0] = 1000;
-        nftDataWith1155[1].minTokensEligible[1] = 2000;
+        nftCollectionRules1155[1].collectionAddress = address(collectionAddress5);
+        nftCollectionRules1155[1].purchaseAmount = 1e22;
+        nftCollectionRules1155[1].purchaseAmountPerToken = false;
+        nftCollectionRules1155[1].tokenIds = new uint256[](2);
+        nftCollectionRules1155[1].minTokensEligible = new uint256[](2);
+        nftCollectionRules1155[1].tokenIds[0] = 1;
+        nftCollectionRules1155[1].tokenIds[1] = 2;
+        nftCollectionRules1155[1].minTokensEligible[0] = 1000;
+        nftCollectionRules1155[1].minTokensEligible[1] = 2000;
 
-        nftDataWithPunks[0].collectionAddress = address(collectionAddress1);
-        nftDataWithPunks[0].purchaseAmount = 0;
-        nftDataWithPunks[0].purchaseAmountPerToken = false;
+        nftCollectionRulesPunks[0].collectionAddress = address(collectionAddress1);
+        nftCollectionRulesPunks[0].purchaseAmount = 0;
+        nftCollectionRulesPunks[0].purchaseAmountPerToken = false;
 
-        nftDataWithPunks[1].collectionAddress = address(punks);
-        nftDataWithPunks[1].purchaseAmount = 1e22;
-        nftDataWithPunks[1].purchaseAmountPerToken = false;
+        nftCollectionRulesPunks[1].collectionAddress = address(punks);
+        nftCollectionRulesPunks[1].purchaseAmount = 1e22;
+        nftCollectionRulesPunks[1].purchaseAmountPerToken = false;
 
         IAelinPool.PoolData memory poolData;
         poolData = IAelinPool.PoolData({
@@ -97,7 +97,7 @@ contract AelinPoolPurchase is Test {
             purchaseDuration: 20 days,
             allowListAddresses: allowListAddresses,
             allowListAmounts: allowListAmounts,
-            nftData: nftData
+            nftCollectionRules: nftCollectionRules
         });
 
         IAelinPool.PoolData memory poolDataWith1155;
@@ -111,7 +111,7 @@ contract AelinPoolPurchase is Test {
             purchaseDuration: 20 days,
             allowListAddresses: allowListAddresses,
             allowListAmounts: allowListAmounts,
-            nftData: nftDataWith1155
+            nftCollectionRules: nftCollectionRules1155
         });
 
         IAelinPool.PoolData memory poolDataWithPunks;
@@ -125,7 +125,7 @@ contract AelinPoolPurchase is Test {
             purchaseDuration: 20 days,
             allowListAddresses: allowListAddresses,
             allowListAmounts: allowListAmounts,
-            nftData: nftDataWithPunks
+            nftCollectionRules: nftCollectionRulesPunks
         });
 
         poolAddress = poolFactory.createPool(poolData);
@@ -207,12 +207,12 @@ contract AelinPoolPurchase is Test {
 
         uint256 balanceOfPoolBeforePurchase = IERC20(purchaseToken).balanceOf(address(poolAddress));
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress1);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress1);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
 
         assertEq(AelinPool(poolAddress).balanceOf(address(this)), purchaseAmount);
         assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), balanceOfPoolBeforePurchase + purchaseAmount);
@@ -230,13 +230,13 @@ contract AelinPoolPurchase is Test {
 
         MockERC721(collectionAddress1).mint(address(this), 1);
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress1);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress1);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
         vm.prank(address(0xBEEF));
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
     }
 
     // scenario 1 - purchase with multiple nfts, same wallet
@@ -247,15 +247,15 @@ contract AelinPoolPurchase is Test {
         MockERC721(collectionAddress1).mint(address(this), 1);
         MockERC721(collectionAddress1).mint(address(this), 2);
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress1);
-        tmpNftArg[0].tokenIds = new uint256[](2);
-        tmpNftArg[0].tokenIds[0] = 1;
-        tmpNftArg[0].tokenIds[1] = 2;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress1);
+        nftPurchaseList[0].tokenIds = new uint256[](2);
+        nftPurchaseList[0].tokenIds[0] = 1;
+        nftPurchaseList[0].tokenIds[1] = 2;
 
         uint256 balanceOfPoolBeforePurchase = IERC20(purchaseToken).balanceOf(address(poolAddress));
 
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
 
         assertEq(AelinPool(poolAddress).balanceOf(address(this)), purchaseAmount);
         assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), balanceOfPoolBeforePurchase + purchaseAmount);
@@ -270,12 +270,12 @@ contract AelinPoolPurchase is Test {
         vm.assume(purchaseAmount < type(uint256).max);
         assertTrue(AelinPool(poolAddress).hasNftList());
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress1);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress1);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
     }
 
     function testFailPurchaseMoreThanCap(uint256 purchaseAmount) public {
@@ -284,12 +284,12 @@ contract AelinPoolPurchase is Test {
 
         MockERC721(collectionAddress1).mint(address(this), 1);
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress1);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress1);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -305,12 +305,12 @@ contract AelinPoolPurchase is Test {
 
         uint256 balanceOfPoolBeforePurchase = IERC20(purchaseToken).balanceOf(address(poolAddress));
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress2);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress2);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
 
         assertEq(AelinPool(poolAddress).balanceOf(address(this)), purchaseAmount);
         assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), balanceOfPoolBeforePurchase + purchaseAmount);
@@ -327,24 +327,24 @@ contract AelinPoolPurchase is Test {
 
         MockERC721(collectionAddress2).mint(address(this), 1);
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress2);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress2);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
     }
 
     // scenario 2 - purchase without nft - fail
     function testFailScenario2WithoutNft(uint256 purchaseAmount) public {
         vm.assume(purchaseAmount <= 1e22);
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress2);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress2);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
     }
 
     // scenario 2 - purchase multiple times with same nft - fail
@@ -354,13 +354,13 @@ contract AelinPoolPurchase is Test {
 
         MockERC721(collectionAddress2).mint(address(this), 1);
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress2);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress2);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
     }
 
     // scenario 2 - purchase with diff wallet - fail
@@ -369,13 +369,13 @@ contract AelinPoolPurchase is Test {
 
         MockERC721(collectionAddress2).mint(address(this), 1);
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress2);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress2);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
         vm.prank(address(0xBEEF));
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -389,14 +389,14 @@ contract AelinPoolPurchase is Test {
 
         MockERC721(collectionAddress3).mint(address(this), 1);
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress3);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress3);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
         uint256 balanceOfPoolBeforePurchase = IERC20(purchaseToken).balanceOf(address(poolAddress));
 
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
 
         assertEq(AelinPool(poolAddress).balanceOf(address(this)), purchaseAmount);
         assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), balanceOfPoolBeforePurchase + purchaseAmount);
@@ -413,12 +413,12 @@ contract AelinPoolPurchase is Test {
 
         MockERC721(collectionAddress3).mint(address(this), 1);
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress3);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress3);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
     }
 
     // scenario 3 - purchase multiple times with same nft - fail
@@ -427,25 +427,25 @@ contract AelinPoolPurchase is Test {
 
         MockERC721(collectionAddress3).mint(address(this), 1);
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress3);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress3);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
     }
 
     // scenario 3 - purchase without nft - fail
     function testFailScenario3WithoutNft(uint256 purchaseAmount) public {
         vm.assume(purchaseAmount <= 1e22);
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress3);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress3);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
     }
 
     // scenario 3 - purchase with more than 1 nft
@@ -457,16 +457,16 @@ contract AelinPoolPurchase is Test {
         MockERC721(collectionAddress3).mint(address(this), 2);
         MockERC721(collectionAddress3).mint(address(this), 3);
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress3);
-        tmpNftArg[0].tokenIds = new uint256[](3);
-        tmpNftArg[0].tokenIds[0] = 1;
-        tmpNftArg[0].tokenIds[1] = 2;
-        tmpNftArg[0].tokenIds[2] = 3;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress3);
+        nftPurchaseList[0].tokenIds = new uint256[](3);
+        nftPurchaseList[0].tokenIds[0] = 1;
+        nftPurchaseList[0].tokenIds[1] = 2;
+        nftPurchaseList[0].tokenIds[2] = 3;
 
         uint256 balanceOfPoolBeforePurchase = IERC20(purchaseToken).balanceOf(address(poolAddress));
 
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
 
         assertEq(AelinPool(poolAddress).balanceOf(address(this)), purchaseAmount);
         assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), balanceOfPoolBeforePurchase + purchaseAmount);
@@ -483,18 +483,18 @@ contract AelinPoolPurchase is Test {
 
         MockERC721(collectionAddress1).mint(address(this), 1);
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress1);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress1);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, 1e22);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, 1e22);
 
         MockERC721(collectionAddress1).transferFrom(address(this), address(0xBEEF), 1);
         deal(address(purchaseToken), address(0xBEEF), 1e75);
 
         vm.prank(address(0xBEEF));
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, 1e22);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, 1e22);
     }
 
     function testFailTransferNftAndPurchase2() public {
@@ -502,18 +502,18 @@ contract AelinPoolPurchase is Test {
 
         MockERC721(collectionAddress2).mint(address(this), 1);
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress2);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress2);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, 1e22);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, 1e22);
 
         MockERC721(collectionAddress2).transferFrom(address(this), address(0xBEEF), 1);
         deal(address(purchaseToken), address(0xBEEF), 1e75);
 
         vm.prank(address(0xBEEF));
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, 1e22);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, 1e22);
     }
 
     function testFailTransferNftAndPurchase3() public {
@@ -521,18 +521,18 @@ contract AelinPoolPurchase is Test {
 
         MockERC721(collectionAddress3).mint(address(this), 1);
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress3);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress3);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, 1e22);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, 1e22);
 
         MockERC721(collectionAddress3).transferFrom(address(this), address(0xBEEF), 1);
         deal(address(purchaseToken), address(0xBEEF), 1e75);
 
         vm.prank(address(0xBEEF));
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, 1e22);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, 1e22);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -555,15 +555,15 @@ contract AelinPoolPurchase is Test {
 
         MockERC1155(collectionAddress4).batchMint(address(this), mintIds, mintAmount, "");
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress4);
-        tmpNftArg[0].tokenIds = new uint256[](2);
-        tmpNftArg[0].tokenIds[0] = 1;
-        tmpNftArg[0].tokenIds[1] = 2;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress4);
+        nftPurchaseList[0].tokenIds = new uint256[](2);
+        nftPurchaseList[0].tokenIds[0] = 1;
+        nftPurchaseList[0].tokenIds[1] = 2;
 
         uint256 balanceOfPoolBeforePurchase = IERC20(purchaseToken).balanceOf(address(poolAddressWith1155));
 
-        AelinPool(poolAddressWith1155).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddressWith1155).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
 
         assertEq(AelinPool(poolAddressWith1155).balanceOf(address(this)), purchaseAmount);
         assertEq(
@@ -588,12 +588,12 @@ contract AelinPoolPurchase is Test {
 
         MockERC1155(collectionAddress4).batchMint(address(this), mintIds, mintAmount, "");
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress4);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 2;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress4);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 2;
 
-        AelinPool(poolAddressWith1155).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddressWith1155).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
     }
 
     // 1155 - purchase unlimted with tokenId when `purchaseAmountPerToken` is true - fail
@@ -608,12 +608,12 @@ contract AelinPoolPurchase is Test {
 
         MockERC1155(collectionAddress4).batchMint(address(this), mintIds, mintAmount, "");
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress4);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress4);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
-        AelinPool(poolAddressWith1155).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddressWith1155).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
     }
 
     // 1155 - purchase multiple times with same tokenId - fail
@@ -628,13 +628,13 @@ contract AelinPoolPurchase is Test {
 
         MockERC1155(collectionAddress5).batchMint(address(this), mintIds, mintAmount, "");
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress4);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress4);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
-        AelinPool(poolAddressWith1155).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
-        AelinPool(poolAddressWith1155).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddressWith1155).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
+        AelinPool(poolAddressWith1155).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
     }
 
     // 1155 - purchase unlimited when `purchaseAmountPerToken` is false and `purchaseAmount` > 0
@@ -652,12 +652,12 @@ contract AelinPoolPurchase is Test {
         MockERC1155(collectionAddress5).batchMint(address(this), mintIds, mintAmount, "");
 
         uint256 balanceOfPoolBeforePurchase = IERC20(purchaseToken).balanceOf(address(poolAddressWith1155));
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress5);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress5);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
-        AelinPool(poolAddressWith1155).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddressWith1155).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
 
         assertEq(AelinPool(poolAddressWith1155).balanceOf(address(this)), purchaseAmount);
         assertEq(
@@ -691,16 +691,16 @@ contract AelinPoolPurchase is Test {
         MockERC1155(collectionAddress5).batchMint(address(this), mintIds2, mintAmount2, "");
 
         uint256 balanceOfPoolBeforePurchase = IERC20(purchaseToken).balanceOf(address(poolAddressWith1155));
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](2);
-        tmpNftArg[0].collectionAddress = address(collectionAddress4);
-        tmpNftArg[0].tokenIds = new uint256[](2);
-        tmpNftArg[0].tokenIds[0] = 1;
-        tmpNftArg[0].tokenIds[1] = 2;
-        tmpNftArg[1].collectionAddress = address(collectionAddress5);
-        tmpNftArg[1].tokenIds = new uint256[](1);
-        tmpNftArg[1].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](2);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress4);
+        nftPurchaseList[0].tokenIds = new uint256[](2);
+        nftPurchaseList[0].tokenIds[0] = 1;
+        nftPurchaseList[0].tokenIds[1] = 2;
+        nftPurchaseList[1].collectionAddress = address(collectionAddress5);
+        nftPurchaseList[1].tokenIds = new uint256[](1);
+        nftPurchaseList[1].tokenIds[0] = 1;
 
-        AelinPool(poolAddressWith1155).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddressWith1155).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
 
         assertEq(AelinPool(poolAddressWith1155).balanceOf(address(this)), purchaseAmount);
         assertEq(
@@ -723,17 +723,17 @@ contract AelinPoolPurchase is Test {
 
         uint256 balanceOfPoolBeforePurchase = IERC20(purchaseToken).balanceOf(address(poolAddress));
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](2);
-        tmpNftArg[0].collectionAddress = address(collectionAddress2);
-        tmpNftArg[0].tokenIds = new uint256[](2);
-        tmpNftArg[0].tokenIds[0] = 1;
-        tmpNftArg[0].tokenIds[1] = 2;
-        tmpNftArg[1].collectionAddress = address(collectionAddress3);
-        tmpNftArg[1].tokenIds = new uint256[](2);
-        tmpNftArg[1].tokenIds[0] = 1;
-        tmpNftArg[1].tokenIds[1] = 2;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](2);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress2);
+        nftPurchaseList[0].tokenIds = new uint256[](2);
+        nftPurchaseList[0].tokenIds[0] = 1;
+        nftPurchaseList[0].tokenIds[1] = 2;
+        nftPurchaseList[1].collectionAddress = address(collectionAddress3);
+        nftPurchaseList[1].tokenIds = new uint256[](2);
+        nftPurchaseList[1].tokenIds[0] = 1;
+        nftPurchaseList[1].tokenIds[1] = 2;
 
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
 
         assertEq(AelinPool(poolAddress).balanceOf(address(this)), purchaseAmount);
         assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), balanceOfPoolBeforePurchase + purchaseAmount);
@@ -756,17 +756,17 @@ contract AelinPoolPurchase is Test {
         MockERC721(collectionAddress3).mint(address(this), 1);
         MockERC721(collectionAddress3).mint(address(this), 2);
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](2);
-        tmpNftArg[0].collectionAddress = address(collectionAddress2);
-        tmpNftArg[0].tokenIds = new uint256[](2);
-        tmpNftArg[0].tokenIds[0] = 1;
-        tmpNftArg[0].tokenIds[1] = 2;
-        tmpNftArg[1].collectionAddress = address(collectionAddress3);
-        tmpNftArg[1].tokenIds = new uint256[](2);
-        tmpNftArg[1].tokenIds[0] = 1;
-        tmpNftArg[1].tokenIds[1] = 2;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](2);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress2);
+        nftPurchaseList[0].tokenIds = new uint256[](2);
+        nftPurchaseList[0].tokenIds[0] = 1;
+        nftPurchaseList[0].tokenIds[1] = 2;
+        nftPurchaseList[1].collectionAddress = address(collectionAddress3);
+        nftPurchaseList[1].tokenIds = new uint256[](2);
+        nftPurchaseList[1].tokenIds[0] = 1;
+        nftPurchaseList[1].tokenIds[1] = 2;
 
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -784,16 +784,16 @@ contract AelinPoolPurchase is Test {
         tokenIds[0] = 100;
 
         uint256 balanceOfPoolBeforePurchase = IERC20(purchaseToken).balanceOf(address(poolAddressWithPunks));
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(punks);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 100;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(punks);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 100;
 
         deal(address(purchaseToken), tokenOwner, 1e75);
 
         vm.startPrank(address(0xA858DDc0445d8131daC4d1DE01f834ffcbA52Ef1));
         purchaseToken.approve(address(poolAddressWithPunks), type(uint256).max);
-        AelinPool(poolAddressWithPunks).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddressWithPunks).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
         vm.stopPrank();
 
         assertEq(AelinPool(poolAddressWithPunks).balanceOf(tokenOwner), purchaseAmount);
@@ -810,12 +810,12 @@ contract AelinPoolPurchase is Test {
     function testFailPunksPurchasePool() public {
         assertTrue(AelinPool(poolAddress).hasNftList());
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(punks);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 100;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(punks);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 100;
 
-        AelinPool(poolAddressWithPunks).purchasePoolTokensWithNft(tmpNftArg, 1e22);
+        AelinPool(poolAddressWithPunks).purchasePoolTokensWithNft(nftPurchaseList, 1e22);
     }
 
     // punks - purchase multiple times with same tokenId and diff wallet - fail
@@ -824,19 +824,19 @@ contract AelinPoolPurchase is Test {
         // owner of cryptopunks tokenId - 100
         address tokenOwner = address(0xA858DDc0445d8131daC4d1DE01f834ffcbA52Ef1);
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(punks);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 100;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(punks);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 100;
 
         deal(address(purchaseToken), tokenOwner, 1e75);
 
         vm.startPrank(address(0xA858DDc0445d8131daC4d1DE01f834ffcbA52Ef1));
         purchaseToken.approve(address(poolAddressWithPunks), type(uint256).max);
-        AelinPool(poolAddressWithPunks).purchasePoolTokensWithNft(tmpNftArg, 1e22);
+        AelinPool(poolAddressWithPunks).purchasePoolTokensWithNft(nftPurchaseList, 1e22);
         vm.stopPrank();
 
-        AelinPool(poolAddressWithPunks).purchasePoolTokensWithNft(tmpNftArg, 1e22);
+        AelinPool(poolAddressWithPunks).purchasePoolTokensWithNft(nftPurchaseList, 1e22);
     }
 
     function testFailAfterExpiry(uint256 purchaseAmount, uint256 timestamp) public {
@@ -847,12 +847,12 @@ contract AelinPoolPurchase is Test {
 
         MockERC721(collectionAddress1).mint(address(this), 1);
 
-        IAelinPool.NftArgs[] memory tmpNftArg = new IAelinPool.NftArgs[](1);
-        tmpNftArg[0].collectionAddress = address(collectionAddress1);
-        tmpNftArg[0].tokenIds = new uint256[](1);
-        tmpNftArg[0].tokenIds[0] = 1;
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress1);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
 
-        AelinPool(poolAddress).purchasePoolTokensWithNft(tmpNftArg, purchaseAmount);
+        AelinPool(poolAddress).purchasePoolTokensWithNft(nftPurchaseList, purchaseAmount);
     }
 
     function onERC1155BatchReceived(

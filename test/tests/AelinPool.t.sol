@@ -39,19 +39,19 @@ contract AelinPoolTest is Test {
 
         address[] memory allowListAddresses;
         uint256[] memory allowListAmounts;
-        IAelinPool.NftData[] memory nftData = new IAelinPool.NftData[](3);
+        IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](3);
 
-        nftData[0].collectionAddress = address(collectionAddress1);
-        nftData[0].purchaseAmount = 0;
-        nftData[0].purchaseAmountPerToken = false;
+        nftCollectionRules[0].collectionAddress = address(collectionAddress1);
+        nftCollectionRules[0].purchaseAmount = 0;
+        nftCollectionRules[0].purchaseAmountPerToken = false;
 
-        nftData[1].collectionAddress = address(collectionAddress2);
-        nftData[1].purchaseAmount = 1e22;
-        nftData[1].purchaseAmountPerToken = false;
+        nftCollectionRules[1].collectionAddress = address(collectionAddress2);
+        nftCollectionRules[1].purchaseAmount = 1e22;
+        nftCollectionRules[1].purchaseAmountPerToken = false;
 
-        nftData[2].collectionAddress = address(collectionAddress3);
-        nftData[2].purchaseAmount = 1e22;
-        nftData[2].purchaseAmountPerToken = true;
+        nftCollectionRules[2].collectionAddress = address(collectionAddress3);
+        nftCollectionRules[2].purchaseAmount = 1e22;
+        nftCollectionRules[2].purchaseAmountPerToken = true;
 
         IAelinPool.PoolData memory poolData;
         poolData = IAelinPool.PoolData({
@@ -64,7 +64,7 @@ contract AelinPoolTest is Test {
             purchaseDuration: 20 days,
             allowListAddresses: allowListAddresses,
             allowListAmounts: allowListAmounts,
-            nftData: nftData
+            nftCollectionRules: nftCollectionRules
         });
 
         poolAddress = poolFactory.createPool(poolData);

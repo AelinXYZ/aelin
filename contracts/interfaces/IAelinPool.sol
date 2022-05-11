@@ -12,11 +12,11 @@ interface IAelinPool {
         uint256 purchaseDuration;
         address[] allowListAddresses;
         uint256[] allowListAmounts;
-        NftData[] nftData;
+        NftCollectionRules[] nftCollectionRules;
     }
 
     // collectionAddress should be unique, otherwise will override
-    struct NftData {
+    struct NftCollectionRules {
         // if 0, then unlimited purchase
         uint256 purchaseAmount;
         address collectionAddress;
@@ -29,7 +29,7 @@ interface IAelinPool {
         uint256[] minTokensEligible;
     }
 
-    struct NftArgs {
+    struct NftPurchaseList {
         address collectionAddress;
         uint256[] tokenIds;
     }
