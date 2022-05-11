@@ -38,8 +38,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
 
     bool private calledInitialize;
 
-    address public aelinRewardsAddress;
+    address public aelinTreasuryAddress;
     address public aelinDealLogicAddress;
+    address public aelinEscrowLogicAddress;
     AelinDeal public aelinDeal;
     address public holder;
 
@@ -83,7 +84,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         PoolData calldata _poolData,
         address _sponsor,
         address _aelinDealLogicAddress,
-        address _aelinRewardsAddress
+        address _aelinTreasuryAddress,
+        address _aelinEscrowLogicAddress
     ) external initOnce {
         require(
             30 minutes <= _poolData.purchaseDuration && 30 days >= _poolData.purchaseDuration,
@@ -109,8 +111,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         poolExpiry = purchaseExpiry + _poolData.duration;
         sponsorFee = _poolData.sponsorFee;
         sponsor = _sponsor;
+        aelinEscrowLogicAddress = _aelinEscrowLogicAddress;
         aelinDealLogicAddress = _aelinDealLogicAddress;
-        aelinRewardsAddress = _aelinRewardsAddress;
+        aelinTreasuryAddress = _aelinTreasuryAddress;
 
         address[] memory allowListAddresses = _poolData.allowListAddresses;
         uint256[] memory allowListAmounts = _poolData.allowListAmounts;
@@ -275,7 +278,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
             holderFundingExpiry
         );
 
-        aelinDeal.initialize(storedName, storedSymbol, dealData, aelinRewardsAddress);
+        aelinDeal.initialize(storedName, storedSymbol, dealData, aelinTreasuryAddress, aelinEscrowLogicAddress);
 
         emit CreateDeal(
             string(abi.encodePacked("aeDeal-", storedName)),
@@ -410,7 +413,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256 sponsorFeeAmt = (poolTokenDealFormatted * sponsorFee) / BASE;
 
         aelinDeal.mint(sponsor, sponsorFeeAmt);
-        aelinDeal.mint(aelinRewardsAddress, aelinFeeAmt);
+        aelinDeal.protocolMint(aelinTreasuryAddress, aelinFeeAmt);
         aelinDeal.mint(recipient, poolTokenDealFormatted - (sponsorFeeAmt + aelinFeeAmt));
         IERC20(purchaseToken).safeTransfer(holder, poolTokenAmount);
         emit AcceptDeal(recipient, address(aelinDeal), poolTokenAmount, sponsorFeeAmt, aelinFeeAmt);
