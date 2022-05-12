@@ -272,7 +272,7 @@ contract AelinDeal is AelinERC20, MinimalProxyFactory, IAelinDeal {
     function protocolMint(uint256 dealTokenAmount) external onlyPool {
         require(depositComplete, "deposit not complete");
         uint256 underlyingProtocolFees = (underlyingPerDealExchangeRate * dealTokenAmount) / 1e18;
-        IERC20(underlyingDealToken).transferFrom(address(this), address(aelinFeeEscrow), underlyingProtocolFees);
+        IERC20(underlyingDealToken).transfer(address(aelinFeeEscrow), underlyingProtocolFees);
     }
 
     modifier blockTransfer() {

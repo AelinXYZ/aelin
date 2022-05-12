@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import {AelinPool} from "contracts/AelinPool.sol";
 import {AelinDeal} from "contracts/AelinDeal.sol";
 import {AelinPoolFactory} from "contracts/AelinPoolFactory.sol";
+import {AelinFeeEscrow} from "contracts/AelinFeeEscrow.sol";
 import {IAelinDeal} from "contracts/interfaces/IAelinDeal.sol";
 import {IAelinPool} from "contracts/interfaces/IAelinPool.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
@@ -14,7 +15,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ICryptoPunks} from "contracts/interfaces/ICryptoPunks.sol";
 
 contract AelinPoolTest is Test {
-    address public aelinRewards = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
+    address public aelinTreasury = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
     address public poolAddress;
 
     AelinPoolFactory public poolFactory;
@@ -28,7 +29,12 @@ contract AelinPoolTest is Test {
 
     function setUp() public {
         testDeal = new AelinDeal();
-        poolFactory = new AelinPoolFactory(address(new AelinPool()), address(testDeal), aelinRewards);
+        poolFactory = new AelinPoolFactory(
+            address(new AelinPool()), 
+            address(testDeal), 
+            aelinTreasury, 
+            address(new AelinFeeEscrow())
+        );
         dealToken = new MockERC20("MockDeal", "MD");
         purchaseToken = new MockERC20("MockPool", "MP");
         collectionAddress1 = new MockERC721("TestCollection", "TC");
@@ -88,7 +94,7 @@ contract AelinPoolTest is Test {
         assertEq(AelinPool(poolAddress).sponsorFee(), 2e18);
         assertEq(AelinPool(poolAddress).sponsor(), address(this));
         assertEq(AelinPool(poolAddress).aelinDealLogicAddress(), address(testDeal));
-        assertEq(AelinPool(poolAddress).aelinRewardsAddress(), address(aelinRewards));
+        assertEq(AelinPool(poolAddress).aelinTreasuryAddress(), address(aelinTreasury));
         assertTrue(!AelinPool(poolAddress).hasAllowList());
         assertTrue(AelinPool(poolAddress).hasNftList());
     }
@@ -131,7 +137,7 @@ contract AelinPoolTest is Test {
         assertEq(proRataPeriod, 30 days);
         assertEq(openPeriod, 0);
         assertEq(AelinDeal(dealAddress).holderFundingExpiry(), block.timestamp + 30 days);
-        assertEq(AelinDeal(dealAddress).aelinRewardsAddress(), address(aelinRewards));
+        assertEq(AelinDeal(dealAddress).aelinTreasuryAddress(), address(aelinTreasury));
         assertEq(
             AelinDeal(dealAddress).underlyingPerDealExchangeRate(),
             (1e27 * 1e18) / AelinDeal(dealAddress).maxTotalSupply()
@@ -178,7 +184,7 @@ contract AelinPoolTest is Test {
         assertEq(proRataPeriod, proRataRedemptionPeriod);
         assertEq(openPeriod, 0);
         assertEq(AelinDeal(dealAddress).holderFundingExpiry(), block.timestamp + holderFundingDuration);
-        assertEq(AelinDeal(dealAddress).aelinRewardsAddress(), address(aelinRewards));
+        assertEq(AelinDeal(dealAddress).aelinTreasuryAddress(), address(aelinTreasury));
         assertEq(
             AelinDeal(dealAddress).underlyingPerDealExchangeRate(),
             (1e27 * 1e18) / AelinDeal(dealAddress).maxTotalSupply()
@@ -223,7 +229,7 @@ contract AelinPoolTest is Test {
         assertEq(proRataPeriod, 30 days);
         assertEq(openPeriod, 0);
         assertEq(AelinDeal(dealAddress).holderFundingExpiry(), block.timestamp + 30 days);
-        assertEq(AelinDeal(dealAddress).aelinRewardsAddress(), address(aelinRewards));
+        assertEq(AelinDeal(dealAddress).aelinTreasuryAddress(), address(aelinTreasury));
         assertEq(
             AelinDeal(dealAddress).underlyingPerDealExchangeRate(),
             (1e27 * 1e18) / AelinDeal(dealAddress).maxTotalSupply()
@@ -277,7 +283,7 @@ contract AelinPoolTest is Test {
         assertEq(proRataPeriod, 20 days);
         assertEq(openPeriod, openRedemptionPeriod);
         assertEq(AelinDeal(dealAddress).holderFundingExpiry(), block.timestamp + 30 days);
-        assertEq(AelinDeal(dealAddress).aelinRewardsAddress(), address(aelinRewards));
+        assertEq(AelinDeal(dealAddress).aelinTreasuryAddress(), address(aelinTreasury));
         assertEq(
             AelinDeal(dealAddress).underlyingPerDealExchangeRate(),
             (underlyingDealTokenTotal * 1e18) / AelinDeal(dealAddress).maxTotalSupply()

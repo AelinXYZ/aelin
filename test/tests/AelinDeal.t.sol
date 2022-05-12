@@ -5,13 +5,14 @@ import "forge-std/Test.sol";
 import {AelinDeal} from "contracts/AelinDeal.sol";
 import {AelinPool} from "contracts/AelinPool.sol";
 import {AelinPoolFactory} from "contracts/AelinPoolFactory.sol";
+import {AelinFeeEscrow} from "contracts/AelinFeeEscrow.sol";
 import {IAelinDeal} from "contracts/interfaces/IAelinDeal.sol";
 import {IAelinPool} from "contracts/interfaces/IAelinPool.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract AelinDealTest is Test {
-    address public aelinRewards = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
+    address public aelinTreasury = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
     address public poolAddress;
     address public dealAddress;
 
@@ -21,7 +22,12 @@ contract AelinDealTest is Test {
     MockERC20 public purchaseToken;
 
     function setUp() public {
-        poolFactory = new AelinPoolFactory(address(new AelinPool()), address(new AelinDeal()), aelinRewards);
+        poolFactory = new AelinPoolFactory(
+            address(new AelinPool()), 
+            address(new AelinDeal()), 
+            aelinTreasury, 
+            address(new AelinFeeEscrow())
+        );
         dealToken = new MockERC20("MockDeal", "MD");
         purchaseToken = new MockERC20("MockPool", "MP");
 
@@ -84,7 +90,7 @@ contract AelinDealTest is Test {
         assertEq(proRataPeriod, 30 days);
         assertEq(openPeriod, 10 days);
         assertEq(AelinDeal(dealAddress).holderFundingExpiry(), block.timestamp + 30 days);
-        assertEq(AelinDeal(dealAddress).aelinRewardsAddress(), address(aelinRewards));
+        assertEq(AelinDeal(dealAddress).aelinTreasuryAddress(), address(aelinTreasury));
         assertEq(
             AelinDeal(dealAddress).underlyingPerDealExchangeRate(),
             (1e35 * 1e18) / AelinDeal(dealAddress).maxTotalSupply()
@@ -246,6 +252,8 @@ contract AelinDealTest is Test {
         vm.prank(address(0xBEEF));
         AelinDeal(dealAddress).withdraw();
     }
+
+    // TODO(addtitional withdraw tests)
 
     /*//////////////////////////////////////////////////////////////
                               claim
