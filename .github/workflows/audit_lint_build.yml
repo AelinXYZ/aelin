@@ -79,6 +79,8 @@ jobs:
 
   foundry-tests:
     runs-on: ubuntu-latest
+    env:
+      ALCHEMY_URL: ${{ secrets.ALCHEMY_URL }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -86,7 +88,7 @@ jobs:
 
       - uses: actions/setup-node@v2
 
-      - name: Install dev dependencies
+      - name: Install dependecies
         run: npm install
 
       - name: Install Foundry
