@@ -94,8 +94,8 @@ jobs:
         with:
           version: nightly
 
-      - name: Pull Submodules
-        run: forge update
+      - name: Install deps
+        run: forge install
 
       - name: Run Tests without fork
         run: forge test --no-match-contract NftCheck --no-match-test testPunksPurchasePool
