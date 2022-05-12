@@ -9,6 +9,8 @@ remappings = [
     'eth-gas-reporter/=node_modules/eth-gas-reporter/',
     'hardhat/=node_modules/hardhat/',
     'openzeppelin-solidity-2.3.0/=node_modules/openzeppelin-solidity-2.3.0/',
+    'ds-test/=lib/forge-std/lib/ds-test/src/',
+    'forge-std/=lib/forge-std/src/',
 ]
 fuzz_max_global_rejects = 50000000
 
