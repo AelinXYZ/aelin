@@ -77,6 +77,35 @@ jobs:
           sarif_file: lint-results.sarif
         continue-on-error: true
 
+  foundry-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v2
+
+      - name: Install dev dependencies
+        run: npm install
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Pull Submodules
+        run: forge update
+
+      - name: Run Tests without fork
+        run: forge test --no-match-contract NftCheck --no-match-test testPunksPurchasePool
+
+      - name: Run NftCheck tests with fork
+        run: forge test --match-contract NftCheck --fork-url ${ALCHEMY_URL}
+
+      - name: Run Punks tests with fork
+        run: forge test --match-contract AelinPoolPurchase --match-test testPunksPurchasePool --fork-url ${ALCHEMY_URL}
+
   test:
     needs: lint
     if: always()
@@ -134,23 +163,6 @@ jobs:
 
       - name: Upload coverage
         run: codecov -t ${CODECOV_TOKEN} -f coverage.json
-
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
-
-      - name: Install deps
-        run: forge install
-
-      - name: Run Tests without fork
-        run: forge test --no-match-contract NftCheck --no-match-test testPunksPurchasePool
-
-      - name: Run NftCheck tests with fork
-        run: forge test --match-contract NftCheck --fork-url ${ALCHEMY_URL}
-
-      - name: Run Punks tests with fork
-        run: forge test --match-contract AelinPoolPurchase --match-test testPunksPurchasePool --fork-url ${ALCHEMY_URL}
 
   build:
     needs: test
