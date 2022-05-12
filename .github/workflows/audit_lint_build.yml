@@ -112,7 +112,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-alpine-node-
         continue-on-error: true
-      
+
       # fixes permission issues on gh actions + docker + npm@8
       - name: Chown workspace
         run: chown -R $(whoami) .
@@ -134,6 +134,23 @@ jobs:
 
       - name: Upload coverage
         run: codecov -t ${CODECOV_TOKEN} -f coverage.json
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install deps
+        run: forge install
+
+      - name: Run Tests without fork
+        run: forge test --no-match-contract NftCheck --no-match-test testPunksPurchasePool
+
+      - name: Run NftCheck tests with fork
+        run: forge test --match-contract NftCheck --fork-url ${ALCHEMY_URL}
+
+      - name: Run Punks tests with fork
+        run: forge test --match-contract AelinPoolPurchase --match-test testPunksPurchasePool --fork-url ${ALCHEMY_URL}
 
   build:
     needs: test

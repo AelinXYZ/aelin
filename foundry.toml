@@ -10,5 +10,6 @@ remappings = [
     'hardhat/=node_modules/hardhat/',
     'openzeppelin-solidity-2.3.0/=node_modules/openzeppelin-solidity-2.3.0/',
 ]
+fuzz_max_global_rejects = 50000000
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
