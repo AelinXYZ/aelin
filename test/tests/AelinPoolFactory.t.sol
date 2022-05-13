@@ -54,7 +54,7 @@ contract AelinPoolFactoryTest is Test {
         vm.assume(purchaseTokenCap < 1e27);
         vm.assume(purchaseDuration >= 30 minutes);
         vm.assume(purchaseDuration <= 30 days);
-        vm.assume(sponsorFee < 98e18);
+        vm.assume(sponsorFee < 15e18);
         vm.assume(duration <= 365 days);
 
         IAelinPool.NftCollectionRules[] memory nftCollectionRules;
