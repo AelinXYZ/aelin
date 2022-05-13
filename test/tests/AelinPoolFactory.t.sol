@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.6;
 
-import "forge-std/test.sol";
+import "forge-std/Test.sol";
 import {AelinPool} from "contracts/AelinPool.sol";
 import {AelinDeal} from "contracts/AelinDeal.sol";
 import {AelinPoolFactory} from "contracts/AelinPoolFactory.sol";
