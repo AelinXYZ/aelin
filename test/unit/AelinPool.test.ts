@@ -261,7 +261,7 @@ describe("AelinPool", function () {
             purchaseTokenCap,
             purchaseToken: purchaseToken.address,
             duration,
-            sponsorFee: ethers.utils.parseEther("98.1"),
+            sponsorFee: ethers.utils.parseEther("15.1"),
             purchaseDuration: purchaseExpiry,
             allowListAddresses: [],
             allowListAmounts: [],

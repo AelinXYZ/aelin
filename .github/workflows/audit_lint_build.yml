@@ -77,6 +77,37 @@ jobs:
           sarif_file: lint-results.sarif
         continue-on-error: true
 
+  foundry-tests:
+    runs-on: ubuntu-latest
+    env:
+      ALCHEMY_URL: ${{ secrets.ALCHEMY_URL }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v2
+
+      - name: Install dependecies
+        run: npm install
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install deps
+        run: forge install
+
+      - name: Run Tests without fork
+        run: forge test --no-match-contract NftCheck --no-match-test testPunksPurchasePool
+
+      - name: Run NftCheck tests with fork
+        run: forge test --match-contract NftCheck --fork-url ${ALCHEMY_URL}
+
+      - name: Run Punks tests with fork
+        run: forge test --match-contract AelinPoolPurchase --match-test testPunksPurchasePool --fork-url ${ALCHEMY_URL}
+
   test:
     needs: lint
     if: always()
@@ -112,7 +143,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-alpine-node-
         continue-on-error: true
-      
+
       # fixes permission issues on gh actions + docker + npm@8
       - name: Chown workspace
         run: chown -R $(whoami) .

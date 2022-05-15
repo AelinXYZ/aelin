@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.6;
 
-import "forge-std/test.sol";
+import "forge-std/Test.sol";
 import {AelinPool} from "contracts/AelinPool.sol";
 import {AelinDeal} from "contracts/AelinDeal.sol";
 import {AelinPoolFactory} from "contracts/AelinPoolFactory.sol";
@@ -58,7 +58,7 @@ contract AelinPoolFactoryTest is Test {
         vm.assume(purchaseTokenCap < 1e27);
         vm.assume(purchaseDuration >= 30 minutes);
         vm.assume(purchaseDuration <= 30 days);
-        vm.assume(sponsorFee < 98e18);
+        vm.assume(sponsorFee < 15e18);
         vm.assume(duration <= 365 days);
 
         IAelinPool.NftCollectionRules[] memory nftCollectionRules;
