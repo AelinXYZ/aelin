@@ -30,9 +30,9 @@ contract AelinPoolTest is Test {
     function setUp() public {
         testDeal = new AelinDeal();
         poolFactory = new AelinPoolFactory(
-            address(new AelinPool()), 
-            address(testDeal), 
-            aelinTreasury, 
+            address(new AelinPool()),
+            address(testDeal),
+            aelinTreasury,
             address(new AelinFeeEscrow())
         );
         dealToken = new MockERC20("MockDeal", "MD");
@@ -42,6 +42,7 @@ contract AelinPoolTest is Test {
         collectionAddress3 = new MockERC721("TestCollection", "TC");
 
         deal(address(purchaseToken), address(this), 1e75);
+        deal(address(dealToken), address(this), 1e75);
 
         address[] memory allowListAddresses;
         uint256[] memory allowListAmounts;
@@ -361,13 +362,189 @@ contract AelinPoolTest is Test {
                           acceptDealTokens
     //////////////////////////////////////////////////////////////*/
 
-    // TODO
+    function testAcceptMaxDealTokens() public {
+        AelinPool(poolAddress).purchasePoolTokens(1e27);
+
+        vm.warp(block.timestamp + 20 days);
+        address dealAddress = AelinPool(poolAddress).createDeal(
+            address(dealToken),
+            1e27,
+            1e27,
+            10 days,
+            20 days,
+            30 days,
+            0,
+            address(this),
+            30 days
+        );
+
+        IERC20(dealToken).approve(address(dealAddress), type(uint256).max);
+        AelinDeal(dealAddress).depositUnderlying(1e27);
+
+        AelinPool(poolAddress).acceptMaxDealTokens();
+
+        assertEq(IERC20(dealToken).balanceOf(dealAddress), 1e27 - ((1e27 * 2e18) / 100e18));
+        assertEq(IERC20(dealToken).balanceOf(address(AelinDeal(dealAddress).aelinFeeEscrow())), 1e25 * 2);
+        assertEq(IERC20(purchaseToken).balanceOf(address(this)), 1e75);
+        assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), 0);
+        assertEq(IERC20(poolAddress).balanceOf(address(this)), 0);
+        assertEq(AelinPool(poolAddress).amountAccepted(address(this)), 1e27);
+        assertEq(AelinPool(poolAddress).totalAmountAccepted(), 1e27);
+        assertTrue(!AelinPool(poolAddress).openPeriodEligible(address(this)));
+    }
+
+    // accept max deal after proRata and open period - fail
+    function testFailAcceptMaxDealTokens(uint256 timestamp) public {
+        vm.assume(timestamp > 30 days);
+        vm.assume(timestamp < type(uint256).max);
+        AelinPool(poolAddress).purchasePoolTokens(1e27);
+
+        vm.warp(block.timestamp + 20 days);
+        address dealAddress = AelinPool(poolAddress).createDeal(
+            address(dealToken),
+            1e27,
+            1e27,
+            10 days,
+            20 days,
+            30 days,
+            0,
+            address(this),
+            30 days
+        );
+
+        IERC20(dealToken).approve(address(dealAddress), type(uint256).max);
+        AelinDeal(dealAddress).depositUnderlying(1e27);
+
+        vm.warp(block.timestamp + 20 days + timestamp);
+        AelinPool(poolAddress).acceptMaxDealTokens();
+    }
+
+    function testAcceptDealTokens(uint256 amount) public {
+        vm.assume(amount < 1e27);
+        AelinPool(poolAddress).purchasePoolTokens(1e27);
+
+        vm.warp(block.timestamp + 20 days);
+        address dealAddress = AelinPool(poolAddress).createDeal(
+            address(dealToken),
+            1e27,
+            1e27,
+            10 days,
+            20 days,
+            30 days,
+            0,
+            address(this),
+            30 days
+        );
+
+        IERC20(dealToken).approve(address(dealAddress), type(uint256).max);
+        AelinDeal(dealAddress).depositUnderlying(1e27);
+
+        AelinPool(poolAddress).acceptDealTokens(amount);
+
+        assertEq(IERC20(dealToken).balanceOf(dealAddress), 1e27 - ((amount * 2e18) / 100e18));
+        assertEq(IERC20(dealToken).balanceOf(address(AelinDeal(dealAddress).aelinFeeEscrow())), (amount * 2e18) / 100e18);
+        assertEq(IERC20(purchaseToken).balanceOf(address(this)), 1e75 - 1e27 + amount);
+        assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), 1e27 - amount);
+        assertEq(IERC20(poolAddress).balanceOf(address(this)), 1e27 - amount);
+        assertEq(AelinPool(poolAddress).amountAccepted(address(this)), amount);
+        assertEq(AelinPool(poolAddress).totalAmountAccepted(), amount);
+        assertTrue(!AelinPool(poolAddress).openPeriodEligible(address(this)));
+    }
+
+    function testAcceptDealTokensLessThanPurchase() public {
+        AelinPool(poolAddress).purchasePoolTokens(1e30);
+
+        vm.warp(block.timestamp + 20 days);
+        address dealAddress = AelinPool(poolAddress).createDeal(
+            address(dealToken),
+            1e27,
+            1e15,
+            10 days,
+            20 days,
+            30 days,
+            30 days,
+            address(this),
+            30 days
+        );
+
+        IERC20(dealToken).approve(address(dealAddress), type(uint256).max);
+        AelinDeal(dealAddress).depositUnderlying(1e15);
+
+        AelinPool(poolAddress).acceptDealTokens(1e25);
+
+        assertEq(IERC20(poolAddress).balanceOf(address(this)), 1e30 - 1e25);
+        assertEq(IERC20(dealAddress).balanceOf(address(this)), 1e25 - ((1e25 * 2e18) / 100e18));
+        // ((acceptedDealAmount * aelinFees) * (underlyingDealAmount * 1e18 / maxSupply)) / 1e18
+        assertEq(IERC20(dealToken).balanceOf(address(AelinDeal(dealAddress).aelinFeeEscrow())), 2e11);
+        assertEq(IERC20(dealToken).balanceOf(address(dealAddress)), 1e15 - 2e11);
+        assertEq(IERC20(purchaseToken).balanceOf(address(this)), 1e75 - 1e30 + 1e25);
+        assertEq(IERC20(purchaseToken).balanceOf(address(poolAddress)), 1e30 - 1e25);
+        assertEq(AelinPool(poolAddress).amountAccepted(address(this)), 1e25);
+        assertEq(AelinPool(poolAddress).totalAmountAccepted(), 1e25);
+        assertTrue(!AelinPool(poolAddress).openPeriodEligible(address(this)));
+    }
+
+    // TODO (additional tests)
 
     /*//////////////////////////////////////////////////////////////
                           maxProRataAmount
     //////////////////////////////////////////////////////////////*/
 
-    // TODO
+    function testMaxProRataAmount(uint256 amount) public {
+        vm.assume(amount > 0);
+        vm.assume(amount <= 1e27);
+        AelinPool(poolAddress).purchasePoolTokens(amount);
+
+        vm.warp(block.timestamp + 20 days);
+        address dealAddress = AelinPool(poolAddress).createDeal(
+            address(dealToken),
+            amount,
+            1e27,
+            10 days,
+            20 days,
+            30 days,
+            0,
+            address(this),
+            30 days
+        );
+
+        IERC20(dealToken).approve(address(dealAddress), type(uint256).max);
+        AelinDeal(dealAddress).depositUnderlying(1e27);
+
+        uint256 proRataAmount = AelinPool(poolAddress).maxProRataAmount(address(this));
+
+        assertEq(proRataAmount, amount);
+    }
+
+    function testMaxProRataAmountWithoutPurchase() public {
+        deal(address(purchaseToken), address(0xBEEF), 1e75);
+        vm.startPrank(address(0xBEEF));
+        IERC20(purchaseToken).approve(address(poolAddress), type(uint256).max);
+        AelinPool(poolAddress).purchasePoolTokens(1e27);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 20 days);
+        address dealAddress = AelinPool(poolAddress).createDeal(
+            address(dealToken),
+            1e27,
+            1e27,
+            10 days,
+            20 days,
+            30 days,
+            0,
+            address(this),
+            30 days
+        );
+
+        IERC20(dealToken).approve(address(dealAddress), type(uint256).max);
+        AelinDeal(dealAddress).depositUnderlying(1e27);
+
+        uint256 proRataAmount = AelinPool(poolAddress).maxProRataAmount(address(this));
+
+        assertEq(proRataAmount, 0);
+    }
+
+    // TODO (additional tests)
 
     /*//////////////////////////////////////////////////////////////
                           withdrawfromPool
