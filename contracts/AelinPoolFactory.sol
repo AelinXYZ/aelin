@@ -6,6 +6,7 @@ import "./AelinPool.sol";
 import "./interfaces/IAelinPool.sol";
 
 /**
+ * @title Aelin Pool Factory
  * @dev the factory contract allows an Aelin sponsor to permissionlessly create new pools
  */
 contract AelinPoolFactory is MinimalProxyFactory {
@@ -27,7 +28,10 @@ contract AelinPoolFactory is MinimalProxyFactory {
     }
 
     /**
+     * @notice create new pool
      * @dev the method a sponsor calls to create a pool
+     * @param _poolData Struct containing pool configuration parameters
+     * @return address Address of new pool contract
      */
     function createPool(IAelinPool.PoolData memory _poolData) external returns (address) {
         require(_poolData.purchaseToken != address(0), "cant pass null token address");
