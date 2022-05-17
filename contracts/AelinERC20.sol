@@ -8,14 +8,14 @@ interface IERC20Decimals {
 }
 
 /**
- * @dev a standard ERC20 contract that is extended with a few methods
- * described in detail below
+ * @title AelinERC20
+ * @dev a standard ERC20 contract that is extended with a few methods described in detail below
  */
 contract AelinERC20 is ERC20 {
     bool setInfo;
     /**
      * @dev Due to the constructor being empty for the MinimalProxy architecture we need
-     * to set the name and symbol in the initializer which requires these custom variables
+     *      to set the name and symbol in the initializer which requires these custom variables
      */
     string private _custom_name;
     string private _custom_symbol;
@@ -32,17 +32,27 @@ contract AelinERC20 is ERC20 {
 
     /**
      * @dev Due to the constructor being empty for the MinimalProxy architecture we need
-     * to set the name, symbol, and decimals in the initializer which requires this
-     * custom logic for name(), symbol(), decimals(), and _setNameSymbolAndDecimals()
+     *      to set the name in the initializer which requires this custom logic 
+     * @return string ERC20 name
      */
     function name() public view virtual override returns (string memory) {
         return _custom_name;
     }
 
+    /**
+     * @dev Due to the constructor being empty for the MinimalProxy architecture we need
+     *      to set the symbol in the initializer which requires this custom logic 
+     * @return string ERC20 symbol
+     */
     function symbol() public view virtual override returns (string memory) {
         return _custom_symbol;
     }
 
+    /**
+     * @dev Due to the constructor being empty for the MinimalProxy architecture we need
+     *      to set the decimals in the initializer which requires this custom logic 
+     * @return uint8 ERC20 decimals
+     */
     function decimals() public view virtual override returns (uint8) {
         return _custom_decimals;
     }
@@ -62,8 +72,8 @@ contract AelinERC20 is ERC20 {
 
     /**
      * @dev Add this to prevent reentrancy attacks on purchasePoolTokens and depositUnderlying
-     * source: https://quantstamp.com/blog/how-the-dforce-hacker-used-reentrancy-to-steal-25-million
-     * uniswap implementation: https://github.com/Uniswap/v2-core/blob/master/contracts/UniswapV2Pair.sol#L31-L36
+     *      source: https://quantstamp.com/blog/how-the-dforce-hacker-used-reentrancy-to-steal-25-million
+     *      uniswap implementation: https://github.com/Uniswap/v2-core/blob/master/contracts/UniswapV2Pair.sol#L31-L36
      */
     modifier lock() {
         require(!locked, "AelinV1: LOCKED");
