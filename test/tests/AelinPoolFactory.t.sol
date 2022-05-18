@@ -356,4 +356,37 @@ contract AelinPoolFactoryTest is Test {
         assertEq(AelinPool(poolAddress).aelinRewardsAddress(), address(aelinRewards));
         assertTrue(!AelinPool(poolAddress).hasAllowList());
     }
+
+    // reverts when some an address other than 721 or 1155 is provided
+    function testCreatePoolNonCompatibleAddress(uint256 timestamp, address collection) public {
+        vm.assume(timestamp < 1e77);
+        vm.assume(collection != address(collectionAddress1));
+        vm.assume(collection != address(collectionAddress2));
+        vm.assume(collection != address(collectionAddress3));
+        vm.assume(collection != address(collectionAddress4));
+        vm.assume(collection != punks);
+
+        IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](1);
+        nftCollectionRules[0].collectionAddress = collection;
+        nftCollectionRules[0].purchaseAmount = 1e20;
+        nftCollectionRules[0].purchaseAmountPerToken = true;
+
+        IAelinPool.PoolData memory poolData;
+        poolData = IAelinPool.PoolData({
+            name: "POOL",
+            symbol: "POOL",
+            purchaseTokenCap: 1e18,
+            purchaseToken: address(purchaseToken),
+            duration: 30 days,
+            sponsorFee: 2e18,
+            purchaseDuration: 20 days,
+            allowListAddresses: allowListAddresses,
+            allowListAmounts: allowListAmounts,
+            nftCollectionRules: nftCollectionRules
+        });
+
+        vm.warp(timestamp);
+        vm.expectRevert(bytes("collection is not compatible"));
+        poolFactory.createPool(poolData);
+    }
 }
