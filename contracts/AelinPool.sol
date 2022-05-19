@@ -262,7 +262,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
      * or if the pro rata period is not active, then you have 0 available for this period
      */
     function maxProRataAmount(address purchaser) public view returns (uint256) {
-        ( , uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
+        (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
 
         if (
             (balanceOf(purchaser) == 0 && amountAccepted[purchaser] == 0 && amountWithdrawn[purchaser] == 0) ||
@@ -290,8 +290,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256 poolTokenAmount,
         bool useMax
     ) internal dealFunded lock {
-        ( , uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
-        ( , uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
+        (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
+        (, uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
 
         if (block.timestamp >= proRataRedemptionStart && block.timestamp < proRataRedemptionExpiry) {
             _acceptDealTokensProRata(recipient, poolTokenAmount, useMax);
@@ -426,9 +426,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
          * or if the period is outside of a redemption window so nothing is available.
          * It then checks if you are in the pro rata period and open period eligibility
          */
-        
-        ( , uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
-        ( , uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
+
+        (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
+        (, uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
 
         if (
             holderFundingExpiry == 0 ||
@@ -448,8 +448,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     }
 
     modifier transferWindow() {
-        ( , uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
-        ( , uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
+        (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
+        (, uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
 
         require(
             proRataRedemptionStart == 0 ||
@@ -480,6 +480,13 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         return poolTokenAmount * 10**(18 - poolTokenDecimals);
     }
 
+    /**
+     * @dev a function that any Ethereum address can call to vouch for a pool's legitimacy
+     */
+    function vouch() external {
+        emit Vouch(msg.sender);
+    }
+
     event SetSponsor(address indexed sponsor);
     event PurchasePoolToken(address indexed purchaser, uint256 purchaseTokenAmount);
     event WithdrawFromPool(address indexed purchaser, uint256 purchaseTokenAmount);
@@ -504,4 +511,5 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256 holderFundingDuration
     );
     event AllowlistAddress(address indexed purchaser, uint256 allowlistAmount);
+    event Vouch(address indexed voucher);
 }
