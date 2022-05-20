@@ -360,7 +360,7 @@ contract AelinPoolTest is Test {
 
     function testFuzzVouchForPool(address attestant) public {
         vm.prank(attestant);
-        vm.expectEmit(true, false, false, true);
+        vm.expectEmit(false, false, false, false, address(poolAddress));
         emit Vouch(attestant);
         AelinPool(poolAddress).vouch();
     }
@@ -371,7 +371,7 @@ contract AelinPoolTest is Test {
 
     function testFuzzDisavowForPool(address attestant) public {
         vm.prank(attestant);
-        vm.expectEmit(true, false, false, true);
+        vm.expectEmit(false, false, false, false, address(poolAddress));
         emit Disavow(attestant);
         AelinPool(poolAddress).disavow();
     }

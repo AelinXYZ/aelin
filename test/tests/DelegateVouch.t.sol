@@ -21,7 +21,7 @@ contract DelegateVouchTest is Test {
 
     function testFuzzAddDelegateVouch(address delegate) public {
         vm.prank(aelinCouncil);
-        vm.expectEmit(true, false, false, true);
+        vm.expectEmit(false, false, false, false, address(delegateVouchAddress));
         emit AddDelegateVouch(delegate);
         DelegateVouch(delegateVouchAddress).addDelegateVouch(delegate);
     }
@@ -38,7 +38,7 @@ contract DelegateVouchTest is Test {
 
     function testFuzzRemoveDelegateVouch(address delegate) public {
         vm.prank(aelinCouncil);
-        vm.expectEmit(true, false, false, true);
+        vm.expectEmit(false, false, false, false, address(delegateVouchAddress));
         emit RemoveDelegateVouch(delegate);
         DelegateVouch(delegateVouchAddress).removeDelegateVouch(delegate);
     }
