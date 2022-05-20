@@ -26,8 +26,8 @@ contract DelegateVouchTest is Test {
         DelegateVouch(delegateVouchAddress).addDelegateVouch(delegate);
     }
 
-    function testFuzzAddDelegateVouchOnlyOwner(address delegate) public {
-        vm.prank(delegate);
+    function testFuzzAddDelegateVouchOnlyOwner(address delegate, address caller) public {
+        vm.prank(caller);
         vm.expectRevert("Only the contract owner may perform this action");
         DelegateVouch(delegateVouchAddress).addDelegateVouch(delegate);
     }
@@ -43,8 +43,8 @@ contract DelegateVouchTest is Test {
         DelegateVouch(delegateVouchAddress).removeDelegateVouch(delegate);
     }
 
-    function testFuzzRemoveDelegateVouchOnlyOwner(address delegate) public {
-        vm.prank(delegate);
+    function testFuzzRemoveDelegateVouchOnlyOwner(address delegate, address caller) public {
+        vm.prank(caller);
         vm.expectRevert("Only the contract owner may perform this action");
         DelegateVouch(delegateVouchAddress).removeDelegateVouch(delegate);
     }
