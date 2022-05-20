@@ -26,6 +26,9 @@ contract AelinPoolTest is Test {
     MockERC721 public collectionAddress2;
     MockERC721 public collectionAddress3;
 
+    event Vouch(address indexed voucher);
+    event Disavow(address indexed voucher);
+
     function setUp() public {
         testDeal = new AelinDeal();
         poolFactory = new AelinPoolFactory(address(new AelinPool()), address(testDeal), aelinRewards);
@@ -349,6 +352,28 @@ contract AelinPoolTest is Test {
         vm.prank(address(futureSponsor));
         AelinPool(poolAddress).acceptSponsor();
         assertEq(AelinPool(poolAddress).sponsor(), address(futureSponsor));
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              vouch
+    //////////////////////////////////////////////////////////////*/
+
+    function testFuzzVouchForPool(address attestant) public {
+        vm.prank(attestant);
+        vm.expectEmit(true, false, false, true);
+        emit Vouch(attestant);
+        AelinPool(poolAddress).vouch();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              disavow
+    //////////////////////////////////////////////////////////////*/
+
+    function testFuzzDisavowForPool(address attestant) public {
+        vm.prank(attestant);
+        vm.expectEmit(true, false, false, true);
+        emit Disavow(attestant);
+        AelinPool(poolAddress).disavow();
     }
 
     /*//////////////////////////////////////////////////////////////

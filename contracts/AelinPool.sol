@@ -641,6 +641,20 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         return poolTokenAmount * 10**(18 - poolTokenDecimals);
     }
 
+    /**
+     * @dev a function that any Ethereum address can call to vouch for a pool's legitimacy
+     */
+    function vouch() external {
+        emit Vouch(msg.sender);
+    }
+
+    /**
+     * @dev a function that any Ethereum address can call to disavow for a pool's legitimacy
+     */
+    function disavow() external {
+        emit Disavow(msg.sender);
+    }
+
     event SetSponsor(address indexed sponsor);
     event PurchasePoolToken(address indexed purchaser, uint256 purchaseTokenAmount);
     event WithdrawFromPool(address indexed purchaser, uint256 purchaseTokenAmount);
@@ -673,4 +687,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256[] tokenIds,
         uint256[] minTokensEligible
     );
+    event Vouch(address indexed voucher);
+    event Disavow(address indexed voucher);
 }
