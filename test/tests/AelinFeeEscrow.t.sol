@@ -24,6 +24,14 @@ contract AelinFeeEscrowTest is Test {
     MockERC20 public dealToken;
     MockERC20 public purchaseToken;
 
+    event InitializeEscrow(
+        address indexed dealAddress,
+        address indexed treasury,
+        uint256 vestingExpiry,
+        address indexed escrowedToken
+    );
+    event DelayEscrow(uint256 vestingExpiry);
+
     function setUp() public {
         testPool = new AelinPool();
         testDeal = new AelinDeal();
@@ -84,6 +92,12 @@ contract AelinFeeEscrowTest is Test {
         assertEq(AelinFeeEscrow(escrowAddress).escrowedToken(), address(dealToken));
     }
 
+    function testInitializeEvent() public {
+        vm.expectEmit(true, true, true, true, address(testEscrow));
+        emit InitializeEscrow(address(this), aelinTreasury, block.timestamp + 180 days, address(dealToken));
+        AelinFeeEscrow(testEscrow).initialize(aelinTreasury, address(dealToken));
+    }
+
     function testSetTreasury(address testAddress) public {
         vm.prank(address(aelinTreasury));
         AelinFeeEscrow(escrowAddress).setTreasury(testAddress);
@@ -117,11 +131,13 @@ contract AelinFeeEscrowTest is Test {
     }
 
     function testDelayEscrow(uint256 timestamp) public {
-        // 90 days + block.timestamp which is 30 days 
+        // 90 days + block.timestamp which is 30 days
         vm.assume(timestamp > 120 days);
         vm.assume(timestamp < 1e75);
         vm.prank(address(aelinTreasury));
         vm.warp(timestamp);
+        vm.expectEmit(false, false, false, true, address(escrowAddress));
+        emit DelayEscrow(block.timestamp + 90 days);
         AelinFeeEscrow(escrowAddress).delayEscrow();
 
         assertEq(AelinFeeEscrow(escrowAddress).vestingExpiry(), block.timestamp + 90 days);

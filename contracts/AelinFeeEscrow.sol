@@ -37,6 +37,7 @@ contract AelinFeeEscrow {
         treasury = _treasury;
         vestingExpiry = block.timestamp + 180 days;
         escrowedToken = _escrowedToken;
+        emit InitializeEscrow(msg.sender, _treasury, vestingExpiry, escrowedToken);
     }
 
     modifier initOnce() {
@@ -53,6 +54,7 @@ contract AelinFeeEscrow {
     function delayEscrow() external onlyTreasury {
         require(vestingExpiry < block.timestamp + 90 days, "can only extend by 90 days");
         vestingExpiry = block.timestamp + 90 days;
+        emit DelayEscrow(vestingExpiry);
     }
 
     function transferToken(
@@ -61,12 +63,20 @@ contract AelinFeeEscrow {
         uint256 amount
     ) external onlyTreasury {
         if (token == escrowedToken) {
-          require(block.timestamp > vestingExpiry, "cannot access funds yet");
+            require(block.timestamp > vestingExpiry, "cannot access funds yet");
         }
         IERC20(token).transfer(to, amount);
     }
+
     // Maybe we could have a method to only receive funds from the AelinDeal contract's
     // protocolMint function and pass in any address needed for that on initialize
 
     event SetTreasury(address indexed treasury);
-} 
+    event InitializeEscrow(
+        address indexed dealAddress,
+        address indexed treasury,
+        uint256 vestingExpiry,
+        address indexed escrowedToken
+    );
+    event DelayEscrow(uint256 vestingExpiry);
+}
