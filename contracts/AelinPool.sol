@@ -151,9 +151,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
                         nftCollectionRules[i].purchaseAmountPerToken
                     );
                 }
+                hasNftList = true;
             }
             // if the first address supports 1155, the entire pool only supports 1155
-            if (NftCheck.supports1155(nftCollectionRules[0].collectionAddress)) {
+            else if (NftCheck.supports1155(nftCollectionRules[0].collectionAddress)) {
                 for (uint256 i = 0; i < nftCollectionRules.length; i++) {
                     require(NftCheck.supports1155(nftCollectionRules[i].collectionAddress), "can only contain 1155");
                     nftCollectionDetails[nftCollectionRules[i].collectionAddress] = nftCollectionRules[i];
@@ -169,8 +170,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
                         nftCollectionRules[i].minTokensEligible
                     );
                 }
+                hasNftList = true;
+            } else {
+                revert("collection is not compatible");
             }
-            hasNftList = true;
         }
 
         emit SetSponsor(_sponsor);
