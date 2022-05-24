@@ -55,7 +55,7 @@ contract AelinDeal is AelinERC20, MinimalProxyFactory, IAelinDeal {
         DealData calldata _dealData,
         address _aelinTreasuryAddress,
         address _aelinEscrowAddress
-    ) external initOnce {
+    ) public initOnce {
         _setNameSymbolAndDecimals(
             string(abi.encodePacked("aeDeal-", _poolName)),
             string(abi.encodePacked("aeD-", _poolSymbol)),
@@ -118,7 +118,7 @@ contract AelinDeal is AelinERC20, MinimalProxyFactory, IAelinDeal {
      * the deposit still needs to be finalized by calling this method with
      * _underlyingDealTokenAmount set to 0
      */
-    function depositUnderlying(uint256 _underlyingDealTokenAmount) external finalizeDeposit lock returns (bool) {
+    function depositUnderlying(uint256 _underlyingDealTokenAmount) public finalizeDeposit lock returns (bool) {
         if (_underlyingDealTokenAmount > 0) {
             uint256 currentBalance = IERC20(underlyingDealToken).balanceOf(address(this));
             IERC20(underlyingDealToken).safeTransferFrom(msg.sender, address(this), _underlyingDealTokenAmount);
@@ -266,7 +266,7 @@ contract AelinDeal is AelinERC20, MinimalProxyFactory, IAelinDeal {
     }
 
     /**
-     * @dev allows the protocol to handle protocol fees coming in deal tokens. 
+     * @dev allows the protocol to handle protocol fees coming in deal tokens.
      * It may only be called from the pool contract that created this deal
      */
     function protocolMint(uint256 dealTokenAmount) external onlyPool {

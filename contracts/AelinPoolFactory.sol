@@ -35,7 +35,7 @@ contract AelinPoolFactory is MinimalProxyFactory {
      */
     function createPool(IAelinPool.PoolData calldata _poolData) external returns (address) {
         require(_poolData.purchaseToken != address(0), "cant pass null token address");
-        address aelinPoolAddress = _cloneAsMinimalProxy(AELIN_POOL_LOGIC, "Could not create new deal");
+        address aelinPoolAddress = _cloneAsMinimalProxy(AELIN_POOL_LOGIC, "Could not create new pool");
         AelinPool aelinPool = AelinPool(aelinPoolAddress);
         aelinPool.initialize(_poolData, msg.sender, AELIN_DEAL_LOGIC, AELIN_TREASURY, AELIN_ESCROW_LOGIC);
 
