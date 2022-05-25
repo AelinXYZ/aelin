@@ -24,6 +24,7 @@ contract DelegateVouchTest is Test {
         vm.expectEmit(false, false, false, false, address(delegateVouchAddress));
         emit AddDelegateVouch(delegate);
         DelegateVouch(delegateVouchAddress).addDelegateVouch(delegate);
+        assertEq(DelegateVouch(delegateVouchAddress).isDelegate(delegate), true);
     }
 
     function testFuzzAddDelegateVouchOnlyOwner(address delegate, address caller) public {
@@ -41,6 +42,7 @@ contract DelegateVouchTest is Test {
         vm.expectEmit(false, false, false, false, address(delegateVouchAddress));
         emit RemoveDelegateVouch(delegate);
         DelegateVouch(delegateVouchAddress).removeDelegateVouch(delegate);
+        assertEq(DelegateVouch(delegateVouchAddress).isDelegate(delegate), false);
     }
 
     function testFuzzRemoveDelegateVouchOnlyOwner(address delegate, address caller) public {
