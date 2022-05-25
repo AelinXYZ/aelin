@@ -3,10 +3,12 @@ pragma solidity 0.8.6;
 
 import "./AelinERC20.sol";
 import "./interfaces/IAelinDeal.sol";
+import "./MinimalProxyFactory.sol";
+import "./AelinFeeEscrow.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract AelinDeal is AelinERC20, IAelinDeal {
+contract AelinDeal is AelinERC20, MinimalProxyFactory, IAelinDeal {
     using SafeERC20 for IERC20;
     uint256 public maxTotalSupply;
 
@@ -15,7 +17,7 @@ contract AelinDeal is AelinERC20, IAelinDeal {
     uint256 public totalUnderlyingClaimed;
     address public holder;
     address public futureHolder;
-    address public aelinRewardsAddress;
+    address public aelinTreasuryAddress;
 
     uint256 public underlyingPerDealExchangeRate;
 
@@ -27,6 +29,9 @@ contract AelinDeal is AelinERC20, IAelinDeal {
     uint256 public holderFundingExpiry;
 
     bool private calledInitialize;
+    address public aelinEscrowAddress;
+    AelinFeeEscrow public aelinFeeEscrow;
+
     bool public depositComplete;
     mapping(address => uint256) public amountVested;
 
@@ -48,7 +53,8 @@ contract AelinDeal is AelinERC20, IAelinDeal {
         string calldata _poolName,
         string calldata _poolSymbol,
         DealData calldata _dealData,
-        address _aelinRewardsAddress
+        address _aelinTreasuryAddress,
+        address _aelinEscrowAddress
     ) external initOnce {
         _setNameSymbolAndDecimals(
             string(abi.encodePacked("aeDeal-", _poolName)),
@@ -67,7 +73,8 @@ contract AelinDeal is AelinERC20, IAelinDeal {
         proRataRedemption.period = _dealData.proRataRedemptionPeriod;
         openRedemption.period = _dealData.openRedemptionPeriod;
         holderFundingExpiry = _dealData.holderFundingDuration;
-        aelinRewardsAddress = _aelinRewardsAddress;
+        aelinTreasuryAddress = _aelinTreasuryAddress;
+        aelinEscrowAddress = _aelinEscrowAddress;
 
         depositComplete = false;
 
@@ -132,6 +139,11 @@ contract AelinDeal is AelinERC20, IAelinDeal {
                 openRedemption.start = proRataRedemption.expiry;
                 openRedemption.expiry = proRataRedemption.expiry + openRedemption.period;
             }
+
+            address aelinEscrowStorageProxy = _cloneAsMinimalProxy(aelinEscrowAddress, "Could not create new escrow");
+            aelinFeeEscrow = AelinFeeEscrow(aelinEscrowStorageProxy);
+            aelinFeeEscrow.initialize(aelinTreasuryAddress, underlyingDealToken);
+
             emit DealFullyFunded(
                 aelinPool,
                 proRataRedemption.start,
@@ -245,16 +257,26 @@ contract AelinDeal is AelinERC20, IAelinDeal {
 
     /**
      * @dev allows the purchaser to mint deal tokens. this method is also used
-     * to send deal tokens to the sponsor and the aelin rewards pool. It may only
-     * be called from the pool contract that created this deal
+     * to send deal tokens to the sponsor. It may only be called from the pool
+     * contract that created this deal
      */
     function mint(address dst, uint256 dealTokenAmount) external onlyPool {
         require(depositComplete, "deposit not complete");
         _mint(dst, dealTokenAmount);
     }
 
+    /**
+     * @dev allows the protocol to handle protocol fees coming in deal tokens. 
+     * It may only be called from the pool contract that created this deal
+     */
+    function protocolMint(uint256 dealTokenAmount) external onlyPool {
+        require(depositComplete, "deposit not complete");
+        uint256 underlyingProtocolFees = (underlyingPerDealExchangeRate * dealTokenAmount) / 1e18;
+        IERC20(underlyingDealToken).transfer(address(aelinFeeEscrow), underlyingProtocolFees);
+    }
+
     modifier blockTransfer() {
-        if (msg.sender != aelinRewardsAddress) {
+        if (msg.sender != aelinTreasuryAddress) {
             require(false, "cannot transfer deal tokens");
         }
         _;
@@ -266,7 +288,7 @@ contract AelinDeal is AelinERC20, IAelinDeal {
      * single transaction for distribution to $AELIN stakers.
      */
     function treasuryTransfer(address recipient) external returns (bool) {
-        require(msg.sender == aelinRewardsAddress, "only Rewards address can access");
+        require(msg.sender == aelinTreasuryAddress, "only Rewards address can access");
         (uint256 underlyingClaimable, uint256 claimableDealTokens) = claimableTokens(msg.sender);
         transfer(recipient, balanceOf(msg.sender) - claimableDealTokens);
         return IERC20(underlyingDealToken).transferFrom(msg.sender, recipient, underlyingClaimable);

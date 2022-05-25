@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import {AelinPool} from "contracts/AelinPool.sol";
 import {AelinDeal} from "contracts/AelinDeal.sol";
 import {AelinPoolFactory} from "contracts/AelinPoolFactory.sol";
+import {AelinFeeEscrow} from "contracts/AelinFeeEscrow.sol";
 import {IAelinDeal} from "contracts/interfaces/IAelinDeal.sol";
 import {IAelinPool} from "contracts/interfaces/IAelinPool.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
@@ -14,7 +15,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ICryptoPunks} from "contracts/interfaces/ICryptoPunks.sol";
 
 contract AelinPoolPurchase is Test {
-    address public aelinRewards = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
+    address public aelinTreasury = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
     address public punks = address(0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB);
     address public poolAddress;
     address public poolAddressWith1155;
@@ -30,7 +31,12 @@ contract AelinPoolPurchase is Test {
     MockERC1155 public collectionAddress5;
 
     function setUp() public {
-        poolFactory = new AelinPoolFactory(address(new AelinPool()), address(new AelinDeal()), aelinRewards);
+        poolFactory = new AelinPoolFactory(
+            address(new AelinPool()), 
+            address(new AelinDeal()), 
+            aelinTreasury, 
+            address(new AelinFeeEscrow())
+        );
         purchaseToken = new MockERC20("MockPool", "MP");
         collectionAddress1 = new MockERC721("TestCollection", "TC");
         collectionAddress2 = new MockERC721("TestCollection", "TC");

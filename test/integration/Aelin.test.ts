@@ -7,8 +7,9 @@ import ERC20Artifact from "../../artifacts/@openzeppelin/contracts/token/ERC20/E
 import AelinPoolArtifact from "../../artifacts/contracts/AelinPool.sol/AelinPool.json";
 import AelinDealArtifact from "../../artifacts/contracts/AelinDeal.sol/AelinDeal.json";
 import AelinPoolFactoryArtifact from "../../artifacts/contracts/AelinPoolFactory.sol/AelinPoolFactory.json";
+import AelinFeeEscrowArtifact from "../../artifacts/contracts/AelinFeeEscrow.sol/AelinFeeEscrow.json";
 
-import { AelinPool, AelinDeal, AelinPoolFactory, ERC20 } from "../../typechain";
+import { AelinPool, AelinDeal, AelinPoolFactory, ERC20, AelinFeeEscrow } from "../../typechain";
 import {
   fundUsers,
   getImpersonatedSigner,
@@ -43,6 +44,7 @@ describe("integration test", () => {
   let aelinDealProxyStorage: AelinDeal;
   let aelinPoolLogic: AelinPool;
   let aelinDealLogic: AelinDeal;
+  let aelinEscrowLogic: AelinFeeEscrow;
   const dealTokenDecimals = 18;
 
   const usdcContractAddress = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
@@ -122,6 +124,12 @@ describe("integration test", () => {
       deployer,
       AelinPoolArtifact
     )) as AelinPool;
+
+    aelinEscrowLogic = (await deployContract(
+      deployer,
+      AelinFeeEscrowArtifact
+    )) as AelinFeeEscrow;
+
     await fundUsers(usdcContract, usdcWhaleSigner, fundUSDCAmount, [
       user1,
       user2,
@@ -192,6 +200,7 @@ describe("integration test", () => {
           aelinPoolLogic.address,
           aelinDealLogic.address,
           mockAelinRewardsAddress,
+          aelinEscrowLogic.address
         ]
       )) as AelinPoolFactory;
 
@@ -538,7 +547,7 @@ describe("integration test", () => {
         aelinDealProxyStorage.filters.Transfer(nullAddress)
       );
 
-      expect(mintLogs.length).to.equal(4 * 3);
+      expect(mintLogs.length).to.equal(4 * 2);
 
       const totalToHolderFromEvents = acceptLogs.reduce(
         (acc, log) => acc.add(log.args.poolTokenAmount),
@@ -623,6 +632,7 @@ describe("integration test", () => {
           aelinPoolLogic.address,
           aelinDealLogic.address,
           mockAelinRewardsAddress,
+          aelinEscrowLogic.address
         ]
       )) as AelinPoolFactory;
 
@@ -908,7 +918,7 @@ describe("integration test", () => {
         aelinDealProxyStorage.filters.Transfer(nullAddress)
       );
 
-      expect(mintLogs.length).to.equal(4 * 3);
+      expect(mintLogs.length).to.equal(4 * 2);
 
       const totalToHolderFromEvents = acceptLogs.reduce(
         (acc, log) => acc.add(log.args.poolTokenAmount),
@@ -1006,6 +1016,7 @@ describe("integration test", () => {
           aelinPoolLogic.address,
           aelinDealLogic.address,
           mockAelinRewardsAddress,
+          aelinEscrowLogic.address
         ]
       )) as AelinPoolFactory;
 
@@ -1166,7 +1177,7 @@ describe("integration test", () => {
         aelinDealProxyStorage.filters.Transfer(nullAddress)
       );
 
-      expect(mintLogs.length).to.equal(3);
+      expect(mintLogs.length).to.equal(2);
 
       const totalToHolderFromEvents = acceptLogs.reduce(
         (acc, log) => acc.add(log.args.poolTokenAmount),
@@ -1186,6 +1197,7 @@ describe("integration test", () => {
             aelinPoolLogic.address,
             aelinDealLogic.address,
             mockAelinRewardsAddress,
+            aelinEscrowLogic.address
           ]
         )) as AelinPoolFactory;
 
@@ -1421,6 +1433,7 @@ describe("integration test", () => {
             aelinPoolLogic.address,
             aelinDealLogic.address,
             mockAelinRewardsAddress,
+            aelinEscrowLogic.address
           ]
         )) as AelinPoolFactory;
 
@@ -1585,6 +1598,7 @@ describe("integration test", () => {
             aelinPoolLogic.address,
             aelinDealLogic.address,
             mockAelinRewardsAddress,
+            aelinEscrowLogic.address
           ]
         )) as AelinPoolFactory;
 

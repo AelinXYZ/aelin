@@ -5,7 +5,8 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 import ERC20Artifact from "../../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json";
 import AelinDealArtifact from "../../artifacts/contracts/AelinDeal.sol/AelinDeal.json";
-import { AelinDeal, ERC20 } from "../../typechain";
+import AelinFeeEscrowArtifact from "../../artifacts/contracts/AelinFeeEscrow.sol/AelinFeeEscrow.json";
+import { AelinDeal, ERC20, AelinFeeEscrow } from "../../typechain";
 import { fundUsers, getImpersonatedSigner, nullAddress } from "../helpers";
 
 const { deployContract, deployMockContract } = waffle;
@@ -20,6 +21,7 @@ describe("AelinDeal", function () {
   let purchaserTwo: SignerWithAddress;
   let treasury: SignerWithAddress;
   let aelinDeal: AelinDeal;
+  let aelinEscrowLogic: AelinFeeEscrow;
   let purchaseToken: MockContract;
   let underlyingDealToken: ERC20;
   let underlyingDealTokenWhaleSigner: SignerWithAddress;
@@ -105,6 +107,7 @@ describe("AelinDeal", function () {
 
   beforeEach(async () => {
     aelinDeal = (await deployContract(sponsor, AelinDealArtifact)) as AelinDeal;
+    aelinEscrowLogic = (await deployContract(sponsor, AelinFeeEscrowArtifact)) as AelinFeeEscrow;
   });
 
   const successfullyInitializeDeal = async ({
@@ -126,7 +129,8 @@ describe("AelinDeal", function () {
         maxDealTotalSupply: poolTokenMaxPurchaseAmount,
         holderFundingDuration: holderFundingExpiryBase + timestamp,
       },
-      treasury.address
+      treasury.address,
+      aelinEscrowLogic.address
     );
 
   const fundDealAndMintTokens = async () => {
@@ -845,7 +849,8 @@ describe("AelinDeal", function () {
           maxDealTotalSupply: poolTokenMaxPurchaseAmount,
           holderFundingDuration: holderFundingExpiryBase + timestamp,
         },
-        treasury.address
+        treasury.address,
+        aelinEscrowLogic.address
       );
 
       await fundDealAndMintTokens();
