@@ -158,50 +158,20 @@ contract AelinFeeEscrowTest is Test {
         AelinFeeEscrow(escrowAddress).delayEscrow();
     }
 
-    function testTransferToken(address to, uint256 amount) public {
-        vm.assume(amount < 1e75);
-        vm.assume(to != address(0));
-        vm.startPrank(address(aelinTreasury));
-        address[] memory transferToken = new address[](100);
-        for (uint256 i = 0; i < 100; i++) {
-            transferToken[i] = address(new MockERC20("TransferToken", "TT"));
-            deal(transferToken[i], address(escrowAddress), amount);
-            AelinFeeEscrow(escrowAddress).transferToken(address(transferToken[i]), to, amount);
-
-            assertEq(IERC20(transferToken[i]).balanceOf(address(escrowAddress)), 0);
-            assertEq(IERC20(transferToken[i]).balanceOf(to), amount);
-        }
-        vm.stopPrank();
-    }
-
-    function testTransferEscrowedToken(address to, uint256 amount) public {
-        vm.assume(amount < 1e35);
-        vm.assume(to != address(0));
-        vm.warp(block.timestamp + 181 days);
-        vm.startPrank(address(aelinTreasury));
-        deal(address(dealToken), address(escrowAddress), amount);
-        AelinFeeEscrow(escrowAddress).transferToken(address(dealToken), to, amount);
-        vm.stopPrank();
-
-        assertEq(IERC20(dealToken).balanceOf(address(escrowAddress)), 0);
-        assertEq(IERC20(dealToken).balanceOf(to), amount);
-    }
-
-    function testTransferAfterDealAccepted(address to, uint256 amount) public {
-        // 1e35 * 2%
-        vm.assume(amount < 2e33);
-        vm.assume(to != address(0));
-
+    function testWithdrawToken() public {
         AelinPool(poolAddress).acceptMaxDealTokens();
 
         uint256 escrowBalance = IERC20(dealToken).balanceOf(address(escrowAddress));
-
         vm.warp(block.timestamp + 181 days);
-        vm.startPrank(address(aelinTreasury));
-        AelinFeeEscrow(escrowAddress).transferToken(address(dealToken), to, amount);
-        vm.stopPrank();
+        vm.prank(address(aelinTreasury));
+        AelinFeeEscrow(escrowAddress).withdrawToken();
 
-        assertEq(IERC20(dealToken).balanceOf(address(escrowAddress)), escrowBalance - amount);
-        assertEq(IERC20(dealToken).balanceOf(to), amount);
+        assertEq(IERC20(dealToken).balanceOf(address(escrowAddress)), 0);
+        assertEq(IERC20(dealToken).balanceOf(aelinTreasury), escrowBalance);
+    }
+
+    function testFailWithdrawToken(uint256 amount) public {
+        vm.assume(amount < 1e75);
+        AelinFeeEscrow(escrowAddress).withdrawToken();
     }
 }
