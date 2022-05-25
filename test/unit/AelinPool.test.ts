@@ -6,7 +6,8 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import ERC20Artifact from "../../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json";
 import AelinDealArtifact from "../../artifacts/contracts/AelinDeal.sol/AelinDeal.json";
 import AelinPoolArtifact from "../../artifacts/contracts/AelinPool.sol/AelinPool.json";
-import { AelinPool, AelinDeal, ERC20 } from "../../typechain";
+import AelinFeeEscrowArtifact from "../../artifacts/contracts/AelinFeeEscrow.sol/AelinFeeEscrow.json";
+import { AelinPool, AelinDeal, ERC20, AelinFeeEscrow } from "../../typechain";
 import {
   fundUsers,
   getImpersonatedSigner,
@@ -29,6 +30,7 @@ describe("AelinPool", function () {
   // makes this an integration test but I am leaving it since it adds value
   let aelinDealLogic: AelinDeal;
   let aelinPool: AelinPool;
+  let aelinEscrowLogic: AelinFeeEscrow;
   let purchaseToken: ERC20;
   let underlyingDealToken: MockContract;
   const purchaseTokenDecimals = 6;
@@ -72,6 +74,10 @@ describe("AelinPool", function () {
       deployer,
       AelinDealArtifact
     )) as AelinDeal;
+    aelinEscrowLogic = (await deployContract(
+      deployer,
+      AelinFeeEscrowArtifact
+    )) as AelinFeeEscrow;
     allowList[0] = deployer.address;
     allowList[1] = holder.address;
     allowList[2] = nonsponsor.address;
@@ -122,10 +128,12 @@ describe("AelinPool", function () {
         purchaseDuration: purchaseExpiry,
         allowListAddresses: useAllowList ? allowList : [],
         allowListAmounts: useAllowList ? allowListAmounts : [],
+        nftCollectionRules: [],
       },
       sponsor.address,
       aelinDealLogic.address,
-      mockAelinRewardsAddress
+      mockAelinRewardsAddress,
+      aelinEscrowLogic.address
     );
 
     return tx;
@@ -171,10 +179,12 @@ describe("AelinPool", function () {
             purchaseDuration: purchaseExpiry,
             allowListAddresses: [],
             allowListAmounts: [],
+            nftCollectionRules: [],
           },
           sponsor.address,
           aelinDealLogic.address,
-          mockAelinRewardsAddress
+          mockAelinRewardsAddress,
+          aelinEscrowLogic.address
         )
       ).to.be.revertedWith("max 1 year duration");
     });
@@ -197,10 +207,12 @@ describe("AelinPool", function () {
             purchaseDuration: purchaseExpiry,
             allowListAddresses: [],
             allowListAmounts: [],
+            nftCollectionRules: [],
           },
           sponsor.address,
           aelinDealLogic.address,
-          mockAelinRewardsAddress
+          mockAelinRewardsAddress,
+          aelinEscrowLogic.address
         )
       ).to.be.revertedWith("too many token decimals");
     });
@@ -218,10 +230,12 @@ describe("AelinPool", function () {
             purchaseDuration: 30 * 60 - 1, // 1 second less than 30min,
             allowListAddresses: [],
             allowListAmounts: [],
+            nftCollectionRules: [],
           },
           sponsor.address,
           aelinDealLogic.address,
-          mockAelinRewardsAddress
+          mockAelinRewardsAddress,
+          aelinEscrowLogic.address
         )
       ).to.be.revertedWith("outside purchase expiry window");
     });
@@ -239,10 +253,12 @@ describe("AelinPool", function () {
             purchaseDuration: 30 * 24 * 60 * 60 + 1, // 1 second more than 30 days,
             allowListAddresses: [],
             allowListAmounts: [],
+            nftCollectionRules: [],
           },
           sponsor.address,
           aelinDealLogic.address,
-          mockAelinRewardsAddress
+          mockAelinRewardsAddress,
+          aelinEscrowLogic.address
         )
       ).to.be.revertedWith("outside purchase expiry window");
     });
@@ -260,10 +276,12 @@ describe("AelinPool", function () {
             purchaseDuration: purchaseExpiry,
             allowListAddresses: [],
             allowListAmounts: [],
+            nftCollectionRules: [],
           },
           sponsor.address,
           aelinDealLogic.address,
-          mockAelinRewardsAddress
+          mockAelinRewardsAddress,
+          aelinEscrowLogic.address
         )
       ).to.be.revertedWith("exceeds max sponsor fee");
     });

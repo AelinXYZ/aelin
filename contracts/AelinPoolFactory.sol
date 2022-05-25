@@ -9,31 +9,35 @@ import "./interfaces/IAelinPool.sol";
  * @dev the factory contract allows an Aelin sponsor to permissionlessly create new pools
  */
 contract AelinPoolFactory is MinimalProxyFactory {
-    address public immutable AELIN_REWARDS;
+    address public immutable AELIN_TREASURY;
     address public immutable AELIN_POOL_LOGIC;
     address public immutable AELIN_DEAL_LOGIC;
+    address public immutable AELIN_ESCROW_LOGIC;
 
     constructor(
         address _aelinPoolLogic,
         address _aelinDealLogic,
-        address _aelinRewards
+        address _aelinTreasury,
+        address _aelinEscrow
     ) {
         require(_aelinPoolLogic != address(0), "cant pass null pool address");
         require(_aelinDealLogic != address(0), "cant pass null deal address");
-        require(_aelinRewards != address(0), "cant pass null rewards address");
+        require(_aelinTreasury != address(0), "cant pass null treasury address");
+        require(_aelinEscrow != address(0), "cant pass null escrow address");
         AELIN_POOL_LOGIC = _aelinPoolLogic;
         AELIN_DEAL_LOGIC = _aelinDealLogic;
-        AELIN_REWARDS = _aelinRewards;
+        AELIN_TREASURY = _aelinTreasury;
+        AELIN_ESCROW_LOGIC = _aelinEscrow;
     }
 
     /**
      * @dev the method a sponsor calls to create a pool
      */
-    function createPool(IAelinPool.PoolData memory _poolData) external returns (address) {
+    function createPool(IAelinPool.PoolData calldata _poolData) external returns (address) {
         require(_poolData.purchaseToken != address(0), "cant pass null token address");
         address aelinPoolAddress = _cloneAsMinimalProxy(AELIN_POOL_LOGIC, "Could not create new deal");
         AelinPool aelinPool = AelinPool(aelinPoolAddress);
-        aelinPool.initialize(_poolData, msg.sender, AELIN_DEAL_LOGIC, AELIN_REWARDS);
+        aelinPool.initialize(_poolData, msg.sender, AELIN_DEAL_LOGIC, AELIN_TREASURY, AELIN_ESCROW_LOGIC);
 
         emit CreatePool(
             aelinPoolAddress,

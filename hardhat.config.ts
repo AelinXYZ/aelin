@@ -33,7 +33,7 @@ const config: HardhatUserConfig = {
   },
   defaultNetwork: "hardhat",
   mocha: {
-    // this needs to be long because CI takes a while to fork the mainnet data from alchemy
+    // this needs to be long because CI takes a while to fork mainnet data from alchemy
     timeout: 1000000,
   },
   etherscan: {
