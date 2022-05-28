@@ -5,6 +5,7 @@ import "./AelinERC20.sol";
 import "./MinimalProxyFactory.sol";
 import "./AelinUpFrontDealFactory.sol";
 import "./interfaces/IAelinUpFrontDeal.sol";
+import "./AelinFeeEscrow.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/ICryptoPunks.sol";
 import "./libraries/NftCheck.sol";
@@ -30,6 +31,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     address public aelinTreasuryAddress;
     address public aelinUpFrontDealLogicAddress;
     address public aelinEscrowLogicAddress;
+    AelinFeeEscrow public aelinFeeEscrow;
     address public holder;
     address public futureHolder;
 
@@ -37,6 +39,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     uint256 public underlyingDealTokenTotal;
     uint256 public totalUnderlyingClaimed;
     uint256 public underlyingPerDealExchangeRate;
+    uint256 public holderFundingExpiry;
 
     uint256 public vestingCliffExpiry;
     uint256 public vestingCliffPeriod;
@@ -82,6 +85,15 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         require(365 days >= _upFrontDealData.duration, "max 1 year duration");
         purchaseTokenDecimals = IERC20Decimals(_upFrontDealData.purchaseToken).decimals();
         require(purchaseTokenDecimals <= DEAL_TOKEN_DECIMALS, "too many token decimals");
+        require(_upFrontDealData.holder != address(0), "cant pass null holder address");
+        require(_upFrontDealData.underlyingDealToken != address(0), "cant pass null token address");
+        require(1825 days >= _upFrontDealData.vestingCliffPeriod, "max 5 year cliff");
+        require(1825 days >= _upFrontDealData.vestingPeriod, "max 5 year vesting");
+        require(
+            30 minutes <= _upFrontDealData.holderFundingDuration && 30 days >= _upFrontDealData.holderFundingDuration,
+            "30 mins - 30 days for holder"
+        );
+
         storedName = _upFrontDealData.name;
         storedSymbol = _upFrontDealData.symbol;
         poolFactory = msg.sender;
@@ -166,6 +178,10 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         vestingCliffPeriod = _upFrontDealData.vestingCliffPeriod;
         vestingPeriod = _upFrontDealData.vestingPeriod;
 
+        holderFundingExpiry = block.timestamp + _upFrontDealData.holderFundingDuration;
+        vestingCliffExpiry = purchaseExpiry + vestingCliffPeriod;
+        vestingExpiry = vestingCliffExpiry + vestingPeriod;
+
         depositComplete = false;
 
         /**
@@ -199,6 +215,59 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         emit SetHolder(futureHolder);
     }
 
+    /**
+     * @dev the holder finalizes the deal for the pool created by the
+     * sponsor by depositing funds using this method.
+     *
+     * NOTE if the deposit was completed with a transfer instead of this method
+     * the deposit still needs to be finalized by calling this method with
+     * _underlyingDealTokenAmount set to 0
+     */
+    function depositUnderlying(uint256 _underlyingDealTokenAmount) public finalizeDeposit lock onlyHolder returns (bool) {
+        if (_underlyingDealTokenAmount > 0) {
+            uint256 currentBalance = IERC20(underlyingDealToken).balanceOf(address(this));
+            IERC20(underlyingDealToken).safeTransferFrom(msg.sender, address(this), _underlyingDealTokenAmount);
+            uint256 balanceAfterTransfer = IERC20(underlyingDealToken).balanceOf(address(this));
+            uint256 underlyingDealTokenAmount = balanceAfterTransfer - currentBalance;
+
+            emit DepositDealToken(underlyingDealToken, msg.sender, underlyingDealTokenAmount);
+        }
+
+        if (IERC20(underlyingDealToken).balanceOf(address(this)) >= underlyingDealTokenTotal) {
+            depositComplete = true;
+
+            address aelinEscrowStorageProxy = _cloneAsMinimalProxy(aelinEscrowLogicAddress, "Could not create new escrow");
+            aelinFeeEscrow = AelinFeeEscrow(aelinEscrowStorageProxy);
+            aelinFeeEscrow.initialize(aelinTreasuryAddress, underlyingDealToken);
+
+            /*
+            emit DealFullyFunded(
+                aelinPool,
+                proRataRedemption.start,
+                proRataRedemption.expiry,
+                openRedemption.start,
+                openRedemption.expiry
+            );
+            */
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @dev ends the purchase period when deal tokens have sold out,
+     * starts vesting period, does not require holder deposit underlying deal token
+     */
+    function soldOut() internal returns (bool) {
+        require();
+    }
+
+    modifier finalizeDeposit() {
+        require(block.timestamp < holderFundingExpiry, "deposit past deadline");
+        require(!depositComplete, "deposit already complete");
+        _;
+    }
+
     modifier onlyHolder() {
         require(msg.sender == holder, "only holder can access");
         _;
@@ -212,6 +281,11 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         bool purchaseAmountPerToken,
         uint256[] tokenIds,
         uint256[] minTokensEligible
+    );
+    event DepositDealToken(
+        address indexed underlyingDealTokenAddress,
+        address indexed depositor,
+        uint256 underlyingDealTokenAmount
     );
     event SetHolder(address indexed holder);
 }

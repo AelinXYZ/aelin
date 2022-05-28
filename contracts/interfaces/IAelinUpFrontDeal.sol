@@ -21,9 +21,10 @@ interface IAelinUpFrontDeal {
         //uint256 openRedemptionPeriod;
         address holder;
         uint256 maxDealTotalSupply;
-        //uint256 holderFundingDuration; Do not need with the combination of purchaseDuration and duration
-
+        // What do we want to require for the holderFundingDuration?
+        uint256 holderFundingDuration;
         uint256 purchaseTokenPerDealToken;
+        uint256 depositUnderlyingAmount;
         // uint256 minimumRaise; future AELIP to revert deal if not enough purchase tokens raised
         // DuctionAuctionRules[] dutchAuctionRules; future AELIP for dutch auction pricing
     }
