@@ -28,7 +28,7 @@ contract AelinUpFrontDeal is AelinERC20, IAelinUpFrontDeal {
     bool private hasAllowList;
     bool private hasNftList;
     bool private dealDepositComplete;
-    bool private poolDepositComplete;
+    bool public poolDepositComplete;
 
     function initialize(
         UpFrontPool calldata _poolData,
@@ -134,7 +134,12 @@ contract AelinUpFrontDeal is AelinERC20, IAelinUpFrontDeal {
         if (_underlyingDealTokenAmount > 0) {
             currentDealTokenTotal += _underlyingDealTokenAmount;
             IERC20(_dealData.underlyingDealToken).transferFrom(_sponsor, address(this), _underlyingDealTokenAmount);
-            emit DepositDealToken(_dealData.underlyingDealToken, _sponsor, _underlyingDealTokenAmount);
+            if (_underlyingDealTokenAmount >= _dealData.underlyingDealTokenTotal) {
+                dealDepositComplete = true;
+                emit DealFullyFunded(address(this), block.timestamp, block.timestamp + _dealData.proRataRedemptionPeriod);
+            } else {
+                emit DepositDealToken(_dealData.underlyingDealToken, _sponsor, _underlyingDealTokenAmount);
+            }
         }
     }
 
