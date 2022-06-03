@@ -3,42 +3,43 @@ pragma solidity 0.8.6;
 
 import "./MinimalProxyFactory.sol";
 import "./AelinUpFrontDeal.sol";
-import "./interfaces/IAelinUpFrontDeal.sol";
+import {IAelinUpFrontDeal} from "./interfaces/IAelinUpFrontDeal.sol";
 
-contract AelinUpFrontDealFactory is MinimalProxyFactory {
-    address public immutable AELIN_TREASURY;
-    address public immutable AELIN_ESCROW_LOGIC;
+contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
     address public immutable UP_FRONT_DEAL_LOGIC;
+    address public immutable AELIN_ESCROW_LOGIC;
+    address public immutable AELIN_TREASURY;
 
     constructor(
-        address _aelinTreasury,
+        address _aelinUpFrontDeal,
         address _aelinEscrow,
-        address _upFrontDealLogic
+        address _aelinTreasury
     ) {
-        AELIN_TREASURY = _aelinTreasury;
+        UP_FRONT_DEAL_LOGIC = _aelinUpFrontDeal;
         AELIN_ESCROW_LOGIC = _aelinEscrow;
-        UP_FRONT_DEAL_LOGIC = _upFrontDealLogic;
+        AELIN_TREASURY = _aelinTreasury;
     }
 
-    function createUpFrontDeal(IAelinUpFrontDeal.UpFrontDealData calldata _upFrontDealData)
+    function createUpFrontDeal(UpFrontDeal calldata _dealData, uint256 _depositUnderlayingAmount)
         external
-        returns (address poolAddress, address upFrontDealAddress)
+        returns (address upFrontDealAddress)
     {
-        require(_upFrontDealData.purchaseToken != address(0), "cant pass null token address");
-        // require holder = msg.sender ?
-        require(_upFrontDealData.holder == msg.sender, "holder must be msg.sender");
-        // more requirements
-
+        require(_dealData.purchaseToken != address(0), "cant pass null token address");
+        require(_dealData.underlyingDealToken != address(0), "cant pass null token address");
         upFrontDealAddress = _cloneAsMinimalProxy(UP_FRONT_DEAL_LOGIC, "Could not create new deal");
-        AelinUpFrontDeal aelinUpFrontDeal = AelinUpFrontDeal(upFrontDealAddress);
-        aelinUpFrontDeal.initialize(
-            _upFrontDealData,
-            UP_FRONT_DEAL_LOGIC,
-            AELIN_TREASURY,
-            AELIN_ESCROW_LOGIC,
-            address(this)
-        );
 
-        // events
+        AelinUpFrontDeal(upFrontDealAddress).initialize(_dealData, msg.sender, _depositUnderlayingAmount);
+
+        emit CreateUpFrontDeal(
+            upFrontDealAddress,
+            string(abi.encodePacked("aeUpFrontDeal-", _dealData.name)),
+            string(abi.encodePacked("aeUD-", _dealData.symbol)),
+            _dealData.purchaseTokenCap,
+            _dealData.purchaseToken,
+            _dealData.sponsorFee,
+            _dealData.purchaseDuration,
+            _dealData.sponsor,
+            _dealData.allowListAddresses.length > 0
+        );
     }
 }
