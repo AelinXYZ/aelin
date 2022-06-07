@@ -42,6 +42,26 @@ interface IAelinUpFrontDeal {
         bool hasAllowList
     );
 
+    event DealFullyFunded(address upFrontDealAddress, uint256 timestamp, uint256 purchaseExpiryTimestamp);
+
+    event WithdrewExcess(address UpFrontDealAddress, uint256 amountWithdrawn);
+
+    event AcceptDeal(
+        address indexed user,
+        uint256 amountPurchased,
+        uint256 totalPurchased,
+        uint256 amountDealTokens,
+        uint256 totalDealTokens
+    );
+
+    event ClaimDealTokens(address indexed user, uint256 amountMinted, uint256 amountPurchasingReturned);
+
+    event SponsorClaim(address indexed sponsor, uint256 amountMinted);
+
+    event HolderClaim(address indexed holder, address token, uint256 amountClaimed, uint256 timestamp);
+
+    event ClaimedUnderlyingDealToken(address indexed user, address underlyingToken, uint256 amountClaimed);
+
     event AllowlistAddress(address[] indexed allowListAddresses, uint256[] allowlistAmounts);
 
     event PoolWith721(address indexed collectionAddress, uint256 purchaseAmount, bool purchaseAmountPerToken);
@@ -53,4 +73,10 @@ interface IAelinUpFrontDeal {
         uint256[] tokenIds,
         uint256[] minTokensEligible
     );
+
+    event SetHolder(address indexed holder);
+
+    event Vouch(address indexed voucher);
+
+    event Disavow(address indexed voucher);
 }
