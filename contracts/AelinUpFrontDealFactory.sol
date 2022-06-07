@@ -28,7 +28,14 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
         require(_dealData.underlyingDealToken != address(0), "cant pass null token address");
         upFrontDealAddress = _cloneAsMinimalProxy(UP_FRONT_DEAL_LOGIC, "Could not create new deal");
 
-        AelinUpFrontDeal(upFrontDealAddress).initialize(_dealData, msg.sender, _depositUnderlayingAmount);
+        AelinUpFrontDeal(upFrontDealAddress).initialize(
+            _dealData,
+            msg.sender,
+            _depositUnderlayingAmount,
+            UP_FRONT_DEAL_LOGIC,
+            AELIN_TREASURY,
+            AELIN_ESCROW_LOGIC
+        );
 
         emit CreateUpFrontDeal(
             upFrontDealAddress,
