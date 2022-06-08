@@ -238,7 +238,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         uint256 purchaseTokenAmount;
 
         if (_nftPurchaseList.length > 0) {
-            purchaseTokenAmount = _purchaseDealTokensWithNft(_dealData, _nftPurchaseList, _purchaseTokenAmount);
+            purchaseTokenAmount = _purchaseDealTokensWithNft(_nftPurchaseList, _purchaseTokenAmount);
         } else {
             purchaseTokenAmount = _purchaseDealTokens(_dealData, _purchaseTokenAmount);
         }
@@ -293,11 +293,11 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      * @dev
      * @return uint256 purchase token quantity
      */
-    function _purchaseDealTokensWithNft(
-        UpFrontDeal memory _dealData,
-        IAelinPool.NftPurchaseList[] calldata _nftPurchaseList,
-        uint256 _purchaseTokenAmount
-    ) internal returns (uint256) {
+    function _purchaseDealTokensWithNft(IAelinPool.NftPurchaseList[] calldata _nftPurchaseList, uint256 _purchaseTokenAmount)
+        internal
+        returns (uint256)
+    {
+        UpFrontDeal memory _dealData = dealData;
         require(hasNftList, "pool does not have an NFT list");
 
         uint256 maxPurchaseTokenAmount;
