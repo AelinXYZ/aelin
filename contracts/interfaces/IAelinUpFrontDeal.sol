@@ -18,9 +18,9 @@ interface IAelinUpFrontDeal {
         uint256 underlyingDealTokenTotal;
         uint256 purchaseTokenPerDealToken;
         uint256 purchaseRaiseMinimum;
-        uint256 purchaseTokenCap;
         uint256 vestingPeriod;
         uint256 vestingCliffPeriod;
+        bool allowDeallocation;
         address holder;
     }
 
@@ -42,7 +42,13 @@ interface IAelinUpFrontDeal {
         bool hasAllowList
     );
 
-    event DealFullyFunded(address upFrontDealAddress, uint256 timestamp, uint256 purchaseExpiryTimestamp);
+    event DealFullyFunded(
+        address upFrontDealAddress,
+        uint256 timestamp,
+        uint256 purchaseExpiryTimestamp,
+        uint256 vestingCliffExpiryTimestamp,
+        uint256 vestingExpiryTimestamp
+    );
 
     event WithdrewExcess(address UpFrontDealAddress, uint256 amountWithdrawn);
 
