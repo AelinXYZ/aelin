@@ -32,7 +32,6 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
             _dealData,
             msg.sender,
             _depositUnderlayingAmount,
-            UP_FRONT_DEAL_LOGIC,
             AELIN_TREASURY,
             AELIN_ESCROW_LOGIC
         );
