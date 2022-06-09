@@ -40,11 +40,13 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
             upFrontDealAddress,
             string(abi.encodePacked("aeUpFrontDeal-", _dealData.name)),
             string(abi.encodePacked("aeUD-", _dealData.symbol)),
-            _dealData.purchaseTokenCap,
             _dealData.purchaseToken,
+            _dealData.underlyingDealTokenTotal,
+            _dealData.purchaseTokenPerDealToken,
             _dealData.sponsorFee,
-            _dealData.purchaseDuration,
+            _dealData.purchaseRaiseMinimum,
             _dealData.sponsor,
+            _dealData.holder,
             _dealData.allowListAddresses.length > 0
         );
     }
