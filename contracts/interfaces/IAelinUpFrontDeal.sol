@@ -34,11 +34,13 @@ interface IAelinUpFrontDeal {
         address indexed poolAddress,
         string name,
         string symbol,
-        uint256 purchaseTokenCap,
         address indexed purchaseToken,
+        uint256 underlyingDealTokenTotal,
+        uint256 purchaseTokenPerDealToken,
         uint256 sponsorFee,
-        uint256 purchaseDuration,
+        uint256 purchaseRaiseMinimum,
         address indexed sponsor,
+        address holder,
         bool hasAllowList
     );
 
