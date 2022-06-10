@@ -240,7 +240,15 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         if (_nftPurchaseList.length > 0) {
             purchaseTokenAmount = _purchaseDealTokensWithNft(_nftPurchaseList, _purchaseTokenAmount);
         } else {
-            purchaseTokenAmount = _purchaseDealTokens(_dealData, _purchaseTokenAmount);
+            if (hasAllowList) {
+                require(_purchaseTokenAmount <= allowList[msg.sender], "more than allocation");
+                allowList[msg.sender] -= _purchaseTokenAmount;
+            }
+
+            uint256 balanceBeforeTransfer = IERC20(_dealData.purchaseToken).balanceOf(address(this));
+            IERC20(_dealData.purchaseToken).transferFrom(msg.sender, address(this), _purchaseTokenAmount);
+            uint256 balanceAfterTransfer = IERC20(_dealData.purchaseToken).balanceOf(address(this));
+            purchaseTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
         }
 
         totalPurchasingAccepted += purchaseTokenAmount;
@@ -269,24 +277,6 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
             poolSharesAmount,
             poolSharesPerUser[msg.sender]
         );
-    }
-
-    /**
-     * @dev purchase deal tokens, if purchase cap is reached allow user to purchase up to the max
-     * @return uint256 purchase token quantity
-     */
-    function _purchaseDealTokens(UpFrontDeal memory _dealData, uint256 _purchaseTokenAmount) internal returns (uint256) {
-        if (hasAllowList) {
-            require(_purchaseTokenAmount <= allowList[msg.sender], "more than allocation");
-            allowList[msg.sender] -= _purchaseTokenAmount;
-        }
-
-        uint256 balanceBeforeTransfer = IERC20(_dealData.purchaseToken).balanceOf(address(this));
-        IERC20(_dealData.purchaseToken).transferFrom(msg.sender, address(this), _purchaseTokenAmount);
-        uint256 balanceAfterTransfer = IERC20(_dealData.purchaseToken).balanceOf(address(this));
-        uint256 purchaseTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
-
-        return (purchaseTokenAmount);
     }
 
     /**
@@ -354,63 +344,47 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         require(poolSharesPerUser[msg.sender] > 0, "no pool shares to claim with");
 
         if (_dealData.purchaseRaiseMinimum == 0 || totalPurchasingAccepted > _dealData.purchaseRaiseMinimum) {
-            claimDealTokens();
+            // Claim Deal Tokens
+            bool _deallocate = totalPoolShares > _dealData.underlyingDealTokenTotal;
+
+            if (_deallocate) {
+                // adjust for deallocation and mint deal tokens
+                uint256 _amountOverTotal = totalPoolShares - _dealData.underlyingDealTokenTotal;
+                uint256 _adjustedDealTokensForUser = ((BASE - AELIN_FEE - _dealData.sponsorFee) *
+                    poolSharesPerUser[msg.sender] *
+                    _amountOverTotal) /
+                    totalPoolShares /
+                    10**18;
+                poolSharesPerUser[msg.sender] = 0;
+                _mint(msg.sender, _adjustedDealTokensForUser);
+
+                // refund any purchase tokens that got deallocated
+                uint256 _underlyingTokenDecimals = IERC20Decimals(_dealData.underlyingDealToken).decimals();
+                uint256 _totalIntendedRaise = (_dealData.purchaseTokenPerDealToken * _dealData.underlyingDealTokenTotal) /
+                    10**_underlyingTokenDecimals;
+                uint256 _amountOverRaise = totalPurchasingAccepted - _totalIntendedRaise;
+                uint256 _purchasingRefund = (100 * purchaseTokensPerUser[msg.sender] * _amountOverRaise) /
+                    totalPurchasingAccepted;
+                purchaseTokensPerUser[msg.sender] = 0;
+                IERC20(_dealData.purchaseToken).transfer(msg.sender, _purchasingRefund);
+
+                emit ClaimDealTokens(msg.sender, _adjustedDealTokensForUser, _purchasingRefund);
+            } else {
+                // mint deal tokens when there is no deallocation
+                uint256 _adjustedDealTokensForUser = ((BASE - AELIN_FEE - _dealData.sponsorFee) *
+                    poolSharesPerUser[msg.sender]) / 10**18;
+                poolSharesPerUser[msg.sender] = 0;
+                purchaseTokensPerUser[msg.sender] = 0;
+                _mint(msg.sender, _adjustedDealTokensForUser);
+                emit ClaimDealTokens(msg.sender, _adjustedDealTokensForUser, 0);
+            }
         } else {
-            claimRefund();
-        }
-    }
-
-    /**
-     * @dev convert pool shares to deal tokens
-     * NOTE deallocation can only be allowed if the purchaseTokenPerDealToken is constant
-     */
-    function claimDealTokens() internal {
-        UpFrontDeal memory _dealData = dealData;
-
-        bool _deallocate = totalPoolShares > _dealData.underlyingDealTokenTotal;
-
-        if (_deallocate) {
-            // adjust for deallocation and mint deal tokens
-            uint256 _amountOverTotal = totalPoolShares - _dealData.underlyingDealTokenTotal;
-            uint256 _adjustedDealTokensForUser = ((BASE - AELIN_FEE - _dealData.sponsorFee) *
-                poolSharesPerUser[msg.sender] *
-                _amountOverTotal) /
-                totalPoolShares /
-                10**18;
-            poolSharesPerUser[msg.sender] = 0;
-            _mint(msg.sender, _adjustedDealTokensForUser);
-
-            // refund any purchase tokens that got deallocated
-            uint256 _underlyingTokenDecimals = IERC20Decimals(_dealData.underlyingDealToken).decimals();
-            uint256 _totalIntendedRaise = (_dealData.purchaseTokenPerDealToken * _dealData.underlyingDealTokenTotal) /
-                10**_underlyingTokenDecimals;
-            uint256 _amountOverRaise = totalPurchasingAccepted - _totalIntendedRaise;
-            uint256 _purchasingRefund = (100 * purchaseTokensPerUser[msg.sender] * _amountOverRaise) /
-                totalPurchasingAccepted;
+            // Claim Refund
+            uint256 _currentBalance = purchaseTokensPerUser[msg.sender];
             purchaseTokensPerUser[msg.sender] = 0;
-            IERC20(_dealData.purchaseToken).transfer(msg.sender, _purchasingRefund);
-
-            emit ClaimDealTokens(msg.sender, _adjustedDealTokensForUser, _purchasingRefund);
-        } else {
-            // mint deal tokens when there is no deallocation
-            uint256 _adjustedDealTokensForUser = ((BASE - AELIN_FEE - _dealData.sponsorFee) *
-                poolSharesPerUser[msg.sender]) / 10**18;
-            poolSharesPerUser[msg.sender] = 0;
-            purchaseTokensPerUser[msg.sender] = 0;
-            _mint(msg.sender, _adjustedDealTokensForUser);
-            emit ClaimDealTokens(msg.sender, _adjustedDealTokensForUser, 0);
+            totalPurchasingAccepted -= _currentBalance;
+            IERC20(_dealData.purchaseToken).transfer(msg.sender, _currentBalance);
         }
-    }
-
-    /**
-     * @dev refunds all purchase tokens; called if the minimum raise was not reached
-     */
-    function claimRefund() internal {
-        UpFrontDeal memory _dealData = dealData;
-        uint256 _currentBalance = purchaseTokensPerUser[msg.sender];
-        purchaseTokensPerUser[msg.sender] = 0;
-        totalPurchasingAccepted -= _currentBalance;
-        IERC20(_dealData.purchaseToken).transfer(msg.sender, _currentBalance);
     }
 
     /**
