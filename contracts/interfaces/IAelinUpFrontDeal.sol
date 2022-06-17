@@ -8,40 +8,48 @@ interface IAelinUpFrontDeal {
         string name;
         string symbol;
         address purchaseToken;
+        address underlyingDealToken;
+        address holder;
         address sponsor;
         uint256 sponsorFee;
-        uint256 purchaseDuration;
-        address[] allowListAddresses;
-        uint256[] allowListAmounts;
-        IAelinPool.NftCollectionRules[] nftCollectionRules;
-        address underlyingDealToken;
+    }
+
+    struct UpFrontDealConfig {
         uint256 underlyingDealTokenTotal;
         uint256 purchaseTokenPerDealToken;
         uint256 purchaseRaiseMinimum;
+        uint256 purchaseDuration;
         uint256 vestingPeriod;
         uint256 vestingCliffPeriod;
         bool allowDeallocation;
-        address holder;
     }
+
+    event CreateUpFrontDeal(
+        address indexed dealAddress,
+        string name,
+        string symbol,
+        address purchaseToken,
+        address underlyingDealToken,
+        address indexed holder,
+        address indexed sponsor,
+        uint256 sponsorFee
+    );
+
+    event CreateUpFrontDealConfig(
+        address indexed dealAddress,
+        uint256 underlyingDealTokenTotal,
+        uint256 purchaseTokenPerDealToken,
+        uint256 purchaseRaiseMinimum,
+        uint256 purchaseDuration,
+        uint256 vestingPeriod,
+        uint256 vestingCliffPeriod,
+        bool allowDeallocation
+    );
 
     event DepositDealToken(
         address indexed underlyingDealTokenAddress,
         address indexed depositor,
         uint256 underlyingDealTokenAmount
-    );
-
-    event CreateUpFrontDeal(
-        address indexed poolAddress,
-        string name,
-        string symbol,
-        address indexed purchaseToken,
-        uint256 underlyingDealTokenTotal,
-        uint256 purchaseTokenPerDealToken,
-        uint256 sponsorFee,
-        uint256 purchaseRaiseMinimum,
-        address indexed sponsor,
-        address holder,
-        bool hasAllowList
     );
 
     event DealFullyFunded(
@@ -69,8 +77,6 @@ interface IAelinUpFrontDeal {
     event HolderClaim(address indexed holder, address token, uint256 amountClaimed, uint256 timestamp);
 
     event ClaimedUnderlyingDealToken(address indexed user, address underlyingToken, uint256 amountClaimed);
-
-    event AllowlistAddress(address[] indexed allowListAddresses, uint256[] allowlistAmounts);
 
     event PoolWith721(address indexed collectionAddress, uint256 purchaseAmount, bool purchaseAmountPerToken);
 
