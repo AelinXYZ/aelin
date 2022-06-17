@@ -15,7 +15,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     uint256 constant MAX_SPONSOR_FEE = 15 * 10**18;
     uint256 constant AELIN_FEE = 2 * 10**18;
 
-    UpFrontDeal public dealData;
+    UpFrontDealData public dealData;
     UpFrontDealConfig public dealConfig;
 
     address public aelinTreasuryAddress;
@@ -46,7 +46,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     uint256 public vestingExpiry;
 
     function initialize(
-        UpFrontDeal calldata _dealData,
+        UpFrontDealData calldata _dealData,
         UpFrontDealConfig calldata _dealConfig,
         AelinNftGating.NftCollectionRules[] calldata _nftCollectionRules,
         AelinAllowList.InitData calldata _allowListInit,
@@ -137,7 +137,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      * if tokens were deposited directly, this method must still be called to start the purchasing period
      */
     function depositUnderlyingTokens(uint256 _depositUnderlyingAmount) public onlyHolder {
-        UpFrontDeal memory _dealData = dealData;
+        UpFrontDealData memory _dealData = dealData;
         UpFrontDealConfig memory _dealConfig = dealConfig;
 
         require(
@@ -166,7 +166,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      * @dev allows holder to withdraw any excess underlying deal tokens deposited to the contract
      */
     function withdrawExcess() external onlyHolder {
-        UpFrontDeal memory _dealData = dealData;
+        UpFrontDealData memory _dealData = dealData;
         UpFrontDealConfig memory _dealConfig = dealConfig;
         uint256 currentBalance = IERC20(_dealData.underlyingDealToken).balanceOf(address(this));
         require(currentBalance > _dealConfig.underlyingDealTokenTotal, "no excess to withdraw");
@@ -185,7 +185,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         external
         lock
     {
-        UpFrontDeal memory _dealData = dealData;
+        UpFrontDealData memory _dealData = dealData;
         UpFrontDealConfig memory _dealConfig = dealConfig;
         require(underlyingDepositComplete, "deal token not yet deposited");
         require(block.timestamp < purchaseExpiry, "not in purchase window");
@@ -242,7 +242,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      * @dev purchaser calls to claim their deal tokens or refund if the minimum raise does not pass
      */
     function purchaserClaim() public lock purchasingOver {
-        UpFrontDeal memory _dealData = dealData;
+        UpFrontDealData memory _dealData = dealData;
         UpFrontDealConfig memory _dealConfig = dealConfig;
 
         require(poolSharesPerUser[msg.sender] > 0, "no pool shares to claim with");
@@ -297,7 +297,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      * NOTE also calls the claim for the protocol fee
      */
     function sponsorClaim() public lock purchasingOver passMinimumRaise onlySponsor {
-        UpFrontDeal memory _dealData = dealData;
+        UpFrontDealData memory _dealData = dealData;
         UpFrontDealConfig memory _dealConfig = dealConfig;
         uint256 _sponsorFeeAmt = (_dealConfig.underlyingDealTokenTotal * _dealData.sponsorFee) / BASE;
         _mint(_dealData.sponsor, _sponsorFeeAmt);
@@ -312,7 +312,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      * NOTE also calls the claim for the protocol fee
      */
     function holderClaim() public lock purchasingOver onlyHolder {
-        UpFrontDeal memory _dealData = dealData;
+        UpFrontDealData memory _dealData = dealData;
         UpFrontDealConfig memory _dealConfig = dealConfig;
 
         require(!holderClaimed, "holder has already claimed");
@@ -351,7 +351,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      * @dev transfers protocol fee of underlying deal tokens to the treasury escrow contract
      */
     function feeEscrowClaim() public lock purchasingOver {
-        UpFrontDeal memory _dealData = dealData;
+        UpFrontDealData memory _dealData = dealData;
         UpFrontDealConfig memory _dealConfig = dealConfig;
 
         if (!feeEscrowClaimed) {
@@ -371,7 +371,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      * amount based on the vesting schedule
      */
     function claimUnderlying() external lock purchasingOver passMinimumRaise {
-        UpFrontDeal memory _dealData = dealData;
+        UpFrontDealData memory _dealData = dealData;
 
         uint256 underlyingDealTokensClaimed = claimableUnderlyingTokens(msg.sender);
         if (underlyingDealTokensClaimed > 0) {

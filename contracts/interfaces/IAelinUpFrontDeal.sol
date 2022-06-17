@@ -4,7 +4,7 @@ pragma solidity 0.8.6;
 import {IAelinPool} from "./IAelinPool.sol";
 
 interface IAelinUpFrontDeal {
-    struct UpFrontDeal {
+    struct UpFrontDealData {
         string name;
         string symbol;
         address purchaseToken;
