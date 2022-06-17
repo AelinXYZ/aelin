@@ -26,7 +26,7 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
     }
 
     function createUpFrontDeal(
-        UpFrontDeal calldata _dealData,
+        UpFrontDealData calldata _dealData,
         UpFrontDealConfig calldata _dealConfig,
         AelinNftGating.NftCollectionRules[] calldata _nftCollectionRules,
         AelinAllowList.InitData calldata _allowListInit,
