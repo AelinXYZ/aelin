@@ -132,58 +132,37 @@ library AelinNftGating {
             }
 
             if (NftCheck.supports721(_collectionAddress)) {
-                _blackListCheck721(_data, _collectionAddress, _tokenIds);
+                for (uint256 j = 0; j < _tokenIds.length; j++) {
+                    require(IERC721(_collectionAddress).ownerOf(_tokenIds[i]) == msg.sender, "has to be the token owner");
+                    require(!_data.nftId[_collectionAddress][_tokenIds[i]], "tokenId already used");
+                    _data.nftId[_collectionAddress][_tokenIds[i]] = true;
+                }
             }
             if (NftCheck.supports1155(_collectionAddress)) {
-                _eligibilityCheck1155(nftCollectionRules, _data, _collectionAddress, _tokenIds);
+                for (uint256 j = 0; j < _tokenIds.length; j++) {
+                    require(_data.nftId[_collectionAddress][_tokenIds[i]], "tokenId not in the pool");
+                    require(
+                        IERC1155(_collectionAddress).balanceOf(msg.sender, _tokenIds[i]) >=
+                            nftCollectionRules.minTokensEligible[i],
+                        "erc1155 balance too low"
+                    );
+                }
             }
             if (_collectionAddress == CRYPTO_PUNKS) {
-                _blackListCheckPunks(_data, _collectionAddress, _tokenIds);
+                for (uint256 j = 0; j < _tokenIds.length; j++) {
+                    require(
+                        ICryptoPunks(_collectionAddress).punkIndexToAddress(_tokenIds[i]) == msg.sender,
+                        "not the owner"
+                    );
+                    require(!_data.nftId[_collectionAddress][_tokenIds[i]], "tokenId already used");
+                    _data.nftId[_collectionAddress][_tokenIds[i]] = true;
+                }
             }
         }
 
         require(_purchaseTokenAmount <= maxPurchaseTokenAmount, "purchase amount should be less the max allocation");
 
         return (_purchaseTokenAmount);
-    }
-
-    function _blackListCheck721(
-        NftGatingData storage data,
-        address _collectionAddress,
-        uint256[] memory _tokenIds
-    ) internal {
-        for (uint256 i = 0; i < _tokenIds.length; i++) {
-            require(IERC721(_collectionAddress).ownerOf(_tokenIds[i]) == msg.sender, "has to be the token owner");
-            require(!data.nftId[_collectionAddress][_tokenIds[i]], "tokenId already used");
-            data.nftId[_collectionAddress][_tokenIds[i]] = true;
-        }
-    }
-
-    function _eligibilityCheck1155(
-        NftCollectionRules memory rules,
-        NftGatingData storage data,
-        address _collectionAddress,
-        uint256[] memory _tokenIds
-    ) internal view {
-        for (uint256 i = 0; i < _tokenIds.length; i++) {
-            require(data.nftId[_collectionAddress][_tokenIds[i]], "tokenId not in the pool");
-            require(
-                IERC1155(_collectionAddress).balanceOf(msg.sender, _tokenIds[i]) >= rules.minTokensEligible[i],
-                "erc1155 balance too low"
-            );
-        }
-    }
-
-    function _blackListCheckPunks(
-        NftGatingData storage data,
-        address _punksAddress,
-        uint256[] memory _tokenIds
-    ) internal {
-        for (uint256 i = 0; i < _tokenIds.length; i++) {
-            require(ICryptoPunks(_punksAddress).punkIndexToAddress(_tokenIds[i]) == msg.sender, "not the owner");
-            require(!data.nftId[_punksAddress][_tokenIds[i]], "tokenId already used");
-            data.nftId[_punksAddress][_tokenIds[i]] = true;
-        }
     }
 
     event PoolWith721(address indexed collectionAddress, uint256 purchaseAmount, bool purchaseAmountPerToken);
