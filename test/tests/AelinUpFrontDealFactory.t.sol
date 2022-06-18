@@ -25,7 +25,7 @@ contract AelinUpFrontDealFactoryTest is Test {
     MockERC1155 public collectionAddress3;
     MockERC1155 public collectionAddress4;
 
-    IAelinUpFrontDeal.UpFrontDeal public dealData;
+    IAelinUpFrontDeal.UpFrontDealData public dealData;
     IAelinUpFrontDeal.UpFrontDealConfig public dealConfig;
 
     address[] public allowListAddresses;
@@ -52,6 +52,8 @@ contract AelinUpFrontDealFactoryTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     // without depositing underlying upon creation
+    // without any NFT Collection Rules
+    // without any Allow List
     function testFuzzCreateDeal(
         uint256 _sponsorFee,
         uint256 _underlyingDealTokenTotal,
@@ -84,8 +86,8 @@ contract AelinUpFrontDealFactoryTest is Test {
         AelinNftGating.NftCollectionRules[] memory _nftCollectionRules;
         AelinAllowList.InitData memory _allowListInit;
 
-        IAelinUpFrontDeal.UpFrontDeal memory _dealData;
-        _dealData = IAelinUpFrontDeal.UpFrontDeal({
+        IAelinUpFrontDeal.UpFrontDealData memory _dealData;
+        _dealData = IAelinUpFrontDeal.UpFrontDealData({
             name: "DEAL",
             symbol: "DEAL",
             purchaseToken: address(purchaseToken),
@@ -114,9 +116,53 @@ contract AelinUpFrontDealFactoryTest is Test {
             0
         );
 
-        //assertEq(keccak256(abi.encode(AelinUpFrontDeal(dealAddress).dealData)), keccak256(abi.encode(_dealData)));
+        string memory _tempString;
+        address _tempAddress;
+        uint256 _tempUint;
+        bool _tempBool;
+
         assertEq(AelinUpFrontDeal(dealAddress).dealFactory(), address(upFrontDealFactory));
         assertEq(AelinUpFrontDeal(dealAddress).name(), "aeUpFrontDeal-DEAL");
         assertEq(AelinUpFrontDeal(dealAddress).symbol(), "aeUD-DEAL");
+
+        // deal data
+        (_tempString, , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(_tempString, "DEAL");
+        (, _tempString, , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(_tempString, "DEAL");
+        (, , _tempAddress, , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(_tempAddress, address(purchaseToken));
+        (, , , _tempAddress, , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(_tempAddress, address(underlyingDealToken));
+        (, , , , _tempAddress, , ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(_tempAddress, address(_dealData.holder));
+        (, , , , , _tempAddress, ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(_tempAddress, address(_dealData.sponsor));
+        (, , , , , , _tempUint) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(_tempUint, _dealData.sponsorFee);
+
+        // deal config
+        (_tempUint, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        assertEq(_tempUint, _dealConfig.underlyingDealTokenTotal);
+        (, _tempUint, , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        assertEq(_tempUint, _dealConfig.purchaseTokenPerDealToken);
+        (, , _tempUint, , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        assertEq(_tempUint, _dealConfig.purchaseRaiseMinimum);
+        (, , , _tempUint, , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        assertEq(_tempUint, _dealConfig.purchaseDuration);
+        (, , , , _tempUint, , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        assertEq(_tempUint, _dealConfig.vestingPeriod);
+        (, , , , , _tempUint, ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        assertEq(_tempUint, _dealConfig.vestingCliffPeriod);
+        (, , , , , , _tempBool) = AelinUpFrontDeal(dealAddress).dealConfig();
+        assertEq(_tempBool, _dealConfig.allowDeallocation);
+
+        // test allow list
+        (, _tempBool) = AelinUpFrontDeal(dealAddress).getAllowList(address(0));
+        assertFalse(_tempBool);
+
+        // test nft gating
+        (, , _tempBool) = AelinUpFrontDeal(dealAddress).getNftGatingDetails(address(0), address(0), 0);
+        assertFalse(_tempBool);
     }
 }
