@@ -104,8 +104,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         AelinNftGating.initialize(_nftCollectionRules, nftGating);
 
         // deposit underlying token logic
-        // check if the underlyingDealAmount is more than 0,
-        // if yes, transfer it to this contract and store it in `currentDealTokenTotal` and add it
+        // check if the underlying token balance is more than 0, meaning the factory contract passed tokens from the creator
         if (IERC20(_dealData.underlyingDealToken).balanceOf(address(this)) > 0) {
             uint256 currentDealTokenTotal = IERC20(_dealData.underlyingDealToken).balanceOf(address(this));
             if (currentDealTokenTotal >= _dealConfig.underlyingDealTokenTotal) {

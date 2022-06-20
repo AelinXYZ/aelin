@@ -36,18 +36,6 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
         require(_dealData.underlyingDealToken != address(0), "cant pass null token address");
         upFrontDealAddress = _cloneAsMinimalProxy(UP_FRONT_DEAL_LOGIC, "Could not create new deal");
 
-        /*
-        if (_depositUnderlyingAmount > 0) {
-            require(
-                IERC20(_dealData.underlyingDealToken).balanceOf(msg.sender) >= _depositUnderlyingAmount,
-                "not enough balance"
-            );
-            IERC20(_dealData.underlyingDealToken).transferFrom(msg.sender, address(this), _depositUnderlyingAmount);
-            _depositUnderlyingAmount = IERC20(_dealData.underlyingDealToken).balanceOf(address(this));
-            IERC20(_dealData.underlyingDealToken).approve(address(upFrontDealAddress), _depositUnderlyingAmount);
-        }
-    */
-
         if (_depositUnderlyingAmount > 0) {
             require(
                 IERC20(_dealData.underlyingDealToken).balanceOf(msg.sender) >= _depositUnderlyingAmount,
