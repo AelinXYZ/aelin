@@ -40,7 +40,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     bool private holderClaimed;
     bool private feeEscrowClaimed;
 
-    uint256 private dealStart;
+    uint256 public dealStart;
     uint256 public vestingCliffExpiry;
     uint256 public purchaseExpiry;
     uint256 public vestingExpiry;
@@ -51,7 +51,6 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         AelinNftGating.NftCollectionRules[] calldata _nftCollectionRules,
         AelinAllowList.InitData calldata _allowListInit,
         address _dealCreator,
-        uint256 _depositUnderlayingAmount,
         address _aelinTreasuryAddress,
         address _aelinEscrowLogicAddress
     ) external initOnce {
@@ -72,6 +71,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         if (_dealConfig.purchaseRaiseMinimum > 0) {
             uint256 _totalIntendedRaise = (_dealConfig.purchaseTokenPerDealToken * _dealConfig.underlyingDealTokenTotal) /
                 10**underlyingTokenDecimals;
+            require(_totalIntendedRaise > 0, "intended raise too small");
             require(_dealConfig.purchaseRaiseMinimum <= _totalIntendedRaise, "raise minimum is greater than deal total");
         }
 
@@ -106,12 +106,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         // deposit underlying token logic
         // check if the underlyingDealAmount is more than 0,
         // if yes, transfer it to this contract and store it in `currentDealTokenTotal` and add it
-        if (_depositUnderlayingAmount > 0) {
-            require(
-                IERC20(_dealData.underlyingDealToken).balanceOf(_dealCreator) >= _depositUnderlayingAmount,
-                "not enough balance"
-            );
-            IERC20(_dealData.underlyingDealToken).transferFrom(_dealCreator, address(this), _depositUnderlayingAmount);
+        if (IERC20(_dealData.underlyingDealToken).balanceOf(address(this)) > 0) {
             uint256 currentDealTokenTotal = IERC20(_dealData.underlyingDealToken).balanceOf(address(this));
             if (currentDealTokenTotal >= _dealConfig.underlyingDealTokenTotal) {
                 underlyingDepositComplete = true;
