@@ -204,14 +204,15 @@ contract AelinUpFrontDealFactoryTest is Test {
         assertFalse(_tempBool);
     }
 
-    function testFuzzCreateDealWithNonFullDeposit(
+    function testFuzzCreateDealWhenDepositReverts(
         address _testAddress,
         uint256 _underlyingDealTokenTotal,
         uint256 _purchaseRaiseMinimum,
         uint256 _purchaseDuration,
         uint256 _vestingPeriod,
         uint256 _vestingCliffPeriod,
-        uint256 _depositUnderlyingAmount
+        uint256 _depositUnderlyingAmount,
+        bool _allowDeallocation
     ) public {
         vm.assume(_underlyingDealTokenTotal > 0);
         vm.assume(_purchaseDuration >= 30 minutes);
@@ -244,7 +245,64 @@ contract AelinUpFrontDealFactoryTest is Test {
             purchaseDuration: _purchaseDuration,
             vestingPeriod: _vestingPeriod,
             vestingCliffPeriod: _vestingCliffPeriod,
-            allowDeallocation: false
+            allowDeallocation: _allowDeallocation
+        });
+
+        address dealAddress;
+
+        // create when the msg.sender does not have enough underlying tokens to fulfill the _depositUnderlyingAmount
+        vm.expectRevert("not enough balance");
+        dealAddress = upFrontDealFactory.createUpFrontDeal(
+            _dealData,
+            _dealConfig,
+            _nftCollectionRules,
+            _allowListInit,
+            _depositUnderlyingAmount
+        );
+    }
+
+    function testFuzzCreateDealWithNonFullDeposit(
+        address _testAddress,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _purchaseRaiseMinimum,
+        uint256 _purchaseDuration,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint256 _depositUnderlyingAmount,
+        bool _allowDeallocation
+    ) public {
+        vm.assume(_underlyingDealTokenTotal > 0);
+        vm.assume(_purchaseDuration >= 30 minutes);
+        vm.assume(_purchaseDuration <= 30 days);
+        vm.assume(_vestingCliffPeriod <= 1825 days);
+        vm.assume(_vestingPeriod <= 1825 days);
+        vm.assume(_depositUnderlyingAmount > 0);
+        vm.assume(_depositUnderlyingAmount < _underlyingDealTokenTotal);
+        vm.assume(_testAddress != address(0));
+
+        AelinNftGating.NftCollectionRules[] memory _nftCollectionRules;
+        AelinAllowList.InitData memory _allowListInit;
+
+        IAelinUpFrontDeal.UpFrontDealData memory _dealData;
+        _dealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: address(0xDEAD),
+            sponsor: address(0x123),
+            sponsorFee: 0
+        });
+
+        IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
+        _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
+            underlyingDealTokenTotal: _underlyingDealTokenTotal,
+            purchaseTokenPerDealToken: 1e18,
+            purchaseRaiseMinimum: 0,
+            purchaseDuration: _purchaseDuration,
+            vestingPeriod: _vestingPeriod,
+            vestingCliffPeriod: _vestingCliffPeriod,
+            allowDeallocation: _allowDeallocation
         });
 
         address dealAddress;
@@ -272,15 +330,124 @@ contract AelinUpFrontDealFactoryTest is Test {
             _allowListInit,
             _depositUnderlyingAmount
         );
-
         assertEq(AelinUpFrontDeal(dealAddress).purchaseExpiry(), 0);
         assertEq(AelinUpFrontDeal(dealAddress).vestingCliffExpiry(), 0);
         assertEq(AelinUpFrontDeal(dealAddress).vestingExpiry(), 0);
+    }
+
+    function testFuzzCreateDealWithFullDeposit(
+        address _testAddress,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _purchaseRaiseMinimum,
+        uint256 _purchaseDuration,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint256 _depositUnderlyingAmount,
+        bool _allowDeallocation
+    ) public {
+        vm.assume(_underlyingDealTokenTotal > 0);
+        vm.assume(_purchaseDuration >= 30 minutes);
+        vm.assume(_purchaseDuration <= 30 days);
+        vm.assume(_vestingCliffPeriod <= 1825 days);
+        vm.assume(_vestingPeriod <= 1825 days);
+        vm.assume(_depositUnderlyingAmount >= _underlyingDealTokenTotal);
+        vm.assume(_testAddress != address(0));
+
+        AelinNftGating.NftCollectionRules[] memory _nftCollectionRules;
+        AelinAllowList.InitData memory _allowListInit;
+
+        IAelinUpFrontDeal.UpFrontDealData memory _dealData;
+        _dealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: address(0xDEAD),
+            sponsor: address(0x123),
+            sponsorFee: 0
+        });
+
+        IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
+        _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
+            underlyingDealTokenTotal: _underlyingDealTokenTotal,
+            purchaseTokenPerDealToken: 1e18,
+            purchaseRaiseMinimum: 0,
+            purchaseDuration: _purchaseDuration,
+            vestingPeriod: _vestingPeriod,
+            vestingCliffPeriod: _vestingCliffPeriod,
+            allowDeallocation: _allowDeallocation
+        });
+
+        address dealAddress;
+
+        // create when _depositUnderlyingAmount is enough to fulfill the underlying total amount
+        vm.startPrank(_testAddress);
+        deal(address(underlyingDealToken), _testAddress, type(uint256).max);
+        underlyingDealToken.approve(address(upFrontDealFactory), type(uint256).max);
+        vm.expectEmit(true, true, false, false);
+        emit DepositDealToken(address(underlyingDealToken), _testAddress, _depositUnderlyingAmount);
+        dealAddress = upFrontDealFactory.createUpFrontDeal(
+            _dealData,
+            _dealConfig,
+            _nftCollectionRules,
+            _allowListInit,
+            _depositUnderlyingAmount
+        );
+        assertEq(AelinUpFrontDeal(dealAddress).purchaseExpiry(), block.timestamp + _purchaseDuration);
+        assertEq(
+            AelinUpFrontDeal(dealAddress).vestingCliffExpiry(),
+            block.timestamp + _purchaseDuration + _vestingCliffPeriod
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddress).vestingExpiry(),
+            block.timestamp + _purchaseDuration + _vestingCliffPeriod + _vestingPeriod
+        );
+    }
+
+    function fuzzTestCreateDealWithAllowList(
+        address _testAddress,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _purchaseRaiseMinimum,
+        uint256 _purchaseDuration,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint256 _depositUnderlyingAmount,
+        bool _allowDeallocation
+    ) public {
+        vm.assume(_underlyingDealTokenTotal > 0);
+        vm.assume(_purchaseDuration >= 30 minutes);
+        vm.assume(_purchaseDuration <= 30 days);
+        vm.assume(_vestingCliffPeriod <= 1825 days);
+        vm.assume(_vestingPeriod <= 1825 days);
+        vm.assume(_testAddress != address(0));
+
+        AelinNftGating.NftCollectionRules[] memory _nftCollectionRules;
+        AelinAllowList.InitData memory _allowListInit;
+
+        address[] memory testAllowListAddresses = new address[](3);
+        uint256[] memory testAllowListAmounts = new uint256[](3);
+        testAllowListAddresses[0] = address(0x1337);
+        testAllowListAddresses[1] = address(0xBEEF);
+        testAllowListAddresses[2] = address(0xDEED);
+        testAllowListAmounts[0] = 1e18;
+        testAllowListAmounts[1] = 1e18;
+        testAllowListAmounts[2] = 1e18;
     }
 
     event DepositDealToken(
         address indexed underlyingDealTokenAddress,
         address indexed depositor,
         uint256 underlyingDealTokenAmount
+    );
+
+    event CreateUpFrontDeal(
+        address indexed dealAddress,
+        string name,
+        string symbol,
+        address purchaseToken,
+        address underlyingDealToken,
+        address indexed holder,
+        address indexed sponsor,
+        uint256 sponsorFee
     );
 }
