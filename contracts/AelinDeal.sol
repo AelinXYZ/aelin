@@ -101,6 +101,7 @@ contract AelinDeal is AelinERC20, MinimalProxyFactory, IAelinDeal {
      * @dev the holder may change their address
      */
     function setHolder(address _holder) external onlyHolder {
+        require(_holder != address(0));
         futureHolder = _holder;
     }
 
@@ -247,9 +248,9 @@ contract AelinDeal is AelinERC20, MinimalProxyFactory, IAelinDeal {
         (uint256 underlyingDealTokensClaimed, uint256 dealTokensClaimed) = claimableTokens(recipient);
         if (dealTokensClaimed > 0) {
             amountVested[recipient] += dealTokensClaimed;
+            totalUnderlyingClaimed += underlyingDealTokensClaimed;
             _burn(recipient, dealTokensClaimed);
             IERC20(underlyingDealToken).safeTransfer(recipient, underlyingDealTokensClaimed);
-            totalUnderlyingClaimed += underlyingDealTokensClaimed;
             emit ClaimedUnderlyingDealToken(underlyingDealToken, recipient, underlyingDealTokensClaimed);
         }
         return dealTokensClaimed;
@@ -266,19 +267,17 @@ contract AelinDeal is AelinERC20, MinimalProxyFactory, IAelinDeal {
     }
 
     /**
-     * @dev allows the protocol to handle protocol fees coming in deal tokens. 
+     * @dev allows the protocol to handle protocol fees coming in deal tokens.
      * It may only be called from the pool contract that created this deal
      */
     function protocolMint(uint256 dealTokenAmount) external onlyPool {
         require(depositComplete, "deposit not complete");
         uint256 underlyingProtocolFees = (underlyingPerDealExchangeRate * dealTokenAmount) / 1e18;
-        IERC20(underlyingDealToken).transfer(address(aelinFeeEscrow), underlyingProtocolFees);
+        IERC20(underlyingDealToken).safeTransfer(address(aelinFeeEscrow), underlyingProtocolFees);
     }
 
     modifier blockTransfer() {
-        if (msg.sender != aelinTreasuryAddress) {
-            require(false, "cannot transfer deal tokens");
-        }
+        require(msg.sender != aelinTreasuryAddress, "cannot transfer deal tokens");
         _;
     }
 
@@ -291,7 +290,8 @@ contract AelinDeal is AelinERC20, MinimalProxyFactory, IAelinDeal {
         require(msg.sender == aelinTreasuryAddress, "only Rewards address can access");
         (uint256 underlyingClaimable, uint256 claimableDealTokens) = claimableTokens(msg.sender);
         transfer(recipient, balanceOf(msg.sender) - claimableDealTokens);
-        return IERC20(underlyingDealToken).transferFrom(msg.sender, recipient, underlyingClaimable);
+        IERC20(underlyingDealToken).safeTransferFrom(msg.sender, recipient, underlyingClaimable);
+        return true;
     }
 
     /**

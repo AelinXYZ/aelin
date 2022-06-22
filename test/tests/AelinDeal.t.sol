@@ -23,9 +23,9 @@ contract AelinDealTest is Test {
 
     function setUp() public {
         poolFactory = new AelinPoolFactory(
-            address(new AelinPool()), 
-            address(new AelinDeal()), 
-            aelinTreasury, 
+            address(new AelinPool()),
+            address(new AelinDeal()),
+            aelinTreasury,
             address(new AelinFeeEscrow())
         );
         dealToken = new MockERC20("MockDeal", "MD");
@@ -99,6 +99,7 @@ contract AelinDealTest is Test {
     }
 
     function testSetHolder(address futureHolder) public {
+        vm.assume(futureHolder != address(0));
         AelinDeal(dealAddress).setHolder(futureHolder);
         assertEq(AelinDeal(dealAddress).futureHolder(), address(futureHolder));
         assertEq(AelinDeal(dealAddress).holder(), address(this));
@@ -111,6 +112,7 @@ contract AelinDealTest is Test {
     }
 
     function testFuzzAcceptHolder(address futureHolder) public {
+        vm.assume(futureHolder != address(0));
         AelinDeal(dealAddress).setHolder(futureHolder);
         vm.prank(address(futureHolder));
         AelinDeal(dealAddress).acceptHolder();
