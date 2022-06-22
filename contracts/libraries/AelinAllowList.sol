@@ -8,6 +8,8 @@ library AelinAllowList {
     }
 
     struct AllowList {
+        address[] allowListAddresses;
+        uint256[] allowListAmounts;
         mapping(address => uint256) amountPerAddress;
         bool hasAllowList;
     }
@@ -18,6 +20,8 @@ library AelinAllowList {
                 _init.allowListAddresses.length == _init.allowListAmounts.length,
                 "allowListAddresses and allowListAmounts arrays should have the same length"
             );
+            _self.allowListAddresses = _init.allowListAddresses;
+            _self.allowListAmounts = _init.allowListAmounts;
             for (uint256 i = 0; i < _init.allowListAddresses.length; i++) {
                 _self.amountPerAddress[_init.allowListAddresses[i]] = _init.allowListAmounts[i];
             }

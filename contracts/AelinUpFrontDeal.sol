@@ -429,8 +429,30 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         emit Disavow(msg.sender);
     }
 
-    function getAllowList(address _address) public view returns (uint256, bool) {
-        return (allowList.amountPerAddress[_address], allowList.hasAllowList);
+    /**
+     * @dev returns allow list information
+     * @param _userAddress address to use in returning the amountPerAddress
+     * @return address[] returns array of addresses included in the allow list
+     * @return uint256[] returns array of allow list amounts for the address matching the index of allowListAddresses
+     * @return uint256 allow list amount for _userAddress input
+     * @return bool true if this deal has an allow list
+     */
+    function getAllowList(address _userAddress)
+        public
+        view
+        returns (
+            address[] memory,
+            uint256[] memory,
+            uint256,
+            bool
+        )
+    {
+        return (
+            allowList.allowListAddresses,
+            allowList.allowListAmounts,
+            allowList.amountPerAddress[_userAddress],
+            allowList.hasAllowList
+        );
     }
 
     /**
