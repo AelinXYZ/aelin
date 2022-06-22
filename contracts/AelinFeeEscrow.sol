@@ -24,6 +24,7 @@ contract AelinFeeEscrow {
      * @dev the treasury may change their address
      */
     function setTreasury(address _treasury) external onlyTreasury {
+        require(_treasury != address(0));
         futureTreasury = _treasury;
     }
 
@@ -63,7 +64,7 @@ contract AelinFeeEscrow {
     function withdrawToken() external onlyTreasury {
         require(block.timestamp > vestingExpiry, "cannot access funds yet");
         uint256 balance = IERC20(escrowedToken).balanceOf(address(this));
-        IERC20(escrowedToken).transfer(treasury, balance);
+        IERC20(escrowedToken).safeTransfer(treasury, balance);
     }
 
     event SetTreasury(address indexed treasury);

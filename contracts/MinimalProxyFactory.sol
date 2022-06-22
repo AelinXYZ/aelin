@@ -2,6 +2,7 @@
 pragma solidity >=0.6.0 <0.8.7;
 
 // https://docs.synthetix.io/contracts/source/contracts/minimalproxyfactory
+// https://blog.openzeppelin.com/deep-dive-into-the-minimal-proxy-contract/
 contract MinimalProxyFactory {
     function _cloneAsMinimalProxy(address _base, string memory _revertMsg) internal returns (address clone) {
         bytes memory createData = _generateMinimalProxyCreateData(_base);
