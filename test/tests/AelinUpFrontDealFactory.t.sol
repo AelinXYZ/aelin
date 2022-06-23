@@ -427,7 +427,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         assertFalse(_tempBool);
     }
 
-    function fuzzTestCreateDealWithAllowList(
+    function testFuzzCreateDealWithAllowList(
         uint256 _underlyingDealTokenTotal,
         uint256 _purchaseRaiseMinimum,
         uint256 _purchaseDuration,
@@ -451,6 +451,9 @@ contract AelinUpFrontDealFactoryTest is Test {
         testAllowListAmounts[0] = 1e18;
         testAllowListAmounts[1] = 1e18;
         testAllowListAmounts[2] = 1e18;
+
+        _allowListInit.allowListAddresses = testAllowListAddresses;
+        _allowListInit.allowListAmounts = testAllowListAmounts;
 
         IAelinUpFrontDeal.UpFrontDealData memory _dealData;
         _dealData = IAelinUpFrontDeal.UpFrontDealData({
@@ -540,14 +543,76 @@ contract AelinUpFrontDealFactoryTest is Test {
         assertEq(_tempUintArray[0], 1e18);
         assertEq(_tempUintArray[1], 1e18);
         assertEq(_tempUintArray[2], 1e18);
-        for (uint256 i; i < _tempAddressArray.length; ++i) {
+        for (uint256 i; i < _tempAddressArray.length; ) {
             (, , _tempUint, ) = AelinUpFrontDeal(dealAddress).getAllowList(_tempAddressArray[i]);
             assertEq(_tempUint, testAllowListAmounts[i]);
+            unchecked {
+                ++i;
+            }
         }
 
         // test nft gating
         (, , _tempBool) = AelinUpFrontDeal(dealAddress).getNftGatingDetails(address(0), address(0), 0);
         assertFalse(_tempBool);
+    }
+
+    // fails because testAllowListAddresses[] and testAllowListAmounts[] are not the same size
+    function testFailFuzzCreateDealWithAllowList(
+        uint256 _underlyingDealTokenTotal,
+        uint256 _purchaseRaiseMinimum,
+        uint256 _purchaseDuration,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod
+    ) public {
+        vm.assume(_underlyingDealTokenTotal > 0);
+        vm.assume(_purchaseDuration >= 30 minutes);
+        vm.assume(_purchaseDuration <= 30 days);
+        vm.assume(_vestingCliffPeriod <= 1825 days);
+        vm.assume(_vestingPeriod <= 1825 days);
+
+        AelinNftGating.NftCollectionRules[] memory _nftCollectionRules;
+        AelinAllowList.InitData memory _allowListInit;
+
+        address[] memory testAllowListAddresses = new address[](3);
+        uint256[] memory testAllowListAmounts = new uint256[](2);
+        testAllowListAddresses[0] = address(0x1337);
+        testAllowListAddresses[1] = address(0xBEEF);
+        testAllowListAddresses[2] = address(0xDEED);
+        testAllowListAmounts[0] = 1e18;
+        testAllowListAmounts[1] = 1e18;
+
+        _allowListInit.allowListAddresses = testAllowListAddresses;
+        _allowListInit.allowListAmounts = testAllowListAmounts;
+
+        IAelinUpFrontDeal.UpFrontDealData memory _dealData;
+        _dealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: address(0xDEAD),
+            sponsor: address(0x123),
+            sponsorFee: 2e18
+        });
+
+        IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
+        _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
+            underlyingDealTokenTotal: _underlyingDealTokenTotal,
+            purchaseTokenPerDealToken: 1e18,
+            purchaseRaiseMinimum: 0,
+            purchaseDuration: _purchaseDuration,
+            vestingPeriod: _vestingPeriod,
+            vestingCliffPeriod: _vestingCliffPeriod,
+            allowDeallocation: false
+        });
+
+        address dealAddress = upFrontDealFactory.createUpFrontDeal(
+            _dealData,
+            _dealConfig,
+            _nftCollectionRules,
+            _allowListInit,
+            0
+        );
     }
 
     event DepositDealToken(
