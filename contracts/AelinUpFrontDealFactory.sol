@@ -32,8 +32,6 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
         AelinAllowList.InitData calldata _allowListInit,
         uint256 _depositUnderlyingAmount
     ) external returns (address upFrontDealAddress) {
-        require(_dealData.purchaseToken != address(0), "cant pass null token address");
-        require(_dealData.underlyingDealToken != address(0), "cant pass null token address");
         upFrontDealAddress = _cloneAsMinimalProxy(UP_FRONT_DEAL_LOGIC, "Could not create new deal");
 
         if (_depositUnderlyingAmount > 0) {
