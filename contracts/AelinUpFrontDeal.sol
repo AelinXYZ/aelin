@@ -3,6 +3,7 @@ pragma solidity 0.8.6;
 
 import "./AelinERC20.sol";
 import "./MinimalProxyFactory.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {AelinDeal} from "./AelinDeal.sol";
 import {AelinPool} from "./AelinPool.sol";
 import {AelinFeeEscrow} from "./AelinFeeEscrow.sol";
@@ -11,6 +12,8 @@ import "./libraries/AelinNftGating.sol";
 import "./libraries/AelinAllowList.sol";
 
 contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal {
+    using SafeERC20 for IERC20;
+
     uint256 constant BASE = 100 * 10**18;
     uint256 constant MAX_SPONSOR_FEE = 15 * 10**18;
     uint256 constant AELIN_FEE = 2 * 10**18;
@@ -145,7 +148,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         require(!underlyingDepositComplete, "already deposited the total");
 
         uint256 balanceBeforeTransfer = IERC20(_dealData.underlyingDealToken).balanceOf(address(this));
-        IERC20(_dealData.underlyingDealToken).transferFrom(msg.sender, address(this), _depositUnderlyingAmount);
+        IERC20(_dealData.underlyingDealToken).safeTransferFrom(msg.sender, address(this), _depositUnderlyingAmount);
         uint256 balanceAfterTransfer = IERC20(_dealData.underlyingDealToken).balanceOf(address(this));
         uint256 underlyingDealTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
 
@@ -170,7 +173,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         require(currentBalance > _dealConfig.underlyingDealTokenTotal, "no excess to withdraw");
 
         uint256 excessAmount = currentBalance - _dealConfig.underlyingDealTokenTotal;
-        IERC20(_dealData.underlyingDealToken).transfer(msg.sender, excessAmount);
+        IERC20(_dealData.underlyingDealToken).safeTransfer(msg.sender, excessAmount);
 
         emit WithdrewExcess(address(this), excessAmount);
     }
@@ -203,7 +206,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
             }
 
             uint256 balanceBeforeTransfer = IERC20(_dealData.purchaseToken).balanceOf(address(this));
-            IERC20(_dealData.purchaseToken).transferFrom(msg.sender, address(this), _purchaseTokenAmount);
+            IERC20(_dealData.purchaseToken).safeTransferFrom(msg.sender, address(this), _purchaseTokenAmount);
             uint256 balanceAfterTransfer = IERC20(_dealData.purchaseToken).balanceOf(address(this));
             purchaseTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
         }
@@ -268,7 +271,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
                 uint256 _purchasingRefund = (100 * purchaseTokensPerUser[msg.sender] * _amountOverRaise) /
                     totalPurchasingAccepted;
                 purchaseTokensPerUser[msg.sender] = 0;
-                IERC20(_dealData.purchaseToken).transfer(msg.sender, _purchasingRefund);
+                IERC20(_dealData.purchaseToken).safeTransfer(msg.sender, _purchasingRefund);
 
                 emit ClaimDealTokens(msg.sender, _adjustedDealTokensForUser, _purchasingRefund);
             } else {
@@ -285,7 +288,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
             uint256 _currentBalance = purchaseTokensPerUser[msg.sender];
             purchaseTokensPerUser[msg.sender] = 0;
             totalPurchasingAccepted -= _currentBalance;
-            IERC20(_dealData.purchaseToken).transfer(msg.sender, _currentBalance);
+            IERC20(_dealData.purchaseToken).safeTransfer(msg.sender, _currentBalance);
         }
     }
 
@@ -322,21 +325,21 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
                 uint256 _underlyingTokenDecimals = IERC20Decimals(_dealData.underlyingDealToken).decimals();
                 uint256 _totalIntendedRaise = (_dealConfig.purchaseTokenPerDealToken *
                     _dealConfig.underlyingDealTokenTotal) / 10**_underlyingTokenDecimals;
-                IERC20(_dealData.purchaseToken).transfer(_dealData.holder, _totalIntendedRaise);
+                IERC20(_dealData.purchaseToken).safeTransfer(_dealData.holder, _totalIntendedRaise);
                 emit HolderClaim(_dealData.holder, _dealData.purchaseToken, _totalIntendedRaise, block.timestamp);
             } else {
                 // holder receives raise
                 uint256 _currentBalance = IERC20(_dealData.purchaseToken).balanceOf(address(this));
-                IERC20(_dealData.purchaseToken).transfer(_dealData.holder, _currentBalance);
+                IERC20(_dealData.purchaseToken).safeTransfer(_dealData.holder, _currentBalance);
                 emit HolderClaim(_dealData.holder, _dealData.purchaseToken, _currentBalance, block.timestamp);
                 // holder receives any leftover underlying deal tokens
                 uint256 _underlyingRefund = _dealConfig.underlyingDealTokenTotal - totalPoolShares;
-                IERC20(_dealData.underlyingDealToken).transfer(_dealData.holder, _underlyingRefund);
+                IERC20(_dealData.underlyingDealToken).safeTransfer(_dealData.holder, _underlyingRefund);
                 emit HolderClaim(_dealData.holder, _dealData.underlyingDealToken, _underlyingRefund, block.timestamp);
             }
         } else {
             uint256 _currentBalance = IERC20(_dealData.underlyingDealToken).balanceOf(address(this));
-            IERC20(_dealData.purchaseToken).transfer(_dealData.holder, _currentBalance);
+            IERC20(_dealData.purchaseToken).safeTransfer(_dealData.holder, _currentBalance);
             emit HolderClaim(_dealData.holder, _dealData.underlyingDealToken, _currentBalance, block.timestamp);
         }
 
@@ -358,7 +361,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
             aelinFeeEscrow.initialize(aelinTreasuryAddress, _dealData.underlyingDealToken);
 
             uint256 aelinFeeAmt = (_dealConfig.underlyingDealTokenTotal * AELIN_FEE) / BASE;
-            IERC20(_dealData.underlyingDealToken).transfer(address(aelinFeeEscrow), aelinFeeAmt);
+            IERC20(_dealData.underlyingDealToken).safeTransfer(address(aelinFeeEscrow), aelinFeeAmt);
         }
 
         feeEscrowClaimed = true;
@@ -375,7 +378,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         if (underlyingDealTokensClaimed > 0) {
             amountVested[msg.sender] += underlyingDealTokensClaimed;
             _burn(msg.sender, underlyingDealTokensClaimed);
-            IERC20(_dealData.underlyingDealToken).transfer(msg.sender, underlyingDealTokensClaimed);
+            IERC20(_dealData.underlyingDealToken).safeTransfer(msg.sender, underlyingDealTokensClaimed);
             totalUnderlyingClaimed += underlyingDealTokensClaimed;
             emit ClaimedUnderlyingDealToken(msg.sender, _dealData.underlyingDealToken, underlyingDealTokensClaimed);
         }
