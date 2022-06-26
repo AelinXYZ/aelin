@@ -44,8 +44,8 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     bool private feeEscrowClaimed;
 
     uint256 public dealStart;
-    uint256 public vestingCliffExpiry;
     uint256 public purchaseExpiry;
+    uint256 public vestingCliffExpiry;
     uint256 public vestingExpiry;
 
     function initialize(
