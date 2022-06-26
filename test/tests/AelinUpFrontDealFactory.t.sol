@@ -30,9 +30,6 @@ contract AelinUpFrontDealFactoryTest is Test {
     IAelinUpFrontDeal.UpFrontDealData public dealData;
     IAelinUpFrontDeal.UpFrontDealConfig public dealConfig;
 
-    address[] public allowListAddresses;
-    uint256[] public allowListAmounts;
-
     function setUp() public {
         testUpFrontDeal = new AelinUpFrontDeal();
         testEscrow = new AelinFeeEscrow();
