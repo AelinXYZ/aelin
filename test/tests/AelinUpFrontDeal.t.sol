@@ -202,6 +202,8 @@ contract AelinUpFrontDealTest is Test {
             allowListInitEmpty,
             1e35
         );
+
+        vm.stopPrank();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -213,6 +215,8 @@ contract AelinUpFrontDealTest is Test {
         address tempAddress;
         uint256 tempUint;
         bool tempBool;
+        // balance
+        assertEq(underlyingDealToken.balanceOf(address(dealAddress)), 0);
         // deal contract storage
         assertEq(AelinUpFrontDeal(dealAddress).dealFactory(), address(upFrontDealFactory));
         assertEq(AelinUpFrontDeal(dealAddress).name(), "aeUpFrontDeal-DEAL");
@@ -267,6 +271,8 @@ contract AelinUpFrontDealTest is Test {
         address tempAddress;
         uint256 tempUint;
         bool tempBool;
+        // balance
+        assertEq(underlyingDealToken.balanceOf(address(dealAddressAllowDeallocation)), 0);
         // deal contract storage
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).dealFactory(), address(upFrontDealFactory));
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).name(), "aeUpFrontDeal-DEAL");
@@ -321,6 +327,8 @@ contract AelinUpFrontDealTest is Test {
         address tempAddress;
         uint256 tempUint;
         bool tempBool;
+        // balance
+        assertEq(underlyingDealToken.balanceOf(address(dealAddressOverFullDeposit)), 1e36);
         // deal contract storage
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).dealFactory(), address(upFrontDealFactory));
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).name(), "aeUpFrontDeal-DEAL");
@@ -378,6 +386,8 @@ contract AelinUpFrontDealTest is Test {
         address tempAddress;
         uint256 tempUint;
         bool tempBool;
+        // balance
+        assertEq(underlyingDealToken.balanceOf(address(dealAddressAllowList)), 1e35);
         // deal contract storage
         assertEq(AelinUpFrontDeal(dealAddressAllowList).dealFactory(), address(upFrontDealFactory));
         assertEq(AelinUpFrontDeal(dealAddressAllowList).name(), "aeUpFrontDeal-DEAL");
@@ -456,6 +466,8 @@ contract AelinUpFrontDealTest is Test {
         address tempAddress;
         uint256 tempUint;
         bool tempBool;
+        // balance
+        assertEq(underlyingDealToken.balanceOf(address(dealAddressNftGating721)), 1e35);
         // deal contract storage
         assertEq(AelinUpFrontDeal(dealAddressNftGating721).dealFactory(), address(upFrontDealFactory));
         assertEq(AelinUpFrontDeal(dealAddressNftGating721).name(), "aeUpFrontDeal-DEAL");
@@ -522,6 +534,8 @@ contract AelinUpFrontDealTest is Test {
         address tempAddress;
         uint256 tempUint;
         bool tempBool;
+        // balance
+        assertEq(underlyingDealToken.balanceOf(address(dealAddressNftGatingPunks)), 1e35);
         // deal contract storage
         assertEq(AelinUpFrontDeal(dealAddressNftGatingPunks).dealFactory(), address(upFrontDealFactory));
         assertEq(AelinUpFrontDeal(dealAddressNftGatingPunks).name(), "aeUpFrontDeal-DEAL");
@@ -588,6 +602,8 @@ contract AelinUpFrontDealTest is Test {
         address tempAddress;
         uint256 tempUint;
         bool tempBool;
+        // balance
+        assertEq(underlyingDealToken.balanceOf(address(dealAddressNftGating1155)), 1e35);
         // deal contract storage
         assertEq(AelinUpFrontDeal(dealAddressNftGating1155).dealFactory(), address(upFrontDealFactory));
         assertEq(AelinUpFrontDeal(dealAddressNftGating1155).name(), "aeUpFrontDeal-DEAL");
@@ -656,4 +672,238 @@ contract AelinUpFrontDealTest is Test {
         assertEq(tempUintArray2[0], 1000);
         assertEq(tempUintArray2[1], 2000);
     }
+
+    function testCannotCallInitializeTwice() public {
+        AelinAllowList.InitData memory allowListInitEmpty;
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRulesEmpty;
+
+        IAelinUpFrontDeal.UpFrontDealData memory dealData;
+        dealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: address(0xDEAD),
+            sponsor: address(0xBEEF),
+            sponsorFee: 1e18
+        });
+
+        IAelinUpFrontDeal.UpFrontDealConfig memory dealConfig;
+        dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
+            underlyingDealTokenTotal: 1e35,
+            purchaseTokenPerDealToken: 3e18,
+            purchaseRaiseMinimum: 1e28,
+            purchaseDuration: 10 days,
+            vestingPeriod: 365 days,
+            vestingCliffPeriod: 60 days,
+            allowDeallocation: false
+        });
+
+        vm.expectRevert("can only initialize once");
+        AelinUpFrontDeal(dealAddress).initialize(
+            dealData,
+            dealConfig,
+            nftCollectionRulesEmpty,
+            allowListInitEmpty,
+            msg.sender,
+            aelinTreasury,
+            address(testEscrow)
+        );
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        pre underlying deposit
+    //////////////////////////////////////////////////////////////*/
+
+    function testCannotAcceptDealBeforeDeposit(address _testAddress) public {
+        vm.assume(_testAddress != address(0));
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        vm.prank(_testAddress);
+        vm.expectRevert("deal token not yet deposited");
+        AelinUpFrontDeal(dealAddress).acceptDeal(nftPurchaseList, 1e18);
+    }
+
+    function testPurchaserCannotClaimBeforeDeposit(address _testAddress) public {
+        vm.assume(_testAddress != address(0));
+        vm.prank(_testAddress);
+        vm.expectRevert("underlying deposit not complete");
+        AelinUpFrontDeal(dealAddress).purchaserClaim();
+    }
+
+    function testSponsorCannotClaimBeforeDeposit() public {
+        vm.prank(address(0xBEEF));
+        vm.expectRevert("underlying deposit not complete");
+        AelinUpFrontDeal(dealAddress).sponsorClaim();
+    }
+
+    function testHolderCannotClaimBeforeDeposit() public {
+        vm.prank(address(0xDEAD));
+        vm.expectRevert("underlying deposit not complete");
+        AelinUpFrontDeal(dealAddress).holderClaim();
+    }
+
+    function testTreasuryCannotClaimBeforeDeposit(address _testAddress) public {
+        vm.assume(_testAddress != address(0));
+        vm.prank(_testAddress);
+        vm.expectRevert("underlying deposit not complete");
+        AelinUpFrontDeal(dealAddress).feeEscrowClaim();
+    }
+
+    function testCannotClaimUnderlyingBeforeDeposit(address _testAddress) public {
+        vm.assume(_testAddress != address(0));
+        vm.prank(_testAddress);
+        vm.expectRevert("underlying deposit not complete");
+        AelinUpFrontDeal(dealAddress).claimUnderlying();
+    }
+
+    function testClaimableBeforeDeposit(address _testAddress) public {
+        vm.assume(_testAddress != address(0));
+        vm.prank(_testAddress);
+        uint256 result = AelinUpFrontDeal(dealAddress).claimableUnderlyingTokens(_testAddress);
+        assertEq(result, 0);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        deposit underlying tokens
+    //////////////////////////////////////////////////////////////*/
+
+    function testOnlyHolderCanDepositUnderlying(address _testAddress, uint256 _depositAmount) public {
+        vm.assume(_testAddress != address(0xDEAD));
+        vm.prank(_testAddress);
+        vm.expectRevert("must be holder");
+        AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(_depositAmount);
+    }
+
+    function testDepositUnderlyingNotEnoughBalance(uint256 _depositAmount, uint256 _holderBalance) public {
+        vm.assume(_holderBalance < _depositAmount);
+        vm.startPrank(address(0xDEAD));
+        deal(address(underlyingDealToken), address(0xDEAD), _holderBalance);
+        underlyingDealToken.approve(address(dealAddress), _holderBalance);
+        vm.expectRevert("not enough balance");
+        AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(_depositAmount);
+    }
+
+    function testDepositUnderlyingAfterComplete(uint256 _depositAmount) public {
+        vm.startPrank(address(0xDEAD));
+        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        underlyingDealToken.approve(address(dealAddress), type(uint256).max);
+        vm.expectRevert("already deposited the total");
+        AelinUpFrontDeal(dealAddressOverFullDeposit).depositUnderlyingTokens(_depositAmount);
+    }
+
+    function testPartialThenFullDepositUnderlying(uint256 _firstDepositAmount, uint256 _secondDepositAmount) public {
+        vm.startPrank(address(0xDEAD));
+        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        underlyingDealToken.approve(address(dealAddress), type(uint256).max);
+        // first deposit
+        (uint256 underlyingDealTokenTotal, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        (bool success, uint256 result) = SafeMath.tryAdd(_firstDepositAmount, _secondDepositAmount);
+        vm.assume(success);
+        vm.assume(result >= underlyingDealTokenTotal);
+        uint256 balanceBeforeDeposit = underlyingDealToken.balanceOf(dealAddress);
+        vm.assume(_firstDepositAmount < underlyingDealTokenTotal - balanceBeforeDeposit);
+        vm.expectEmit(true, true, false, false);
+        emit DepositDealToken(address(underlyingDealToken), address(0xDEAD), _firstDepositAmount);
+        AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(_firstDepositAmount);
+        uint256 balanceAfterDeposit = underlyingDealToken.balanceOf(dealAddress);
+        assertEq(balanceAfterDeposit, balanceBeforeDeposit + _firstDepositAmount);
+        assertEq(AelinUpFrontDeal(dealAddress).purchaseExpiry(), 0);
+        assertEq(AelinUpFrontDeal(dealAddress).vestingCliffExpiry(), 0);
+        assertEq(AelinUpFrontDeal(dealAddress).vestingExpiry(), 0);
+        // second deposit
+        balanceBeforeDeposit = balanceAfterDeposit;
+        vm.expectEmit(true, true, false, false);
+        emit DepositDealToken(address(underlyingDealToken), address(0xDEAD), _secondDepositAmount);
+        AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(_secondDepositAmount);
+        balanceAfterDeposit = underlyingDealToken.balanceOf(dealAddress);
+        assertEq(balanceAfterDeposit, balanceBeforeDeposit + _secondDepositAmount);
+        assertEq(AelinUpFrontDeal(dealAddress).purchaseExpiry(), block.timestamp + 10 days);
+        assertEq(AelinUpFrontDeal(dealAddress).vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
+        assertEq(AelinUpFrontDeal(dealAddress).vestingExpiry(), block.timestamp + 10 days + 60 days + 365 days);
+        vm.stopPrank();
+    }
+
+    // deposit full underlying then revert when trying to deposit again after
+    function testDepositUnderlyingFullDeposit(uint256 _depositAmount) public {
+        (uint256 underlyingDealTokenTotal, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        uint256 balanceBeforeDeposit = underlyingDealToken.balanceOf(address(dealAddress));
+        vm.assume(_depositAmount >= underlyingDealTokenTotal - balanceBeforeDeposit);
+        vm.startPrank(address(0xDEAD));
+        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        underlyingDealToken.approve(address(dealAddress), type(uint256).max);
+        vm.expectEmit(true, false, false, false);
+        emit DealFullyFunded(
+            address(dealAddress),
+            block.timestamp,
+            block.timestamp + 10 days,
+            block.timestamp + 10 days + 60 days,
+            block.timestamp + 10 days + 60 days + 365 days
+        );
+        vm.expectEmit(true, true, false, false);
+        emit DepositDealToken(address(underlyingDealToken), address(0xDEAD), _depositAmount);
+        AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(_depositAmount);
+        uint256 balanceAfterDeposit = underlyingDealToken.balanceOf(address(dealAddress));
+        assertEq(balanceAfterDeposit, balanceBeforeDeposit + _depositAmount);
+        assertEq(AelinUpFrontDeal(dealAddress).purchaseExpiry(), block.timestamp + 10 days);
+        assertEq(AelinUpFrontDeal(dealAddress).vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
+        assertEq(AelinUpFrontDeal(dealAddress).vestingExpiry(), block.timestamp + 10 days + 60 days + 365 days);
+        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        underlyingDealToken.approve(address(dealAddress), type(uint256).max);
+        vm.expectRevert("already deposited the total");
+        AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(_depositAmount);
+        vm.stopPrank();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        Set / Accept Holder
+    //////////////////////////////////////////////////////////////*/
+
+    function testSetHolder(address _futureHolder) public {
+        vm.prank(address(0xDEAD));
+        AelinUpFrontDeal(dealAddress).setHolder(_futureHolder);
+        assertEq(AelinUpFrontDeal(dealAddress).futureHolder(), address(_futureHolder));
+        (, , , , address holderAddress, , ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(holderAddress, address(0xDEAD));
+    }
+
+    function testFailSetHolder() public {
+        vm.prank(address(0x1337));
+        AelinUpFrontDeal(dealAddress).setHolder(msg.sender);
+        assertEq(AelinUpFrontDeal(dealAddress).futureHolder(), msg.sender);
+    }
+
+    function testFuzzAcceptHolder(address _futureHolder) public {
+        vm.prank(address(0xDEAD));
+        AelinUpFrontDeal(dealAddress).setHolder(_futureHolder);
+        vm.prank(address(_futureHolder));
+        vm.expectEmit(false, false, false, false);
+        emit SetHolder(_futureHolder);
+        AelinUpFrontDeal(dealAddress).acceptHolder();
+        (, , , , address holderAddress, , ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(holderAddress, address(_futureHolder));
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                events
+    //////////////////////////////////////////////////////////////*/
+
+    event DepositDealToken(
+        address indexed underlyingDealTokenAddress,
+        address indexed depositor,
+        uint256 underlyingDealTokenAmount
+    );
+
+    event DealFullyFunded(
+        address indexed upFrontDealAddress,
+        uint256 timestamp,
+        uint256 purchaseExpiryTimestamp,
+        uint256 vestingCliffExpiryTimestamp,
+        uint256 vestingExpiryTimestamp
+    );
+
+    event SetHolder(address indexed holder);
+
+    event Vouch(address indexed voucher);
+
+    event Disavow(address indexed voucher);
 }
