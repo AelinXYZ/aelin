@@ -521,12 +521,12 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     }
 
     modifier onlyHolder() {
-        require(msg.sender == dealData.holder);
+        require(msg.sender == dealData.holder, "must be holder");
         _;
     }
 
     modifier onlySponsor() {
-        require(msg.sender == dealData.sponsor);
+        require(msg.sender == dealData.sponsor, "must be sponsor");
         _;
     }
 
