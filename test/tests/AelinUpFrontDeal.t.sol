@@ -831,14 +831,6 @@ contract AelinUpFrontDealTest is Test {
         vm.startPrank(address(0xDEAD));
         deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
         underlyingDealToken.approve(address(dealAddress), type(uint256).max);
-        vm.expectEmit(true, false, false, false);
-        emit DealFullyFunded(
-            address(dealAddress),
-            block.timestamp,
-            block.timestamp + 10 days,
-            block.timestamp + 10 days + 60 days,
-            block.timestamp + 10 days + 60 days + 365 days
-        );
         vm.expectEmit(true, true, false, false);
         emit DepositDealToken(address(underlyingDealToken), address(0xDEAD), _depositAmount);
         AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(_depositAmount);
@@ -881,6 +873,28 @@ contract AelinUpFrontDealTest is Test {
         AelinUpFrontDeal(dealAddress).acceptHolder();
         (, , , , address holderAddress, , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(holderAddress, address(_futureHolder));
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              vouch
+    //////////////////////////////////////////////////////////////*/
+
+    function testFuzzVouchForDeal(address _attestant) public {
+        vm.prank(_attestant);
+        vm.expectEmit(false, false, false, false, address(dealAddress));
+        emit Vouch(_attestant);
+        AelinUpFrontDeal(dealAddress).vouch();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              disavow
+    //////////////////////////////////////////////////////////////*/
+
+    function testFuzzDisavowForDeal(address _attestant) public {
+        vm.prank(_attestant);
+        vm.expectEmit(false, false, false, false, address(dealAddress));
+        emit Disavow(_attestant);
+        AelinUpFrontDeal(dealAddress).disavow();
     }
 
     /*//////////////////////////////////////////////////////////////
