@@ -277,7 +277,9 @@ contract AelinDeal is AelinERC20, MinimalProxyFactory, IAelinDeal {
     }
 
     modifier blockTransfer() {
-        require(msg.sender != aelinTreasuryAddress, "cannot transfer deal tokens");
+        if (msg.sender != aelinTreasuryAddress) {
+            require(false, "cannot transfer deal tokens");
+        }
         _;
     }
 
