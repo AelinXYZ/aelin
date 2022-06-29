@@ -847,7 +847,7 @@ contract AelinUpFrontDealTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        Set / Accept Holder
+                        setHolder / acceptHolder
     //////////////////////////////////////////////////////////////*/
 
     function testSetHolder(address _futureHolder) public {
@@ -898,6 +898,49 @@ contract AelinUpFrontDealTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
+                            withdrawExcess
+    //////////////////////////////////////////////////////////////*/
+
+    function testOnlyHolderCanCallWithdrawExcess(address _testAddress) public {
+        vm.assume(_testAddress != address(0xDEAD));
+        vm.prank(_testAddress);
+        vm.expectRevert("must be holder");
+        AelinUpFrontDeal(dealAddress).withdrawExcess();
+    }
+
+    function testRevertNoExcessToWithdraw(uint256 _depositAmount) public {
+        (uint256 underlyingDealTokenTotal, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        vm.assume(_depositAmount <= underlyingDealTokenTotal);
+        vm.startPrank(address(0xDEAD));
+        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        underlyingDealToken.approve(address(dealAddress), type(uint256).max);
+        AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(_depositAmount);
+        vm.expectRevert("no excess to withdraw");
+        AelinUpFrontDeal(dealAddress).withdrawExcess();
+        vm.stopPrank();
+    }
+
+    function testWithdrawExcess(uint256 _depositAmount) public {
+        (uint256 underlyingDealTokenTotal, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        vm.assume(_depositAmount > underlyingDealTokenTotal);
+        vm.startPrank(address(0xDEAD));
+        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        underlyingDealToken.approve(address(dealAddress), type(uint256).max);
+        AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(_depositAmount);
+        uint256 balanceAfterTransfer = underlyingDealToken.balanceOf(dealAddress);
+        uint256 expectedWithdraw = balanceAfterTransfer - underlyingDealTokenTotal;
+        vm.expectEmit(false, false, false, false);
+        emit WithdrewExcess(address(dealAddress), expectedWithdraw);
+        AelinUpFrontDeal(dealAddress).withdrawExcess();
+        assertEq(underlyingDealToken.balanceOf(dealAddress), underlyingDealTokenTotal);
+        vm.stopPrank();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              acceptDeal
+    //////////////////////////////////////////////////////////////*/
+
+    /*//////////////////////////////////////////////////////////////
                                 events
     //////////////////////////////////////////////////////////////*/
 
@@ -920,4 +963,6 @@ contract AelinUpFrontDealTest is Test {
     event Vouch(address indexed voucher);
 
     event Disavow(address indexed voucher);
+
+    event WithdrewExcess(address UpFrontDealAddress, uint256 amountWithdrawn);
 }
