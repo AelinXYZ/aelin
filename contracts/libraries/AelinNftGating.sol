@@ -133,17 +133,17 @@ library AelinNftGating {
 
             if (NftCheck.supports721(_collectionAddress)) {
                 for (uint256 j = 0; j < _tokenIds.length; j++) {
-                    require(IERC721(_collectionAddress).ownerOf(_tokenIds[i]) == msg.sender, "has to be the token owner");
-                    require(!_data.nftId[_collectionAddress][_tokenIds[i]], "tokenId already used");
-                    _data.nftId[_collectionAddress][_tokenIds[i]] = true;
+                    require(IERC721(_collectionAddress).ownerOf(_tokenIds[j]) == msg.sender, "has to be the token owner");
+                    require(!_data.nftId[_collectionAddress][_tokenIds[j]], "tokenId already used");
+                    _data.nftId[_collectionAddress][_tokenIds[j]] = true;
                 }
             }
             if (NftCheck.supports1155(_collectionAddress)) {
                 for (uint256 j = 0; j < _tokenIds.length; j++) {
-                    require(_data.nftId[_collectionAddress][_tokenIds[i]], "tokenId not in the pool");
+                    require(_data.nftId[_collectionAddress][_tokenIds[j]], "tokenId not in the pool");
                     require(
-                        IERC1155(_collectionAddress).balanceOf(msg.sender, _tokenIds[i]) >=
-                            nftCollectionRules.minTokensEligible[i],
+                        IERC1155(_collectionAddress).balanceOf(msg.sender, _tokenIds[j]) >=
+                            nftCollectionRules.minTokensEligible[j],
                         "erc1155 balance too low"
                     );
                 }
@@ -151,11 +151,11 @@ library AelinNftGating {
             if (_collectionAddress == CRYPTO_PUNKS) {
                 for (uint256 j = 0; j < _tokenIds.length; j++) {
                     require(
-                        ICryptoPunks(_collectionAddress).punkIndexToAddress(_tokenIds[i]) == msg.sender,
+                        ICryptoPunks(_collectionAddress).punkIndexToAddress(_tokenIds[j]) == msg.sender,
                         "not the owner"
                     );
-                    require(!_data.nftId[_collectionAddress][_tokenIds[i]], "tokenId already used");
-                    _data.nftId[_collectionAddress][_tokenIds[i]] = true;
+                    require(!_data.nftId[_collectionAddress][_tokenIds[j]], "tokenId already used");
+                    _data.nftId[_collectionAddress][_tokenIds[j]] = true;
                 }
             }
         }

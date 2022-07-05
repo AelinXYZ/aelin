@@ -199,17 +199,14 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
                 nftGating,
                 _purchaseTokenAmount
             );
-        } else {
-            if (allowList.hasAllowList) {
-                require(_purchaseTokenAmount <= allowList.amountPerAddress[msg.sender], "more than allocation");
-                allowList.amountPerAddress[msg.sender] -= _purchaseTokenAmount;
-            }
-
-            uint256 balanceBeforeTransfer = IERC20(_dealData.purchaseToken).balanceOf(address(this));
-            IERC20(_dealData.purchaseToken).safeTransferFrom(msg.sender, address(this), _purchaseTokenAmount);
-            uint256 balanceAfterTransfer = IERC20(_dealData.purchaseToken).balanceOf(address(this));
-            purchaseTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
+        } else if (allowList.hasAllowList) {
+            require(_purchaseTokenAmount <= allowList.amountPerAddress[msg.sender], "more than allocation");
+            allowList.amountPerAddress[msg.sender] -= _purchaseTokenAmount;
         }
+        uint256 balanceBeforeTransfer = IERC20(_dealData.purchaseToken).balanceOf(address(this));
+        IERC20(_dealData.purchaseToken).safeTransferFrom(msg.sender, address(this), _purchaseTokenAmount);
+        uint256 balanceAfterTransfer = IERC20(_dealData.purchaseToken).balanceOf(address(this));
+        purchaseTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
 
         totalPurchasingAccepted += purchaseTokenAmount;
         purchaseTokensPerUser[msg.sender] += purchaseTokenAmount;
@@ -220,6 +217,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         // this takes into account the decimal conversion between purchasing token and underlying deal token
         // pool shares having the same amount of decimals as underlying deal tokens
         poolSharesAmount = (purchaseTokenAmount * 10**underlyingTokenDecimals) / _dealConfig.purchaseTokenPerDealToken;
+        require(poolSharesAmount > 0, "purchase amount too small");
 
         // pool shares directly correspond to the amount of deal tokens that can be minted
         // pool shares held = deal tokens minted as long as no deallocation takes place
@@ -518,6 +516,18 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
             nftGating.nftId[_collection][_nftId],
             nftGating.hasNftList
         );
+    }
+
+    function getPurchaseTokensPerUser(address _address) public view returns (uint256) {
+        return (purchaseTokensPerUser[_address]);
+    }
+
+    function getPoolSharesPerUser(address _address) public view returns (uint256) {
+        return (poolSharesPerUser[_address]);
+    }
+
+    function getAmountVested(address _address) public view returns (uint256) {
+        return (amountVested[_address]);
     }
 
     modifier onlyHolder() {
