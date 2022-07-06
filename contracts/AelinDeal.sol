@@ -5,8 +5,6 @@ import "./AelinERC20.sol";
 import "./interfaces/IAelinDeal.sol";
 import "./MinimalProxyFactory.sol";
 import "./AelinFeeEscrow.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract AelinDeal is AelinERC20, MinimalProxyFactory, IAelinDeal {
     using SafeERC20 for IERC20;
@@ -159,11 +157,7 @@ contract AelinDeal is AelinERC20, MinimalProxyFactory, IAelinDeal {
 
     /**
      * @dev the holder can withdraw any amount accidentally deposited over
-     * the amount needed to fulfill the deal
-     *
-     * NOTE if the deposit was completed with a transfer instead of this method
-     * the deposit still needs to be finalized by calling this method with
-     * _underlyingDealTokenAmount set to 0
+     * the amount needed to fulfill the deal or all amount if deposit was not completed
      */
     function withdraw() external onlyHolder {
         uint256 withdrawAmount;

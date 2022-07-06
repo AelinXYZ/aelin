@@ -3,7 +3,6 @@ pragma solidity 0.8.6;
 
 import "./MinimalProxyFactory.sol";
 import "./AelinPool.sol";
-import "./interfaces/IAelinPool.sol";
 
 /**
  * @dev the factory contract allows an Aelin sponsor to permissionlessly create new pools
