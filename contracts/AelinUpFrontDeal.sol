@@ -259,16 +259,18 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
                     totalPoolShares /
                     10**18;
                 poolSharesPerUser[msg.sender] = 0;
-                _mint(msg.sender, _adjustedDealTokensForUser);
 
                 // refund any purchase tokens that got deallocated
+                uint256 purchaseTokensAmount = purchaseTokensPerUser[msg.sender];
                 uint256 _underlyingTokenDecimals = IERC20Decimals(_dealData.underlyingDealToken).decimals();
                 uint256 _totalIntendedRaise = (_dealConfig.purchaseTokenPerDealToken *
                     _dealConfig.underlyingDealTokenTotal) / 10**_underlyingTokenDecimals;
                 uint256 _amountOverRaise = totalPurchasingAccepted - _totalIntendedRaise;
-                uint256 _purchasingRefund = (100 * purchaseTokensPerUser[msg.sender] * _amountOverRaise) /
-                    totalPurchasingAccepted;
+                uint256 _purchasingRefund = (100 * purchaseTokensAmount * _amountOverRaise) / totalPurchasingAccepted;
                 purchaseTokensPerUser[msg.sender] = 0;
+
+                // mint deal tokens and transfer purchase token refund
+                _mint(msg.sender, _adjustedDealTokensForUser);
                 IERC20(_dealData.purchaseToken).safeTransfer(msg.sender, _purchasingRefund);
 
                 emit ClaimDealTokens(msg.sender, _adjustedDealTokensForUser, _purchasingRefund);
@@ -285,8 +287,9 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
             // Claim Refund
             uint256 _currentBalance = purchaseTokensPerUser[msg.sender];
             purchaseTokensPerUser[msg.sender] = 0;
-            totalPurchasingAccepted -= _currentBalance;
+            poolSharesPerUser[msg.sender] = 0;
             IERC20(_dealData.purchaseToken).safeTransfer(msg.sender, _currentBalance);
+            emit ClaimDealTokens(msg.sender, 0, _currentBalance);
         }
     }
 
