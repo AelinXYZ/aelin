@@ -573,7 +573,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
      * if they do not like a deal
      */
     function _withdraw(uint256 _purchaseTokenAmount) internal {
-        require(purchaseTokenAmount <= balanceOf(msg.sender), "input larger than balance");
+        require(_purchaseTokenAmount <= balanceOf(msg.sender), "input larger than balance");
         require(block.timestamp >= poolExpiry, "not yet withdraw period");
         if (holderFundingExpiry > 0) {
             require(block.timestamp > holderFundingExpiry || aelinDeal.depositComplete(), "cant withdraw in funding period");
