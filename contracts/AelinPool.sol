@@ -524,6 +524,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         }
 
         _mint(msg.sender, purchaseTokenAmount);
+        emit PurchasePoolToken(msg.sender, purchaseTokenAmount);
     }
 
     function _blackListCheck721(address _collectionAddress, uint256[] memory _tokenIds) internal {
