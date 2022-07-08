@@ -226,21 +226,17 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
 
         if (!_dealConfig.allowDeallocation) {
             require(totalPoolShares <= _dealConfig.underlyingDealTokenTotal, "purchased amount over total");
-        } /*else if (totalPoolShares > _dealConfig.underlyingDealTokenTotal) {
+        } else if (totalPoolShares > _dealConfig.underlyingDealTokenTotal) {
             // if there is deallocation
             // attempt these computations, if it causes a revert this is overflow protection for purchaserClaim()
-            uint256 amountOverTotal = totalPoolShares - _dealConfig.underlyingDealTokenTotal;
-            uint256 adjustedDealTokensForUser = ((BASE - AELIN_FEE - _dealData.sponsorFee) *
-                poolSharesPerUser[msg.sender] *
-                amountOverTotal) /
-                totalPoolShares /
-                10**18;
-            uint256 underlyingTokenDecimals = IERC20Decimals(_dealData.underlyingDealToken).decimals();
+            uint256 test = (((poolSharesPerUser[msg.sender] * _dealConfig.underlyingDealTokenTotal) / totalPoolShares) *
+                (BASE - AELIN_FEE - _dealData.sponsorFee)) / BASE;
             uint256 totalIntendedRaise = (_dealConfig.purchaseTokenPerDealToken * _dealConfig.underlyingDealTokenTotal) /
                 10**underlyingTokenDecimals;
-            uint256 amountOverRaise = totalPurchasingAccepted - totalIntendedRaise;
-            uint256 purchasingRefund = (100 * purchaseTokensPerUser[msg.sender] * amountOverRaise) / totalPurchasingAccepted;
-        }*/
+            test =
+                purchaseTokensPerUser[msg.sender] -
+                ((purchaseTokensPerUser[msg.sender] * totalIntendedRaise) / totalPurchasingAccepted);
+        }
 
         emit AcceptDeal(
             msg.sender,
@@ -266,21 +262,17 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
 
             if (deallocate) {
                 // adjust for deallocation and mint deal tokens
-                uint256 amountOverTotal = totalPoolShares - _dealConfig.underlyingDealTokenTotal;
-                uint256 adjustedDealTokensForUser = ((BASE - AELIN_FEE - _dealData.sponsorFee) *
-                    poolSharesPerUser[msg.sender] *
-                    amountOverTotal) /
-                    totalPoolShares /
-                    10**18;
+                uint256 adjustedDealTokensForUser = (((poolSharesPerUser[msg.sender] *
+                    _dealConfig.underlyingDealTokenTotal) / totalPoolShares) * (BASE - AELIN_FEE - _dealData.sponsorFee)) /
+                    BASE;
                 poolSharesPerUser[msg.sender] = 0;
 
                 // refund any purchase tokens that got deallocated
                 uint256 underlyingTokenDecimals = IERC20Decimals(_dealData.underlyingDealToken).decimals();
                 uint256 totalIntendedRaise = (_dealConfig.purchaseTokenPerDealToken * _dealConfig.underlyingDealTokenTotal) /
                     10**underlyingTokenDecimals;
-                uint256 amountOverRaise = totalPurchasingAccepted - totalIntendedRaise;
-                uint256 purchasingRefund = (100 * purchaseTokensPerUser[msg.sender] * amountOverRaise) /
-                    totalPurchasingAccepted;
+                uint256 purchasingRefund = purchaseTokensPerUser[msg.sender] -
+                    ((purchaseTokensPerUser[msg.sender] * totalIntendedRaise) / totalPurchasingAccepted);
                 purchaseTokensPerUser[msg.sender] = 0;
 
                 // mint deal tokens and transfer purchase token refund
@@ -291,7 +283,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
             } else {
                 // mint deal tokens when there is no deallocation
                 uint256 adjustedDealTokensForUser = ((BASE - AELIN_FEE - _dealData.sponsorFee) *
-                    poolSharesPerUser[msg.sender]) / 10**18;
+                    poolSharesPerUser[msg.sender]) / BASE;
                 poolSharesPerUser[msg.sender] = 0;
                 purchaseTokensPerUser[msg.sender] = 0;
                 _mint(msg.sender, adjustedDealTokensForUser);
