@@ -40,6 +40,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     uint256 public totalUnderlyingClaimed;
 
     bool private underlyingDepositComplete;
+    bool private sponsorClaimed;
     bool private holderClaimed;
     bool private feeEscrowClaimed;
 
@@ -305,13 +306,25 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      * NOTE also calls the claim for the protocol fee
      */
     function sponsorClaim() public lock purchasingOver passMinimumRaise onlySponsor {
+        require(!sponsorClaimed, "sponsor already claimed");
         UpFrontDealData memory _dealData = dealData;
         UpFrontDealConfig memory _dealConfig = dealConfig;
-        uint256 _sponsorFeeAmt = (_dealConfig.underlyingDealTokenTotal * _dealData.sponsorFee) / BASE;
+
+        uint256 totalSold;
+        if (totalPoolShares > _dealConfig.underlyingDealTokenTotal) {
+            totalSold = _dealConfig.underlyingDealTokenTotal;
+        } else {
+            totalSold = totalPoolShares;
+        }
+        uint256 _sponsorFeeAmt = (totalSold * _dealData.sponsorFee) / BASE;
         _mint(_dealData.sponsor, _sponsorFeeAmt);
         emit SponsorClaim(_dealData.sponsor, _sponsorFeeAmt);
 
-        feeEscrowClaim();
+        if (!feeEscrowClaimed) {
+            feeEscrowClaim();
+        }
+
+        sponsorClaimed = true;
     }
 
     /**
@@ -320,10 +333,9 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      * NOTE also calls the claim for the protocol fee
      */
     function holderClaim() public lock purchasingOver onlyHolder {
+        require(!holderClaimed, "holder already claimed");
         UpFrontDealData memory _dealData = dealData;
         UpFrontDealConfig memory _dealConfig = dealConfig;
-
-        require(!holderClaimed, "holder has already claimed");
 
         if (_dealConfig.purchaseRaiseMinimum == 0 || totalPurchasingAccepted > _dealConfig.purchaseRaiseMinimum) {
             bool _deallocate = totalPoolShares > _dealConfig.underlyingDealTokenTotal;
@@ -334,6 +346,9 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
                     _dealConfig.underlyingDealTokenTotal) / 10**_underlyingTokenDecimals;
                 IERC20(_dealData.purchaseToken).safeTransfer(_dealData.holder, _totalIntendedRaise);
                 emit HolderClaim(_dealData.holder, _dealData.purchaseToken, _totalIntendedRaise, block.timestamp);
+                if (!feeEscrowClaimed) {
+                    feeEscrowClaim();
+                }
             } else {
                 // holder receives raise
                 uint256 _currentBalance = IERC20(_dealData.purchaseToken).balanceOf(address(this));
@@ -343,14 +358,15 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
                 uint256 _underlyingRefund = _dealConfig.underlyingDealTokenTotal - totalPoolShares;
                 IERC20(_dealData.underlyingDealToken).safeTransfer(_dealData.holder, _underlyingRefund);
                 emit HolderClaim(_dealData.holder, _dealData.underlyingDealToken, _underlyingRefund, block.timestamp);
+                if (!feeEscrowClaimed) {
+                    feeEscrowClaim();
+                }
             }
         } else {
             uint256 _currentBalance = IERC20(_dealData.underlyingDealToken).balanceOf(address(this));
-            IERC20(_dealData.purchaseToken).safeTransfer(_dealData.holder, _currentBalance);
+            IERC20(_dealData.underlyingDealToken).safeTransfer(_dealData.holder, _currentBalance);
             emit HolderClaim(_dealData.holder, _dealData.underlyingDealToken, _currentBalance, block.timestamp);
         }
-
-        feeEscrowClaim();
 
         holderClaimed = true;
     }
@@ -358,20 +374,28 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     /**
      * @dev transfers protocol fee of underlying deal tokens to the treasury escrow contract
      */
-    function feeEscrowClaim() public lock purchasingOver {
+    function feeEscrowClaim() public purchasingOver {
         UpFrontDealData memory _dealData = dealData;
         UpFrontDealConfig memory _dealConfig = dealConfig;
 
         if (!feeEscrowClaimed) {
+            feeEscrowClaimed = true;
+
             address aelinEscrowStorageProxy = _cloneAsMinimalProxy(aelinEscrowLogicAddress, "Could not create new escrow");
             aelinFeeEscrow = AelinFeeEscrow(aelinEscrowStorageProxy);
             aelinFeeEscrow.initialize(aelinTreasuryAddress, _dealData.underlyingDealToken);
 
-            uint256 aelinFeeAmt = (_dealConfig.underlyingDealTokenTotal * AELIN_FEE) / BASE;
+            uint256 totalSold;
+            if (totalPoolShares > _dealConfig.underlyingDealTokenTotal) {
+                totalSold = _dealConfig.underlyingDealTokenTotal;
+            } else {
+                totalSold = totalPoolShares;
+            }
+            uint256 aelinFeeAmt = (totalSold * AELIN_FEE) / BASE;
             IERC20(_dealData.underlyingDealToken).safeTransfer(address(aelinFeeEscrow), aelinFeeAmt);
-        }
 
-        feeEscrowClaimed = true;
+            emit FeeEscrowClaim(aelinEscrowStorageProxy, _dealData.underlyingDealToken, aelinFeeAmt);
+        }
     }
 
     /**
@@ -397,7 +421,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     function claimableUnderlyingTokens(address purchaser) public view returns (uint256) {
         UpFrontDealConfig memory _dealConfig = dealConfig;
 
-        uint256 underlyingClaimable = 0;
+        uint256 underlyingClaimable;
 
         uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
         if (

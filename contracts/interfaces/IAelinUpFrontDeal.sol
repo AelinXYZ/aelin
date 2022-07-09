@@ -76,6 +76,8 @@ interface IAelinUpFrontDeal {
 
     event HolderClaim(address indexed holder, address token, uint256 amountClaimed, uint256 timestamp);
 
+    event FeeEscrowClaim(address indexed aelinFeeEscrow, address indexed underlyingTokenAddress, uint256 amount);
+
     event ClaimedUnderlyingDealToken(address indexed user, address underlyingToken, uint256 amountClaimed);
 
     event PoolWith721(address indexed collectionAddress, uint256 purchaseAmount, bool purchaseAmountPerToken);
