@@ -49,6 +49,9 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     uint256 public vestingCliffExpiry;
     uint256 public vestingExpiry;
 
+    /**
+     * @dev initializes the contract configuration, called from the factory contract when creating a new Up Front Deal
+     */
     function initialize(
         UpFrontDealData calldata _dealData,
         UpFrontDealConfig calldata _dealConfig,
@@ -137,6 +140,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      * @dev method for holder to deposit underlying deal tokens
      * all underlying deal tokens must be deposited for the purchasing period to start
      * if tokens were deposited directly, this method must still be called to start the purchasing period
+     * @param _depositUnderlyingAmount how many underlying tokens the holder will transfer to the contract
      */
     function depositUnderlyingTokens(uint256 _depositUnderlyingAmount) public onlyHolder {
         UpFrontDealData memory _dealData = dealData;
@@ -182,6 +186,8 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     /**
      * @dev accept deal by depositing purchasing tokens which is converted to a mapping which stores the amount of
      * underlying purchased. pool shares have the same decimals as the underlying deal token
+     * @param _nftPurchaseList NFTs to use for accepting the deal if deal is NFT gated
+     * @param _purchaseTokenAmount how many purchase tokens will be used to purchase deal token shares
      */
     function acceptDeal(AelinNftGating.NftPurchaseList[] calldata _nftPurchaseList, uint256 _purchaseTokenAmount)
         external
@@ -416,25 +422,26 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     }
 
     /**
-     * @dev a view showing the amount of the underlying deal token a purchaser gets in return
+     * @dev a view showing the amount of the underlying deal token a purchaser can claim
+     * @param _purchaser address to check the quantity of claimable underlying tokens
      */
-    function claimableUnderlyingTokens(address purchaser) public view purchasingOver returns (uint256) {
+    function claimableUnderlyingTokens(address _purchaser) public view purchasingOver returns (uint256) {
         UpFrontDealConfig memory _dealConfig = dealConfig;
 
         uint256 underlyingClaimable;
 
         uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
         if (
-            balanceOf(purchaser) > 0 &&
+            balanceOf(_purchaser) > 0 &&
             (maxTime > vestingCliffExpiry || (maxTime == vestingCliffExpiry && _dealConfig.vestingPeriod == 0))
         ) {
             uint256 timeElapsed = maxTime - vestingCliffExpiry;
 
             underlyingClaimable = _dealConfig.vestingPeriod == 0
-                ? balanceOf(purchaser)
-                : ((balanceOf(purchaser) + amountVested[purchaser]) * timeElapsed) /
+                ? balanceOf(_purchaser)
+                : ((balanceOf(_purchaser) + amountVested[_purchaser]) * timeElapsed) /
                     _dealConfig.vestingPeriod -
-                    amountVested[purchaser];
+                    amountVested[_purchaser];
         }
 
         return (underlyingClaimable);
@@ -442,11 +449,15 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
 
     /**
      * @dev the holder may change their address
+     * @param _holder address to swap the holder role
      */
     function setHolder(address _holder) external onlyHolder {
         futureHolder = _holder;
     }
 
+    /**
+     * @dev futurHolder can call to accept the role of holder
+     */
     function acceptHolder() external {
         require(msg.sender == futureHolder, "only future holder can access");
         dealData.holder = futureHolder;
@@ -551,14 +562,26 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         );
     }
 
+    /**
+     * @dev getPurchaseTokensPerUser
+     * @param _address address to check
+     */
     function getPurchaseTokensPerUser(address _address) public view returns (uint256) {
         return (purchaseTokensPerUser[_address]);
     }
 
+    /**
+     * @dev getPoolSharesPerUser
+     * @param _address address to check
+     */
     function getPoolSharesPerUser(address _address) public view returns (uint256) {
         return (poolSharesPerUser[_address]);
     }
 
+    /**
+     * @dev getAmountVested
+     * @param _address address to check
+     */
     function getAmountVested(address _address) public view returns (uint256) {
         return (amountVested[_address]);
     }
