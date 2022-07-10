@@ -418,7 +418,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     /**
      * @dev a view showing the amount of the underlying deal token a purchaser gets in return
      */
-    function claimableUnderlyingTokens(address purchaser) public view returns (uint256) {
+    function claimableUnderlyingTokens(address purchaser) public view purchasingOver returns (uint256) {
         UpFrontDealConfig memory _dealConfig = dealConfig;
 
         uint256 underlyingClaimable;
