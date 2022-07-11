@@ -763,7 +763,7 @@ contract AelinUpFrontDealTest is Test {
         vm.assume(_testAddress != address(0));
         vm.prank(_testAddress);
         vm.expectRevert("underlying deposit not complete");
-        uint256 result = AelinUpFrontDeal(dealAddress).claimableUnderlyingTokens(_testAddress);
+        AelinUpFrontDeal(dealAddress).claimableUnderlyingTokens(_testAddress);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -1632,9 +1632,7 @@ contract AelinUpFrontDealTest is Test {
         vm.assume(_purchaseAmount < 1e28);
         // accept deal
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
-        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
-            dealAddressOverFullDeposit
-        ).dealConfig();
+        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
         (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
         vm.assume(success);
         uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
@@ -1720,7 +1718,7 @@ contract AelinUpFrontDealTest is Test {
             dealAddressAllowDeallocation
         ).dealConfig();
         (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealData();
-        (bool success, uint256 value) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
         vm.assume(success);
         uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
@@ -1778,9 +1776,7 @@ contract AelinUpFrontDealTest is Test {
         vm.assume(_purchaseAmount < 1e28);
         // accept deal
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
-        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
-            dealAddressOverFullDeposit
-        ).dealConfig();
+        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
         (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
         vm.assume(success);
         uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
@@ -1814,9 +1810,7 @@ contract AelinUpFrontDealTest is Test {
         vm.assume(_purchaseAmount < 1e35);
         // accept deal
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
-        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
-            dealAddressOverFullDeposit
-        ).dealConfig();
+        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
         (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
         vm.assume(success);
         uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
@@ -1998,9 +1992,7 @@ contract AelinUpFrontDealTest is Test {
         vm.assume(_purchaseAmount < 1e35);
         // accept deal
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
-        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
-            dealAddressOverFullDeposit
-        ).dealConfig();
+        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
         (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
         vm.assume(success);
         uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
@@ -2068,9 +2060,7 @@ contract AelinUpFrontDealTest is Test {
         // accept deal
         vm.startPrank(address(0x1337));
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
-        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
-            dealAddressOverFullDeposit
-        ).dealConfig();
+        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
         (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
         vm.assume(success);
         uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
@@ -2392,8 +2382,7 @@ contract AelinUpFrontDealTest is Test {
         AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
         // claimable underlying
         vm.warp(purchaseExpiry + 1 days + _timeAfterPurchasing);
-        (, , , , uint256 vestingPeriod, uint256 vestingCliffPeriod, ) = AelinUpFrontDeal(dealAddressOverFullDeposit)
-            .dealConfig();
+        (, , , , uint256 vestingPeriod, , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
         uint256 underlyingClaimable;
         uint256 maxTime = block.timestamp > AelinUpFrontDeal(dealAddressOverFullDeposit).vestingExpiry()
             ? AelinUpFrontDeal(dealAddressOverFullDeposit).vestingExpiry()
@@ -2459,8 +2448,6 @@ contract AelinUpFrontDealTest is Test {
         AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
         // claimable underlying
         vm.warp(purchaseExpiry + 1 days + _timeAfterPurchasing);
-        (, , , , uint256 vestingPeriod, uint256 vestingCliffPeriod, ) = AelinUpFrontDeal(dealAddressOverFullDeposit)
-            .dealConfig();
         uint256 claimable = AelinUpFrontDeal(dealAddressOverFullDeposit).claimableUnderlyingTokens(address(0x1337));
         assertEq(claimable, 0);
         vm.stopPrank();
@@ -2506,8 +2493,6 @@ contract AelinUpFrontDealTest is Test {
         AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
         // claimable underlying
         vm.warp(purchaseExpiry + 1 days + _timeAfterPurchasing);
-        (, , , , uint256 vestingPeriod, uint256 vestingCliffPeriod, ) = AelinUpFrontDeal(dealAddressOverFullDeposit)
-            .dealConfig();
         uint256 claimable = AelinUpFrontDeal(dealAddressOverFullDeposit).claimableUnderlyingTokens(address(0x1337));
         assertEq(claimable, MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)));
         vm.stopPrank();
@@ -2555,8 +2540,7 @@ contract AelinUpFrontDealTest is Test {
         AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
         // claimable underlying
         vm.warp(purchaseExpiry + 1 days + _timeAfterPurchasing);
-        (, , , , uint256 vestingPeriod, uint256 vestingCliffPeriod, ) = AelinUpFrontDeal(dealAddressOverFullDeposit)
-            .dealConfig();
+        (, , , , uint256 vestingPeriod, , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
         uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
         uint256 timeElapsed = maxTime - AelinUpFrontDeal(dealAddressOverFullDeposit).vestingCliffExpiry();
         uint256 expectedClaim = ((MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)) +
@@ -2586,9 +2570,7 @@ contract AelinUpFrontDealTest is Test {
         vm.assume(_purchaseAmount < 1e28);
         // accept deal
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
-        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
-            dealAddressOverFullDeposit
-        ).dealConfig();
+        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
         (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
         vm.assume(success);
         uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
