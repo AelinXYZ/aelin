@@ -59,8 +59,8 @@ contract MerkleDistributor is Owned, Pausable, IMerkleDistributor {
     }
 
     function _selfDestruct(address payable beneficiary) external onlyOwner {
-        //only callable a year after end time
-        require(block.timestamp > (startTime + 30 days), "Contract can only be selfdestruct after a year");
+        // only callable a year after end time
+        require(block.timestamp > (startTime + 365 days), "Contract can only be selfdestruct after a year");
 
         IERC20(token).transfer(beneficiary, IERC20(token).balanceOf(address(this)));
 
