@@ -22,7 +22,7 @@ library AelinAllowList {
             );
             _self.allowListAddresses = _init.allowListAddresses;
             _self.allowListAmounts = _init.allowListAmounts;
-            for (uint256 i = 0; i < _init.allowListAddresses.length; i++) {
+            for (uint256 i; i < _init.allowListAddresses.length; ++i) {
                 _self.amountPerAddress[_init.allowListAddresses[i]] = _init.allowListAmounts[i];
             }
             _self.hasAllowList = true;
