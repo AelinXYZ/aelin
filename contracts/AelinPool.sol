@@ -431,11 +431,12 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
      * - the cap has not been exceeded
      */
     function purchasePoolTokens(uint256 _purchaseTokenAmount) external lock {
+        require(block.timestamp < purchaseExpiry, "not in purchase window");
+        require(!hasNftList, "has NFT list");
         if (hasAllowList) {
             require(_purchaseTokenAmount <= allowList[msg.sender], "more than allocation");
             allowList[msg.sender] -= _purchaseTokenAmount;
         }
-        require(block.timestamp < purchaseExpiry, "not in purchase window");
         uint256 currentBalance = IERC20(purchaseToken).balanceOf(address(this));
         IERC20(purchaseToken).safeTransferFrom(msg.sender, address(this), _purchaseTokenAmount);
         uint256 balanceAfterTransfer = IERC20(purchaseToken).balanceOf(address(this));
