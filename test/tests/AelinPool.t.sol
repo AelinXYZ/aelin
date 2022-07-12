@@ -343,6 +343,7 @@ contract AelinPoolTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function testFuzzSetSponsor(address futureSponsor) public {
+        vm.assume(futureSponsor != address(0));
         AelinPool(poolAddress).setSponsor(futureSponsor);
         assertEq(AelinPool(poolAddress).futureSponsor(), futureSponsor);
         assertEq(AelinPool(poolAddress).sponsor(), address(this));
@@ -355,6 +356,7 @@ contract AelinPoolTest is Test {
     }
 
     function testFuzzAcceptSponsor(address futureSponsor) public {
+        vm.assume(futureSponsor != address(0));
         AelinPool(poolAddress).setSponsor(futureSponsor);
         vm.prank(address(futureSponsor));
         AelinPool(poolAddress).acceptSponsor();

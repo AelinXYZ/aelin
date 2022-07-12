@@ -99,6 +99,7 @@ contract AelinFeeEscrowTest is Test {
     }
 
     function testSetTreasury(address testAddress) public {
+        vm.assume(testAddress != address(0));
         vm.prank(address(aelinTreasury));
         AelinFeeEscrow(escrowAddress).setTreasury(testAddress);
 
@@ -112,6 +113,7 @@ contract AelinFeeEscrowTest is Test {
     }
 
     function testAcceptTreasury(address testAddress) public {
+        vm.assume(testAddress != address(0));
         vm.prank(address(aelinTreasury));
         AelinFeeEscrow(escrowAddress).setTreasury(testAddress);
 

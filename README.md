@@ -26,7 +26,7 @@ The deal token is an ERC20 that might include a vesting schedule or not to claim
 
 - `Aelin Fee` - 2% fee to the protocol taken from every purchaser when they accept a deal.
 
-- `Sponsor Fee` - optional fee set by the sponsor when they announce the pool. can range from 0 to 98%.
+- `Sponsor Fee` - optional fee set by the sponsor when they announce the pool. can range from 0 to 15%.
 
 ## User journeys
 
@@ -41,14 +41,14 @@ Arguments:
 - `uint _purchaseTokenCap`- the max amount of purchase tokens that can be used to buy pool tokens. if set to 0 the deal is uncapped
 - `address _purchaseToken` the purchase token used to buy the pool token
 - `uint _duration` the duration of the pool which starts after the purchase expiry period ends. if no deal is created by the end of the duration, the purchaser may withdraw their funds
-- `uint _sponsorFee`- an optional fee from the sponsor set between 0 and 98%
+- `uint _sponsorFee`- an optional fee from the sponsor set between 0 and 15%
 - `uint _purchaseDuration` the amount of time a purchaser has to buy a pool token before the sponsor can create the deal
 
 Requirements:
 
 - the `_duration` must be <= 1 year (revert)
 - the `_purchaseDuration` must be >= 30 minutes and <= 30 days (revert)
-- the `_sponsorFee` must be between 0% and 98% (revert)
+- the `_sponsorFee` must be between 0% and 15% (revert)
 
 NOTE if SPONSOR never finds a deal this is the end of their journey and the PURCHASER can retrieve their purchase tokens at the end of the `_duration`
 
@@ -118,7 +118,7 @@ Requirements:
 
 **Accept when Conversion Ratio == 1:1** (e.g. a pool has $10M sUSD in it and the deal is for $10M sUSD)
 
-- **PRO RATA PERIOD**: The purchaser can either call `AelinPool.acceptDealTokens(uint poolTokenAmount)` or `AelinPool.acceptMaxDealTokens()` while the `block.timestamp < proRataRedmeptionExpiry`. In this case calling max will send all of their purchase tokens to the `HOLDER`, send 2% of the deal tokens to the `AELIN_REWARDS` address for `Aelin` token stakers, and an optional % from 0 to 98 to the `SPONSOR` which was set as the `sponsorFee` in the pool creation at the beginning of the process. If not accepting max, any additional tokens may be withdrawn at any time
+- **PRO RATA PERIOD**: The purchaser can either call `AelinPool.acceptDealTokens(uint poolTokenAmount)` or `AelinPool.acceptMaxDealTokens()` while the `block.timestamp < proRataRedmeptionExpiry`. In this case calling max will send all of their purchase tokens to the `HOLDER`, send 2% of the deal tokens to the `AELIN_REWARDS` address for `Aelin` token stakers, and an optional % from 0 to 15 to the `SPONSOR` which was set as the `sponsorFee` in the pool creation at the beginning of the process. If not accepting max, any additional tokens may be withdrawn at any time
 
 - **OPEN REDEMPTION PERIOD**:
   (n/a - since the ratio is 1:1 all purchasers have already had the chance to max their contributions)
