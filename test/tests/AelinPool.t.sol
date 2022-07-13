@@ -17,6 +17,8 @@ import {ICryptoPunks} from "contracts/interfaces/ICryptoPunks.sol";
 contract AelinPoolTest is Test {
     address public aelinTreasury = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
     address public poolAddress;
+    address public poolAddressWith721;
+    address public poolAddressWithAllowList;
 
     AelinPoolFactory public poolFactory;
     AelinDeal public testDeal;
@@ -47,8 +49,17 @@ contract AelinPoolTest is Test {
         deal(address(purchaseToken), address(this), 1e75);
         deal(address(dealToken), address(this), 1e75);
 
-        address[] memory allowListAddresses;
-        uint256[] memory allowListAmounts;
+        address[] memory allowListAddressesEmpty;
+        uint256[] memory allowListAmountsEmpty;
+        address[] memory allowListAddresses = new address[](2);
+        uint256[] memory allowListAmounts = new uint256[](2);
+
+        allowListAddresses[0] = address(0x1337);
+        allowListAmounts[0] = 1e22;
+        allowListAddresses[1] = address(0x1338);
+        allowListAmounts[1] = 3e22;
+
+        IAelinPool.NftCollectionRules[] memory nftCollectionRulesEmpty;
         IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](3);
 
         nftCollectionRules[0].collectionAddress = address(collectionAddress1);
@@ -72,14 +83,45 @@ contract AelinPoolTest is Test {
             duration: 30 days,
             sponsorFee: 2e18,
             purchaseDuration: 20 days,
+            allowListAddresses: allowListAddressesEmpty,
+            allowListAmounts: allowListAmountsEmpty,
+            nftCollectionRules: nftCollectionRulesEmpty
+        });
+
+        IAelinPool.PoolData memory poolDataWithAllowList;
+        poolDataWithAllowList = IAelinPool.PoolData({
+            name: "POOL",
+            symbol: "POOL",
+            purchaseTokenCap: 1e35,
+            purchaseToken: address(purchaseToken),
+            duration: 30 days,
+            sponsorFee: 2e18,
+            purchaseDuration: 20 days,
             allowListAddresses: allowListAddresses,
             allowListAmounts: allowListAmounts,
+            nftCollectionRules: nftCollectionRulesEmpty
+        });
+
+        IAelinPool.PoolData memory poolDataWith721;
+        poolDataWith721 = IAelinPool.PoolData({
+            name: "POOL",
+            symbol: "POOL",
+            purchaseTokenCap: 1e35,
+            purchaseToken: address(purchaseToken),
+            duration: 30 days,
+            sponsorFee: 2e18,
+            purchaseDuration: 20 days,
+            allowListAddresses: allowListAddressesEmpty,
+            allowListAmounts: allowListAmountsEmpty,
             nftCollectionRules: nftCollectionRules
         });
 
         poolAddress = poolFactory.createPool(poolData);
+        poolAddressWithAllowList = poolFactory.createPool(poolDataWithAllowList);
+        poolAddressWith721 = poolFactory.createPool(poolDataWith721);
 
         purchaseToken.approve(address(poolAddress), type(uint256).max);
+        purchaseToken.approve(address(poolAddressWith721), type(uint256).max);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -100,7 +142,22 @@ contract AelinPoolTest is Test {
         assertEq(AelinPool(poolAddress).aelinDealLogicAddress(), address(testDeal));
         assertEq(AelinPool(poolAddress).aelinTreasuryAddress(), address(aelinTreasury));
         assertTrue(!AelinPool(poolAddress).hasAllowList());
-        assertTrue(AelinPool(poolAddress).hasNftList());
+        assertTrue(!AelinPool(poolAddress).hasNftList());
+
+        assertEq(AelinPool(poolAddressWith721).name(), "aePool-POOL");
+        assertEq(AelinPool(poolAddressWith721).symbol(), "aeP-POOL");
+        assertEq(AelinPool(poolAddressWith721).decimals(), 18);
+        assertEq(AelinPool(poolAddressWith721).poolFactory(), address(poolFactory));
+        assertEq(AelinPool(poolAddressWith721).purchaseTokenCap(), 1e35);
+        assertEq(AelinPool(poolAddressWith721).purchaseToken(), address(purchaseToken));
+        assertEq(AelinPool(poolAddressWith721).purchaseExpiry(), block.timestamp + 20 days);
+        assertEq(AelinPool(poolAddressWith721).poolExpiry(), block.timestamp + 20 days + 30 days);
+        assertEq(AelinPool(poolAddressWith721).sponsorFee(), 2e18);
+        assertEq(AelinPool(poolAddressWith721).sponsor(), address(this));
+        assertEq(AelinPool(poolAddressWith721).aelinDealLogicAddress(), address(testDeal));
+        assertEq(AelinPool(poolAddressWith721).aelinTreasuryAddress(), address(aelinTreasury));
+        assertTrue(!AelinPool(poolAddressWith721).hasAllowList());
+        assertTrue(AelinPool(poolAddressWith721).hasNftList());
     }
 
     /*//////////////////////////////////////////////////////////////
