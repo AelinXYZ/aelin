@@ -53,6 +53,12 @@ contract AelinPoolTest is Test {
         uint256[] memory allowListAmountsEmpty;
         address[] memory allowListAddresses = new address[](2);
         uint256[] memory allowListAmounts = new uint256[](2);
+
+        allowListAddresses[0] = address(0x1337);
+        allowListAmounts[0] = 1e22;
+        allowListAddresses[1] = address(0x1338);
+        allowListAmounts[1] = 3e22;
+
         IAelinPool.NftCollectionRules[] memory nftCollectionRulesEmpty;
         IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](3);
 
@@ -82,6 +88,20 @@ contract AelinPoolTest is Test {
             nftCollectionRules: nftCollectionRulesEmpty
         });
 
+        IAelinPool.PoolData memory poolDataWithAllowList;
+        poolDataWithAllowList = IAelinPool.PoolData({
+            name: "POOL",
+            symbol: "POOL",
+            purchaseTokenCap: 1e35,
+            purchaseToken: address(purchaseToken),
+            duration: 30 days,
+            sponsorFee: 2e18,
+            purchaseDuration: 20 days,
+            allowListAddresses: allowListAddresses,
+            allowListAmounts: allowListAmounts,
+            nftCollectionRules: nftCollectionRulesEmpty
+        });
+
         IAelinPool.PoolData memory poolDataWith721;
         poolDataWith721 = IAelinPool.PoolData({
             name: "POOL",
@@ -97,6 +117,7 @@ contract AelinPoolTest is Test {
         });
 
         poolAddress = poolFactory.createPool(poolData);
+        poolAddressWithAllowList = poolFactory.createPool(poolDataWithAllowList);
         poolAddressWith721 = poolFactory.createPool(poolDataWith721);
 
         purchaseToken.approve(address(poolAddress), type(uint256).max);
