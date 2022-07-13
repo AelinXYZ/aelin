@@ -26,9 +26,6 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     AelinFeeEscrow public aelinFeeEscrow;
     address public dealFactory;
 
-    bool private calledInitialize;
-    address public futureHolder;
-
     AelinAllowList.AllowList public allowList;
     AelinNftGating.NftGatingData public nftGating;
     mapping(address => uint256) public purchaseTokensPerUser;
@@ -43,6 +40,9 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     bool private sponsorClaimed;
     bool private holderClaimed;
     bool private feeEscrowClaimed;
+
+    bool private calledInitialize;
+    address public futureHolder;
 
     uint256 public dealStart;
     uint256 public purchaseExpiry;
@@ -113,6 +113,8 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         // check if the deal is nft gated
         // if yes, store it in `nftCollectionDetails` and `nftId` and emit respective events for 721 and 1155
         AelinNftGating.initialize(_nftCollectionRules, nftGating);
+
+        require(!(allowList.hasAllowList && nftGating.hasNftList), "cannot have allow list and nft gating");
 
         // deposit underlying token logic
         // check if the underlying token balance is more than 0, meaning the factory contract passed tokens from the creator
@@ -198,22 +200,18 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         require(underlyingDepositComplete, "deal token not yet deposited");
         require(block.timestamp < purchaseExpiry, "not in purchase window");
         require(IERC20(_dealData.purchaseToken).balanceOf(msg.sender) >= _purchaseTokenAmount, "not enough purchaseToken");
-        uint256 purchaseTokenAmount;
 
-        if (_nftPurchaseList.length > 0) {
-            purchaseTokenAmount = AelinNftGating.purchaseDealTokensWithNft(
-                _nftPurchaseList,
-                nftGating,
-                _purchaseTokenAmount
-            );
+        if (nftGating.hasNftList || _nftPurchaseList.length > 0) {
+            AelinNftGating.purchaseDealTokensWithNft(_nftPurchaseList, nftGating, _purchaseTokenAmount);
         } else if (allowList.hasAllowList) {
             require(_purchaseTokenAmount <= allowList.amountPerAddress[msg.sender], "more than allocation");
             allowList.amountPerAddress[msg.sender] -= _purchaseTokenAmount;
         }
+
         uint256 balanceBeforeTransfer = IERC20(_dealData.purchaseToken).balanceOf(address(this));
         IERC20(_dealData.purchaseToken).safeTransferFrom(msg.sender, address(this), _purchaseTokenAmount);
         uint256 balanceAfterTransfer = IERC20(_dealData.purchaseToken).balanceOf(address(this));
-        purchaseTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
+        uint256 purchaseTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
 
         totalPurchasingAccepted += purchaseTokenAmount;
         purchaseTokensPerUser[msg.sender] += purchaseTokenAmount;
@@ -415,8 +413,8 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         if (underlyingDealTokensClaimed > 0) {
             amountVested[msg.sender] += underlyingDealTokensClaimed;
             _burn(msg.sender, underlyingDealTokensClaimed);
-            IERC20(_dealData.underlyingDealToken).safeTransfer(msg.sender, underlyingDealTokensClaimed);
             totalUnderlyingClaimed += underlyingDealTokensClaimed;
+            IERC20(_dealData.underlyingDealToken).safeTransfer(msg.sender, underlyingDealTokensClaimed);
             emit ClaimedUnderlyingDealToken(msg.sender, _dealData.underlyingDealToken, underlyingDealTokensClaimed);
         }
     }
