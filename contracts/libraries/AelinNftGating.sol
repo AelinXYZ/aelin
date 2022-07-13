@@ -106,6 +106,7 @@ library AelinNftGating {
         uint256 _purchaseTokenAmount
     ) public returns (uint256) {
         require(_data.hasNftList, "pool does not have an NFT list");
+        require(_nftPurchaseList.length > 0, "must provide purchase list");
 
         uint256 maxPurchaseTokenAmount;
 
