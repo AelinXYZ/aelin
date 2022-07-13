@@ -1,10 +1,10 @@
 {
-  "kovan": {
-    "Distribution": "0x2fa3c48A5c8BAC7E8ee9064a4E03a0E3C9FB2143",
-    "VirtualAelinToken": "0xc30a722e5c8d391d239d08afbe7613aaf7ee8485"
-  },
-  "optimism": {
-    "Distribution": "0x1fa677ca369b97Ab30707373531cB050b1c3a7c6",
-    "VirtualAelinToken": "0x25855b3E23c770F1EffC17BfB1bBb111eeD668b5"
-  }
+	"kovan": {
+		"Distribution": "0x2fa3c48A5c8BAC7E8ee9064a4E03a0E3C9FB2143",
+		"VirtualAelinToken": "0xc30a722e5c8d391d239d08afbe7613aaf7ee8485"
+	},
+	"optimism": {
+		"Distribution": "0x1fa677ca369b97Ab30707373531cB050b1c3a7c6",
+		"VirtualAelinToken": "0x25855b3E23c770F1EffC17BfB1bBb111eeD668b5"
+	}
 }

@@ -5,7 +5,8 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 import ERC20Artifact from "../../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json";
 import AelinDealArtifact from "../../artifacts/contracts/AelinDeal.sol/AelinDeal.json";
-import { AelinDeal, ERC20 } from "../../typechain";
+import AelinFeeEscrowArtifact from "../../artifacts/contracts/AelinFeeEscrow.sol/AelinFeeEscrow.json";
+import { AelinDeal, ERC20, AelinFeeEscrow } from "../../typechain";
 import { fundUsers, getImpersonatedSigner, nullAddress } from "../helpers";
 
 const { deployContract, deployMockContract } = waffle;
@@ -20,6 +21,7 @@ describe("AelinDeal", function () {
   let purchaserTwo: SignerWithAddress;
   let treasury: SignerWithAddress;
   let aelinDeal: AelinDeal;
+  let aelinEscrowLogic: AelinFeeEscrow;
   let purchaseToken: MockContract;
   let underlyingDealToken: ERC20;
   let underlyingDealTokenWhaleSigner: SignerWithAddress;
@@ -105,6 +107,7 @@ describe("AelinDeal", function () {
 
   beforeEach(async () => {
     aelinDeal = (await deployContract(sponsor, AelinDealArtifact)) as AelinDeal;
+    aelinEscrowLogic = (await deployContract(sponsor, AelinFeeEscrowArtifact)) as AelinFeeEscrow;
   });
 
   const successfullyInitializeDeal = async ({
@@ -112,22 +115,23 @@ describe("AelinDeal", function () {
   }: {
     timestamp: number;
   }) =>
-    aelinDeal
-      .connect(deployer)
-      .initialize(
-        name,
-        symbol,
-        underlyingDealToken.address,
+    aelinDeal.connect(deployer).initialize(
+      name,
+      symbol,
+      {
+        underlyingDealToken: underlyingDealToken.address,
         underlyingDealTokenTotal,
         vestingPeriod,
-        vestingCliff,
+        vestingCliffPeriod: vestingCliff,
         proRataRedemptionPeriod,
         openRedemptionPeriod,
-        holder.address,
-        poolTokenMaxPurchaseAmount,
-        holderFundingExpiryBase + timestamp,
-        treasury.address
-      );
+        holder: holder.address,
+        maxDealTotalSupply: poolTokenMaxPurchaseAmount,
+        holderFundingDuration: holderFundingExpiryBase + timestamp,
+      },
+      treasury.address,
+      aelinEscrowLogic.address
+    );
 
   const fundDealAndMintTokens = async () => {
     await underlyingDealToken
@@ -148,6 +152,9 @@ describe("AelinDeal", function () {
         timestamp: latestTimestamp,
       });
 
+      const [proRataPeriod, ,] = await aelinDeal.proRataRedemption();
+      const [openPeriod, ,] = await aelinDeal.openRedemption();
+
       // TODO test the aelinDeal.AELIN_POOL() variable
       expect(await aelinDeal.name()).to.equal(`aeDeal-${name}`);
       expect(await aelinDeal.symbol()).to.equal(`aeD-${symbol}`);
@@ -156,27 +163,13 @@ describe("AelinDeal", function () {
         underlyingDealToken.address
       );
       expect(await aelinDeal.aelinPool()).to.equal(deployer.address);
-      // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
-      const { timestamp } = await ethers.provider.getBlock(tx.blockHash!);
       expect(await aelinDeal.underlyingDealTokenTotal()).to.equal(
         underlyingDealTokenTotal.toString()
       );
-      const actualVestingCliff =
-        timestamp +
-        proRataRedemptionPeriod +
-        openRedemptionPeriod +
-        vestingCliff;
-      expect(await aelinDeal.vestingCliff()).to.equal(actualVestingCliff);
+      expect(await aelinDeal.vestingCliffPeriod()).to.equal(vestingCliff);
       expect(await aelinDeal.vestingPeriod()).to.equal(vestingPeriod);
-      expect(await aelinDeal.vestingExpiry()).to.equal(
-        actualVestingCliff + vestingPeriod
-      );
-      expect(await aelinDeal.proRataRedemptionPeriod()).to.equal(
-        proRataRedemptionPeriod
-      );
-      expect(await aelinDeal.openRedemptionPeriod()).to.equal(
-        openRedemptionPeriod
-      );
+      expect(proRataPeriod).to.equal(proRataRedemptionPeriod);
+      expect(openPeriod).to.equal(openRedemptionPeriod);
       expect(await aelinDeal.underlyingPerDealExchangeRate()).to.equal(
         underlyingPerDealExchangeRate
       );
@@ -541,8 +534,8 @@ describe("AelinDeal", function () {
       it("should allow the purchaser to claim their partially vested tokens", async function () {
         // NOTE that this is deterministic but changes with codecov running so I am using
         // high and low estimates so the test will always pass even when the value changes slightly
-        const partiallyClaimUnderlyingHigh = 202739900;
-        const partiallyClaimUnderlyingLow = 202739700;
+        const partiallyClaimUnderlyingHigh = 202739800;
+        const partiallyClaimUnderlyingLow = 202739600;
         await fundDealAndMintTokens();
 
         await ethers.provider.send("evm_increaseTime", [
@@ -581,8 +574,9 @@ describe("AelinDeal", function () {
       it("should allow the treasury to claim their partially vested tokens and send the remaining vested tokens and claimed underlying deal tokens in a single transaction", async function () {
         // NOTE that this is deterministic but changes with codecov running so I am using
         // high and low estimates so the test will always pass even when the value changes slightly
-        const partiallyClaimUnderlyingHigh = 202739900;
-        const partiallyClaimUnderlyingLow = 202739700;
+        const partiallyClaimUnderlyingHigh = 202739800;
+        const partiallyClaimUnderlyingLow = 202739600;
+
         await fundDealAndMintTokens();
         expect(await underlyingDealToken.balanceOf(treasury.address)).to.equal(
           0
@@ -672,7 +666,7 @@ describe("AelinDeal", function () {
           mintAmount.mul(2)
         );
 
-        const vestingCliffEVM = await aelinDeal.vestingCliff();
+        const vestingCliffEVM = await aelinDeal.vestingCliffExpiry();
         const vestingPeriodEVM = await aelinDeal.vestingPeriod();
         const vestingCliff = vestingCliffEVM.toNumber();
         const vestingPeriod = vestingPeriodEVM.toNumber();
@@ -693,7 +687,7 @@ describe("AelinDeal", function () {
 
       it("should fail when doing a transfer", async function () {
         await fundDealAndMintTokens();
-        const vestingCliffEVM = await aelinDeal.vestingCliff();
+        const vestingCliffEVM = await aelinDeal.vestingCliffExpiry();
         const vestingPeriodEVM = await aelinDeal.vestingPeriod();
         const vestingCliff = vestingCliffEVM.toNumber();
         const vestingPeriod = vestingPeriodEVM.toNumber();
@@ -726,7 +720,7 @@ describe("AelinDeal", function () {
       it("should error when the purchaser transfers more than they have after claiming", async function () {
         await fundDealAndMintTokens();
 
-        const vestingCliffEVM = await aelinDeal.vestingCliff();
+        const vestingCliffEVM = await aelinDeal.vestingCliffExpiry();
         const vestingPeriodEVM = await aelinDeal.vestingPeriod();
         const vestingCliff = vestingCliffEVM.toNumber();
         const vestingPeriod = vestingPeriodEVM.toNumber();
@@ -745,7 +739,7 @@ describe("AelinDeal", function () {
 
       it("should fail when doing a transferFrom", async function () {
         await fundDealAndMintTokens();
-        const vestingCliffEVM = await aelinDeal.vestingCliff();
+        const vestingCliffEVM = await aelinDeal.vestingCliffExpiry();
         const vestingPeriodEVM = await aelinDeal.vestingPeriod();
         const vestingCliff = vestingCliffEVM.toNumber();
         const vestingPeriod = vestingPeriodEVM.toNumber();
@@ -771,7 +765,7 @@ describe("AelinDeal", function () {
       it("should error when transferFrom is called", async function () {
         await fundDealAndMintTokens();
 
-        const vestingCliffEVM = await aelinDeal.vestingCliff();
+        const vestingCliffEVM = await aelinDeal.vestingCliffExpiry();
         const vestingPeriodEVM = await aelinDeal.vestingPeriod();
         const vestingCliff = vestingCliffEVM.toNumber();
         const vestingPeriod = vestingPeriodEVM.toNumber();
@@ -819,8 +813,8 @@ describe("AelinDeal", function () {
       it("should return the correct amount of tokens claimable after partially vested", async function () {
         // NOTE that this is deterministic but changes with codecov running so I am using
         // high and low estimates so the test will always pass even when the value changes slightly
-        const partialClaimEstHigh = 202739850;
-        const partialClaimEstLow = 202739750;
+        const partialClaimEstHigh = 202739800;
+        const partialClaimEstLow = 202739600;
         await fundDealAndMintTokens();
 
         await ethers.provider.send("evm_increaseTime", [
@@ -841,22 +835,23 @@ describe("AelinDeal", function () {
   describe("custom deal initializations", function () {
     it("should allow a purchaser to claim their tokens right away if there is no vesting schedule", async function () {
       const { timestamp } = await ethers.provider.getBlock("latest");
-      aelinDeal
-        .connect(deployer)
-        .initialize(
-          name,
-          symbol,
-          underlyingDealToken.address,
+      aelinDeal.connect(deployer).initialize(
+        name,
+        symbol,
+        {
+          underlyingDealToken: underlyingDealToken.address,
           underlyingDealTokenTotal,
-          0,
-          0,
+          vestingPeriod: 0,
+          vestingCliffPeriod: 0,
           proRataRedemptionPeriod,
           openRedemptionPeriod,
-          holder.address,
-          poolTokenMaxPurchaseAmount,
-          holderFundingExpiryBase + timestamp,
-          treasury.address
-        );
+          holder: holder.address,
+          maxDealTotalSupply: poolTokenMaxPurchaseAmount,
+          holderFundingDuration: holderFundingExpiryBase + timestamp,
+        },
+        treasury.address,
+        aelinEscrowLogic.address
+      );
 
       await fundDealAndMintTokens();
       await ethers.provider.send("evm_increaseTime", [

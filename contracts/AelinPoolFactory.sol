@@ -8,74 +8,47 @@ import "./AelinPool.sol";
  * @dev the factory contract allows an Aelin sponsor to permissionlessly create new pools
  */
 contract AelinPoolFactory is MinimalProxyFactory {
-    address public immutable AELIN_REWARDS;
+    address public immutable AELIN_TREASURY;
     address public immutable AELIN_POOL_LOGIC;
     address public immutable AELIN_DEAL_LOGIC;
+    address public immutable AELIN_ESCROW_LOGIC;
 
     constructor(
         address _aelinPoolLogic,
         address _aelinDealLogic,
-        address _aelinRewards
+        address _aelinTreasury,
+        address _aelinEscrow
     ) {
         require(_aelinPoolLogic != address(0), "cant pass null pool address");
         require(_aelinDealLogic != address(0), "cant pass null deal address");
-        require(_aelinRewards != address(0), "cant pass null rewards address");
+        require(_aelinTreasury != address(0), "cant pass null treasury address");
+        require(_aelinEscrow != address(0), "cant pass null escrow address");
         AELIN_POOL_LOGIC = _aelinPoolLogic;
         AELIN_DEAL_LOGIC = _aelinDealLogic;
-        AELIN_REWARDS = _aelinRewards;
+        AELIN_TREASURY = _aelinTreasury;
+        AELIN_ESCROW_LOGIC = _aelinEscrow;
     }
 
     /**
      * @dev the method a sponsor calls to create a pool
      */
-    function createPool(
-        string memory _name,
-        string memory _symbol,
-        uint256 _purchaseTokenCap,
-        address _purchaseToken,
-        uint256 _duration,
-        uint256 _sponsorFee,
-        uint256 _purchaseDuration,
-        address[] memory _allowList,
-        uint256[] memory _allowListAmounts
-    ) external returns (address) {
-        require(_purchaseToken != address(0), "cant pass null token address");
-        address aelinPoolAddress = _cloneAsMinimalProxy(
-            AELIN_POOL_LOGIC,
-            "Could not create new deal"
-        );
+    function createPool(IAelinPool.PoolData calldata _poolData) external returns (address) {
+        require(_poolData.purchaseToken != address(0), "cant pass null token address");
+        address aelinPoolAddress = _cloneAsMinimalProxy(AELIN_POOL_LOGIC, "Could not create new deal");
         AelinPool aelinPool = AelinPool(aelinPoolAddress);
-        aelinPool.initialize(
-            _name,
-            _symbol,
-            _purchaseTokenCap,
-            _purchaseToken,
-            _duration,
-            _sponsorFee,
-            msg.sender,
-            _purchaseDuration,
-            AELIN_DEAL_LOGIC,
-            AELIN_REWARDS
-        );
-        if (_allowList.length > 0 || _allowListAmounts.length > 0) {
-            require(
-                _allowList.length == _allowListAmounts.length,
-                "allowList array length issue"
-            );
-            aelinPool.updateAllowList(_allowList, _allowListAmounts);
-        }
+        aelinPool.initialize(_poolData, msg.sender, AELIN_DEAL_LOGIC, AELIN_TREASURY, AELIN_ESCROW_LOGIC);
 
         emit CreatePool(
             aelinPoolAddress,
-            string(abi.encodePacked("aePool-", _name)),
-            string(abi.encodePacked("aeP-", _symbol)),
-            _purchaseTokenCap,
-            _purchaseToken,
-            _duration,
-            _sponsorFee,
+            string(abi.encodePacked("aePool-", _poolData.name)),
+            string(abi.encodePacked("aeP-", _poolData.symbol)),
+            _poolData.purchaseTokenCap,
+            _poolData.purchaseToken,
+            _poolData.duration,
+            _poolData.sponsorFee,
             msg.sender,
-            _purchaseDuration,
-            _allowList.length > 0
+            _poolData.purchaseDuration,
+            _poolData.allowListAddresses.length > 0
         );
 
         return aelinPoolAddress;

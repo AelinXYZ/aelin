@@ -3,7 +3,7 @@ name: Aelin CI
 on:
   push:
   pull_request:
-    branches: [main, dev]
+    branches: [main, dev, dev-fork]
 
 jobs:
   audit:
@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: ghcr.io/synthetixio/docker-sec-tools/alpine:14.17
+      image: ghcr.io/synthetixio/docker-sec-tools/alpine:16.14
       credentials:
         username: synthetixio
         password: ${{ secrets.GH_PACKAGES_READ_ONLY }}
@@ -25,7 +25,7 @@ jobs:
         run: npm audit --audit-level=critical
 
       - name: Lockfile lint
-        run: lockfile-lint -p package-lock.json --type npm --allowed-hosts npm --allowed-schemes "https:"
+        run: lockfile-lint -p package-lock.json --type npm --allowed-hosts npm --allowed-schemes "https:" "npm:"
 
   lint:
     needs: audit
@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: ghcr.io/synthetixio/docker-node/alpine:14.17
+      image: ghcr.io/synthetixio/docker-node/alpine:16.14
       credentials:
         username: synthetixio
         password: ${{ secrets.GH_PACKAGES_READ_ONLY }}
@@ -57,8 +57,15 @@ jobs:
             ${{ runner.os }}-alpine-node-
         continue-on-error: true
 
+      # fixes permission issues on gh actions + docker + npm@8
+      - name: Chown workspace
+        run: chown -R $(whoami) .
+
+      # mkdir -p node_modules fixes https://github.com/npm/cli/issues/3208 starting from npm@7
       - name: Install dependencies
-        run: npm install --prefer-offline --no-audit
+        run: |
+          mkdir -p node_modules
+          npm install --prefer-offline --no-audit --legacy-peer-deps
 
       - name: Lint
         run: npm run lint:sarif
@@ -69,6 +76,37 @@ jobs:
         with:
           sarif_file: lint-results.sarif
         continue-on-error: true
+
+  foundry-tests:
+    runs-on: ubuntu-latest
+    env:
+      ALCHEMY_URL: ${{ secrets.ALCHEMY_URL }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v2
+
+      - name: Install dependecies
+        run: npm install
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install deps
+        run: forge install
+
+      - name: Run Tests without fork
+        run: forge test --no-match-contract NftCheck --no-match-test testPunksPurchasePool
+
+      - name: Run NftCheck tests with fork
+        run: forge test --match-contract NftCheck --fork-url ${ALCHEMY_URL}
+
+      - name: Run Punks tests with fork
+        run: forge test --match-contract AelinPoolPurchase --match-test testPunksPurchasePool --fork-url ${ALCHEMY_URL}
 
   test:
     needs: lint
@@ -83,7 +121,7 @@ jobs:
       OP_PRIVATE_KEY: ${{ secrets.OP_PRIVATE_KEY }}
 
     container:
-      image: ghcr.io/synthetixio/docker-sec-tools/alpine:14.17
+      image: ghcr.io/synthetixio/docker-sec-tools/alpine:16.14
       credentials:
         username: synthetixio
         password: ${{ secrets.GH_PACKAGES_READ_ONLY }}
@@ -106,8 +144,15 @@ jobs:
             ${{ runner.os }}-alpine-node-
         continue-on-error: true
 
+      # fixes permission issues on gh actions + docker + npm@8
+      - name: Chown workspace
+        run: chown -R $(whoami) .
+
+      # mkdir -p node_modules fixes https://github.com/npm/cli/issues/3208 starting from npm@7
       - name: Install dependencies
-        run: npm install --prefer-offline --no-audit
+        run: |
+          mkdir -p node_modules
+          npm install --prefer-offline --no-audit --legacy-peer-deps
 
       - name: Compile
         run: npm run compile
@@ -127,7 +172,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: ghcr.io/synthetixio/docker-node/alpine:14.17
+      image: ghcr.io/synthetixio/docker-node/alpine:16.14
       credentials:
         username: synthetixio
         password: ${{ secrets.GH_PACKAGES_READ_ONLY }}
@@ -150,8 +195,15 @@ jobs:
             ${{ runner.os }}-alpine-node-
         continue-on-error: true
 
+      # fixes permission issues on gh actions + docker + npm@8
+      - name: Chown workspace
+        run: chown -R $(whoami) .
+
+      # mkdir -p node_modules fixes https://github.com/npm/cli/issues/3208 starting from npm@7
       - name: Install dependencies
-        run: npm install --prefer-offline --no-audit
+        run: |
+          mkdir -p node_modules
+          npm install --prefer-offline --no-audit --legacy-peer-deps
 
       - name: Cache build cache
         uses: actions/cache@c64c572235d810460d0d6876e9c705ad5002b353 # pin@v2

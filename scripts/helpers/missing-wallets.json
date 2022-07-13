@@ -1,704 +1,704 @@
 [
-  {
-    "id": "0x99F4176EE457afedFfCB1839c7aB7A030a5e4A92",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x0118f8a7c405ea2262289b77"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02be3a" },
-    "collateral": "39357090.078665543210006999"
-  },
-  {
-    "id": "0xCe17ec0F86024172f03b4AA9234367e5C8A7e8A1",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x228aa81f05aad6a01d0e"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02a2c5" },
-    "collateral": "40198.659705225223084184"
-  },
-  {
-    "id": "0xa4127b892653964ffEFc9faB4809eAbaCc5ACc77",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x35d4a78c1559fa5817d7"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x029b17" },
-    "collateral": "30175.06340839507865242"
-  },
-  {
-    "id": "0xfFAC7FD045303112fdb28e9dACe8E1334aD324c0",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x04630fb1c0227e5ca572"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x0295a8" },
-    "collateral": "7335.562286506579106492"
-  },
-  {
-    "id": "0x75dFDB6fBbAB2818F45b663EAb92Df19c6a0b1f9",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x08ad71aa8b6d271819df"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x0298a6" },
-    "collateral": "6582.033181337350854995"
-  },
-  {
-    "id": "0x998ff82b5Fbc22fC7581De78651aA2899aA6B256",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x071edb705427ab86cbf2"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02a031" },
-    "collateral": "4415.929850767213105638"
-  },
-  {
-    "id": "0x5d6152EC2c222160A41749AD9c19649DF8e27594",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x04eeb0753fdd96c8c017"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x029d6a" },
-    "collateral": "3819.155542577814015106"
-  },
-  {
-    "id": "0xC69B8069980DBA6c90526486209d755d05e32A57",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x037456a9de1ef6c01241"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x028907" },
-    "collateral": "3609.624867655908045466"
-  },
-  {
-    "id": "0xa57c6BaeC8F9C608ea24e788C39383e9760717d4",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x0512240e3619882b5959"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02a0e9" },
-    "collateral": "3132.442000499436762529"
-  },
-  {
-    "id": "0xeAcAf5B2717060bda76a5883a01CB5f693F40801",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x02ffa8e9690f1963ce4a"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x028441" },
-    "collateral": "3045.279175105001209089"
-  },
-  {
-    "id": "0x450C0C90706a8cC664e8b496711370b43415715D",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x04018ab8e737b1783f73"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x01b0dd" },
-    "collateral": "2764.642722513960211433"
-  },
-  {
-    "id": "0x1c2E6d945030B451018347695be1A25F17470C05",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x0260f80a9ef068c694a9"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02946f" },
-    "collateral": "2150.517929013830128575"
-  },
-  {
-    "id": "0x72D36d42847111d93ef8b77833DcEE9C5B18C76D",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0xaebea412039ce7d8fa"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x026c55" },
-    "collateral": "1971.972442801171961967"
-  },
-  {
-    "id": "0x41EeC65A98843C8a1FB44B0Da82ec313097a01ab",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x02c2c7d672bfe941ad99"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x01b527" },
-    "collateral": "1945.122269949131540746"
-  },
-  {
-    "id": "0x2D4C38d80914084D90C55AE6622eB7859Ea9AB64",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x023dfa5f692b0b52bffe"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02a2dd" },
-    "collateral": "1935.406565206157444959"
-  },
-  {
-    "id": "0xd6e371526cdaeE04cd8AF225D42e37Bc14688D9E",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x02134cdf309db2e95ede"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x01f717" },
-    "collateral": "1528.596481619674805844"
-  },
-  {
-    "id": "0x08d0a7c724c4fB01F6A36F2612d61ad9979aC5D3",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0xb215b2c3d9c6c2eb8d"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02b05d" },
-    "collateral": "1513.645401853750612245"
-  },
-  {
-    "id": "0xd39421D329313809972e46fF064474360D418d79",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x01f7c2497a8e245002e3"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x01ffbd" },
-    "collateral": "1281.106722032215901241"
-  },
-  {
-    "id": "0xF597c6452aD43651E8e6B1D35abF9e383D985e0B",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x010a150d5a62a84bcd60"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02880e" },
-    "collateral": "1216.906682037207896881"
-  },
-  {
-    "id": "0xc4Cd57b06C9f735aBd6240A2683026E308f716C7",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x014d86daee2b703352d9"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02a326" },
-    "collateral": "1129.699117860711445804"
-  },
-  {
-    "id": "0xf7b88A6b1d9ad24Ce50c680f670F40dE78acDF4C",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x46ea456e6cd0a8be7e"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02199f" },
-    "collateral": "1092.192004"
-  },
-  {
-    "id": "0x53d1C6a6514c198BA12A4388572cD200662E4406",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x017d715d37e34e7c2806"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02adaa" },
-    "collateral": "994.6"
-  },
-  {
-    "id": "0xC1a182E9dDB242a1bb748652d58AB1b45bE9AE2a",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x011e33faadcc6c035070"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x01a8e6" },
-    "collateral": "924.25453838"
-  },
-  {
-    "id": "0x28Be87b72eA9e245FC23981f50e4c231A3467E29",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x0106cb1b6255e21c00cb"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x029426" },
-    "collateral": "938.081863691485027639"
-  },
-  {
-    "id": "0x8e63316F90834d4CC0733f1f3199B37606d85205",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x01241481edafdfa1bbaa"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02a537" },
-    "collateral": "916.746708100373039281"
-  },
-  {
-    "id": "0x408Cf2972C416AD18083C76DaC2c30584745Cdb9",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x01abc865bde406ff25"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x025417" },
-    "collateral": "916.457719274718966512"
-  },
-  {
-    "id": "0x5C7e239039Ef0CCd1167FfAb3850e2B2ef0a46AA",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x0e13d60fd17251a4da"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x028b47" },
-    "collateral": "870.0080759"
-  },
-  {
-    "id": "0xD7e7e1680C6dCC7E6fB7E83e91BbcC9aeb0ff0a2",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x1dacbe53154f5958b7"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x024f9c" },
-    "collateral": "744.360304"
-  },
-  {
-    "id": "0x2E99CF1De6B4A9Fa49128e8BACa8414F44BFEcbc",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0xc48a2a552715d6b65f"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02a42e" },
-    "collateral": "748.48233758629050271"
-  },
-  {
-    "id": "0xBb2DA79345eEc1B64B5A26736F693A9874E1c409",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0xf55efd5bb1dc6a3e75"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02a87e" },
-    "collateral": "676.56"
-  },
-  {
-    "id": "0x31ebd7dBB42a533325064da48e04E69B13bb93D6",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x1274b8eb67d6d3844b"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02569b" },
-    "collateral": "666.353157"
-  },
-  {
-    "id": "0xb0D15C1e0eCBf5219c57d4B18bBf7AD30304599D",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0xb3aa088e3a75ceec97"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x020a0b" },
-    "collateral": "656.78"
-  },
-  {
-    "id": "0x39C2677801b85A4Be3AD48Bfc3Ab81B6E336cf42",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0xabed7c14c37ce9fa95"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02a4a1" },
-    "collateral": "662.48149064331770981"
-  },
-  {
-    "id": "0xF9A6A6f9fF1f0Ac3a854418CAc59Cb81a11e827b",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0xdddfba622e3bb11f2d"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02b30c" },
-    "collateral": "635.80062225"
-  },
-  {
-    "id": "0xCb672b5F26280F91f7aeF18F941f5A5453245f37",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0xe26f2fb3a31b8bfffb"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02a989" },
-    "collateral": "624.268558664086499637"
-  },
-  {
-    "id": "0x2BE0f79dd79af7fffD7e2a4b0323F0f77Cd43C11",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x019dae0603200a54962c"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02b39c" },
-    "collateral": "1048.10509430846526226"
-  },
-  {
-    "id": "0xe91e6Af04316849F69290e21918DFC4C19FB7381",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x035deb52ec5f04a280"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x0177ef" },
-    "collateral": "615.82807592"
-  },
-  {
-    "id": "0xD6Df28ed923237CEf5217C88f228C160bA3B0f03",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x185d02a7f6a2796e31"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x027910" },
-    "collateral": "611.140883802283615429"
-  },
-  {
-    "id": "0x6e6a750CBf3eaE93803aEfe33ba00F5C2BB9E535",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x0808fc400e3d6c22"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x026208" },
-    "collateral": "606.01732134"
-  },
-  {
-    "id": "0x146043eDe30b7a4b71445EFC77d4dE6BB10402fF",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x90026036036b63c6b9"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x0286cd" },
-    "collateral": "597.908053"
-  },
-  {
-    "id": "0x829148aBa1177C4b6A6A3dbcA3E165FD34094e1b",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0xa1121d863ff0533308"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x029503" },
-    "collateral": "580.270793036750483558"
-  },
-  {
-    "id": "0x019E09e087CFa0fc7F99Ce3abf1f7C2Dbce5Dff9",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0xdb6c9e9e749c8d43b7"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x0140d9" },
-    "collateral": "579.545949718788859999"
-  },
-  {
-    "id": "0xcF78238480108B16a61dd1b8D9e72DB36e6b2a91",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0xbdeb8bbc1fb8aef38f"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x0295b5" },
-    "collateral": "566.710388060620125176"
-  },
-  {
-    "id": "0x6a41278687f2E431b034D209AE3c9DC16840f24F",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0xba22334d5ed391ff3d"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x01dcef" },
-    "collateral": "560.076181572733286644"
-  },
-  {
-    "id": "0x6c6144f0c836662CEE855505176BB5c78E475cfC",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x4903969d4bed6a58b0"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02a8bd" },
-    "collateral": "557.9701"
-  },
-  {
-    "id": "0xb207569e3331C46902fd3645fb967039F705D5ef",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0xdb83f0dbb1dc371518"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02a6ef" },
-    "collateral": "554.763089825896661191"
-  },
-  {
-    "id": "0x624372C0618CBA8EEa907BA17046Cb6160DcF8Bf",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x33fa8b834560ec4ced"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x020d34" },
-    "collateral": "712.656253346749339457"
-  },
-  {
-    "id": "0x47C30Dab2797D79b9e2d768c3F1DcF564343E792",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x1530e6c5a3430424f2"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x025068" },
-    "collateral": "548.497906948123900498"
-  },
-  {
-    "id": "0xc42b794c205aD057ea714A34E47F59ce05612159",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0xad06e658ce6448e5ca"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x0296e3" },
-    "collateral": "551.344144713792628219"
-  },
-  {
-    "id": "0x6F1951C85D25986715693290Ba7E1525353804d1",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x192df758bcdb1c60c2"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02309a" },
-    "collateral": "528.671"
-  },
-  {
-    "id": "0xDd74a5f502167c1bdd88968D058834170175277B",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0xae7d75ad05e8fb267f"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02b31b" },
-    "collateral": "501.0"
-  },
-  {
-    "id": "0x09a4866fd6A450C364154e73B561A56e2a304B73",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0xd9040b6fa456a31607"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x029bde" },
-    "collateral": "486.801884346149689289"
-  },
-  {
-    "id": "0x9f70812A888B1E33B3440754b7fe4B5cBb303910",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x9f65e19b38b052be1d"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02b327" },
-    "collateral": "461.07805731"
-  },
-  {
-    "id": "0x6C22C0600F69F195981319B67fCfcC3100245C5F",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0xaf087d0a5191708daf"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02aa89" },
-    "collateral": "443.34918957"
-  },
-  {
-    "id": "0xaBcefb63bD47102A7d7b3b71E938ec9B2bE5ADC1",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x948d4952860084360e"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x0188ee" },
-    "collateral": "441.273067431555574435"
-  },
-  {
-    "id": "0x0BAE60C6522eb8d07aFFC1977A8E2e9747e1cbc0",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x99836570f7bd50384a"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x019540" },
-    "collateral": "440.12106"
-  },
-  {
-    "id": "0x05EaF3564c72506Ac18981890F1b1e9873a43a4E",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x957890c122818b840b"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02a7c0" },
-    "collateral": "436.364281609191184556"
-  },
-  {
-    "id": "0x7Ed716a3c0a634fa033CAD0e53BC5fDBc838e23B",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x8ba854b305ddb56d3a"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02a525" },
-    "collateral": "437.205637477269076425"
-  },
-  {
-    "id": "0x593786CF6f2873dA22FE4F27FC29592C8439111b",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x8a98ccd3fbb0f7db9f"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x019e80" },
-    "collateral": "396.806893256119019891"
-  },
-  {
-    "id": "0x362C7F1B44C6310B9B3B49B7000022e1cb328666",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x913dd565a4b654fa"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x01a821" },
-    "collateral": "394.34087813"
-  },
-  {
-    "id": "0xf212c6074Ff2EB61FfE590943aFeBBAcC1F01520",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x08e4c348041b101114"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x026ecc" },
-    "collateral": "390.813966445059492645"
-  },
-  {
-    "id": "0x50aa878FB973F91650e94A679C27EdB024cF7518",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x41845536c401f795f7"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x026f0f" },
-    "collateral": "382.748121334507059622"
-  },
-  {
-    "id": "0xd1f00976bD8caaaF82d5257a32Fcbe1d98ea1BFE",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x8d02e6c37ba2a44101"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02ae84" },
-    "collateral": "380.208499245039209229"
-  },
-  {
-    "id": "0x0F2B20Acb2fD7EEbC0ABc3AEe0b00d57533b6bD1",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x0119d560d362307a59"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x028c97" },
-    "collateral": "373.62915034"
-  },
-  {
-    "id": "0xf2306b7547b4E7C3d2B4F0864900414A91d5571f",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x73524ae65222883f9a"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02a359" },
-    "collateral": "365.794370481757114677"
-  },
-  {
-    "id": "0xBB104430143bee19cDEf9801c87D316E9a5e6C00",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x7f16278ebf4cfa9380"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x012def" },
-    "collateral": "353.15696032"
-  },
-  {
-    "id": "0x9E51BE7071F086d3A1fD5Dc0016177473619b237",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x815eb16be2dc82e287"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x018c5b" },
-    "collateral": "350.429134082357844631"
-  },
-  {
-    "id": "0xF87F1d49FeAf5470EBa422F20550Db5B75B76447",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x73be24fbd76a0f5e47"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x012b5d" },
-    "collateral": "345.10582735"
-  },
-  {
-    "id": "0x5f681ad96cE4AD8b3D7D745ba1E34109Afebdab8",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x6f3aced3f5fea4b456"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x0176bf" },
-    "collateral": "344.297675494909734943"
-  },
-  {
-    "id": "0xE8EaAc6d05EA1A601b9c8229aA7e8Ce4Ee2fc187",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x8efd74cca93e53a88b"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x0147ae" },
-    "collateral": "338.456"
-  },
-  {
-    "id": "0x211496B50C79f9e6B3bCF1c8e15Ef5074E4C7B13",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x065550385b4e9fd777"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x023d34" },
-    "collateral": "321.176364992736882267"
-  },
-  {
-    "id": "0x8E3E3320Bd3F8c48b334724a037688d9df2E7682",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x768aac7e9db4a62d5a"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x0193ed" },
-    "collateral": "311.042769612071621579"
-  },
-  {
-    "id": "0xA73cf65163D3A456Ba8D99E24192Ca120876394D",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x6f9b9e3a5f7d49e050"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02b2cb" },
-    "collateral": "309.542054937395655024"
-  },
-  {
-    "id": "0x09f3C4e3CC9aBD59414CEB494FB2B14729087D27",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x4267e40c1cd6d84995"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x028006" },
-    "collateral": "305.877716692163435565"
-  },
-  {
-    "id": "0x81262F44581600Aef0dB3a3D9B99dca57f846B22",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x7ab3b6a821af217c9c"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02b3b7" },
-    "collateral": "305.5643133"
-  },
-  {
-    "id": "0x0E0b40cdC92Ed34318DF659C77858DDFA264210e",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x57dda3b87282d1b89b"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x01c959" },
-    "collateral": "303.96961752"
-  },
-  {
-    "id": "0x75547dbdE1370eE1Ff3128AdB5F28Fca196123De",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x6b7e00bc650aa5690b"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x02b2ee" },
-    "collateral": "302.210447709077421779"
-  },
-  {
-    "id": "0x9EB3912D96FC148d4e5D7bd79c1Ed8F618170d37",
-    "initialDebtOwnership": {
-      "type": "BigNumber",
-      "hex": "0x653d41d9f871bb076d"
-    },
-    "debtEntryIndex": { "type": "BigNumber", "hex": "0x013758" },
-    "collateral": "301.22384634"
-  }
+	{
+		"id": "0x99F4176EE457afedFfCB1839c7aB7A030a5e4A92",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x0118f8a7c405ea2262289b77"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02be3a" },
+		"collateral": "39357090.078665543210006999"
+	},
+	{
+		"id": "0xCe17ec0F86024172f03b4AA9234367e5C8A7e8A1",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x228aa81f05aad6a01d0e"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02a2c5" },
+		"collateral": "40198.659705225223084184"
+	},
+	{
+		"id": "0xa4127b892653964ffEFc9faB4809eAbaCc5ACc77",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x35d4a78c1559fa5817d7"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x029b17" },
+		"collateral": "30175.06340839507865242"
+	},
+	{
+		"id": "0xfFAC7FD045303112fdb28e9dACe8E1334aD324c0",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x04630fb1c0227e5ca572"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x0295a8" },
+		"collateral": "7335.562286506579106492"
+	},
+	{
+		"id": "0x75dFDB6fBbAB2818F45b663EAb92Df19c6a0b1f9",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x08ad71aa8b6d271819df"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x0298a6" },
+		"collateral": "6582.033181337350854995"
+	},
+	{
+		"id": "0x998ff82b5Fbc22fC7581De78651aA2899aA6B256",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x071edb705427ab86cbf2"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02a031" },
+		"collateral": "4415.929850767213105638"
+	},
+	{
+		"id": "0x5d6152EC2c222160A41749AD9c19649DF8e27594",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x04eeb0753fdd96c8c017"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x029d6a" },
+		"collateral": "3819.155542577814015106"
+	},
+	{
+		"id": "0xC69B8069980DBA6c90526486209d755d05e32A57",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x037456a9de1ef6c01241"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x028907" },
+		"collateral": "3609.624867655908045466"
+	},
+	{
+		"id": "0xa57c6BaeC8F9C608ea24e788C39383e9760717d4",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x0512240e3619882b5959"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02a0e9" },
+		"collateral": "3132.442000499436762529"
+	},
+	{
+		"id": "0xeAcAf5B2717060bda76a5883a01CB5f693F40801",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x02ffa8e9690f1963ce4a"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x028441" },
+		"collateral": "3045.279175105001209089"
+	},
+	{
+		"id": "0x450C0C90706a8cC664e8b496711370b43415715D",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x04018ab8e737b1783f73"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x01b0dd" },
+		"collateral": "2764.642722513960211433"
+	},
+	{
+		"id": "0x1c2E6d945030B451018347695be1A25F17470C05",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x0260f80a9ef068c694a9"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02946f" },
+		"collateral": "2150.517929013830128575"
+	},
+	{
+		"id": "0x72D36d42847111d93ef8b77833DcEE9C5B18C76D",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0xaebea412039ce7d8fa"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x026c55" },
+		"collateral": "1971.972442801171961967"
+	},
+	{
+		"id": "0x41EeC65A98843C8a1FB44B0Da82ec313097a01ab",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x02c2c7d672bfe941ad99"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x01b527" },
+		"collateral": "1945.122269949131540746"
+	},
+	{
+		"id": "0x2D4C38d80914084D90C55AE6622eB7859Ea9AB64",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x023dfa5f692b0b52bffe"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02a2dd" },
+		"collateral": "1935.406565206157444959"
+	},
+	{
+		"id": "0xd6e371526cdaeE04cd8AF225D42e37Bc14688D9E",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x02134cdf309db2e95ede"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x01f717" },
+		"collateral": "1528.596481619674805844"
+	},
+	{
+		"id": "0x08d0a7c724c4fB01F6A36F2612d61ad9979aC5D3",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0xb215b2c3d9c6c2eb8d"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02b05d" },
+		"collateral": "1513.645401853750612245"
+	},
+	{
+		"id": "0xd39421D329313809972e46fF064474360D418d79",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x01f7c2497a8e245002e3"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x01ffbd" },
+		"collateral": "1281.106722032215901241"
+	},
+	{
+		"id": "0xF597c6452aD43651E8e6B1D35abF9e383D985e0B",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x010a150d5a62a84bcd60"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02880e" },
+		"collateral": "1216.906682037207896881"
+	},
+	{
+		"id": "0xc4Cd57b06C9f735aBd6240A2683026E308f716C7",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x014d86daee2b703352d9"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02a326" },
+		"collateral": "1129.699117860711445804"
+	},
+	{
+		"id": "0xf7b88A6b1d9ad24Ce50c680f670F40dE78acDF4C",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x46ea456e6cd0a8be7e"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02199f" },
+		"collateral": "1092.192004"
+	},
+	{
+		"id": "0x53d1C6a6514c198BA12A4388572cD200662E4406",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x017d715d37e34e7c2806"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02adaa" },
+		"collateral": "994.6"
+	},
+	{
+		"id": "0xC1a182E9dDB242a1bb748652d58AB1b45bE9AE2a",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x011e33faadcc6c035070"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x01a8e6" },
+		"collateral": "924.25453838"
+	},
+	{
+		"id": "0x28Be87b72eA9e245FC23981f50e4c231A3467E29",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x0106cb1b6255e21c00cb"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x029426" },
+		"collateral": "938.081863691485027639"
+	},
+	{
+		"id": "0x8e63316F90834d4CC0733f1f3199B37606d85205",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x01241481edafdfa1bbaa"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02a537" },
+		"collateral": "916.746708100373039281"
+	},
+	{
+		"id": "0x408Cf2972C416AD18083C76DaC2c30584745Cdb9",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x01abc865bde406ff25"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x025417" },
+		"collateral": "916.457719274718966512"
+	},
+	{
+		"id": "0x5C7e239039Ef0CCd1167FfAb3850e2B2ef0a46AA",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x0e13d60fd17251a4da"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x028b47" },
+		"collateral": "870.0080759"
+	},
+	{
+		"id": "0xD7e7e1680C6dCC7E6fB7E83e91BbcC9aeb0ff0a2",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x1dacbe53154f5958b7"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x024f9c" },
+		"collateral": "744.360304"
+	},
+	{
+		"id": "0x2E99CF1De6B4A9Fa49128e8BACa8414F44BFEcbc",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0xc48a2a552715d6b65f"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02a42e" },
+		"collateral": "748.48233758629050271"
+	},
+	{
+		"id": "0xBb2DA79345eEc1B64B5A26736F693A9874E1c409",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0xf55efd5bb1dc6a3e75"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02a87e" },
+		"collateral": "676.56"
+	},
+	{
+		"id": "0x31ebd7dBB42a533325064da48e04E69B13bb93D6",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x1274b8eb67d6d3844b"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02569b" },
+		"collateral": "666.353157"
+	},
+	{
+		"id": "0xb0D15C1e0eCBf5219c57d4B18bBf7AD30304599D",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0xb3aa088e3a75ceec97"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x020a0b" },
+		"collateral": "656.78"
+	},
+	{
+		"id": "0x39C2677801b85A4Be3AD48Bfc3Ab81B6E336cf42",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0xabed7c14c37ce9fa95"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02a4a1" },
+		"collateral": "662.48149064331770981"
+	},
+	{
+		"id": "0xF9A6A6f9fF1f0Ac3a854418CAc59Cb81a11e827b",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0xdddfba622e3bb11f2d"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02b30c" },
+		"collateral": "635.80062225"
+	},
+	{
+		"id": "0xCb672b5F26280F91f7aeF18F941f5A5453245f37",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0xe26f2fb3a31b8bfffb"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02a989" },
+		"collateral": "624.268558664086499637"
+	},
+	{
+		"id": "0x2BE0f79dd79af7fffD7e2a4b0323F0f77Cd43C11",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x019dae0603200a54962c"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02b39c" },
+		"collateral": "1048.10509430846526226"
+	},
+	{
+		"id": "0xe91e6Af04316849F69290e21918DFC4C19FB7381",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x035deb52ec5f04a280"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x0177ef" },
+		"collateral": "615.82807592"
+	},
+	{
+		"id": "0xD6Df28ed923237CEf5217C88f228C160bA3B0f03",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x185d02a7f6a2796e31"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x027910" },
+		"collateral": "611.140883802283615429"
+	},
+	{
+		"id": "0x6e6a750CBf3eaE93803aEfe33ba00F5C2BB9E535",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x0808fc400e3d6c22"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x026208" },
+		"collateral": "606.01732134"
+	},
+	{
+		"id": "0x146043eDe30b7a4b71445EFC77d4dE6BB10402fF",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x90026036036b63c6b9"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x0286cd" },
+		"collateral": "597.908053"
+	},
+	{
+		"id": "0x829148aBa1177C4b6A6A3dbcA3E165FD34094e1b",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0xa1121d863ff0533308"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x029503" },
+		"collateral": "580.270793036750483558"
+	},
+	{
+		"id": "0x019E09e087CFa0fc7F99Ce3abf1f7C2Dbce5Dff9",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0xdb6c9e9e749c8d43b7"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x0140d9" },
+		"collateral": "579.545949718788859999"
+	},
+	{
+		"id": "0xcF78238480108B16a61dd1b8D9e72DB36e6b2a91",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0xbdeb8bbc1fb8aef38f"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x0295b5" },
+		"collateral": "566.710388060620125176"
+	},
+	{
+		"id": "0x6a41278687f2E431b034D209AE3c9DC16840f24F",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0xba22334d5ed391ff3d"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x01dcef" },
+		"collateral": "560.076181572733286644"
+	},
+	{
+		"id": "0x6c6144f0c836662CEE855505176BB5c78E475cfC",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x4903969d4bed6a58b0"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02a8bd" },
+		"collateral": "557.9701"
+	},
+	{
+		"id": "0xb207569e3331C46902fd3645fb967039F705D5ef",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0xdb83f0dbb1dc371518"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02a6ef" },
+		"collateral": "554.763089825896661191"
+	},
+	{
+		"id": "0x624372C0618CBA8EEa907BA17046Cb6160DcF8Bf",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x33fa8b834560ec4ced"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x020d34" },
+		"collateral": "712.656253346749339457"
+	},
+	{
+		"id": "0x47C30Dab2797D79b9e2d768c3F1DcF564343E792",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x1530e6c5a3430424f2"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x025068" },
+		"collateral": "548.497906948123900498"
+	},
+	{
+		"id": "0xc42b794c205aD057ea714A34E47F59ce05612159",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0xad06e658ce6448e5ca"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x0296e3" },
+		"collateral": "551.344144713792628219"
+	},
+	{
+		"id": "0x6F1951C85D25986715693290Ba7E1525353804d1",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x192df758bcdb1c60c2"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02309a" },
+		"collateral": "528.671"
+	},
+	{
+		"id": "0xDd74a5f502167c1bdd88968D058834170175277B",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0xae7d75ad05e8fb267f"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02b31b" },
+		"collateral": "501.0"
+	},
+	{
+		"id": "0x09a4866fd6A450C364154e73B561A56e2a304B73",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0xd9040b6fa456a31607"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x029bde" },
+		"collateral": "486.801884346149689289"
+	},
+	{
+		"id": "0x9f70812A888B1E33B3440754b7fe4B5cBb303910",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x9f65e19b38b052be1d"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02b327" },
+		"collateral": "461.07805731"
+	},
+	{
+		"id": "0x6C22C0600F69F195981319B67fCfcC3100245C5F",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0xaf087d0a5191708daf"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02aa89" },
+		"collateral": "443.34918957"
+	},
+	{
+		"id": "0xaBcefb63bD47102A7d7b3b71E938ec9B2bE5ADC1",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x948d4952860084360e"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x0188ee" },
+		"collateral": "441.273067431555574435"
+	},
+	{
+		"id": "0x0BAE60C6522eb8d07aFFC1977A8E2e9747e1cbc0",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x99836570f7bd50384a"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x019540" },
+		"collateral": "440.12106"
+	},
+	{
+		"id": "0x05EaF3564c72506Ac18981890F1b1e9873a43a4E",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x957890c122818b840b"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02a7c0" },
+		"collateral": "436.364281609191184556"
+	},
+	{
+		"id": "0x7Ed716a3c0a634fa033CAD0e53BC5fDBc838e23B",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x8ba854b305ddb56d3a"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02a525" },
+		"collateral": "437.205637477269076425"
+	},
+	{
+		"id": "0x593786CF6f2873dA22FE4F27FC29592C8439111b",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x8a98ccd3fbb0f7db9f"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x019e80" },
+		"collateral": "396.806893256119019891"
+	},
+	{
+		"id": "0x362C7F1B44C6310B9B3B49B7000022e1cb328666",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x913dd565a4b654fa"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x01a821" },
+		"collateral": "394.34087813"
+	},
+	{
+		"id": "0xf212c6074Ff2EB61FfE590943aFeBBAcC1F01520",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x08e4c348041b101114"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x026ecc" },
+		"collateral": "390.813966445059492645"
+	},
+	{
+		"id": "0x50aa878FB973F91650e94A679C27EdB024cF7518",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x41845536c401f795f7"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x026f0f" },
+		"collateral": "382.748121334507059622"
+	},
+	{
+		"id": "0xd1f00976bD8caaaF82d5257a32Fcbe1d98ea1BFE",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x8d02e6c37ba2a44101"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02ae84" },
+		"collateral": "380.208499245039209229"
+	},
+	{
+		"id": "0x0F2B20Acb2fD7EEbC0ABc3AEe0b00d57533b6bD1",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x0119d560d362307a59"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x028c97" },
+		"collateral": "373.62915034"
+	},
+	{
+		"id": "0xf2306b7547b4E7C3d2B4F0864900414A91d5571f",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x73524ae65222883f9a"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02a359" },
+		"collateral": "365.794370481757114677"
+	},
+	{
+		"id": "0xBB104430143bee19cDEf9801c87D316E9a5e6C00",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x7f16278ebf4cfa9380"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x012def" },
+		"collateral": "353.15696032"
+	},
+	{
+		"id": "0x9E51BE7071F086d3A1fD5Dc0016177473619b237",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x815eb16be2dc82e287"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x018c5b" },
+		"collateral": "350.429134082357844631"
+	},
+	{
+		"id": "0xF87F1d49FeAf5470EBa422F20550Db5B75B76447",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x73be24fbd76a0f5e47"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x012b5d" },
+		"collateral": "345.10582735"
+	},
+	{
+		"id": "0x5f681ad96cE4AD8b3D7D745ba1E34109Afebdab8",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x6f3aced3f5fea4b456"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x0176bf" },
+		"collateral": "344.297675494909734943"
+	},
+	{
+		"id": "0xE8EaAc6d05EA1A601b9c8229aA7e8Ce4Ee2fc187",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x8efd74cca93e53a88b"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x0147ae" },
+		"collateral": "338.456"
+	},
+	{
+		"id": "0x211496B50C79f9e6B3bCF1c8e15Ef5074E4C7B13",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x065550385b4e9fd777"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x023d34" },
+		"collateral": "321.176364992736882267"
+	},
+	{
+		"id": "0x8E3E3320Bd3F8c48b334724a037688d9df2E7682",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x768aac7e9db4a62d5a"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x0193ed" },
+		"collateral": "311.042769612071621579"
+	},
+	{
+		"id": "0xA73cf65163D3A456Ba8D99E24192Ca120876394D",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x6f9b9e3a5f7d49e050"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02b2cb" },
+		"collateral": "309.542054937395655024"
+	},
+	{
+		"id": "0x09f3C4e3CC9aBD59414CEB494FB2B14729087D27",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x4267e40c1cd6d84995"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x028006" },
+		"collateral": "305.877716692163435565"
+	},
+	{
+		"id": "0x81262F44581600Aef0dB3a3D9B99dca57f846B22",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x7ab3b6a821af217c9c"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02b3b7" },
+		"collateral": "305.5643133"
+	},
+	{
+		"id": "0x0E0b40cdC92Ed34318DF659C77858DDFA264210e",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x57dda3b87282d1b89b"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x01c959" },
+		"collateral": "303.96961752"
+	},
+	{
+		"id": "0x75547dbdE1370eE1Ff3128AdB5F28Fca196123De",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x6b7e00bc650aa5690b"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x02b2ee" },
+		"collateral": "302.210447709077421779"
+	},
+	{
+		"id": "0x9EB3912D96FC148d4e5D7bd79c1Ed8F618170d37",
+		"initialDebtOwnership": {
+			"type": "BigNumber",
+			"hex": "0x653d41d9f871bb076d"
+		},
+		"debtEntryIndex": { "type": "BigNumber", "hex": "0x013758" },
+		"collateral": "301.22384634"
+	}
 ]

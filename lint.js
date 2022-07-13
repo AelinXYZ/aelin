@@ -3,9 +3,9 @@ const CLIEngine = require('eslint').CLIEngine;
 
 const argv = process.argv.slice(2);
 const cli = new CLIEngine({
-  fix: false,
-  extensions: argv[2].split(','),
-  useEslintrc: true,
+	fix: false,
+	extensions: argv[2].split(','),
+	useEslintrc: true,
 });
 
 console.log('Starting to lint..');
@@ -22,24 +22,17 @@ console.log('Lint finished');
 console.log(consoleFormatter(report.results));
 
 // Output to sarif format
-const otherFormatter = cli.getFormatter(
-  '@microsoft/eslint-formatter-sarif/sarif.js',
-);
+const otherFormatter = cli.getFormatter('@microsoft/eslint-formatter-sarif/sarif.js');
 
 console.log('Saving sarif report..');
 
-fs.writeFile(
-  'lint-results.sarif',
-  otherFormatter(report.results),
-  'utf8',
-  () => {
-    console.log('Sarif report saved');
-    if (report.errorCount > 0) {
-      console.log('Errors found, exiting..');
-      process.exit(1);
-    } else {
-      console.log('No errors found');
-      process.exit(0);
-    }
-  },
-);
+fs.writeFile('lint-results.sarif', otherFormatter(report.results), 'utf8', () => {
+	console.log('Sarif report saved');
+	if (report.errorCount > 0) {
+		console.log('Errors found, exiting..');
+		process.exit(1);
+	} else {
+		console.log('No errors found');
+		process.exit(0);
+	}
+});

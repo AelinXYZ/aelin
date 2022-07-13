@@ -2,12 +2,12 @@ import { HardhatUserConfig } from "hardhat/config";
 
 import "@nomiclabs/hardhat-waffle";
 import "@nomiclabs/hardhat-ethers";
-import "@nomiclabs/hardhat-web3";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "hardhat-interact";
 import "solidity-coverage";
 import "@nomiclabs/hardhat-etherscan";
+import "dotenv/config";
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
@@ -33,7 +33,7 @@ const config: HardhatUserConfig = {
   },
   defaultNetwork: "hardhat",
   mocha: {
-    // this needs to be long because CI takes a while to fork the mainnet data from alchemy
+    // this needs to be long because CI takes a while to fork mainnet data from alchemy
     timeout: 1000000,
   },
   etherscan: {
@@ -51,6 +51,10 @@ const config: HardhatUserConfig = {
     },
     kovan: {
       url: `https://eth-kovan.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+      accounts: [`0x${process.env.KOVAN_PRIVATE_KEY}`],
+    },
+    goerli: {
+      url: `https://eth-goerli.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
       accounts: [`0x${process.env.KOVAN_PRIVATE_KEY}`],
     },
     hardhat: {

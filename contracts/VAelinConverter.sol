@@ -40,15 +40,9 @@ contract VAelinConverter is Owned {
 
     function _selfDestruct(address payable beneficiary) external onlyOwner {
         //only callable a year after end time
-        require(
-            block.timestamp > (startTime + 365 days),
-            "Contract can only be selfdestruct after a year"
-        );
+        require(block.timestamp > (startTime + 365 days), "Contract can only be selfdestruct after a year");
 
-        IERC20(AELIN).transfer(
-            beneficiary,
-            IERC20(AELIN).balanceOf(address(this))
-        );
+        IERC20(AELIN).transfer(beneficiary, IERC20(AELIN).balanceOf(address(this)));
 
         selfdestruct(beneficiary);
     }
