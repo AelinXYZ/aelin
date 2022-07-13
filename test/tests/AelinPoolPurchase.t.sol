@@ -868,7 +868,7 @@ contract AelinPoolPurchase is Test {
     // punks - purchase with the tokenId
     function testPunksPurchasePool(uint256 purchaseAmount) public {
         vm.assume(purchaseAmount <= 1e22);
-        assertTrue(AelinPool(poolAddress).hasNftList());
+        assertTrue(AelinPool(poolAddressWithPunks).hasNftList());
         // owner of cryptopunks tokenId - 100
         address tokenOwner = address(0xA858DDc0445d8131daC4d1DE01f834ffcbA52Ef1);
 
