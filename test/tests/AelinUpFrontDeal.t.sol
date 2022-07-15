@@ -2635,17 +2635,21 @@ contract AelinUpFrontDealTest is Test {
         vm.stopPrank();
         // claim underlying
         vm.startPrank(_address);
+        /*
         vm.warp(purchaseExpiry + 1 days + _timeAfterPurchasing);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getAmountVested(_address), 0);
         assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(_address), 0);
         assertEq(underlyingDealToken.balanceOf(_address), 0);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalUnderlyingClaimed(), 0);
+*/
+        vm.expectRevert("no underlying ready to claim");
         AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlying();
         // after claim checks
+        /*
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getAmountVested(_address), 0);
         assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(_address), 0);
         assertEq(underlyingDealToken.balanceOf(_address), 0);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalUnderlyingClaimed(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalUnderlyingClaimed(), 0);*/
         vm.stopPrank();
     }
 
@@ -2692,17 +2696,20 @@ contract AelinUpFrontDealTest is Test {
         uint256 adjustedDealTokensForUser = ((BASE - AELIN_FEE - sponsorFee) * poolSharesPerUser) / BASE;
         AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
         // claim underlying
+        /*
         vm.warp(purchaseExpiry + 1 days + _timeAfterPurchasing);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getAmountVested(address(0x1337)), 0);
         assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)), adjustedDealTokensForUser);
         assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalUnderlyingClaimed(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalUnderlyingClaimed(), 0);*/
+        vm.expectRevert("no underlying ready to claim");
         AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlying();
         // after claim checks
+        /*
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getAmountVested(address(0x1337)), 0);
         assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)), adjustedDealTokensForUser);
         assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalUnderlyingClaimed(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalUnderlyingClaimed(), 0);*/
         vm.stopPrank();
     }
 
