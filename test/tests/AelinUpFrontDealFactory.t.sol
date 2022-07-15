@@ -1232,6 +1232,58 @@ contract AelinUpFrontDealFactoryTest is Test {
         );
     }
 
+    function testRevertNftAndAllowList() public {
+        AelinNftGating.NftCollectionRules[] memory _nftCollectionRules = new AelinNftGating.NftCollectionRules[](1);
+        AelinAllowList.InitData memory _allowListInit;
+
+        _nftCollectionRules[0].collectionAddress = address(collectionAddress1);
+        _nftCollectionRules[0].purchaseAmount = 1e20;
+        _nftCollectionRules[0].purchaseAmountPerToken = true;
+
+        address[] memory testAllowListAddresses = new address[](3);
+        uint256[] memory testAllowListAmounts = new uint256[](3);
+        testAllowListAddresses[0] = address(0x1337);
+        testAllowListAddresses[1] = address(0xBEEF);
+        testAllowListAddresses[2] = address(0xDEED);
+        testAllowListAmounts[0] = 1e18;
+        testAllowListAmounts[1] = 1e18;
+        testAllowListAmounts[2] = 1e18;
+
+        _allowListInit.allowListAddresses = testAllowListAddresses;
+        _allowListInit.allowListAmounts = testAllowListAmounts;
+
+        IAelinUpFrontDeal.UpFrontDealData memory _dealData;
+        _dealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: address(0xDEAD),
+            sponsor: address(0x123),
+            sponsorFee: 2e18
+        });
+
+        IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
+        _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
+            underlyingDealTokenTotal: 2e27,
+            purchaseTokenPerDealToken: 1e18,
+            purchaseRaiseMinimum: 0,
+            purchaseDuration: 30 days,
+            vestingPeriod: 10 days,
+            vestingCliffPeriod: 1 days,
+            allowDeallocation: false
+        });
+
+        vm.expectRevert("cannot have allow list and nft gating");
+        address dealAddress = upFrontDealFactory.createUpFrontDeal(
+            _dealData,
+            _dealConfig,
+            _nftCollectionRules,
+            _allowListInit,
+            0
+        );
+    }
+
     event DepositDealToken(
         address indexed underlyingDealTokenAddress,
         address indexed depositor,
