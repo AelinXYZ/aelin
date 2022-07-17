@@ -98,7 +98,7 @@ library AelinNftGating {
      * @param _nftPurchaseList nft collection address and token ids to use for purchase
      * @param _data contract storage data for nft gating passed by reference
      * @param _purchaseTokenAmount amount to purchase with, must not exceed max allowable from collection rules
-     * @return uint256 purchase token quantity
+     * @return uint256 max purchase token amount allowable
      */
     function purchaseDealTokensWithNft(
         NftPurchaseList[] calldata _nftPurchaseList,
@@ -121,23 +121,53 @@ library AelinNftGating {
             if (nftCollectionRules.purchaseAmountPerToken) {
                 if (NftCheck.supports1155(_collectionAddress)) {
                     for (uint256 j; j < _tokenIds.length; ++j) {
-                        maxPurchaseTokenAmount +=
-                            nftCollectionRules.purchaseAmount *
-                            IERC1155(_collectionAddress).balanceOf(msg.sender, _tokenIds[j]);
+                        unchecked {
+                            uint256 collectionAllowance = nftCollectionRules.purchaseAmount *
+                                IERC1155(_collectionAddress).balanceOf(msg.sender, _tokenIds[j]);
+                            // if there is an overflow of the pervious calculation, allow the max purchase token amount
+                            if (
+                                collectionAllowance / nftCollectionRules.purchaseAmount !=
+                                IERC1155(_collectionAddress).balanceOf(msg.sender, _tokenIds[j])
+                            ) {
+                                maxPurchaseTokenAmount = type(uint256).max;
+                            } else {
+                                maxPurchaseTokenAmount += collectionAllowance;
+                                if (maxPurchaseTokenAmount < collectionAllowance) {
+                                    maxPurchaseTokenAmount = type(uint256).max;
+                                }
+                            }
+                        }
                     }
                 } else {
-                    maxPurchaseTokenAmount += nftCollectionRules.purchaseAmount * _tokenIds.length;
+                    unchecked {
+                        uint256 collectionAllowance = nftCollectionRules.purchaseAmount * _tokenIds.length;
+                        // if there is an overflow of the pervious calculation, allow the max purchase token amount
+                        if (collectionAllowance / nftCollectionRules.purchaseAmount != _tokenIds.length) {
+                            maxPurchaseTokenAmount = type(uint256).max;
+                        } else {
+                            maxPurchaseTokenAmount += collectionAllowance;
+                            if (maxPurchaseTokenAmount < collectionAllowance) {
+                                maxPurchaseTokenAmount = type(uint256).max;
+                            }
+                        }
+                    }
                 }
             }
 
             if (!nftCollectionRules.purchaseAmountPerToken && nftCollectionRules.purchaseAmount > 0) {
                 require(!_data.nftWalletUsedForPurchase[_collectionAddress][msg.sender], "wallet already used for nft set");
                 _data.nftWalletUsedForPurchase[_collectionAddress][msg.sender] = true;
-                maxPurchaseTokenAmount += nftCollectionRules.purchaseAmount;
+                unchecked {
+                    maxPurchaseTokenAmount += nftCollectionRules.purchaseAmount;
+                    // if addition causes overflow the max allowance is max value of uint256
+                    if (maxPurchaseTokenAmount < nftCollectionRules.purchaseAmount) {
+                        maxPurchaseTokenAmount = type(uint256).max;
+                    }
+                }
             }
 
             if (nftCollectionRules.purchaseAmount == 0) {
-                maxPurchaseTokenAmount = _purchaseTokenAmount;
+                maxPurchaseTokenAmount = type(uint256).max;
             }
 
             if (NftCheck.supports721(_collectionAddress)) {
@@ -171,7 +201,7 @@ library AelinNftGating {
 
         require(_purchaseTokenAmount <= maxPurchaseTokenAmount, "purchase amount greater than max allocation");
 
-        return (_purchaseTokenAmount);
+        return (maxPurchaseTokenAmount);
     }
 
     event PoolWith721(address indexed collectionAddress, uint256 purchaseAmount, bool purchaseAmountPerToken);
