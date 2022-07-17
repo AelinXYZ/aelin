@@ -17,6 +17,10 @@ contract AelinUpFrontDealFactoryTest is Test {
     address public aelinTreasury = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
     address public punks = address(0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB);
 
+    uint256 constant BASE = 10000;
+    uint256 constant MAX_SPONSOR_FEE = 1500;
+    uint256 constant AELIN_FEE = 200;
+
     AelinUpFrontDeal public testUpFrontDeal;
     AelinUpFrontDealFactory public upFrontDealFactory;
     AelinFeeEscrow public testEscrow;
@@ -63,7 +67,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         uint256 _vestingCliffPeriod,
         bool _allowDeallocation
     ) public {
-        vm.assume(_sponsorFee < 15e18);
+        vm.assume(_sponsorFee < MAX_SPONSOR_FEE);
         vm.assume(_underlyingDealTokenTotal > 0);
         vm.assume(_purchaseTokenPerDealToken > 0);
         vm.assume(_purchaseDuration >= 30 minutes);
@@ -170,7 +174,7 @@ contract AelinUpFrontDealFactoryTest is Test {
 
         if (_purchaseRaiseMinimum > 0) {
             uint8 underlyingTokenDecimals = MockERC20(underlyingDealToken).decimals();
-            (bool success, uint256 numerator) = SafeMath.tryMul(_purchaseTokenPerDealToken, _underlyingDealTokenTotal);
+            (, uint256 numerator) = SafeMath.tryMul(_purchaseTokenPerDealToken, _underlyingDealTokenTotal);
             uint256 totalIntendedRaise = numerator / 10**underlyingTokenDecimals;
             vm.assume(totalIntendedRaise != 0);
             vm.assume(_purchaseRaiseMinimum <= totalIntendedRaise);
@@ -187,7 +191,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 2e18
+            sponsorFee: 200
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -278,7 +282,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 2e18
+            sponsorFee: 200
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -310,7 +314,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(0),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 2e18
+            sponsorFee: 200
         });
 
         vm.expectRevert("cant pass null underlying token address");
@@ -325,14 +329,14 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0),
             sponsor: address(0x123),
-            sponsorFee: 2e18
+            sponsorFee: 200
         });
 
         vm.expectRevert("cant pass null holder address");
         dealAddress = upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit, 0);
     }
 
-    function testFailFuzzCreateDealWhenDeposit(
+    function testFuzzCreateDealWhenDepositNotEnough(
         address _testAddress,
         uint256 _underlyingDealTokenTotal,
         uint256 _purchaseDuration,
@@ -376,7 +380,8 @@ contract AelinUpFrontDealFactoryTest is Test {
         });
 
         // create when the msg.sender does not have enough underlying tokens to fulfill the _depositUnderlyingAmount
-        address dealAddress = upFrontDealFactory.createUpFrontDeal(
+        vm.expectRevert("not enough balance");
+        upFrontDealFactory.createUpFrontDeal(
             _dealData,
             _dealConfig,
             _nftCollectionRules,
@@ -587,7 +592,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 2e18
+            sponsorFee: 200
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -681,7 +686,7 @@ contract AelinUpFrontDealFactoryTest is Test {
     }
 
     // fails because testAllowListAddresses[] and testAllowListAmounts[] are not the same size
-    function testFailFuzzCreateDealWithAllowList(
+    function testFuzzCreateDealWithAllowListNotSameSize(
         uint256 _underlyingDealTokenTotal,
         uint256 _purchaseDuration,
         uint256 _vestingPeriod,
@@ -715,7 +720,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 2e18
+            sponsorFee: 200
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -729,13 +734,8 @@ contract AelinUpFrontDealFactoryTest is Test {
             allowDeallocation: false
         });
 
-        address dealAddress = upFrontDealFactory.createUpFrontDeal(
-            _dealData,
-            _dealConfig,
-            _nftCollectionRules,
-            _allowListInit,
-            0
-        );
+        vm.expectRevert("allowListAddresses and allowListAmounts arrays should have the same length");
+        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit, 0);
     }
 
     function testCreateDealWith721() public {
@@ -758,7 +758,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 2e18
+            sponsorFee: 200
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -867,7 +867,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 2e18
+            sponsorFee: 200
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -988,7 +988,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 2e18
+            sponsorFee: 200
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -1111,7 +1111,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 2e18
+            sponsorFee: 200
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -1126,13 +1126,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         });
 
         vm.expectRevert("can only contain 1155");
-        address dealAddress = upFrontDealFactory.createUpFrontDeal(
-            _dealData,
-            _dealConfig,
-            _nftCollectionRules,
-            _allowListInit,
-            0
-        );
+        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit, 0);
     }
 
     function testRevertCreateDealWith721and1155() public {
@@ -1161,7 +1155,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 2e18
+            sponsorFee: 200
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -1176,13 +1170,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         });
 
         vm.expectRevert("can only contain 721");
-        address dealAddress = upFrontDealFactory.createUpFrontDeal(
-            _dealData,
-            _dealConfig,
-            _nftCollectionRules,
-            _allowListInit,
-            0
-        );
+        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit, 0);
     }
 
     // reverts when some an address other than 721 or 1155 is provided
@@ -1208,7 +1196,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 2e18
+            sponsorFee: 200
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -1223,13 +1211,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         });
 
         vm.expectRevert("collection is not compatible");
-        address dealAddress = upFrontDealFactory.createUpFrontDeal(
-            _dealData,
-            _dealConfig,
-            _nftCollectionRules,
-            _allowListInit,
-            0
-        );
+        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit, 0);
     }
 
     function testRevertNftAndAllowList() public {
@@ -1260,7 +1242,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 2e18
+            sponsorFee: 200
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -1275,13 +1257,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         });
 
         vm.expectRevert("cannot have allow list and nft gating");
-        address dealAddress = upFrontDealFactory.createUpFrontDeal(
-            _dealData,
-            _dealConfig,
-            _nftCollectionRules,
-            _allowListInit,
-            0
-        );
+        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit, 0);
     }
 
     event DepositDealToken(

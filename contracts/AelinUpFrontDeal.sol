@@ -14,9 +14,10 @@ import "./libraries/AelinAllowList.sol";
 contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal {
     using SafeERC20 for IERC20;
 
-    uint256 constant BASE = 100 * 10**18;
-    uint256 constant MAX_SPONSOR_FEE = 15 * 10**18;
-    uint256 constant AELIN_FEE = 2 * 10**18;
+    // fee bps
+    uint256 constant BASE = 10000;
+    uint256 constant MAX_SPONSOR_FEE = 1500;
+    uint256 constant AELIN_FEE = 200;
 
     UpFrontDealData public dealData;
     UpFrontDealConfig public dealConfig;
