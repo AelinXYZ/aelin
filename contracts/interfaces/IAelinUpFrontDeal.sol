@@ -16,12 +16,16 @@ interface IAelinUpFrontDeal {
 
     struct UpFrontDealConfig {
         uint256 underlyingDealTokenTotal;
-        uint256 purchaseTokenPerDealToken;
         uint256 purchaseRaiseMinimum;
         uint256 purchaseDuration;
-        uint256 vestingPeriod;
-        uint256 vestingCliffPeriod;
+        VestingSchedule[] vestingSchedule;
         bool allowDeallocation;
+    }
+
+    struct VestingSchedule {
+        uint256 purchaseTokenPerDealToken;
+        uint256 vestingCliffPeriod;
+        uint256 vestingPeriod;
     }
 
     event CreateUpFrontDeal(
@@ -56,14 +60,15 @@ interface IAelinUpFrontDeal {
         address upFrontDealAddress,
         uint256 timestamp,
         uint256 purchaseExpiryTimestamp,
-        uint256 vestingCliffExpiryTimestamp,
-        uint256 vestingExpiryTimestamp
+        uint256[] vestingCliffExpiryTimestamp,
+        uint256[] vestingExpiryTimestamp
     );
 
     event WithdrewExcess(address UpFrontDealAddress, uint256 amountWithdrawn);
 
     event AcceptDeal(
         address indexed user,
+        uint256 vestingIndex,
         uint256 amountPurchased,
         uint256 totalPurchased,
         uint256 amountDealTokens,
@@ -74,7 +79,14 @@ interface IAelinUpFrontDeal {
 
     event SponsorClaim(address indexed sponsor, uint256 amountMinted);
 
-    event HolderClaim(address indexed holder, address token, uint256 amountClaimed, uint256 timestamp);
+    event HolderClaim(
+        address indexed holder,
+        address purchasingToken,
+        uint256 amountClaimed,
+        address underlyingToken,
+        uint256 underlyingRefund,
+        uint256 timestamp
+    );
 
     event FeeEscrowClaim(address indexed aelinFeeEscrow, address indexed underlyingTokenAddress, uint256 amount);
 

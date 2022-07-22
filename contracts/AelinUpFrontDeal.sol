@@ -19,6 +19,8 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     uint256 constant MAX_SPONSOR_FEE = 1500;
     uint256 constant AELIN_FEE = 200;
 
+    uint256 constant MAX_VESTING_SCHEDULES = 10;
+
     UpFrontDealData public dealData;
     UpFrontDealConfig public dealConfig;
 
@@ -29,9 +31,9 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
 
     AelinAllowList.AllowList public allowList;
     AelinNftGating.NftGatingData public nftGating;
-    mapping(address => uint256) public purchaseTokensPerUser;
-    mapping(address => uint256) public poolSharesPerUser;
-    mapping(address => uint256) public amountVested;
+    mapping(address => mapping(uint256 => uint256)) public purchaseTokensPerUser;
+    mapping(address => mapping(uint256 => uint256)) public poolSharesPerUser;
+    mapping(address => mapping(uint256 => uint256)) public amountVested;
 
     uint256 public totalPurchasingAccepted;
     uint256 public totalPoolShares;
@@ -47,8 +49,8 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
 
     uint256 public dealStart;
     uint256 public purchaseExpiry;
-    uint256 public vestingCliffExpiry;
-    uint256 public vestingExpiry;
+    uint256[] public vestingCliffExpiry;
+    uint256[] public vestingExpiry;
 
     /**
      * @dev initializes the contract configuration, called from the factory contract when creating a new Up Front Deal
@@ -72,19 +74,30 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
 
         uint8 purchaseTokenDecimals = IERC20Decimals(_dealData.purchaseToken).decimals();
         require(purchaseTokenDecimals <= DEAL_TOKEN_DECIMALS, "purchase token not compatible");
-
-        require(1825 days >= _dealConfig.vestingCliffPeriod, "max 5 year cliff");
-        require(1825 days >= _dealConfig.vestingPeriod, "max 5 year vesting");
-
         require(_dealConfig.underlyingDealTokenTotal > 0, "must have nonzero deal tokens");
-        require(_dealConfig.purchaseTokenPerDealToken > 0, "invalid deal price");
+
+        require(_dealConfig.vestingSchedule.length > 0, "must have vesting schedule");
+        require(_dealConfig.vestingSchedule.length < MAX_VESTING_SCHEDULES, "exceeds max amount of vesting schedules");
+        for (uint256 i; i < _dealConfig.vestingSchedule.length; ++i) {
+            require(1825 days >= _dealConfig.vestingSchedule[i].vestingCliffPeriod, "max 5 year cliff");
+            require(1825 days >= _dealConfig.vestingSchedule[i].vestingPeriod, "max 5 year vesting");
+            require(_dealConfig.vestingSchedule[i].purchaseTokenPerDealToken > 0, "invalid deal price");
+            if (i > 0) {
+                require(
+                    _dealConfig.vestingSchedule[i].purchaseTokenPerDealToken <
+                        _dealConfig.vestingSchedule[i - 1].purchaseTokenPerDealToken,
+                    "price must be lower than previous"
+                );
+            }
+            require(_dealConfig.vestingSchedule[i].purchaseTokenPerDealToken > 0, "invalid deal price");
+        }
 
         uint8 underlyingTokenDecimals = IERC20Decimals(_dealData.underlyingDealToken).decimals();
         if (_dealConfig.purchaseRaiseMinimum > 0) {
-            uint256 _totalIntendedRaise = (_dealConfig.purchaseTokenPerDealToken * _dealConfig.underlyingDealTokenTotal) /
-                10**underlyingTokenDecimals;
-            require(_totalIntendedRaise > 0, "intended raise too small");
-            require(_dealConfig.purchaseRaiseMinimum <= _totalIntendedRaise, "raise minimum is greater than deal total");
+            uint256 _maxRaise = (_dealConfig.vestingSchedule[0].purchaseTokenPerDealToken *
+                _dealConfig.underlyingDealTokenTotal) / 10**underlyingTokenDecimals;
+            require(_maxRaise > 0, "max raise too small");
+            require(_dealConfig.purchaseRaiseMinimum <= _maxRaise, "raise minimum is greater than deal total");
         }
 
         // store pool and deal details as state variables
@@ -124,8 +137,10 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
             if (currentDealTokenTotal >= _dealConfig.underlyingDealTokenTotal) {
                 underlyingDepositComplete = true;
                 purchaseExpiry = block.timestamp + _dealConfig.purchaseDuration;
-                vestingCliffExpiry = purchaseExpiry + _dealConfig.vestingCliffPeriod;
-                vestingExpiry = vestingCliffExpiry + _dealConfig.vestingPeriod;
+                for (uint256 i; i < _dealConfig.vestingSchedule.length; ++i) {
+                    vestingCliffExpiry[i] = purchaseExpiry + _dealConfig.vestingSchedule[i].vestingCliffPeriod;
+                    vestingExpiry[i] = vestingCliffExpiry[i] + _dealConfig.vestingSchedule[i].vestingPeriod;
+                }
                 emit DealFullyFunded(address(this), block.timestamp, purchaseExpiry, vestingCliffExpiry, vestingExpiry);
             }
 
@@ -159,8 +174,10 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         if (balanceAfterTransfer >= dealConfig.underlyingDealTokenTotal) {
             underlyingDepositComplete = true;
             purchaseExpiry = block.timestamp + dealConfig.purchaseDuration;
-            vestingCliffExpiry = purchaseExpiry + dealConfig.vestingCliffPeriod;
-            vestingExpiry = vestingCliffExpiry + dealConfig.vestingPeriod;
+            for (uint256 i; i < dealConfig.vestingSchedule.length; ++i) {
+                vestingCliffExpiry[i] = purchaseExpiry + dealConfig.vestingSchedule[i].vestingCliffPeriod;
+                vestingExpiry[i] = vestingCliffExpiry[i] + dealConfig.vestingSchedule[i].vestingPeriod;
+            }
             emit DealFullyFunded(address(this), block.timestamp, purchaseExpiry, vestingCliffExpiry, vestingExpiry);
         }
 
@@ -187,18 +204,21 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      * underlying purchased. pool shares have the same decimals as the underlying deal token
      * @param _nftPurchaseList NFTs to use for accepting the deal if deal is NFT gated
      * @param _purchaseTokenAmount how many purchase tokens will be used to purchase deal token shares
+     * @param _vestingIndex the vesting schedule related to the purchase
      */
-    function acceptDeal(AelinNftGating.NftPurchaseList[] calldata _nftPurchaseList, uint256 _purchaseTokenAmount)
-        external
-        lock
-    {
+    function acceptDeal(
+        AelinNftGating.NftPurchaseList[] calldata _nftPurchaseList,
+        uint256 _purchaseTokenAmount,
+        uint256 _vestingIndex
+    ) external lock {
         require(underlyingDepositComplete, "deal token not yet deposited");
         require(block.timestamp < purchaseExpiry, "not in purchase window");
 
         address _purchaseToken = dealData.purchaseToken;
         uint256 _underlyingDealTokenTotal = dealConfig.underlyingDealTokenTotal;
-        uint256 _purchaseTokenPerDealToken = dealConfig.purchaseTokenPerDealToken;
+        VestingSchedule[] memory vestingSchedule = dealConfig.vestingSchedule;
         require(IERC20(_purchaseToken).balanceOf(msg.sender) >= _purchaseTokenAmount, "not enough purchaseToken");
+        require(_vestingIndex < vestingSchedule.length, "index not in bounds");
 
         if (nftGating.hasNftList || _nftPurchaseList.length > 0) {
             AelinNftGating.purchaseDealTokensWithNft(_nftPurchaseList, nftGating, _purchaseTokenAmount);
@@ -213,41 +233,40 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         uint256 purchaseTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
 
         totalPurchasingAccepted += purchaseTokenAmount;
-        purchaseTokensPerUser[msg.sender] += purchaseTokenAmount;
+        purchaseTokensPerUser[msg.sender][_vestingIndex] += purchaseTokenAmount;
 
         uint8 underlyingTokenDecimals = IERC20Decimals(dealData.underlyingDealToken).decimals();
-        uint256 poolSharesAmount;
 
         // this takes into account the decimal conversion between purchasing token and underlying deal token
         // pool shares having the same amount of decimals as underlying deal tokens
-        poolSharesAmount = (purchaseTokenAmount * 10**underlyingTokenDecimals) / _purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (purchaseTokenAmount * 10**underlyingTokenDecimals) /
+            vestingSchedule[_vestingIndex].purchaseTokenPerDealToken;
         require(poolSharesAmount > 0, "purchase amount too small");
 
         // pool shares directly correspond to the amount of deal tokens that can be minted
         // pool shares held = deal tokens minted as long as no deallocation takes place
         totalPoolShares += poolSharesAmount;
-        poolSharesPerUser[msg.sender] += poolSharesAmount;
+        poolSharesPerUser[msg.sender][_vestingIndex] += poolSharesAmount;
 
         if (!dealConfig.allowDeallocation) {
             require(totalPoolShares <= _underlyingDealTokenTotal, "purchased amount over total");
         } else if (totalPoolShares > _underlyingDealTokenTotal) {
             // if there is deallocation
             // attempt these computations, if it causes a revert this is overflow protection for purchaserClaim()
-            uint256 test = (((poolSharesPerUser[msg.sender] * _underlyingDealTokenTotal) / totalPoolShares) *
+            uint256 test = (((poolSharesPerUser[msg.sender][_vestingIndex] * _underlyingDealTokenTotal) / totalPoolShares) *
                 (BASE - AELIN_FEE - dealData.sponsorFee)) / BASE;
-            uint256 totalIntendedRaise = (_purchaseTokenPerDealToken * _underlyingDealTokenTotal) /
-                10**underlyingTokenDecimals;
             test =
-                purchaseTokensPerUser[msg.sender] -
-                ((purchaseTokensPerUser[msg.sender] * totalIntendedRaise) / totalPurchasingAccepted);
+                purchaseTokensPerUser[msg.sender][_vestingIndex] -
+                ((purchaseTokensPerUser[msg.sender][_vestingIndex] * _underlyingDealTokenTotal) / totalPoolShares);
         }
 
         emit AcceptDeal(
             msg.sender,
+            _vestingIndex,
             purchaseTokenAmount,
-            purchaseTokensPerUser[msg.sender],
+            purchaseTokensPerUser[msg.sender][_vestingIndex],
             poolSharesAmount,
-            poolSharesPerUser[msg.sender]
+            poolSharesPerUser[msg.sender][_vestingIndex]
         );
     }
 
@@ -255,50 +274,63 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      * @dev purchaser calls to claim their deal tokens or refund if the minimum raise does not pass
      */
     function purchaserClaim() public lock purchasingOver {
-        require(poolSharesPerUser[msg.sender] > 0, "no pool shares to claim with");
+        //require(poolSharesPerUser[msg.sender] > 0, "no pool shares to claim with");
 
         uint256 _purchaseRaiseMinimum = dealConfig.purchaseRaiseMinimum;
+        uint256 _underlyingDealTokenTotal = dealConfig.underlyingDealTokenTotal;
 
-        if (_purchaseRaiseMinimum == 0 || totalPurchasingAccepted > _purchaseRaiseMinimum) {
-            uint256 _underlyingDealTokenTotal = dealConfig.underlyingDealTokenTotal;
-            // Claim Deal Tokens
-            bool deallocate = totalPoolShares > _underlyingDealTokenTotal;
+        uint256 totalRaise;
+        bool deallocate = totalPoolShares > _underlyingDealTokenTotal;
+        if (deallocate) {
+            totalRaise = (totalPurchasingAccepted * _underlyingDealTokenTotal) / totalPoolShares;
+        } else {
+            totalRaise = totalPurchasingAccepted;
+        }
 
-            if (deallocate) {
-                // adjust for deallocation and mint deal tokens
-                uint256 adjustedDealTokensForUser = (((poolSharesPerUser[msg.sender] * _underlyingDealTokenTotal) /
-                    totalPoolShares) * (BASE - AELIN_FEE - dealData.sponsorFee)) / BASE;
-                poolSharesPerUser[msg.sender] = 0;
+        if (_purchaseRaiseMinimum == 0 || totalRaise > _purchaseRaiseMinimum) {
+            uint256 dealTokensForUser;
+            uint256 purchaseTokenRefund;
 
-                // refund any purchase tokens that got deallocated
-                uint256 underlyingTokenDecimals = IERC20Decimals(dealData.underlyingDealToken).decimals();
-                uint256 totalIntendedRaise = (dealConfig.purchaseTokenPerDealToken * _underlyingDealTokenTotal) /
-                    10**underlyingTokenDecimals;
-                uint256 purchasingRefund = purchaseTokensPerUser[msg.sender] -
-                    ((purchaseTokensPerUser[msg.sender] * totalIntendedRaise) / totalPurchasingAccepted);
-                purchaseTokensPerUser[msg.sender] = 0;
-
-                // mint deal tokens and transfer purchase token refund
-                _mint(msg.sender, adjustedDealTokensForUser);
-                IERC20(dealData.purchaseToken).safeTransfer(msg.sender, purchasingRefund);
-
-                emit ClaimDealTokens(msg.sender, adjustedDealTokensForUser, purchasingRefund);
-            } else {
-                // mint deal tokens when there is no deallocation
-                uint256 adjustedDealTokensForUser = ((BASE - AELIN_FEE - dealData.sponsorFee) *
-                    poolSharesPerUser[msg.sender]) / BASE;
-                poolSharesPerUser[msg.sender] = 0;
-                purchaseTokensPerUser[msg.sender] = 0;
-                _mint(msg.sender, adjustedDealTokensForUser);
-                emit ClaimDealTokens(msg.sender, adjustedDealTokensForUser, 0);
+            for (uint256 i; i < dealConfig.vestingSchedule.length; ++i) {
+                // Claim Deal Tokens
+                if (deallocate) {
+                    // adjust for deallocation and mint deal tokens
+                    uint256 adjustedDealTokensForUser = (((poolSharesPerUser[msg.sender][i] * _underlyingDealTokenTotal) /
+                        totalPoolShares) * (BASE - AELIN_FEE - dealData.sponsorFee)) / BASE;
+                    poolSharesPerUser[msg.sender][i] = 0;
+                    // refund any purchase tokens that got deallocated
+                    uint256 purchasingRefund = purchaseTokensPerUser[msg.sender][i] -
+                        ((purchaseTokensPerUser[msg.sender][i] * _underlyingDealTokenTotal) / totalPoolShares);
+                    purchaseTokensPerUser[msg.sender][i] = 0;
+                    // add to deal token and refund
+                    dealTokensForUser += adjustedDealTokensForUser;
+                    purchaseTokenRefund += purchasingRefund;
+                } else {
+                    // mint deal tokens when there is no deallocation
+                    dealTokensForUser +=
+                        ((BASE - AELIN_FEE - dealData.sponsorFee) * poolSharesPerUser[msg.sender][i]) /
+                        BASE;
+                    poolSharesPerUser[msg.sender][i] = 0;
+                    purchaseTokensPerUser[msg.sender][i] = 0;
+                }
             }
+            if (dealTokensForUser > 0) {
+                _mint(msg.sender, dealTokensForUser);
+            }
+            if (purchaseTokenRefund > 0) {
+                IERC20(dealData.purchaseToken).safeTransfer(msg.sender, purchaseTokenRefund);
+            }
+            emit ClaimDealTokens(msg.sender, dealTokensForUser, purchaseTokenRefund);
         } else {
             // Claim Refund
-            uint256 currentBalance = purchaseTokensPerUser[msg.sender];
-            purchaseTokensPerUser[msg.sender] = 0;
-            poolSharesPerUser[msg.sender] = 0;
-            IERC20(dealData.purchaseToken).safeTransfer(msg.sender, currentBalance);
-            emit ClaimDealTokens(msg.sender, 0, currentBalance);
+            uint256 purchaseTokenRefund;
+            for (uint256 i; i < dealConfig.vestingSchedule.length; ++i) {
+                purchaseTokenRefund += purchaseTokensPerUser[msg.sender][i];
+                purchaseTokensPerUser[msg.sender][i] = 0;
+                poolSharesPerUser[msg.sender][i] = 0;
+            }
+            IERC20(dealData.purchaseToken).safeTransfer(msg.sender, purchaseTokenRefund);
+            emit ClaimDealTokens(msg.sender, 0, purchaseTokenRefund);
         }
     }
 
@@ -336,27 +368,37 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         address _holder = dealData.holder;
         address _underlyingDealToken = dealData.underlyingDealToken;
         uint256 _purchaseRaiseMinimum = dealConfig.purchaseRaiseMinimum;
+        uint256 _underlyingDealTokenTotal = dealConfig.underlyingDealTokenTotal;
 
-        if (_purchaseRaiseMinimum == 0 || totalPurchasingAccepted > _purchaseRaiseMinimum) {
+        uint256 totalRaise;
+        bool deallocate = totalPoolShares > _underlyingDealTokenTotal;
+        if (deallocate) {
+            totalRaise = (totalPurchasingAccepted * _underlyingDealTokenTotal) / totalPoolShares;
+        } else {
+            totalRaise = totalPurchasingAccepted;
+        }
+
+        if (_purchaseRaiseMinimum == 0 || totalRaise > _purchaseRaiseMinimum) {
             address _purchaseToken = dealData.purchaseToken;
-            uint256 _underlyingDealTokenTotal = dealConfig.underlyingDealTokenTotal;
 
-            bool _deallocate = totalPoolShares > _underlyingDealTokenTotal;
-            if (_deallocate) {
-                uint256 _underlyingTokenDecimals = IERC20Decimals(_underlyingDealToken).decimals();
-                uint256 _totalIntendedRaise = (dealConfig.purchaseTokenPerDealToken * _underlyingDealTokenTotal) /
-                    10**_underlyingTokenDecimals;
-                IERC20(_purchaseToken).safeTransfer(_holder, _totalIntendedRaise);
-                emit HolderClaim(_holder, _purchaseToken, _totalIntendedRaise, block.timestamp);
+            if (deallocate) {
+                IERC20(_purchaseToken).safeTransfer(_holder, totalRaise);
+                emit HolderClaim(_holder, _purchaseToken, totalRaise, _underlyingDealToken, 0, block.timestamp);
             } else {
                 // holder receives raise
                 uint256 _currentBalance = IERC20(_purchaseToken).balanceOf(address(this));
                 IERC20(_purchaseToken).safeTransfer(_holder, _currentBalance);
-                emit HolderClaim(_holder, _purchaseToken, _currentBalance, block.timestamp);
                 // holder receives any leftover underlying deal tokens
                 uint256 _underlyingRefund = _underlyingDealTokenTotal - totalPoolShares;
                 IERC20(_underlyingDealToken).safeTransfer(_holder, _underlyingRefund);
-                emit HolderClaim(_holder, _underlyingDealToken, _underlyingRefund, block.timestamp);
+                emit HolderClaim(
+                    _holder,
+                    _purchaseToken,
+                    _currentBalance,
+                    _underlyingDealToken,
+                    _underlyingRefund,
+                    block.timestamp
+                );
             }
             if (!feeEscrowClaimed) {
                 feeEscrowClaim();
@@ -364,7 +406,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         } else {
             uint256 _currentBalance = IERC20(_underlyingDealToken).balanceOf(address(this));
             IERC20(_underlyingDealToken).safeTransfer(_holder, _currentBalance);
-            emit HolderClaim(_holder, _underlyingDealToken, _currentBalance, block.timestamp);
+            emit HolderClaim(_holder, dealData.purchaseToken, 0, _underlyingDealToken, _currentBalance, block.timestamp);
         }
     }
 
@@ -397,38 +439,65 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     /**
      * @dev purchaser calls after the purchasing period to claim underlying deal tokens
      * amount based on the vesting schedule
+     * @param _vestingIndex the vesting schedule for which to claim from
      */
-    function claimUnderlying() external lock purchasingOver passMinimumRaise {
-        uint256 underlyingDealTokensClaimed = claimableUnderlyingTokens(msg.sender);
+    function claimUnderlyingPerSchedule(uint256 _vestingIndex) external lock purchasingOver passMinimumRaise {
+        require(_vestingIndex < dealConfig.vestingSchedule.length, "index not in bounds");
+        uint256 underlyingDealTokensClaimed = claimableUnderlyingTokens(msg.sender, _vestingIndex);
         require(underlyingDealTokensClaimed > 0, "no underlying ready to claim");
         address _underlyingDealToken = dealData.underlyingDealToken;
-        amountVested[msg.sender] += underlyingDealTokensClaimed;
+        amountVested[msg.sender][_vestingIndex] += underlyingDealTokensClaimed;
         _burn(msg.sender, underlyingDealTokensClaimed);
         totalUnderlyingClaimed += underlyingDealTokensClaimed;
         IERC20(_underlyingDealToken).safeTransfer(msg.sender, underlyingDealTokensClaimed);
         emit ClaimedUnderlyingDealToken(msg.sender, _underlyingDealToken, underlyingDealTokensClaimed);
     }
 
+    function claimUnderlyingAllSchedules() external lock purchasingOver passMinimumRaise {
+        address _underlyingDealToken = dealData.underlyingDealToken;
+        uint256 length = dealConfig.vestingSchedule.length;
+        uint256 amountClaim;
+
+        for (uint256 i; i < length; ++i) {
+            uint256 underlyingDealTokensClaimed = claimableUnderlyingTokens(msg.sender, i);
+            amountVested[msg.sender][i] += underlyingDealTokensClaimed;
+            amountClaim += underlyingDealTokensClaimed;
+        }
+
+        require(amountClaim > 0, "no underlying ready to claim");
+        _burn(msg.sender, amountClaim);
+        totalUnderlyingClaimed += amountClaim;
+        IERC20(_underlyingDealToken).safeTransfer(msg.sender, amountClaim);
+        emit ClaimedUnderlyingDealToken(msg.sender, _underlyingDealToken, amountClaim);
+    }
+
     /**
      * @dev a view showing the amount of the underlying deal token a purchaser can claim
      * @param _purchaser address to check the quantity of claimable underlying tokens
+     * @param _vestingIndex the vesting schedule to get the claimable token amount for
      */
-    function claimableUnderlyingTokens(address _purchaser) public view purchasingOver returns (uint256) {
-        uint256 _vestingPeriod = dealConfig.vestingPeriod;
+    function claimableUnderlyingTokens(address _purchaser, uint256 _vestingIndex)
+        public
+        view
+        purchasingOver
+        returns (uint256)
+    {
+        uint256 _vestingPeriod = dealConfig.vestingSchedule[_vestingIndex].vestingPeriod;
+        uint256 _vestingCliffExpiry = vestingCliffExpiry[_vestingIndex];
+        uint256 _vestingExpiry = vestingExpiry[_vestingIndex];
         uint256 underlyingClaimable;
 
-        uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        uint256 maxTime = block.timestamp > _vestingExpiry ? _vestingExpiry : block.timestamp;
         if (
             balanceOf(_purchaser) > 0 &&
-            (maxTime > vestingCliffExpiry || (maxTime == vestingCliffExpiry && _vestingPeriod == 0))
+            (maxTime > _vestingCliffExpiry || (maxTime == _vestingCliffExpiry && _vestingPeriod == 0))
         ) {
-            uint256 timeElapsed = maxTime - vestingCliffExpiry;
+            uint256 timeElapsed = maxTime - _vestingCliffExpiry;
+            uint256 _amountVested = amountVested[_purchaser][_vestingIndex];
 
             underlyingClaimable = _vestingPeriod == 0
                 ? balanceOf(_purchaser)
-                : ((balanceOf(_purchaser) + amountVested[_purchaser]) * timeElapsed) /
-                    _vestingPeriod -
-                    amountVested[_purchaser];
+                : ((balanceOf(_purchaser) + _amountVested) * timeElapsed) / _vestingPeriod - _amountVested;
         }
 
         return (underlyingClaimable);
@@ -552,25 +621,28 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     /**
      * @dev getPurchaseTokensPerUser
      * @param _address address to check
+     * @param _vestingIndex vesting schedule to check
      */
-    function getPurchaseTokensPerUser(address _address) public view returns (uint256) {
-        return (purchaseTokensPerUser[_address]);
+    function getPurchaseTokensPerUser(address _address, uint256 _vestingIndex) public view returns (uint256) {
+        return (purchaseTokensPerUser[_address][_vestingIndex]);
     }
 
     /**
      * @dev getPoolSharesPerUser
      * @param _address address to check
+     * @param _vestingIndex vesting schedule to check
      */
-    function getPoolSharesPerUser(address _address) public view returns (uint256) {
-        return (poolSharesPerUser[_address]);
+    function getPoolSharesPerUser(address _address, uint256 _vestingIndex) public view returns (uint256) {
+        return (poolSharesPerUser[_address][_vestingIndex]);
     }
 
     /**
      * @dev getAmountVested
      * @param _address address to check
+     * @param _vestingIndex vesting schedule to check
      */
-    function getAmountVested(address _address) public view returns (uint256) {
-        return (amountVested[_address]);
+    function getAmountVested(address _address, uint256 _vestingIndex) public view returns (uint256) {
+        return (amountVested[_address][_vestingIndex]);
     }
 
     modifier onlyHolder() {
