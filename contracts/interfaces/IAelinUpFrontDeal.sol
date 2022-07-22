@@ -74,7 +74,14 @@ interface IAelinUpFrontDeal {
 
     event SponsorClaim(address indexed sponsor, uint256 amountMinted);
 
-    event HolderClaim(address indexed holder, address token, uint256 amountClaimed, uint256 timestamp);
+    event HolderClaim(
+        address indexed holder,
+        address purchaseToken,
+        uint256 amountClaimed,
+        address underlyingToken,
+        uint256 underlyingRefund,
+        uint256 timestamp
+    );
 
     event FeeEscrowClaim(address indexed aelinFeeEscrow, address indexed underlyingTokenAddress, uint256 amount);
 
