@@ -235,11 +235,9 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
             // attempt these computations, if it causes a revert this is overflow protection for purchaserClaim()
             uint256 test = (((poolSharesPerUser[msg.sender] * _underlyingDealTokenTotal) / totalPoolShares) *
                 (BASE - AELIN_FEE - dealData.sponsorFee)) / BASE;
-            uint256 totalIntendedRaise = (_purchaseTokenPerDealToken * _underlyingDealTokenTotal) /
-                10**underlyingTokenDecimals;
             test =
                 purchaseTokensPerUser[msg.sender] -
-                ((purchaseTokensPerUser[msg.sender] * totalIntendedRaise) / totalPurchasingAccepted);
+                ((purchaseTokensPerUser[msg.sender] * _underlyingDealTokenTotal) / totalPoolShares);
         }
 
         emit AcceptDeal(
@@ -271,11 +269,8 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
                 poolSharesPerUser[msg.sender] = 0;
 
                 // refund any purchase tokens that got deallocated
-                uint256 underlyingTokenDecimals = IERC20Decimals(dealData.underlyingDealToken).decimals();
-                uint256 totalIntendedRaise = (dealConfig.purchaseTokenPerDealToken * _underlyingDealTokenTotal) /
-                    10**underlyingTokenDecimals;
                 uint256 purchasingRefund = purchaseTokensPerUser[msg.sender] -
-                    ((purchaseTokensPerUser[msg.sender] * totalIntendedRaise) / totalPurchasingAccepted);
+                    ((purchaseTokensPerUser[msg.sender] * _underlyingDealTokenTotal) / totalPoolShares);
                 purchaseTokensPerUser[msg.sender] = 0;
 
                 // mint deal tokens and transfer purchase token refund
@@ -335,28 +330,34 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
 
         address _holder = dealData.holder;
         address _underlyingDealToken = dealData.underlyingDealToken;
+        address _purchaseToken = dealData.purchaseToken;
         uint256 _purchaseRaiseMinimum = dealConfig.purchaseRaiseMinimum;
 
         if (_purchaseRaiseMinimum == 0 || totalPurchasingAccepted > _purchaseRaiseMinimum) {
-            address _purchaseToken = dealData.purchaseToken;
             uint256 _underlyingDealTokenTotal = dealConfig.underlyingDealTokenTotal;
 
-            bool _deallocate = totalPoolShares > _underlyingDealTokenTotal;
-            if (_deallocate) {
+            bool deallocate = totalPoolShares > _underlyingDealTokenTotal;
+            if (deallocate) {
                 uint256 _underlyingTokenDecimals = IERC20Decimals(_underlyingDealToken).decimals();
                 uint256 _totalIntendedRaise = (dealConfig.purchaseTokenPerDealToken * _underlyingDealTokenTotal) /
                     10**_underlyingTokenDecimals;
                 IERC20(_purchaseToken).safeTransfer(_holder, _totalIntendedRaise);
-                emit HolderClaim(_holder, _purchaseToken, _totalIntendedRaise, block.timestamp);
+                emit HolderClaim(_holder, _purchaseToken, _totalIntendedRaise, _underlyingDealToken, 0, block.timestamp);
             } else {
                 // holder receives raise
                 uint256 _currentBalance = IERC20(_purchaseToken).balanceOf(address(this));
                 IERC20(_purchaseToken).safeTransfer(_holder, _currentBalance);
-                emit HolderClaim(_holder, _purchaseToken, _currentBalance, block.timestamp);
                 // holder receives any leftover underlying deal tokens
                 uint256 _underlyingRefund = _underlyingDealTokenTotal - totalPoolShares;
                 IERC20(_underlyingDealToken).safeTransfer(_holder, _underlyingRefund);
-                emit HolderClaim(_holder, _underlyingDealToken, _underlyingRefund, block.timestamp);
+                emit HolderClaim(
+                    _holder,
+                    _purchaseToken,
+                    _currentBalance,
+                    _underlyingDealToken,
+                    _underlyingRefund,
+                    block.timestamp
+                );
             }
             if (!feeEscrowClaimed) {
                 feeEscrowClaim();
@@ -364,7 +365,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         } else {
             uint256 _currentBalance = IERC20(_underlyingDealToken).balanceOf(address(this));
             IERC20(_underlyingDealToken).safeTransfer(_holder, _currentBalance);
-            emit HolderClaim(_holder, _underlyingDealToken, _currentBalance, block.timestamp);
+            emit HolderClaim(_holder, _purchaseToken, 0, _underlyingDealToken, _currentBalance, block.timestamp);
         }
     }
 

@@ -1807,7 +1807,7 @@ contract AelinUpFrontDealTest is Test {
         vm.assume(_address != address(0));
         vm.assume(_address != address(0xBEEF));
         vm.startPrank(_address);
-        vm.assume(_purchaseAmount > 6e28);
+        vm.assume(_purchaseAmount > 10e28);
         vm.assume(_purchaseAmount < 1e35);
         // accept deal
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
@@ -2048,7 +2048,14 @@ contract AelinUpFrontDealTest is Test {
         uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
         vm.warp(purchaseExpiry + 1 days);
         vm.expectEmit(true, false, false, true);
-        emit HolderClaim(address(0xDEAD), address(purchaseToken), amountRaise, block.timestamp);
+        emit HolderClaim(
+            address(0xDEAD),
+            address(purchaseToken),
+            amountRaise,
+            address(underlyingDealToken),
+            underlyingDealTokenTotal - poolSharesAmount,
+            block.timestamp
+        );
         AelinUpFrontDeal(dealAddressOverFullDeposit).holderClaim();
         // claim again
         vm.expectRevert("holder already claimed");
@@ -2085,7 +2092,14 @@ contract AelinUpFrontDealTest is Test {
         uint256 amountRefund = underlyingDealToken.balanceOf(address(dealAddressOverFullDeposit));
         uint256 amountBeforeClaim = underlyingDealToken.balanceOf(address(0xDEAD));
         vm.expectEmit(true, false, false, true);
-        emit HolderClaim(address(0xDEAD), address(underlyingDealToken), amountRefund, block.timestamp);
+        emit HolderClaim(
+            address(0xDEAD),
+            address(purchaseToken),
+            0,
+            address(underlyingDealToken),
+            amountRefund,
+            block.timestamp
+        );
         AelinUpFrontDeal(dealAddressOverFullDeposit).holderClaim();
         uint256 amountAfterClaim = underlyingDealToken.balanceOf(address(0xDEAD));
         assertEq(amountAfterClaim - amountBeforeClaim, amountRefund);
@@ -2125,7 +2139,14 @@ contract AelinUpFrontDealTest is Test {
         uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
         vm.warp(purchaseExpiry + 1 days);
         vm.expectEmit(true, false, false, true);
-        emit HolderClaim(address(0xDEAD), address(purchaseToken), amountRaise, block.timestamp);
+        emit HolderClaim(
+            address(0xDEAD),
+            address(purchaseToken),
+            amountRaise,
+            address(underlyingDealToken),
+            underlyingDealTokenTotal - poolSharesAmount,
+            block.timestamp
+        );
         AelinUpFrontDeal(dealAddressOverFullDeposit).holderClaim();
         uint256 amountAfterClaim = underlyingDealToken.balanceOf(address(0xDEAD));
         assertEq(amountAfterClaim - amountBeforeClaim, amountRefund);
@@ -2177,7 +2198,14 @@ contract AelinUpFrontDealTest is Test {
         uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry();
         vm.warp(purchaseExpiry + 1 days);
         vm.expectEmit(true, false, false, true);
-        emit HolderClaim(address(0xDEAD), address(purchaseToken), totalIntendedRaise, block.timestamp);
+        emit HolderClaim(
+            address(0xDEAD),
+            address(purchaseToken),
+            totalIntendedRaise,
+            address(underlyingDealToken),
+            0,
+            block.timestamp
+        );
         AelinUpFrontDeal(dealAddressAllowDeallocation).holderClaim();
         assertEq(purchaseToken.balanceOf(address(0xDEAD)), totalIntendedRaise);
         uint256 feeAmount = (underlyingDealTokenTotal * AELIN_FEE) / BASE;
@@ -2872,7 +2900,14 @@ contract AelinUpFrontDealTest is Test {
 
     event SponsorClaim(address indexed sponsor, uint256 amountMinted);
 
-    event HolderClaim(address indexed holder, address token, uint256 amountClaimed, uint256 timestamp);
+    event HolderClaim(
+        address indexed holder,
+        address purchaseToken,
+        uint256 amountClaimed,
+        address underlyingToken,
+        uint256 underlyingRefund,
+        uint256 timestamp
+    );
 
     event FeeEscrowClaim(address indexed aelinFeeEscrow, address indexed underlyingTokenAddress, uint256 amount);
 
