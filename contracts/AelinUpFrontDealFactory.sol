@@ -8,6 +8,8 @@ import "./libraries/AelinAllowList.sol";
 import {IAelinUpFrontDeal} from "./interfaces/IAelinUpFrontDeal.sol";
 
 contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
+    using SafeERC20 for IERC20;
+
     address public immutable UP_FRONT_DEAL_LOGIC;
     address public immutable AELIN_ESCROW_LOGIC;
     address public immutable AELIN_TREASURY;
@@ -40,7 +42,7 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
                 "not enough balance"
             );
             uint256 _balanceBeforeTransfer = ERC20(_dealData.underlyingDealToken).balanceOf(address(this));
-            IERC20(_dealData.underlyingDealToken).transferFrom(msg.sender, address(this), _depositUnderlyingAmount);
+            IERC20(_dealData.underlyingDealToken).safeTransferFrom(msg.sender, address(this), _depositUnderlyingAmount);
             uint256 _balanceAfterTransfer = IERC20(_dealData.underlyingDealToken).balanceOf(address(this));
             _depositUnderlyingAmount = _balanceAfterTransfer - _balanceBeforeTransfer;
             IERC20(_dealData.underlyingDealToken).transfer(upFrontDealAddress, _depositUnderlyingAmount);

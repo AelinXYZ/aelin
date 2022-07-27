@@ -233,9 +233,9 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         } else if (totalPoolShares > _underlyingDealTokenTotal) {
             // if there is deallocation
             // attempt these computations, if it causes a revert this is overflow protection for purchaserClaim()
-            uint256 test = (((poolSharesPerUser[msg.sender] * _underlyingDealTokenTotal) / totalPoolShares) *
+            uint256 mathTest = (((poolSharesPerUser[msg.sender] * _underlyingDealTokenTotal) / totalPoolShares) *
                 (BASE - AELIN_FEE - dealData.sponsorFee)) / BASE;
-            test =
+            mathTest =
                 purchaseTokensPerUser[msg.sender] -
                 ((purchaseTokensPerUser[msg.sender] * _underlyingDealTokenTotal) / totalPoolShares);
         }
