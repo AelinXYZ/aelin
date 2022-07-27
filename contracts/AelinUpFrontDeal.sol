@@ -78,25 +78,20 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
 
         require(_dealConfig.vestingSchedule.length > 0, "must have vesting schedule");
         require(_dealConfig.vestingSchedule.length < MAX_VESTING_SCHEDULES, "exceeds max amount of vesting schedules");
+        uint8 underlyingTokenDecimals = IERC20Decimals(_dealData.underlyingDealToken).decimals();
+        uint256 highestPrice;
         for (uint256 i; i < _dealConfig.vestingSchedule.length; ++i) {
             require(1825 days >= _dealConfig.vestingSchedule[i].vestingCliffPeriod, "max 5 year cliff");
             require(1825 days >= _dealConfig.vestingSchedule[i].vestingPeriod, "max 5 year vesting");
             require(_dealConfig.vestingSchedule[i].purchaseTokenPerDealToken > 0, "invalid deal price");
-            if (i > 0) {
-                require(
-                    _dealConfig.vestingSchedule[i].purchaseTokenPerDealToken <
-                        _dealConfig.vestingSchedule[i - 1].purchaseTokenPerDealToken,
-                    "price must be lower than previous"
-                );
+            if (_dealConfig.vestingSchedule[i].purchaseTokenPerDealToken > highestPrice) {
+                highestPrice = _dealConfig.vestingSchedule[i].purchaseTokenPerDealToken;
             }
-            require(_dealConfig.vestingSchedule[i].purchaseTokenPerDealToken > 0, "invalid deal price");
         }
 
-        uint8 underlyingTokenDecimals = IERC20Decimals(_dealData.underlyingDealToken).decimals();
+        uint256 _maxRaise = (highestPrice * _dealConfig.underlyingDealTokenTotal) / 10**underlyingTokenDecimals;
+        require(_maxRaise > 0, "max raise too small");
         if (_dealConfig.purchaseRaiseMinimum > 0) {
-            uint256 _maxRaise = (_dealConfig.vestingSchedule[0].purchaseTokenPerDealToken *
-                _dealConfig.underlyingDealTokenTotal) / 10**underlyingTokenDecimals;
-            require(_maxRaise > 0, "max raise too small");
             require(_dealConfig.purchaseRaiseMinimum <= _maxRaise, "raise minimum is greater than deal total");
         }
 

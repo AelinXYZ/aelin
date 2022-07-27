@@ -118,6 +118,12 @@ contract AelinUpFrontDealTest is Test {
         nftCollectionRules1155[1].minTokensEligible[0] = 1000;
         nftCollectionRules1155[1].minTokensEligible[1] = 2000;
 
+        // Vesting Schedules
+        IAelinUpFrontDeal.VestingSchedule[] memory vestingSingle = new IAelinUpFrontDeal.VestingSchedule[](1);
+        vestingSingle[0].purchaseTokenPerDealToken = 3e18;
+        vestingSingle[0].vestingCliffPeriod = 60 days;
+        vestingSingle[0].vestingPeriod = 365 days;
+
         IAelinUpFrontDeal.UpFrontDealData memory dealData;
         dealData = IAelinUpFrontDeal.UpFrontDealData({
             name: "DEAL",
@@ -132,22 +138,18 @@ contract AelinUpFrontDealTest is Test {
         IAelinUpFrontDeal.UpFrontDealConfig memory dealConfig;
         dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
             underlyingDealTokenTotal: 1e35,
-            purchaseTokenPerDealToken: 3e18,
             purchaseRaiseMinimum: 1e28,
             purchaseDuration: 10 days,
-            vestingPeriod: 365 days,
-            vestingCliffPeriod: 60 days,
+            vestingSchedule: vestingSingle,
             allowDeallocation: false
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory dealConfigAllowDeallocation;
         dealConfigAllowDeallocation = IAelinUpFrontDeal.UpFrontDealConfig({
             underlyingDealTokenTotal: 1e35,
-            purchaseTokenPerDealToken: 3e18,
             purchaseRaiseMinimum: 0,
             purchaseDuration: 10 days,
-            vestingPeriod: 365 days,
-            vestingCliffPeriod: 60 days,
+            vestingSchedule: vestingSingle,
             allowDeallocation: true
         });
 
@@ -230,8 +232,8 @@ contract AelinUpFrontDealTest is Test {
         assertEq(AelinUpFrontDeal(dealAddress).aelinEscrowLogicAddress(), address(testEscrow));
         assertEq(AelinUpFrontDeal(dealAddress).aelinTreasuryAddress(), aelinTreasury);
         assertEq(AelinUpFrontDeal(dealAddress).purchaseExpiry(), 0);
-        assertEq(AelinUpFrontDeal(dealAddress).vestingCliffExpiry(), 0);
-        assertEq(AelinUpFrontDeal(dealAddress).vestingExpiry(), 0);
+        assertEq(AelinUpFrontDeal(dealAddress).vestingCliffExpiry(0), 0);
+        assertEq(AelinUpFrontDeal(dealAddress).vestingExpiry(0), 0);
         // deal data
         (tempString, , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(tempString, "DEAL");

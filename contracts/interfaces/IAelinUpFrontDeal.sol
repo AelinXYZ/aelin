@@ -42,11 +42,9 @@ interface IAelinUpFrontDeal {
     event CreateUpFrontDealConfig(
         address indexed dealAddress,
         uint256 underlyingDealTokenTotal,
-        uint256 purchaseTokenPerDealToken,
         uint256 purchaseRaiseMinimum,
         uint256 purchaseDuration,
-        uint256 vestingPeriod,
-        uint256 vestingCliffPeriod,
+        VestingSchedule[] vestingSchedule,
         bool allowDeallocation
     );
 
