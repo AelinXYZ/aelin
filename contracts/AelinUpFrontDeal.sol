@@ -125,6 +125,9 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
 
         require(!(allowList.hasAllowList && nftGating.hasNftList), "cannot have allow list and nft gating");
 
+        vestingCliffExpiry = new uint256[](_dealConfig.vestingSchedule.length);
+        vestingExpiry = new uint256[](_dealConfig.vestingSchedule.length);
+
         // deposit underlying token logic
         // check if the underlying token balance is more than 0, meaning the factory contract passed tokens from the creator
         if (IERC20(_dealData.underlyingDealToken).balanceOf(address(this)) > 0) {
@@ -230,11 +233,9 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         totalPurchasingAccepted += purchaseTokenAmount;
         purchaseTokensPerUser[msg.sender][_vestingIndex] += purchaseTokenAmount;
 
-        uint8 underlyingTokenDecimals = IERC20Decimals(dealData.underlyingDealToken).decimals();
-
         // this takes into account the decimal conversion between purchasing token and underlying deal token
         // pool shares having the same amount of decimals as underlying deal tokens
-        uint256 poolSharesAmount = (purchaseTokenAmount * 10**underlyingTokenDecimals) /
+        uint256 poolSharesAmount = (purchaseTokenAmount * 10**(IERC20Decimals(dealData.underlyingDealToken).decimals())) /
             vestingSchedule[_vestingIndex].purchaseTokenPerDealToken;
         require(poolSharesAmount > 0, "purchase amount too small");
 
@@ -269,8 +270,6 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      * @dev purchaser calls to claim their deal tokens or refund if the minimum raise does not pass
      */
     function purchaserClaim() public lock purchasingOver {
-        //require(poolSharesPerUser[msg.sender] > 0, "no pool shares to claim with");
-
         uint256 _purchaseRaiseMinimum = dealConfig.purchaseRaiseMinimum;
         uint256 _underlyingDealTokenTotal = dealConfig.underlyingDealTokenTotal;
 
@@ -610,6 +609,31 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
             nftGating.nftWalletUsedForPurchase[_collection][_wallet],
             nftGating.nftId[_collection][_nftId],
             nftGating.hasNftList
+        );
+    }
+
+    /**
+     * @dev get the vesting schedule struct information for a single vesting schedule
+     * @param _vestingIndex the index in the dealConfig.vestingSchedule struct array to return the data from
+     * @return uint256 purchaseTokenPerDealToken
+     * @return uint256 vestingCliffPeriod
+     * @return uint256 vestingPeriod
+     */
+    function getVestingScheduleDetails(uint256 _vestingIndex)
+        public
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        require(_vestingIndex < dealConfig.vestingSchedule.length, "index not in bounds");
+        IAelinUpFrontDeal.VestingSchedule memory vestingSchedule = dealConfig.vestingSchedule[_vestingIndex];
+        return (
+            vestingSchedule.purchaseTokenPerDealToken,
+            vestingSchedule.vestingCliffPeriod,
+            vestingSchedule.vestingPeriod
         );
     }
 
