@@ -69,6 +69,7 @@ contract AelinUpFrontDealFactoryTest is Test {
     ) public {
         vm.assume(_sponsorFee < MAX_SPONSOR_FEE);
         vm.assume(_underlyingDealTokenTotal > 0);
+        vm.assume(_underlyingDealTokenTotal < 1e41);
         vm.assume(_purchaseTokenPerDealToken > 0);
         vm.assume(_purchaseDuration >= 30 minutes);
         vm.assume(_purchaseDuration <= 30 days);
@@ -80,6 +81,13 @@ contract AelinUpFrontDealFactoryTest is Test {
         vestingSingle[0].purchaseTokenPerDealToken = _purchaseTokenPerDealToken;
         vestingSingle[0].vestingCliffPeriod = _vestingCliffPeriod;
         vestingSingle[0].vestingPeriod = _vestingPeriod;
+
+        unchecked {
+            uint256 test = _purchaseTokenPerDealToken * _underlyingDealTokenTotal;
+            vm.assume(test / _purchaseTokenPerDealToken == _underlyingDealTokenTotal);
+            test = test / 10**MockERC20(underlyingDealToken).decimals();
+            vm.assume(test > 0);
+        }
 
         AelinNftGating.NftCollectionRules[] memory _nftCollectionRules;
         AelinAllowList.InitData memory _allowListInit;
@@ -418,6 +426,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         bool _allowDeallocation
     ) public {
         vm.assume(_underlyingDealTokenTotal > 0);
+        vm.assume(_underlyingDealTokenTotal < 1e41);
         vm.assume(_purchaseDuration >= 30 minutes);
         vm.assume(_purchaseDuration <= 30 days);
         vm.assume(_vestingCliffPeriod <= 1825 days);
@@ -508,6 +517,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         vm.assume(_vestingCliffPeriod <= 1825 days);
         vm.assume(_vestingPeriod <= 1825 days);
         vm.assume(_depositUnderlyingAmount >= _underlyingDealTokenTotal);
+        vm.assume(_underlyingDealTokenTotal < 1e41);
         vm.assume(_testAddress != address(0));
 
         // Vesting Schedules
@@ -590,6 +600,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         uint256 _vestingCliffPeriod
     ) public {
         vm.assume(_underlyingDealTokenTotal > 0);
+        vm.assume(_underlyingDealTokenTotal < 1e41);
         vm.assume(_purchaseDuration >= 30 minutes);
         vm.assume(_purchaseDuration <= 30 days);
         vm.assume(_vestingCliffPeriod <= 1825 days);
@@ -724,6 +735,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         uint256 _vestingCliffPeriod
     ) public {
         vm.assume(_underlyingDealTokenTotal > 0);
+        vm.assume(_underlyingDealTokenTotal < 1e41);
         vm.assume(_purchaseDuration >= 30 minutes);
         vm.assume(_purchaseDuration <= 30 days);
         vm.assume(_vestingCliffPeriod <= 1825 days);
