@@ -529,6 +529,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
             require(IERC721(_collectionAddress).ownerOf(_tokenIds[i]) == msg.sender, "has to be the token owner");
             require(!nftId[_collectionAddress][_tokenIds[i]], "tokenId already used");
             nftId[_collectionAddress][_tokenIds[i]] = true;
+            emit BlacklistNFT(_collectionAddress, _tokenIds[i]);
         }
     }
 
@@ -551,6 +552,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
             require(ICryptoPunks(_punksAddress).punkIndexToAddress(_tokenIds[i]) == msg.sender, "not the owner");
             require(!nftId[_punksAddress][_tokenIds[i]], "tokenId already used");
             nftId[_punksAddress][_tokenIds[i]] = true;
+            emit BlacklistNFT(_punksAddress, _tokenIds[i]);
         }
     }
 
@@ -698,4 +700,5 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     );
     event Vouch(address indexed voucher);
     event Disavow(address indexed voucher);
+    event BlacklistNFT(address indexed collection, uint256 nftID);
 }
