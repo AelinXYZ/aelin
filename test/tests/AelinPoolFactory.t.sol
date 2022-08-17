@@ -362,16 +362,9 @@ contract AelinPoolFactoryTest is Test {
     }
 
     // reverts when some an address other than 721 or 1155 is provided
-    function testCreatePoolNonCompatibleAddress(uint256 timestamp, address collection) public {
-        vm.assume(timestamp < 1e77);
-        vm.assume(collection != address(collectionAddress1));
-        vm.assume(collection != address(collectionAddress2));
-        vm.assume(collection != address(collectionAddress3));
-        vm.assume(collection != address(collectionAddress4));
-        vm.assume(collection != punks);
-
+    function testCreatePoolNonCompatibleAddress() public {
         IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](1);
-        nftCollectionRules[0].collectionAddress = collection;
+        nftCollectionRules[0].collectionAddress = address(testEscrow);
         nftCollectionRules[0].purchaseAmount = 1e20;
         nftCollectionRules[0].purchaseAmountPerToken = true;
 
@@ -389,7 +382,6 @@ contract AelinPoolFactoryTest is Test {
             nftCollectionRules: nftCollectionRules
         });
 
-        vm.warp(timestamp);
         vm.expectRevert(bytes("collection is not compatible"));
         poolFactory.createPool(poolData);
     }
