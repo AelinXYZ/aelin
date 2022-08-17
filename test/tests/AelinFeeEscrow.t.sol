@@ -150,6 +150,7 @@ contract AelinFeeEscrowTest is Test {
     }
 
     function testFailDelayEscrowDiffAddress(address testAddress) public {
+        vm.assume(address(aelinTreasury) != testAddress);
         vm.prank(testAddress);
         AelinFeeEscrow(escrowAddress).delayEscrow();
     }
