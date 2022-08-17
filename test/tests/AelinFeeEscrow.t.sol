@@ -149,10 +149,7 @@ contract AelinFeeEscrowTest is Test {
         AelinFeeEscrow(escrowAddress).delayEscrow();
     }
 
-    function testFailDelayEscrowDiffAddress(uint256 timestamp, address testAddress) public {
-        vm.assume(timestamp > 120 days);
-        vm.assume(timestamp < type(uint256).max);
-        vm.warp(timestamp);
+    function testFailDelayEscrowDiffAddress(address testAddress) public {
         vm.prank(testAddress);
         AelinFeeEscrow(escrowAddress).delayEscrow();
     }
