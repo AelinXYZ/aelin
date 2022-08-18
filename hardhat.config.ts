@@ -46,7 +46,7 @@ const config: HardhatUserConfig = {
     },
     mainnet: {
       url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
-      accounts: [`0x${process.env.OP_PRIVATE_KEY}`],
+      accounts: [`0x${process.env.MAINNET_PRIVATE_KEY}`],
       gasMultiplier: 1.5,
     },
     kovan: {
