@@ -39,21 +39,27 @@ async function main() {
 	// const dealLogicAddress = "0x722969A3fdc778a5cC7CbC8DC8Ae3e96a288f853";
 	// const rewardsAddress = "0x5B8F3fb479571Eca6A06240b21926Db586Cdf10f";
 
+	// mainnet OP deployed contracts v4
+	const poolLogicAddress = '0x9d30dE9EeEb855D08c22155593FA5e035a742108';
+	const dealLogicAddress = '0x2b58528dABF7fC3Ed0102DF7bfE2578e951bDE02';
+	const rewardsAddress = '0x5B8F3fb479571Eca6A06240b21926Db586Cdf10f';
+	const escrowAddress = '0xf145650Cbb189f5f05ece057fc55F341d513C8C4';
 	// goerli deployed contracts
 	// const poolLogicAddress = "0xE46d449924A74D3155B2605E12399D22401f16E4";
 	// const dealLogicAddress = "0xBE68F3E4B5CEbaAB155582a4220cDf8E439861A5";
 	// const rewardsAddress = "0x9d6DC72ED8ff3464cFd814c9Bb1Db0aFB157Cb97";
 
 	// kovan deployed contracts
-	const poolLogicAddress = '0x0ad6487267c5F92e588F1e72d60FC39d54cBE8EF';
-	const dealLogicAddress = '0xB32F6CfC7Db506be9D3F45EC5d008165A26DE098';
-	const rewardsAddress = '0x7856f2a12A7A18b4A115d295F548434a9b078fA1';
+	// const poolLogicAddress = '0x0ad6487267c5F92e588F1e72d60FC39d54cBE8EF';
+	// const dealLogicAddress = '0xB32F6CfC7Db506be9D3F45EC5d008165A26DE098';
+	// const rewardsAddress = '0x7856f2a12A7A18b4A115d295F548434a9b078fA1';
 
 	const AelinPoolFactory = await ethers.getContractFactory('AelinPoolFactory');
 	const aelinPoolFactory = await AelinPoolFactory.deploy(
 		poolLogicAddress,
 		dealLogicAddress,
-		rewardsAddress
+		rewardsAddress,
+		escrowAddress
 	);
 
 	console.log('AelinPoolFactory address:', aelinPoolFactory.address);
