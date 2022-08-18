@@ -24,6 +24,12 @@ async function main() {
 	// const dealLogicAddress = "0xeF1C0B40016d0EA08e4F409f48e618B41eDF66D9";
 	// const rewardsAddress = "0x51b0332E1b3349bcF01689E63e34d8859595e376";
 
+	// mainnet v4
+	const poolLogicAddress = '0x7Abdc254845300f5cB8571D65668D3f1310969A5';
+	const dealLogicAddress = '0x813D9F50742A365C3C228B0755a9b505fDfa396a';
+	const rewardsAddress = '0x51b0332E1b3349bcF01689E63e34d8859595e376';
+	const escrowAddress = '0x7fe3d63c0bE423000772C231Dfd43DE6B32a161e';
+
 	// mainnet OP deployed contracts
 	// const poolLogicAddress = "0x689b7D709106bc488f872C50B688F058048536BE";
 	// const dealLogicAddress = "0xBca527108Bcc3DE437C5Bfdb1A5489DE26DeEaE0";
@@ -40,10 +46,11 @@ async function main() {
 	// const rewardsAddress = "0x5B8F3fb479571Eca6A06240b21926Db586Cdf10f";
 
 	// mainnet OP deployed contracts v4
-	const poolLogicAddress = '0x9d30dE9EeEb855D08c22155593FA5e035a742108';
-	const dealLogicAddress = '0x2b58528dABF7fC3Ed0102DF7bfE2578e951bDE02';
-	const rewardsAddress = '0x5B8F3fb479571Eca6A06240b21926Db586Cdf10f';
-	const escrowAddress = '0xf145650Cbb189f5f05ece057fc55F341d513C8C4';
+	// const poolLogicAddress = '0x9d30dE9EeEb855D08c22155593FA5e035a742108';
+	// const dealLogicAddress = '0x2b58528dABF7fC3Ed0102DF7bfE2578e951bDE02';
+	// const rewardsAddress = '0x5B8F3fb479571Eca6A06240b21926Db586Cdf10f';
+	// const escrowAddress = '0xf145650Cbb189f5f05ece057fc55F341d513C8C4';
+
 	// goerli deployed contracts
 	// const poolLogicAddress = "0xE46d449924A74D3155B2605E12399D22401f16E4";
 	// const dealLogicAddress = "0xBE68F3E4B5CEbaAB155582a4220cDf8E439861A5";
@@ -60,6 +67,7 @@ async function main() {
 		dealLogicAddress,
 		rewardsAddress,
 		escrowAddress
+		// { gasPrice: ethers.utils.parseUnits('15', 'gwei') }
 	);
 
 	console.log('AelinPoolFactory address:', aelinPoolFactory.address);
