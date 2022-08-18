@@ -2,10 +2,11 @@
 pragma solidity 0.8.6;
 
 import "./AelinERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "./interfaces/IAelinDeal.sol";
+import "./MinimalProxyFactory.sol";
+import "./AelinFeeEscrow.sol";
 
-contract AelinDeal is AelinERC20 {
+contract AelinDeal is AelinERC20, MinimalProxyFactory, IAelinDeal {
     using SafeERC20 for IERC20;
     uint256 public maxTotalSupply;
 
@@ -14,27 +15,26 @@ contract AelinDeal is AelinERC20 {
     uint256 public totalUnderlyingClaimed;
     address public holder;
     address public futureHolder;
-    address public aelinRewardsAddress;
+    address public aelinTreasuryAddress;
 
     uint256 public underlyingPerDealExchangeRate;
 
     address public aelinPool;
-    uint256 public vestingCliff;
+    uint256 public vestingCliffExpiry;
+    uint256 public vestingCliffPeriod;
     uint256 public vestingPeriod;
     uint256 public vestingExpiry;
     uint256 public holderFundingExpiry;
 
-    uint256 public proRataRedemptionPeriod;
-    uint256 public proRataRedemptionStart;
-    uint256 public proRataRedemptionExpiry;
+    bool private calledInitialize;
+    address public aelinEscrowAddress;
+    AelinFeeEscrow public aelinFeeEscrow;
 
-    uint256 public openRedemptionPeriod;
-    uint256 public openRedemptionStart;
-    uint256 public openRedemptionExpiry;
-
-    bool public calledInitialize;
     bool public depositComplete;
     mapping(address => uint256) public amountVested;
+
+    Timeline public openRedemption;
+    Timeline public proRataRedemption;
 
     /**
      * @dev the constructor will always be blank due to the MinimalProxyFactory pattern
@@ -48,52 +48,39 @@ contract AelinDeal is AelinERC20 {
      * NOTE the deal tokens wrapping the underlying are always 18 decimals
      */
     function initialize(
-        string memory _name,
-        string memory _symbol,
-        address _underlyingDealToken,
-        uint256 _underlyingDealTokenTotal,
-        uint256 _vestingPeriod,
-        uint256 _vestingCliff,
-        uint256 _proRataRedemptionPeriod,
-        uint256 _openRedemptionPeriod,
-        address _holder,
-        uint256 _maxDealTotalSupply,
-        uint256 _holderFundingDuration,
-        address _aelinRewardsAddress
+        string calldata _poolName,
+        string calldata _poolSymbol,
+        DealData calldata _dealData,
+        address _aelinTreasuryAddress,
+        address _aelinEscrowAddress
     ) external initOnce {
         _setNameSymbolAndDecimals(
-            string(abi.encodePacked("aeDeal-", _name)),
-            string(abi.encodePacked("aeD-", _symbol)),
+            string(abi.encodePacked("aeDeal-", _poolName)),
+            string(abi.encodePacked("aeD-", _poolSymbol)),
             DEAL_TOKEN_DECIMALS
         );
 
-        holder = _holder;
-        underlyingDealToken = _underlyingDealToken;
-        underlyingDealTokenTotal = _underlyingDealTokenTotal;
-        maxTotalSupply = _maxDealTotalSupply;
+        holder = _dealData.holder;
+        underlyingDealToken = _dealData.underlyingDealToken;
+        underlyingDealTokenTotal = _dealData.underlyingDealTokenTotal;
+        maxTotalSupply = _dealData.maxDealTotalSupply;
 
         aelinPool = msg.sender;
-        vestingCliff =
-            block.timestamp +
-            _proRataRedemptionPeriod +
-            _openRedemptionPeriod +
-            _vestingCliff;
-        vestingPeriod = _vestingPeriod;
-        vestingExpiry = vestingCliff + _vestingPeriod;
-        proRataRedemptionPeriod = _proRataRedemptionPeriod;
-        openRedemptionPeriod = _openRedemptionPeriod;
-        holderFundingExpiry = _holderFundingDuration;
-        aelinRewardsAddress = _aelinRewardsAddress;
+        vestingCliffPeriod = _dealData.vestingCliffPeriod;
+        vestingPeriod = _dealData.vestingPeriod;
+        proRataRedemption.period = _dealData.proRataRedemptionPeriod;
+        openRedemption.period = _dealData.openRedemptionPeriod;
+        holderFundingExpiry = _dealData.holderFundingDuration;
+        aelinTreasuryAddress = _aelinTreasuryAddress;
+        aelinEscrowAddress = _aelinEscrowAddress;
 
         depositComplete = false;
 
         /**
          * calculates the amount of underlying deal tokens you get per wrapped deal token accepted
          */
-        underlyingPerDealExchangeRate =
-            (_underlyingDealTokenTotal * 1e18) /
-            maxTotalSupply;
-        emit SetHolder(_holder);
+        underlyingPerDealExchangeRate = (_dealData.underlyingDealTokenTotal * 1e18) / maxTotalSupply;
+        emit SetHolder(_dealData.holder);
     }
 
     modifier initOnce() {
@@ -112,6 +99,7 @@ contract AelinDeal is AelinERC20 {
      * @dev the holder may change their address
      */
     function setHolder(address _holder) external onlyHolder {
+        require(_holder != address(0));
         futureHolder = _holder;
     }
 
@@ -129,53 +117,38 @@ contract AelinDeal is AelinERC20 {
      * the deposit still needs to be finalized by calling this method with
      * _underlyingDealTokenAmount set to 0
      */
-    function depositUnderlying(uint256 _underlyingDealTokenAmount)
-        external
-        finalizeDeposit
-        lock
-        returns (bool)
-    {
+    function depositUnderlying(uint256 _underlyingDealTokenAmount) external finalizeDeposit lock returns (bool) {
         if (_underlyingDealTokenAmount > 0) {
-            uint256 currentBalance = IERC20(underlyingDealToken).balanceOf(
-                address(this)
-            );
-            IERC20(underlyingDealToken).safeTransferFrom(
-                msg.sender,
-                address(this),
-                _underlyingDealTokenAmount
-            );
-            uint256 balanceAfterTransfer = IERC20(underlyingDealToken)
-                .balanceOf(address(this));
-            uint256 underlyingDealTokenAmount = balanceAfterTransfer -
-                currentBalance;
+            uint256 currentBalance = IERC20(underlyingDealToken).balanceOf(address(this));
+            IERC20(underlyingDealToken).safeTransferFrom(msg.sender, address(this), _underlyingDealTokenAmount);
+            uint256 balanceAfterTransfer = IERC20(underlyingDealToken).balanceOf(address(this));
+            uint256 underlyingDealTokenAmount = balanceAfterTransfer - currentBalance;
 
-            emit DepositDealToken(
-                underlyingDealToken,
-                msg.sender,
-                underlyingDealTokenAmount
-            );
+            emit DepositDealToken(underlyingDealToken, msg.sender, underlyingDealTokenAmount);
         }
 
-        if (
-            IERC20(underlyingDealToken).balanceOf(address(this)) >=
-            underlyingDealTokenTotal
-        ) {
+        if (IERC20(underlyingDealToken).balanceOf(address(this)) >= underlyingDealTokenTotal) {
             depositComplete = true;
-            proRataRedemptionStart = block.timestamp;
-            proRataRedemptionExpiry = block.timestamp + proRataRedemptionPeriod;
+            proRataRedemption.start = block.timestamp;
+            proRataRedemption.expiry = block.timestamp + proRataRedemption.period;
+            vestingCliffExpiry = block.timestamp + proRataRedemption.period + openRedemption.period + vestingCliffPeriod;
+            vestingExpiry = vestingCliffExpiry + vestingPeriod;
 
-            if (openRedemptionPeriod > 0) {
-                openRedemptionStart = proRataRedemptionExpiry;
-                openRedemptionExpiry =
-                    proRataRedemptionExpiry +
-                    openRedemptionPeriod;
+            if (openRedemption.period > 0) {
+                openRedemption.start = proRataRedemption.expiry;
+                openRedemption.expiry = proRataRedemption.expiry + openRedemption.period;
             }
+
+            address aelinEscrowStorageProxy = _cloneAsMinimalProxy(aelinEscrowAddress, "Could not create new escrow");
+            aelinFeeEscrow = AelinFeeEscrow(aelinEscrowStorageProxy);
+            aelinFeeEscrow.initialize(aelinTreasuryAddress, underlyingDealToken);
+
             emit DealFullyFunded(
                 aelinPool,
-                proRataRedemptionStart,
-                proRataRedemptionExpiry,
-                openRedemptionStart,
-                openRedemptionExpiry
+                proRataRedemption.start,
+                proRataRedemption.expiry,
+                openRedemption.start,
+                openRedemption.expiry
             );
             return true;
         }
@@ -184,29 +157,19 @@ contract AelinDeal is AelinERC20 {
 
     /**
      * @dev the holder can withdraw any amount accidentally deposited over
-     * the amount needed to fulfill the deal
-     *
-     * NOTE if the deposit was completed with a transfer instead of this method
-     * the deposit still needs to be finalized by calling this method with
-     * _underlyingDealTokenAmount set to 0
+     * the amount needed to fulfill the deal or all amount if deposit was not completed
      */
     function withdraw() external onlyHolder {
         uint256 withdrawAmount;
         if (!depositComplete && block.timestamp >= holderFundingExpiry) {
-            withdrawAmount = IERC20(underlyingDealToken).balanceOf(
-                address(this)
-            );
+            withdrawAmount = IERC20(underlyingDealToken).balanceOf(address(this));
         } else {
             withdrawAmount =
                 IERC20(underlyingDealToken).balanceOf(address(this)) -
                 (underlyingDealTokenTotal - totalUnderlyingClaimed);
         }
         IERC20(underlyingDealToken).safeTransfer(holder, withdrawAmount);
-        emit WithdrawUnderlyingDealToken(
-            underlyingDealToken,
-            holder,
-            withdrawAmount
-        );
+        emit WithdrawUnderlyingDealToken(underlyingDealToken, holder, withdrawAmount);
     }
 
     /**
@@ -217,22 +180,17 @@ contract AelinDeal is AelinERC20 {
      * - both the pro rata and open redemption windows are no longer active
      */
     function withdrawExpiry() external onlyHolder {
-        require(proRataRedemptionExpiry > 0, "redemption period not started");
+        require(proRataRedemption.expiry > 0, "redemption period not started");
         require(
-            openRedemptionExpiry > 0
-                ? block.timestamp >= openRedemptionExpiry
-                : block.timestamp >= proRataRedemptionExpiry,
+            openRedemption.expiry > 0
+                ? block.timestamp >= openRedemption.expiry
+                : block.timestamp >= proRataRedemption.expiry,
             "redeem window still active"
         );
-        uint256 withdrawAmount = IERC20(underlyingDealToken).balanceOf(
-            address(this)
-        ) - ((underlyingPerDealExchangeRate * totalSupply()) / 1e18);
+        uint256 withdrawAmount = IERC20(underlyingDealToken).balanceOf(address(this)) -
+            ((underlyingPerDealExchangeRate * totalSupply()) / 1e18);
         IERC20(underlyingDealToken).safeTransfer(holder, withdrawAmount);
-        emit WithdrawUnderlyingDealToken(
-            underlyingDealToken,
-            holder,
-            withdrawAmount
-        );
+        emit WithdrawUnderlyingDealToken(underlyingDealToken, holder, withdrawAmount);
     }
 
     modifier onlyHolder() {
@@ -256,24 +214,18 @@ contract AelinDeal is AelinERC20 {
     {
         underlyingClaimable = 0;
         dealTokensClaimable = 0;
-        uint256 maxTime = block.timestamp > vestingExpiry
-            ? vestingExpiry
-            : block.timestamp;
+
+        uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
         if (
             balanceOf(purchaser) > 0 &&
-            (maxTime > vestingCliff ||
-                (maxTime == vestingCliff && vestingPeriod == 0))
+            (maxTime > vestingCliffExpiry || (maxTime == vestingCliffExpiry && vestingPeriod == 0))
         ) {
-            uint256 timeElapsed = maxTime - vestingCliff;
+            uint256 timeElapsed = maxTime - vestingCliffExpiry;
+
             dealTokensClaimable = vestingPeriod == 0
                 ? balanceOf(purchaser)
-                : ((balanceOf(purchaser) + amountVested[purchaser]) *
-                    timeElapsed) /
-                    vestingPeriod -
-                    amountVested[purchaser];
-            underlyingClaimable =
-                (underlyingPerDealExchangeRate * dealTokensClaimable) /
-                1e18;
+                : ((balanceOf(purchaser) + amountVested[purchaser]) * timeElapsed) / vestingPeriod - amountVested[purchaser];
+            underlyingClaimable = (underlyingPerDealExchangeRate * dealTokensClaimable) / 1e18;
         }
     }
 
@@ -287,41 +239,39 @@ contract AelinDeal is AelinERC20 {
     }
 
     function _claim(address recipient) internal returns (uint256) {
-        (
-            uint256 underlyingDealTokensClaimed,
-            uint256 dealTokensClaimed
-        ) = claimableTokens(recipient);
+        (uint256 underlyingDealTokensClaimed, uint256 dealTokensClaimed) = claimableTokens(recipient);
         if (dealTokensClaimed > 0) {
             amountVested[recipient] += dealTokensClaimed;
-            _burn(recipient, dealTokensClaimed);
-            IERC20(underlyingDealToken).safeTransfer(
-                recipient,
-                underlyingDealTokensClaimed
-            );
             totalUnderlyingClaimed += underlyingDealTokensClaimed;
-            emit ClaimedUnderlyingDealToken(
-                underlyingDealToken,
-                recipient,
-                underlyingDealTokensClaimed
-            );
+            _burn(recipient, dealTokensClaimed);
+            IERC20(underlyingDealToken).safeTransfer(recipient, underlyingDealTokensClaimed);
+            emit ClaimedUnderlyingDealToken(underlyingDealToken, recipient, underlyingDealTokensClaimed);
         }
         return dealTokensClaimed;
     }
 
     /**
      * @dev allows the purchaser to mint deal tokens. this method is also used
-     * to send deal tokens to the sponsor and the aelin rewards pool. It may only
-     * be called from the pool contract that created this deal
+     * to send deal tokens to the sponsor. It may only be called from the pool
+     * contract that created this deal
      */
     function mint(address dst, uint256 dealTokenAmount) external onlyPool {
         require(depositComplete, "deposit not complete");
         _mint(dst, dealTokenAmount);
     }
 
+    /**
+     * @dev allows the protocol to handle protocol fees coming in deal tokens.
+     * It may only be called from the pool contract that created this deal
+     */
+    function protocolMint(uint256 dealTokenAmount) external onlyPool {
+        require(depositComplete, "deposit not complete");
+        uint256 underlyingProtocolFees = (underlyingPerDealExchangeRate * dealTokenAmount) / 1e18;
+        IERC20(underlyingDealToken).safeTransfer(address(aelinFeeEscrow), underlyingProtocolFees);
+    }
+
     modifier blockTransfer() {
-        if (msg.sender != aelinRewardsAddress) {
-            require(false, "cannot transfer deal tokens");
-        }
+        require(msg.sender == aelinTreasuryAddress, "cannot transfer deal tokens");
         _;
     }
 
@@ -331,21 +281,11 @@ contract AelinDeal is AelinERC20 {
      * single transaction for distribution to $AELIN stakers.
      */
     function treasuryTransfer(address recipient) external returns (bool) {
-        require(
-            msg.sender == aelinRewardsAddress,
-            "only Rewards address can access"
-        );
-        (
-            uint256 underlyingClaimable,
-            uint256 claimableDealTokens
-        ) = claimableTokens(msg.sender);
+        require(msg.sender == aelinTreasuryAddress, "only Rewards address can access");
+        (uint256 underlyingClaimable, uint256 claimableDealTokens) = claimableTokens(msg.sender);
         transfer(recipient, balanceOf(msg.sender) - claimableDealTokens);
-        return
-            IERC20(underlyingDealToken).transferFrom(
-                msg.sender,
-                recipient,
-                underlyingClaimable
-            );
+        IERC20(underlyingDealToken).safeTransferFrom(msg.sender, recipient, underlyingClaimable);
+        return true;
     }
 
     /**
@@ -354,36 +294,17 @@ contract AelinDeal is AelinERC20 {
      * tokens. They must also pay for the receivers claim and burn any of their vested tokens in order to ensure
      * the claim calculation is always accurate for all parties in the system
      */
-    function transferMax(address recipient)
-        external
-        blockTransfer
-        returns (bool)
-    {
+    function transferMax(address recipient) external blockTransfer returns (bool) {
         (, uint256 claimableDealTokens) = claimableTokens(msg.sender);
         return transfer(recipient, balanceOf(msg.sender) - claimableDealTokens);
     }
 
-    function transferFromMax(address sender, address recipient)
-        external
-        blockTransfer
-        returns (bool)
-    {
+    function transferFromMax(address sender, address recipient) external blockTransfer returns (bool) {
         (, uint256 claimableDealTokens) = claimableTokens(sender);
-        return
-            transferFrom(
-                sender,
-                recipient,
-                balanceOf(sender) - claimableDealTokens
-            );
+        return transferFrom(sender, recipient, balanceOf(sender) - claimableDealTokens);
     }
 
-    function transfer(address recipient, uint256 amount)
-        public
-        virtual
-        override
-        blockTransfer
-        returns (bool)
-    {
+    function transfer(address recipient, uint256 amount) public virtual override blockTransfer returns (bool) {
         _claim(msg.sender);
         _claim(recipient);
         return super.transfer(recipient, amount);

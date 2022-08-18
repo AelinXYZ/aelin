@@ -7,7 +7,8 @@ import ERC20Artifact from "../../artifacts/@openzeppelin/contracts/token/ERC20/E
 import AelinDealArtifact from "../../artifacts/contracts/AelinDeal.sol/AelinDeal.json";
 import AelinPoolArtifact from "../../artifacts/contracts/AelinPool.sol/AelinPool.json";
 import AelinPoolFactoryArtifact from "../../artifacts/contracts/AelinPoolFactory.sol/AelinPoolFactory.json";
-import { AelinPool, AelinPoolFactory } from "../../typechain";
+import AelinFeeEscrowArtifact from "../../artifacts/contracts/AelinFeeEscrow.sol/AelinFeeEscrow.json";
+import { AelinPool, AelinPoolFactory, AelinFeeEscrow } from "../../typechain";
 import { mockAelinRewardsAddress, nullAddress } from "../helpers";
 
 const { deployContract, deployMockContract } = waffle;
@@ -21,6 +22,7 @@ describe("AelinPoolFactory", function () {
   let aelinDealLogic: MockContract;
   let aelinPoolLogic: AelinPool;
   let aelinPoolFactory: AelinPoolFactory;
+  let aelinEscrowLogic: AelinFeeEscrow;
 
   const name = "Test token";
   const symbol = "AMA";
@@ -51,28 +53,31 @@ describe("AelinPoolFactory", function () {
       deployer,
       AelinPoolArtifact
     )) as AelinPool;
+    aelinEscrowLogic = (await deployContract(
+      deployer,
+      AelinPoolArtifact
+    )) as AelinFeeEscrow;
     await purchaseToken.mock.decimals.returns(6);
     aelinPoolFactory = (await deployContract(
       deployer,
       AelinPoolFactoryArtifact,
-      [aelinPoolLogic.address, aelinDealLogic.address, mockAelinRewardsAddress]
+      [aelinPoolLogic.address, aelinDealLogic.address, mockAelinRewardsAddress, aelinEscrowLogic.address]
     )) as AelinPoolFactory;
   });
 
   it("Should call the createPool method", async function () {
-    const result = await aelinPoolFactory
-      .connect(sponsor)
-      .createPool(
-        name,
-        symbol,
-        purchaseTokenCap,
-        purchaseToken.address,
-        duration,
-        sponsorFee,
-        purchaseExpiry,
-        [],
-        []
-      );
+    const result = await aelinPoolFactory.connect(sponsor).createPool({
+      name,
+      symbol,
+      purchaseTokenCap,
+      purchaseToken: purchaseToken.address,
+      duration,
+      sponsorFee,
+      purchaseDuration: purchaseExpiry,
+      allowListAddresses: [],
+      allowListAmounts: [],
+      nftCollectionRules: [],
+    });
 
     expect(result.value).to.equal(0);
 
@@ -94,19 +99,18 @@ describe("AelinPoolFactory", function () {
 
   it("Should revert when purchse token is zero address", async function () {
     await expect(
-      aelinPoolFactory
-        .connect(sponsor)
-        .createPool(
-          name,
-          symbol,
-          purchaseTokenCap,
-          nullAddress,
-          duration,
-          sponsorFee,
-          purchaseExpiry,
-          [],
-          []
-        )
+      aelinPoolFactory.connect(sponsor).createPool({
+        name,
+        symbol,
+        purchaseTokenCap,
+        purchaseToken: nullAddress,
+        duration,
+        sponsorFee,
+        purchaseDuration: purchaseExpiry,
+        allowListAddresses: [],
+        allowListAmounts: [],
+        nftCollectionRules: [],
+      })
     ).to.be.revertedWith("cant pass null token address");
   });
 
@@ -116,6 +120,7 @@ describe("AelinPoolFactory", function () {
         nullAddress,
         aelinDealLogic.address,
         mockAelinRewardsAddress,
+        aelinEscrowLogic.address
       ])
     ).to.be.revertedWith("cant pass null pool address");
 
@@ -124,6 +129,7 @@ describe("AelinPoolFactory", function () {
         aelinPoolLogic.address,
         nullAddress,
         mockAelinRewardsAddress,
+        aelinEscrowLogic.address
       ])
     ).to.be.revertedWith("cant pass null deal address");
 
@@ -132,24 +138,33 @@ describe("AelinPoolFactory", function () {
         aelinPoolLogic.address,
         aelinDealLogic.address,
         nullAddress,
+        aelinEscrowLogic.address
       ])
-    ).to.be.revertedWith("cant pass null rewards address");
+    ).to.be.revertedWith("cant pass null treasury address");
+
+    await expect(
+      deployContract(deployer, AelinPoolFactoryArtifact, [
+        aelinPoolLogic.address,
+        aelinDealLogic.address,
+        mockAelinRewardsAddress,
+        nullAddress
+      ])
+    ).to.be.revertedWith("cant pass null escrow address");
   });
 
   it("Should work with an allow list and amounts of equal array length", async function () {
-    const result = await aelinPoolFactory
-      .connect(sponsor)
-      .createPool(
-        name,
-        symbol,
-        purchaseTokenCap,
-        purchaseToken.address,
-        duration,
-        sponsorFee,
-        purchaseExpiry,
-        allowList,
-        allowListAmounts
-      );
+    const result = await aelinPoolFactory.connect(sponsor).createPool({
+      name,
+      symbol,
+      purchaseTokenCap,
+      purchaseToken: purchaseToken.address,
+      duration,
+      sponsorFee,
+      purchaseDuration: purchaseExpiry,
+      allowListAddresses: allowList,
+      allowListAmounts: allowListAmounts,
+      nftCollectionRules: [],
+    });
     expect(result.value).to.equal(0);
 
     const [, log] = await aelinPoolFactory.queryFilter(
@@ -169,19 +184,20 @@ describe("AelinPoolFactory", function () {
   });
   it("Should error with an allow list and amounts of mismatching length", async function () {
     await expect(
-      aelinPoolFactory
-        .connect(sponsor)
-        .createPool(
-          name,
-          symbol,
-          purchaseTokenCap,
-          purchaseToken.address,
-          duration,
-          sponsorFee,
-          purchaseExpiry,
-          [...allowList, deployer.address],
-          allowListAmounts
-        )
-    ).to.be.revertedWith("allowList array length issue");
+      aelinPoolFactory.connect(sponsor).createPool({
+        name,
+        symbol,
+        purchaseTokenCap,
+        purchaseToken: purchaseToken.address,
+        duration,
+        sponsorFee,
+        purchaseDuration: purchaseExpiry,
+        allowListAddresses: [...allowList, deployer.address],
+        allowListAmounts: allowListAmounts,
+        nftCollectionRules: [],
+      })
+    ).to.be.revertedWith(
+      "allowListAddresses and allowListAmounts arrays should have the same length"
+    );
   });
 });

@@ -8,3 +8,5 @@ coverage
 coverage.json
 .idea
 lint-results.sarif
+.env
+.vscode/
