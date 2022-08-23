@@ -8,6 +8,7 @@ import "hardhat-interact";
 import "solidity-coverage";
 import "@nomiclabs/hardhat-etherscan";
 import "dotenv/config";
+import "hardhat/cannon";
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
