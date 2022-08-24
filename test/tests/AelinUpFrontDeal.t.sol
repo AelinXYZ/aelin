@@ -31,6 +31,7 @@ contract AelinUpFrontDealTest is Test {
     address dealAddressNftGating721;
     address dealAddressNftGatingPunks;
     address dealAddressNftGating1155;
+    address dealAddressMultipleSchedules;
 
     AelinUpFrontDeal public testUpFrontDeal;
     AelinUpFrontDealFactory public upFrontDealFactory;
@@ -219,6 +220,36 @@ contract AelinUpFrontDealTest is Test {
                 dealData,
                 dealConfig,
                 nftCollectionRules1155,
+                allowListInitEmpty,
+                1e35
+            );
+        }
+
+        if (true) {
+            AelinAllowList.InitData memory allowListInitEmpty;
+            AelinNftGating.NftCollectionRules[] memory nftCollectionRulesEmpty;
+
+            IAelinUpFrontDeal.VestingSchedule[] memory vestingMulti = new IAelinUpFrontDeal.VestingSchedule[](2);
+            vestingMulti[0].purchaseTokenPerDealToken = 3e18;
+            vestingMulti[0].vestingCliffPeriod = 60 days;
+            vestingMulti[0].vestingPeriod = 365 days;
+            vestingMulti[1].purchaseTokenPerDealToken = 2e18;
+            vestingMulti[1].vestingCliffPeriod = 90 days;
+            vestingMulti[1].vestingPeriod = 730 days;
+
+            IAelinUpFrontDeal.UpFrontDealConfig memory dealConfigMultipleVesting;
+            dealConfigMultipleVesting = IAelinUpFrontDeal.UpFrontDealConfig({
+                underlyingDealTokenTotal: 1e35,
+                purchaseRaiseMinimum: 1e28,
+                purchaseDuration: 10 days,
+                vestingSchedule: vestingMulti,
+                allowDeallocation: true
+            });
+
+            dealAddressMultipleSchedules = upFrontDealFactory.createUpFrontDeal(
+                dealData,
+                dealConfigMultipleVesting,
+                nftCollectionRulesEmpty,
                 allowListInitEmpty,
                 1e35
             );
@@ -648,7 +679,10 @@ contract AelinUpFrontDealTest is Test {
         assertEq(AelinUpFrontDeal(dealAddressNftGating1155).aelinTreasuryAddress(), aelinTreasury);
         assertEq(AelinUpFrontDeal(dealAddressNftGating1155).purchaseExpiry(), block.timestamp + 10 days);
         assertEq(AelinUpFrontDeal(dealAddressNftGating1155).vestingCliffExpiry(0), block.timestamp + 10 days + 60 days);
-        assertEq(AelinUpFrontDeal(dealAddressNftGating1155).vestingCliffExpiry(0), block.timestamp + 10 days + 60 days);
+        assertEq(
+            AelinUpFrontDeal(dealAddressNftGating1155).vestingExpiry(0),
+            block.timestamp + 10 days + 60 days + 365 days
+        );
         // deal data
         (tempString, , , , , , ) = AelinUpFrontDeal(dealAddressNftGating1155).dealData();
         assertEq(tempString, "DEAL");
@@ -706,6 +740,75 @@ contract AelinUpFrontDealTest is Test {
         assertEq(tempUintArray1[1], 20);
         assertEq(tempUintArray2[0], 1000);
         assertEq(tempUintArray2[1], 2000);
+    }
+
+    function testInitializeMultipleSchedules() public {
+        string memory tempString;
+        address tempAddress;
+        uint256 tempUint;
+        bool tempBool;
+        // deal contract storage
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).dealFactory(), address(upFrontDealFactory));
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).name(), "aeUpFrontDeal-DEAL");
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).symbol(), "aeUD-DEAL");
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).decimals(), MockERC20(underlyingDealToken).decimals());
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).dealStart(), block.timestamp);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).aelinEscrowLogicAddress(), address(testEscrow));
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).aelinTreasuryAddress(), aelinTreasury);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry(), block.timestamp + 10 days);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).vestingCliffExpiry(0), block.timestamp + 10 days + 60 days);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(0),
+            block.timestamp + 10 days + 60 days + 365 days
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).vestingCliffExpiry(1), block.timestamp + 10 days + 90 days);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(1),
+            block.timestamp + 10 days + 90 days + 730 days
+        );
+        // deal data
+        (tempString, , , , , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        assertEq(tempString, "DEAL");
+        (, tempString, , , , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        assertEq(tempString, "DEAL");
+        (, , tempAddress, , , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        assertEq(tempAddress, address(purchaseToken));
+        (, , , tempAddress, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        assertEq(tempAddress, address(underlyingDealToken));
+        (, , , , tempAddress, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        assertEq(tempAddress, address(0xDEAD));
+        (, , , , , tempAddress, ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        assertEq(tempAddress, address(0xBEEF));
+        (, , , , , , tempUint) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        assertEq(tempUint, 100);
+        // deal config
+        (tempUint, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        assertEq(tempUint, 1e35);
+        (, tempUint, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        assertEq(tempUint, 1e28);
+        (, , tempUint, ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        assertEq(tempUint, 10 days);
+        (, , , tempBool) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        assertTrue(tempBool);
+        // vesting schedule details
+        (tempUint, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(0);
+        assertEq(tempUint, 3e18);
+        (, tempUint, ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(0);
+        assertEq(tempUint, 60 days);
+        (, , tempUint) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(0);
+        assertEq(tempUint, 365 days);
+        (tempUint, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(1);
+        assertEq(tempUint, 2e18);
+        (, tempUint, ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(1);
+        assertEq(tempUint, 90 days);
+        (, , tempUint) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(1);
+        assertEq(tempUint, 730 days);
+        // test allow list
+        (, , , tempBool) = AelinUpFrontDeal(dealAddressMultipleSchedules).getAllowList(address(0));
+        assertFalse(tempBool);
+        // test nft gating
+        (, , tempBool) = AelinUpFrontDeal(dealAddressMultipleSchedules).getNftGatingDetails(address(0), address(0), 0);
+        assertFalse(tempBool);
     }
 
     function testCannotCallInitializeTwice() public {
@@ -1638,6 +1741,67 @@ contract AelinUpFrontDealTest is Test {
         vm.stopPrank();
     }
 
+    function testAcceptDealInvalidVestingIndex() public {
+        vm.startPrank(address(0x1337));
+        uint256 purchaseAmount = 1e18;
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleSchedules), type(uint256).max);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        vm.expectRevert("index not in bounds");
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, purchaseAmount, 2);
+        vm.stopPrank();
+    }
+
+    function testAcceptDealMultipleSchedules(uint256 _purchaseAmount1, uint256 _purchaseAmount2) public {
+        vm.assume(_purchaseAmount1 > 0);
+        vm.assume(_purchaseAmount1 < 9e40);
+        vm.assume(_purchaseAmount2 > 0);
+        vm.assume(_purchaseAmount2 < 9e40);
+        vm.startPrank(address(0x1337));
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleSchedules), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            0
+        );
+        (uint256 purchaseTokenPerDealToken2, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            1
+        );
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        vm.assume(_purchaseAmount1 <= underlyingDealTokenTotal);
+        uint256 poolSharesAmount1 = (_purchaseAmount1 * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+        vm.assume(poolSharesAmount1 > 0);
+        uint256 poolSharesAmount2 = (_purchaseAmount2 * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken2;
+        vm.assume(poolSharesAmount2 > 0);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        // first purchase
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount1, _purchaseAmount1, poolSharesAmount1, poolSharesAmount1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount1, 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), _purchaseAmount1);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0),
+            _purchaseAmount1
+        );
+        // second purchase
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 1, _purchaseAmount2, _purchaseAmount2, poolSharesAmount2, poolSharesAmount2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount2, 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1 + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), poolSharesAmount2);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(),
+            _purchaseAmount1 + _purchaseAmount2
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1),
+            _purchaseAmount2
+        );
+        vm.stopPrank();
+    }
+
     /*//////////////////////////////////////////////////////////////
                             purchaserClaim
     //////////////////////////////////////////////////////////////*/
@@ -1693,6 +1857,8 @@ contract AelinUpFrontDealTest is Test {
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337), 0), 0);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337), 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getDealTokensPerSchedule(address(0x1337), 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getDealTokensPerSchedule(address(0x1337), 1), 0);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max);
     }
 
@@ -1733,6 +1899,11 @@ contract AelinUpFrontDealTest is Test {
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337), 0), 0);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337), 0), 0);
+        assertEq(
+            AelinUpFrontDeal(dealAddressOverFullDeposit).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokensForUser
+        );
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getDealTokensPerSchedule(address(0x1337), 1), 0);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)), adjustedDealTokensForUser);
         assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
@@ -1775,11 +1946,8 @@ contract AelinUpFrontDealTest is Test {
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         assertEq(MockERC20(dealAddressAllowDeallocation).balanceOf(address(0x1337)), 0);
         // claim
-        uint256 adjustedDealTokensForUser = (((AelinUpFrontDeal(dealAddressAllowDeallocation).getPoolSharesPerUser(
-            address(0x1337),
-            0
-        ) * underlyingDealTokenTotal) / AelinUpFrontDeal(dealAddressAllowDeallocation).totalPoolShares()) *
-            (BASE - AELIN_FEE - sponsorFee)) / BASE;
+        uint256 adjustedDealTokensForUser = (((poolSharesAmount * underlyingDealTokenTotal) /
+            AelinUpFrontDeal(dealAddressAllowDeallocation).totalPoolShares()) * (BASE - AELIN_FEE - sponsorFee)) / BASE;
         uint256 totalIntendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10**underlyingTokenDecimals;
         uint256 purchasingRefund = AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(
             address(0x1337),
@@ -1795,8 +1963,315 @@ contract AelinUpFrontDealTest is Test {
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPoolSharesPerUser(address(0x1337), 0), 0);
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted(), _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(address(0x1337), 0), 0);
+        assertEq(
+            AelinUpFrontDeal(dealAddressAllowDeallocation).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokensForUser
+        );
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getDealTokensPerSchedule(address(0x1337), 1), 0);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount + purchasingRefund);
         assertEq(MockERC20(dealAddressAllowDeallocation).balanceOf(address(0x1337)), adjustedDealTokensForUser);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+        vm.stopPrank();
+    }
+
+    function testPurchaserClaimMultiScheduleSinglePurchase(uint256 _purchaseAmount) public {
+        vm.assume(_purchaseAmount >= 1e28);
+        vm.assume(_purchaseAmount < 9e40);
+        vm.startPrank(address(0x1337));
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleSchedules), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        (uint256 purchaseTokenPerDealToken, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            1
+        );
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        uint256 poolSharesAmount;
+        unchecked {
+            poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+            vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
+            vm.assume(poolSharesAmount > 0);
+        }
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        // purchase
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 1, _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1),
+            _purchaseAmount
+        );
+        // claim
+        uint256 dealTokensForUser = ((BASE - AELIN_FEE - sponsorFee) *
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1)) / BASE;
+        require(purchaseToken.balanceOf(address(0x1337)) == (type(uint256).max - _purchaseAmount), "balance before claim");
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry() + 1 days);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimDealTokens(address(0x1337), dealTokensForUser, 0);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).purchaserClaim();
+        require(purchaseToken.balanceOf(address(0x1337)) == (type(uint256).max - _purchaseAmount), "balance after claim");
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0), 0);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            dealTokensForUser
+        );
+        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
+        assertEq(MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)), dealTokensForUser);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+        vm.stopPrank();
+    }
+
+    function testPurchaserClaimMultiScheduleRefund(uint256 _purchaseAmount) public {
+        vm.assume(_purchaseAmount > 0);
+        vm.assume(_purchaseAmount < (1e28 / 2));
+        vm.startPrank(address(0x1337));
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleSchedules), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            1
+        );
+        (uint256 purchaseTokenPerDealToken2, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            0
+        );
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        // purchase 1
+        uint256 poolSharesAmount1;
+        unchecked {
+            poolSharesAmount1 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+            vm.assume(poolSharesAmount1 <= underlyingDealTokenTotal);
+            vm.assume(poolSharesAmount1 > 0);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 1, _purchaseAmount, _purchaseAmount, poolSharesAmount1, poolSharesAmount1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1),
+            _purchaseAmount
+        );
+        // purchase 2
+        uint256 poolSharesAmount2;
+        unchecked {
+            poolSharesAmount2 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken2;
+            vm.assume(poolSharesAmount2 <= underlyingDealTokenTotal);
+            vm.assume(poolSharesAmount2 > 0);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount2, poolSharesAmount2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1 + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0),
+            _purchaseAmount
+        );
+        // claim
+        require(
+            purchaseToken.balanceOf(address(0x1337)) == (type(uint256).max - 2 * _purchaseAmount),
+            "balance before claim"
+        );
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry() + 1 days);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimDealTokens(address(0x1337), 0, 2 * _purchaseAmount);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).purchaserClaim();
+        require(purchaseToken.balanceOf(address(0x1337)) == (type(uint256).max), "balance after claim");
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1), 0);
+        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max);
+        assertEq(MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)), 0);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+        vm.stopPrank();
+    }
+
+    function testPurchaserClaimMultiSchedule(uint256 _purchaseAmount) public {
+        vm.assume(_purchaseAmount > (1e28 / 2));
+        vm.assume(_purchaseAmount < 9e40);
+        vm.startPrank(address(0x1337));
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleSchedules), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            1
+        );
+        (uint256 purchaseTokenPerDealToken2, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            0
+        );
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        // purchase 1
+        uint256 poolSharesAmount1;
+        unchecked {
+            poolSharesAmount1 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+            vm.assume(poolSharesAmount1 <= underlyingDealTokenTotal);
+            vm.assume(poolSharesAmount1 > 0);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 1, _purchaseAmount, _purchaseAmount, poolSharesAmount1, poolSharesAmount1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1),
+            _purchaseAmount
+        );
+        // purchase 2
+        uint256 poolSharesAmount2;
+        unchecked {
+            poolSharesAmount2 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken2;
+            vm.assume(poolSharesAmount2 <= underlyingDealTokenTotal);
+            vm.assume(poolSharesAmount2 > 0);
+            vm.assume(poolSharesAmount1 + poolSharesAmount2 <= underlyingDealTokenTotal);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount2, poolSharesAmount2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1 + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0),
+            _purchaseAmount
+        );
+        // claim
+        uint256 dealTokensForUser1 = ((BASE - AELIN_FEE - sponsorFee) * poolSharesAmount1) / BASE;
+        uint256 dealTokensForUser2 = ((BASE - AELIN_FEE - sponsorFee) * poolSharesAmount2) / BASE;
+        uint256 dealTokensForUser = dealTokensForUser1 + dealTokensForUser2;
+        require(
+            purchaseToken.balanceOf(address(0x1337)) == (type(uint256).max - 2 * _purchaseAmount),
+            "balance before claim"
+        );
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry() + 1 days);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimDealTokens(address(0x1337), dealTokensForUser, 0);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).purchaserClaim();
+        require(
+            purchaseToken.balanceOf(address(0x1337)) == (type(uint256).max - (2 * _purchaseAmount)),
+            "balance after claim"
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1), 0);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            dealTokensForUser2
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            dealTokensForUser1
+        );
+        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - (2 * _purchaseAmount));
+        assertEq(MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)), dealTokensForUser);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+        vm.stopPrank();
+    }
+
+    function testPurchaserClaimMultiScheduleDeallocate(uint256 _purchaseAmount) public {
+        vm.assume(_purchaseAmount > (1e28 / 2));
+        vm.assume(_purchaseAmount < 9e40);
+        vm.startPrank(address(0x1337));
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleSchedules), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            1
+        );
+        (uint256 purchaseTokenPerDealToken2, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            0
+        );
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        // purchase 1
+        uint256 poolSharesAmount1;
+        unchecked {
+            poolSharesAmount1 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+            vm.assume(poolSharesAmount1 > 0);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 1, _purchaseAmount, _purchaseAmount, poolSharesAmount1, poolSharesAmount1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1),
+            _purchaseAmount
+        );
+        // purchase 2
+        uint256 poolSharesAmount2;
+        unchecked {
+            poolSharesAmount2 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken2;
+            vm.assume(poolSharesAmount2 > 0);
+            vm.assume(poolSharesAmount1 + poolSharesAmount2 > underlyingDealTokenTotal);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount2, poolSharesAmount2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1 + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0),
+            _purchaseAmount
+        );
+        // claim
+        uint256 totalPoolShares = AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares();
+        uint256 adjustedDealTokens1 = (poolSharesAmount1 * underlyingDealTokenTotal) / totalPoolShares;
+        adjustedDealTokens1 = ((BASE - AELIN_FEE - sponsorFee) * adjustedDealTokens1) / BASE;
+        uint256 dealTokensForUser = (poolSharesAmount2 * underlyingDealTokenTotal) / totalPoolShares;
+        dealTokensForUser = ((BASE - AELIN_FEE - sponsorFee) * dealTokensForUser) / BASE;
+        dealTokensForUser = adjustedDealTokens1 + dealTokensForUser;
+        uint256 purchaseTokenRefund = (2 * _purchaseAmount) -
+            (((2 * _purchaseAmount) * underlyingDealTokenTotal) /
+                AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares());
+        require(
+            purchaseToken.balanceOf(address(0x1337)) == (type(uint256).max - 2 * _purchaseAmount),
+            "balance before claim"
+        );
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry() + 1 days);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimDealTokens(address(0x1337), dealTokensForUser, purchaseTokenRefund);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).purchaserClaim();
+        require(
+            purchaseToken.balanceOf(address(0x1337)) == (type(uint256).max - (2 * _purchaseAmount) + purchaseTokenRefund),
+            "balance after claim"
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1), 0);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            adjustedDealTokens1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            dealTokensForUser - adjustedDealTokens1
+        );
+        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - (2 * _purchaseAmount) + purchaseTokenRefund);
+        assertEq(MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)), dealTokensForUser);
         assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
         vm.stopPrank();
     }
@@ -2011,6 +2486,108 @@ contract AelinUpFrontDealTest is Test {
         uint256 feeAmount = (underlyingDealTokenTotal * AELIN_FEE) / BASE;
         assertEq(
             underlyingDealToken.balanceOf(address(AelinUpFrontDeal(dealAddressAllowDeallocation).aelinFeeEscrow())),
+            feeAmount
+        );
+        vm.stopPrank();
+    }
+
+    function testSponsorClaimMultiScheduleDeallocate(uint256 _purchaseAmount) public {
+        vm.assume(_purchaseAmount > (1e28 / 2));
+        vm.assume(_purchaseAmount < 9e40);
+        vm.startPrank(address(0x1337));
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleSchedules), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            1
+        );
+        (uint256 purchaseTokenPerDealToken2, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            0
+        );
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        // purchase 1
+        uint256 poolSharesAmount1;
+        unchecked {
+            poolSharesAmount1 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+            vm.assume(poolSharesAmount1 > 0);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 1, _purchaseAmount, _purchaseAmount, poolSharesAmount1, poolSharesAmount1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1),
+            _purchaseAmount
+        );
+        // purchase 2
+        uint256 poolSharesAmount2;
+        unchecked {
+            poolSharesAmount2 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken2;
+            vm.assume(poolSharesAmount2 > 0);
+            vm.assume(poolSharesAmount1 + poolSharesAmount2 > underlyingDealTokenTotal);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount2, poolSharesAmount2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1 + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0),
+            _purchaseAmount
+        );
+        // claim
+        uint256 totalPoolShares = AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares();
+        uint256 adjustedDealTokens1 = (poolSharesAmount1 * underlyingDealTokenTotal) / totalPoolShares;
+        adjustedDealTokens1 = ((BASE - AELIN_FEE - sponsorFee) * adjustedDealTokens1) / BASE;
+        uint256 dealTokensForUser = (poolSharesAmount2 * underlyingDealTokenTotal) / totalPoolShares;
+        dealTokensForUser = ((BASE - AELIN_FEE - sponsorFee) * dealTokensForUser) / BASE;
+        dealTokensForUser = adjustedDealTokens1 + dealTokensForUser;
+        uint256 purchaseTokenRefund = (2 * _purchaseAmount) -
+            (((2 * _purchaseAmount) * underlyingDealTokenTotal) /
+                AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares());
+        require(
+            purchaseToken.balanceOf(address(0x1337)) == (type(uint256).max - 2 * _purchaseAmount),
+            "balance before claim"
+        );
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry() + 1 days);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimDealTokens(address(0x1337), dealTokensForUser, purchaseTokenRefund);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).purchaserClaim();
+        require(
+            purchaseToken.balanceOf(address(0x1337)) == (type(uint256).max - (2 * _purchaseAmount) + purchaseTokenRefund),
+            "balance after claim"
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1), 0);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            adjustedDealTokens1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            dealTokensForUser - adjustedDealTokens1
+        );
+        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - (2 * _purchaseAmount) + purchaseTokenRefund);
+        assertEq(MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)), dealTokensForUser);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+        vm.stopPrank();
+        // sponsor claim
+        vm.startPrank(address(0xBEEF));
+        uint256 amountMinted = (underlyingDealTokenTotal * sponsorFee) / BASE;
+        vm.expectEmit(true, false, false, true);
+        emit SponsorClaim(address(0xBEEF), amountMinted);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).sponsorClaim();
+        uint256 feeAmount = (underlyingDealTokenTotal * AELIN_FEE) / BASE;
+        assertEq(
+            underlyingDealToken.balanceOf(address(AelinUpFrontDeal(dealAddressMultipleSchedules).aelinFeeEscrow())),
             feeAmount
         );
         vm.stopPrank();
@@ -2263,6 +2840,118 @@ contract AelinUpFrontDealTest is Test {
         vm.stopPrank();
     }
 
+    function testHolderClaimMultiScheduleDeallocate(uint256 _purchaseAmount) public {
+        vm.assume(_purchaseAmount > (1e28 / 2));
+        vm.assume(_purchaseAmount < 9e40);
+        vm.startPrank(address(0x1337));
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleSchedules), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            1
+        );
+        (uint256 purchaseTokenPerDealToken2, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            0
+        );
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        // purchase 1
+        uint256 poolSharesAmount1;
+        unchecked {
+            poolSharesAmount1 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+            vm.assume(poolSharesAmount1 > 0);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 1, _purchaseAmount, _purchaseAmount, poolSharesAmount1, poolSharesAmount1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1),
+            _purchaseAmount
+        );
+        // purchase 2
+        uint256 poolSharesAmount2;
+        unchecked {
+            poolSharesAmount2 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken2;
+            vm.assume(poolSharesAmount2 > 0);
+            vm.assume(poolSharesAmount1 + poolSharesAmount2 > underlyingDealTokenTotal);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount2, poolSharesAmount2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1 + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0),
+            _purchaseAmount
+        );
+        // claim
+        uint256 totalPoolShares = AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares();
+        uint256 adjustedDealTokens1 = (poolSharesAmount1 * underlyingDealTokenTotal) / totalPoolShares;
+        adjustedDealTokens1 = ((BASE - AELIN_FEE - sponsorFee) * adjustedDealTokens1) / BASE;
+        uint256 dealTokensForUser = (poolSharesAmount2 * underlyingDealTokenTotal) / totalPoolShares;
+        dealTokensForUser = ((BASE - AELIN_FEE - sponsorFee) * dealTokensForUser) / BASE;
+        dealTokensForUser = adjustedDealTokens1 + dealTokensForUser;
+        uint256 purchaseTokenRefund = (2 * _purchaseAmount) -
+            (((2 * _purchaseAmount) * underlyingDealTokenTotal) /
+                AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares());
+        require(
+            purchaseToken.balanceOf(address(0x1337)) == (type(uint256).max - 2 * _purchaseAmount),
+            "balance before claim"
+        );
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry() + 1 days);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimDealTokens(address(0x1337), dealTokensForUser, purchaseTokenRefund);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).purchaserClaim();
+        require(
+            purchaseToken.balanceOf(address(0x1337)) == (type(uint256).max - (2 * _purchaseAmount) + purchaseTokenRefund),
+            "balance after claim"
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1), 0);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            adjustedDealTokens1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            dealTokensForUser - adjustedDealTokens1
+        );
+        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - (2 * _purchaseAmount) + purchaseTokenRefund);
+        assertEq(MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)), dealTokensForUser);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+        vm.stopPrank();
+        // holder claim
+        vm.startPrank(address(0xDEAD));
+        assertEq(address(AelinUpFrontDeal(dealAddressMultipleSchedules).aelinFeeEscrow()), address(0));
+        uint256 totalAdjustedRaise = (AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted() *
+            underlyingDealTokenTotal) / AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares();
+        vm.expectEmit(true, false, false, true);
+        emit HolderClaim(
+            address(0xDEAD),
+            address(purchaseToken),
+            totalAdjustedRaise,
+            address(underlyingDealToken),
+            0,
+            block.timestamp
+        );
+        AelinUpFrontDeal(dealAddressMultipleSchedules).holderClaim();
+        assertEq(purchaseToken.balanceOf(address(0xDEAD)), totalAdjustedRaise);
+        uint256 feeAmount = (underlyingDealTokenTotal * AELIN_FEE) / BASE;
+        assertEq(
+            underlyingDealToken.balanceOf(address(AelinUpFrontDeal(dealAddressMultipleSchedules).aelinFeeEscrow())),
+            feeAmount
+        );
+        vm.stopPrank();
+    }
+
     /*//////////////////////////////////////////////////////////////
                             feeEscrowClaim
     //////////////////////////////////////////////////////////////*/
@@ -2363,6 +3052,108 @@ contract AelinUpFrontDealTest is Test {
             underlyingDealToken.balanceOf(address(AelinUpFrontDeal(dealAddressAllowDeallocation).aelinFeeEscrow())),
             feeAmount
         );
+        vm.stopPrank();
+    }
+
+    function testEscrowClaimMultiScheduleDeallocate(uint256 _purchaseAmount) public {
+        vm.assume(_purchaseAmount > (1e28 / 2));
+        vm.assume(_purchaseAmount < 9e40);
+        vm.startPrank(address(0x1337));
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleSchedules), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            1
+        );
+        (uint256 purchaseTokenPerDealToken2, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            0
+        );
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        // purchase 1
+        uint256 poolSharesAmount1;
+        unchecked {
+            poolSharesAmount1 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+            vm.assume(poolSharesAmount1 > 0);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 1, _purchaseAmount, _purchaseAmount, poolSharesAmount1, poolSharesAmount1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1),
+            _purchaseAmount
+        );
+        // purchase 2
+        uint256 poolSharesAmount2;
+        unchecked {
+            poolSharesAmount2 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken2;
+            vm.assume(poolSharesAmount2 > 0);
+            vm.assume(poolSharesAmount1 + poolSharesAmount2 > underlyingDealTokenTotal);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount2, poolSharesAmount2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1 + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0),
+            _purchaseAmount
+        );
+        // claim
+        uint256 totalPoolShares = AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares();
+        uint256 adjustedDealTokens1 = (poolSharesAmount1 * underlyingDealTokenTotal) / totalPoolShares;
+        adjustedDealTokens1 = ((BASE - AELIN_FEE - sponsorFee) * adjustedDealTokens1) / BASE;
+        uint256 dealTokensForUser = (poolSharesAmount2 * underlyingDealTokenTotal) / totalPoolShares;
+        dealTokensForUser = ((BASE - AELIN_FEE - sponsorFee) * dealTokensForUser) / BASE;
+        dealTokensForUser = adjustedDealTokens1 + dealTokensForUser;
+        uint256 purchaseTokenRefund = (2 * _purchaseAmount) -
+            (((2 * _purchaseAmount) * underlyingDealTokenTotal) /
+                AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares());
+        require(
+            purchaseToken.balanceOf(address(0x1337)) == (type(uint256).max - 2 * _purchaseAmount),
+            "balance before claim"
+        );
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry() + 1 days);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimDealTokens(address(0x1337), dealTokensForUser, purchaseTokenRefund);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).purchaserClaim();
+        require(
+            purchaseToken.balanceOf(address(0x1337)) == (type(uint256).max - (2 * _purchaseAmount) + purchaseTokenRefund),
+            "balance after claim"
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1), 0);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            adjustedDealTokens1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            dealTokensForUser - adjustedDealTokens1
+        );
+        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - (2 * _purchaseAmount) + purchaseTokenRefund);
+        assertEq(MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)), dealTokensForUser);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+        // holder claim
+        assertEq(address(AelinUpFrontDeal(dealAddressMultipleSchedules).aelinFeeEscrow()), address(0));
+        uint256 feeAmount = (underlyingDealTokenTotal * AELIN_FEE) / BASE;
+        uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry();
+        vm.warp(purchaseExpiry + 1 days);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).feeEscrowClaim();
+        assertTrue(address(AelinUpFrontDeal(dealAddressMultipleSchedules).aelinFeeEscrow()) != address(0));
+        assertEq(
+            underlyingDealToken.balanceOf(address(AelinUpFrontDeal(dealAddressMultipleSchedules).aelinFeeEscrow())),
+            feeAmount
+        );
+        vm.stopPrank();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -2626,8 +3417,166 @@ contract AelinUpFrontDealTest is Test {
         vm.stopPrank();
     }
 
+    function testClaimableMultiScheduleDeallocateDuringVest() public {
+        uint256 _purchaseAmount = 9e40;
+        uint256 _timeAfterPurchasing = 100 days;
+        vm.startPrank(address(0x1337));
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleSchedules), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            1
+        );
+        (uint256 purchaseTokenPerDealToken2, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            0
+        );
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        // purchase 1
+        uint256 poolSharesAmount1;
+        unchecked {
+            poolSharesAmount1 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+            vm.assume(poolSharesAmount1 > 0);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 1, _purchaseAmount, _purchaseAmount, poolSharesAmount1, poolSharesAmount1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1),
+            _purchaseAmount
+        );
+        // purchase 2
+        uint256 poolSharesAmount2;
+        unchecked {
+            poolSharesAmount2 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken2;
+            vm.assume(poolSharesAmount2 > 0);
+            vm.assume(poolSharesAmount1 + poolSharesAmount2 > underlyingDealTokenTotal);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount2, poolSharesAmount2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1 + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0),
+            _purchaseAmount
+        );
+        // claim
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry() + 1 days);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).purchaserClaim();
+        // claimable underlying 1
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry() + 1 days + _timeAfterPurchasing);
+        (, , uint256 vestingPeriod) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(0);
+        uint256 vestingExpiry = AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(0);
+        uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        uint256 expectedClaim = ((AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(
+            address(0x1337),
+            0
+        ) + AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0)) *
+            (maxTime - AelinUpFrontDeal(dealAddressMultipleSchedules).vestingCliffExpiry(0))) /
+            vestingPeriod -
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0);
+        uint256 claimable = AelinUpFrontDeal(dealAddressMultipleSchedules).claimableUnderlyingTokens(address(0x1337), 0);
+        assertEq(claimable, expectedClaim);
+        // claimable underlying 2
+        (, , vestingPeriod) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(1);
+        vestingExpiry = AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(1);
+        maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        expectedClaim =
+            ((AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1) +
+                AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1)) *
+                (maxTime - AelinUpFrontDeal(dealAddressMultipleSchedules).vestingCliffExpiry(1))) /
+            vestingPeriod -
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1);
+        claimable = AelinUpFrontDeal(dealAddressMultipleSchedules).claimableUnderlyingTokens(address(0x1337), 1);
+        assertEq(claimable, expectedClaim);
+        vm.stopPrank();
+    }
+
+    function testClaimableMultiScheduleDeallocateFullVest(uint256 _purchaseAmount) public {
+        vm.assume(_purchaseAmount > (1e28 / 2));
+        vm.assume(_purchaseAmount < 9e40);
+        vm.startPrank(address(0x1337));
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleSchedules), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            1
+        );
+        (uint256 purchaseTokenPerDealToken2, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            0
+        );
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        // purchase 1
+        uint256 poolSharesAmount1;
+        unchecked {
+            poolSharesAmount1 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+            vm.assume(poolSharesAmount1 > 0);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 1, _purchaseAmount, _purchaseAmount, poolSharesAmount1, poolSharesAmount1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1),
+            _purchaseAmount
+        );
+        // purchase 2
+        uint256 poolSharesAmount2;
+        unchecked {
+            poolSharesAmount2 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken2;
+            vm.assume(poolSharesAmount2 > 0);
+            vm.assume(poolSharesAmount1 + poolSharesAmount2 > underlyingDealTokenTotal);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount2, poolSharesAmount2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1 + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0),
+            _purchaseAmount
+        );
+        // claim
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry() + 1 days);
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        uint256 adjustedDealTokens1 = (poolSharesAmount1 * underlyingDealTokenTotal) /
+            AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares();
+        adjustedDealTokens1 = ((BASE - AELIN_FEE - sponsorFee) * adjustedDealTokens1) / BASE;
+        uint256 adjustedDealTokens2 = (poolSharesAmount2 * underlyingDealTokenTotal) /
+            AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares();
+        adjustedDealTokens2 = ((BASE - AELIN_FEE - sponsorFee) * adjustedDealTokens2) / BASE;
+        AelinUpFrontDeal(dealAddressMultipleSchedules).purchaserClaim();
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            adjustedDealTokens1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokens2
+        );
+        // claimable underlying 1
+        uint256 vestingExpiry = AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(1);
+        vm.warp(vestingExpiry + 1 days);
+        uint256 claimable = AelinUpFrontDeal(dealAddressMultipleSchedules).claimableUnderlyingTokens(address(0x1337), 1);
+        assertEq(claimable, adjustedDealTokens1);
+        // claimable underlying 2
+        vestingExpiry = AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(0);
+        vm.warp(vestingExpiry + 1 days);
+        claimable = AelinUpFrontDeal(dealAddressMultipleSchedules).claimableUnderlyingTokens(address(0x1337), 0);
+        assertEq(claimable, adjustedDealTokens2);
+    }
+
     /*//////////////////////////////////////////////////////////////
-                            claimUnderlying
+                        claimUnderlyingPerSchedule
     //////////////////////////////////////////////////////////////*/
 
     function testRevertClaimNotInWindow() public {
@@ -2911,6 +3860,1251 @@ contract AelinUpFrontDealTest is Test {
         );
         assertEq(underlyingDealToken.balanceOf(address(0x1337)), expectedClaim1 + expectedClaim2);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalUnderlyingClaimed(), expectedClaim1 + expectedClaim2);
+        vm.stopPrank();
+    }
+
+    function testClaimMultiScheduleDeallocateDuringVest() public {
+        uint256 _purchaseAmount = 1e40;
+        uint256 _timeAfterPurchasing = 200 days;
+        vm.startPrank(address(0x1337));
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleSchedules), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            1
+        );
+        (uint256 purchaseTokenPerDealToken2, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            0
+        );
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        // purchase 1
+        uint256 poolSharesAmount1;
+        unchecked {
+            poolSharesAmount1 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+            vm.assume(poolSharesAmount1 > 0);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 1, _purchaseAmount, _purchaseAmount, poolSharesAmount1, poolSharesAmount1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1),
+            _purchaseAmount
+        );
+        // purchase 2
+        uint256 poolSharesAmount2;
+        unchecked {
+            poolSharesAmount2 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken2;
+            vm.assume(poolSharesAmount2 > 0);
+            vm.assume(poolSharesAmount1 + poolSharesAmount2 > underlyingDealTokenTotal);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount2, poolSharesAmount2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1 + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0),
+            _purchaseAmount
+        );
+        // claim
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry() + 1 days);
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        uint256 adjustedDealTokens1 = (poolSharesAmount1 * underlyingDealTokenTotal) /
+            AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares();
+        adjustedDealTokens1 = ((BASE - AELIN_FEE - sponsorFee) * adjustedDealTokens1) / BASE;
+        uint256 adjustedDealTokens2 = (poolSharesAmount2 * underlyingDealTokenTotal) /
+            AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares();
+        adjustedDealTokens2 = ((BASE - AELIN_FEE - sponsorFee) * adjustedDealTokens2) / BASE;
+        AelinUpFrontDeal(dealAddressMultipleSchedules).purchaserClaim();
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            adjustedDealTokens1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokens2
+        );
+        // claim underlying 1
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(1) + 1 days + _timeAfterPurchasing);
+        (, , uint256 vestingPeriod) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(1);
+        uint256 vestingExpiry = AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(1);
+        uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        uint256 expectedClaim1 = ((AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(
+            address(0x1337),
+            1
+        ) + AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1)) *
+            (maxTime - AelinUpFrontDeal(dealAddressMultipleSchedules).vestingCliffExpiry(1))) /
+            vestingPeriod -
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1), 0);
+        assertEq(
+            MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)),
+            adjustedDealTokens1 + adjustedDealTokens2
+        );
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), 0);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(address(0x1337), address(underlyingDealToken), expectedClaim1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingPerSchedule(1);
+        // after claim checks
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1), expectedClaim1);
+        assertEq(
+            MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)),
+            adjustedDealTokens1 + adjustedDealTokens2 - expectedClaim1
+        );
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), expectedClaim1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), expectedClaim1);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            adjustedDealTokens1 - expectedClaim1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokens2
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1), 0);
+        // claim underlying 2
+        (, , vestingPeriod) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(0);
+        vestingExpiry = AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(0);
+        maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        uint256 expectedClaim2 = ((AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(
+            address(0x1337),
+            0
+        ) + AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0)) *
+            (maxTime - AelinUpFrontDeal(dealAddressMultipleSchedules).vestingCliffExpiry(0))) /
+            vestingPeriod -
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0), 0);
+        assertEq(
+            MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)),
+            adjustedDealTokens1 + adjustedDealTokens2 - expectedClaim1
+        );
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), expectedClaim1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), expectedClaim1);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(address(0x1337), address(underlyingDealToken), expectedClaim2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingPerSchedule(0);
+        // after claim checks
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0), expectedClaim2);
+        assertEq(
+            MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)),
+            adjustedDealTokens1 + adjustedDealTokens2 - expectedClaim1 - expectedClaim2
+        );
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), expectedClaim1 + expectedClaim2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), expectedClaim1 + expectedClaim2);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            adjustedDealTokens1 - expectedClaim1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokens2 - expectedClaim2
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0), 0);
+        vm.stopPrank();
+    }
+
+    function testClaimMultiScheduleDeallocateFullVest(uint256 _purchaseAmount) public {
+        vm.assume(_purchaseAmount > (1e28 / 2));
+        vm.assume(_purchaseAmount < 9e40);
+        vm.startPrank(address(0x1337));
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleSchedules), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            1
+        );
+        (uint256 purchaseTokenPerDealToken2, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            0
+        );
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        // purchase 1
+        uint256 poolSharesAmount1;
+        unchecked {
+            poolSharesAmount1 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+            vm.assume(poolSharesAmount1 > 0);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 1, _purchaseAmount, _purchaseAmount, poolSharesAmount1, poolSharesAmount1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1),
+            _purchaseAmount
+        );
+        // purchase 2
+        uint256 poolSharesAmount2;
+        unchecked {
+            poolSharesAmount2 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken2;
+            vm.assume(poolSharesAmount2 > 0);
+            vm.assume(poolSharesAmount1 + poolSharesAmount2 > underlyingDealTokenTotal);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount2, poolSharesAmount2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1 + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0),
+            _purchaseAmount
+        );
+        // claim
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry() + 1 days);
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        uint256 adjustedDealTokens1 = (poolSharesAmount1 * underlyingDealTokenTotal) /
+            AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares();
+        adjustedDealTokens1 = ((BASE - AELIN_FEE - sponsorFee) * adjustedDealTokens1) / BASE;
+        uint256 adjustedDealTokens2 = (poolSharesAmount2 * underlyingDealTokenTotal) /
+            AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares();
+        adjustedDealTokens2 = ((BASE - AELIN_FEE - sponsorFee) * adjustedDealTokens2) / BASE;
+        AelinUpFrontDeal(dealAddressMultipleSchedules).purchaserClaim();
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            adjustedDealTokens1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokens2
+        );
+        // claim underlying 1
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(1) + 1 days);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1), 0);
+        assertEq(
+            MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)),
+            adjustedDealTokens1 + adjustedDealTokens2
+        );
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), 0);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(address(0x1337), address(underlyingDealToken), adjustedDealTokens1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingPerSchedule(1);
+        // after claim checks
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1), adjustedDealTokens1);
+        assertEq(MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)), adjustedDealTokens2);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), adjustedDealTokens1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), adjustedDealTokens1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1), 0);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokens2
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1), 0);
+        // claim underlying 2
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(0) + 1 days);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0), 0);
+        assertEq(MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)), adjustedDealTokens2);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), adjustedDealTokens1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), adjustedDealTokens1);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(address(0x1337), address(underlyingDealToken), adjustedDealTokens2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingPerSchedule(0);
+        // after claim checks
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0), adjustedDealTokens2);
+        assertEq(MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)), 0);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), adjustedDealTokens1 + adjustedDealTokens2);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(),
+            adjustedDealTokens1 + adjustedDealTokens2
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0), 0);
+        // try to claim again after claiming
+        vm.expectRevert("no underlying ready to claim");
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingPerSchedule(0);
+        vm.expectRevert("no underlying ready to claim");
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingPerSchedule(1);
+        vm.stopPrank();
+    }
+
+    function testClaimMultiScheduleDuringVest() public {
+        uint256 _purchaseAmount = 7e27;
+        uint256 _timeAfterPurchasing = 100 days;
+        vm.startPrank(address(0x1337));
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleSchedules), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            1
+        );
+        (uint256 purchaseTokenPerDealToken2, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            0
+        );
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        // purchase 1
+        uint256 poolSharesAmount1;
+        unchecked {
+            poolSharesAmount1 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+            vm.assume(poolSharesAmount1 > 0);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 1, _purchaseAmount, _purchaseAmount, poolSharesAmount1, poolSharesAmount1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1),
+            _purchaseAmount
+        );
+        // purchase 2
+        uint256 poolSharesAmount2;
+        unchecked {
+            poolSharesAmount2 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken2;
+            vm.assume(poolSharesAmount2 > 0);
+            vm.assume(poolSharesAmount1 + poolSharesAmount2 <= underlyingDealTokenTotal);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount2, poolSharesAmount2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1 + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0),
+            _purchaseAmount
+        );
+        // claim
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry() + 1 days);
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        uint256 adjustedDealTokens1 = ((BASE - AELIN_FEE - sponsorFee) * poolSharesAmount1) / BASE;
+        uint256 adjustedDealTokens2 = ((BASE - AELIN_FEE - sponsorFee) * poolSharesAmount2) / BASE;
+        AelinUpFrontDeal(dealAddressMultipleSchedules).purchaserClaim();
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            adjustedDealTokens1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokens2
+        );
+        // claim underlying 1
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(1) + 1 days + _timeAfterPurchasing);
+        (, , uint256 vestingPeriod) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(1);
+        uint256 vestingExpiry = AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(1);
+        uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        uint256 expectedClaim1 = ((adjustedDealTokens1 +
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1)) *
+            (maxTime - AelinUpFrontDeal(dealAddressMultipleSchedules).vestingCliffExpiry(1))) /
+            vestingPeriod -
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1), 0);
+        assertEq(
+            MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)),
+            adjustedDealTokens1 + adjustedDealTokens2
+        );
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), 0);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(address(0x1337), address(underlyingDealToken), expectedClaim1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingPerSchedule(1);
+        // after claim checks
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1), expectedClaim1);
+        assertEq(
+            MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)),
+            adjustedDealTokens1 + adjustedDealTokens2 - expectedClaim1
+        );
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), expectedClaim1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), expectedClaim1);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            adjustedDealTokens1 - expectedClaim1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokens2
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1), 0);
+        // claim underlying 2
+        (, , vestingPeriod) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(0);
+        vestingExpiry = AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(0);
+        maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        uint256 expectedClaim2 = ((adjustedDealTokens2 +
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0)) *
+            (maxTime - AelinUpFrontDeal(dealAddressMultipleSchedules).vestingCliffExpiry(0))) /
+            vestingPeriod -
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0), 0);
+        assertEq(
+            MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)),
+            adjustedDealTokens1 + adjustedDealTokens2 - expectedClaim1
+        );
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), expectedClaim1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), expectedClaim1);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(address(0x1337), address(underlyingDealToken), expectedClaim2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingPerSchedule(0);
+        // after claim checks
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0), expectedClaim2);
+        assertEq(
+            MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)),
+            adjustedDealTokens1 + adjustedDealTokens2 - expectedClaim1 - expectedClaim2
+        );
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), expectedClaim1 + expectedClaim2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), expectedClaim1 + expectedClaim2);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            adjustedDealTokens1 - expectedClaim1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokens2 - expectedClaim2
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0), 0);
+        vm.stopPrank();
+    }
+
+    function testClaimMultiScheduleFullVest() public {
+        uint256 _purchaseAmount = 7e27;
+        vm.startPrank(address(0x1337));
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleSchedules), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            1
+        );
+        (uint256 purchaseTokenPerDealToken2, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            0
+        );
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        // purchase 1
+        uint256 poolSharesAmount1;
+        unchecked {
+            poolSharesAmount1 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+            vm.assume(poolSharesAmount1 > 0);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 1, _purchaseAmount, _purchaseAmount, poolSharesAmount1, poolSharesAmount1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1),
+            _purchaseAmount
+        );
+        // purchase 2
+        uint256 poolSharesAmount2;
+        unchecked {
+            poolSharesAmount2 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken2;
+            vm.assume(poolSharesAmount2 > 0);
+            vm.assume(poolSharesAmount1 + poolSharesAmount2 <= underlyingDealTokenTotal);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount2, poolSharesAmount2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1 + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0),
+            _purchaseAmount
+        );
+        // claim
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry() + 1 days);
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        uint256 adjustedDealTokens1 = ((BASE - AELIN_FEE - sponsorFee) * poolSharesAmount1) / BASE;
+        uint256 adjustedDealTokens2 = ((BASE - AELIN_FEE - sponsorFee) * poolSharesAmount2) / BASE;
+        AelinUpFrontDeal(dealAddressMultipleSchedules).purchaserClaim();
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            adjustedDealTokens1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokens2
+        );
+        // claim underlying 1
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(1) + 1 days);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1), 0);
+        assertEq(
+            MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)),
+            adjustedDealTokens1 + adjustedDealTokens2
+        );
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), 0);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(address(0x1337), address(underlyingDealToken), adjustedDealTokens1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingPerSchedule(1);
+        // after claim checks
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1), adjustedDealTokens1);
+        assertEq(MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)), adjustedDealTokens2);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), adjustedDealTokens1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), adjustedDealTokens1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1), 0);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokens2
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1), 0);
+        // claim underlying 2
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(0) + 1 days);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0), 0);
+        assertEq(MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)), adjustedDealTokens2);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), adjustedDealTokens1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), adjustedDealTokens1);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(address(0x1337), address(underlyingDealToken), adjustedDealTokens2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingPerSchedule(0);
+        // after claim checks
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0), adjustedDealTokens2);
+        assertEq(MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)), 0);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), adjustedDealTokens1 + adjustedDealTokens2);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(),
+            adjustedDealTokens1 + adjustedDealTokens2
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0), 0);
+        // try to claim again after claiming
+        vm.expectRevert("no underlying ready to claim");
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingPerSchedule(0);
+        vm.expectRevert("no underlying ready to claim");
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingPerSchedule(1);
+        vm.stopPrank();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        claimUnderlyingAllSchedules
+    //////////////////////////////////////////////////////////////*/
+
+    function testRevertClaimAllNotInWindow() public {
+        vm.startPrank(address(0x1337));
+        vm.expectRevert("underlying deposit not complete");
+        AelinUpFrontDeal(dealAddress).claimUnderlyingAllSchedules();
+        vm.expectRevert("purchase period not over");
+        AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlyingAllSchedules();
+        vm.stopPrank();
+    }
+
+    function testRevertClaimAllFailMinimumRaise(uint256 _purchaseAmount) public {
+        vm.startPrank(address(0x1337));
+        vm.assume(_purchaseAmount < 1e28);
+        // accept deal
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (uint256 purchaseTokenPerDealToken, , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).getVestingScheduleDetails(0);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        vm.assume(success);
+        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount > 0);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337), 0), _purchaseAmount);
+        // claim attempt
+        uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
+        vm.warp(purchaseExpiry + 1 days);
+        vm.expectRevert("does not pass minimum raise");
+        AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlyingAllSchedules();
+        vm.stopPrank();
+    }
+
+    function testClaimAllQuantityZero(address _address, uint256 _timeAfterPurchasing) public {
+        vm.assume(_address != address(0));
+        vm.assume(_address != address(0x1337));
+        vm.assume(_address != address(0xDEAD));
+        vm.assume(_timeAfterPurchasing < 2190 days);
+        // deposit underlying
+        vm.startPrank(address(0xDEAD));
+        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        underlyingDealToken.approve(address(dealAddressAllowDeallocation), type(uint256).max);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).depositUnderlyingTokens(1e35);
+        vm.stopPrank();
+        uint256 _purchaseAmount = 6e28;
+        // accept deal
+        vm.startPrank(address(0x1337));
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
+        (uint256 purchaseTokenPerDealToken, , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).getVestingScheduleDetails(0);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        vm.assume(success);
+        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount > 0);
+        vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337), 0), _purchaseAmount);
+        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
+        // claim
+        assertEq(address(AelinUpFrontDeal(dealAddressOverFullDeposit).aelinFeeEscrow()), address(0));
+        uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
+        vm.warp(purchaseExpiry + 1 days);
+        AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
+        vm.stopPrank();
+        // claim underlying
+        vm.startPrank(_address);
+        vm.expectRevert("no underlying ready to claim");
+        AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlyingAllSchedules();
+        vm.stopPrank();
+    }
+
+    function testClaimAllDuringVestingCliff(uint256 _timeAfterPurchasing) public {
+        vm.assume(_timeAfterPurchasing < 2190 days);
+        // deposit underlying
+        vm.startPrank(address(0xDEAD));
+        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        underlyingDealToken.approve(address(dealAddressAllowDeallocation), type(uint256).max);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).depositUnderlyingTokens(1e35);
+        vm.stopPrank();
+        uint256 _purchaseAmount = 6e28;
+        // ensure right window
+        uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
+        uint256 vestingCliffExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).vestingCliffExpiry(0);
+        vm.assume(purchaseExpiry + 1 days + _timeAfterPurchasing > purchaseExpiry);
+        vm.assume(purchaseExpiry + 1 days + _timeAfterPurchasing <= vestingCliffExpiry);
+        // accept deal
+        vm.startPrank(address(0x1337));
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
+        (uint256 purchaseTokenPerDealToken, , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).getVestingScheduleDetails(0);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        vm.assume(success);
+        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount > 0);
+        vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337), 0), _purchaseAmount);
+        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
+        // claim
+        vm.warp(purchaseExpiry + 1 days);
+        AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
+        // claim underlying
+        vm.expectRevert("no underlying ready to claim");
+        AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlyingAllSchedules();
+        vm.stopPrank();
+    }
+
+    function testClaimAllAfterVesting(uint256 _timeAfterPurchasing) public {
+        vm.assume(_timeAfterPurchasing < 2190 days);
+        // deposit underlying
+        vm.startPrank(address(0xDEAD));
+        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        underlyingDealToken.approve(address(dealAddressAllowDeallocation), type(uint256).max);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).depositUnderlyingTokens(1e35);
+        vm.stopPrank();
+        uint256 _purchaseAmount = 6e28;
+        // ensure right window
+        uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
+        uint256 vestingExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).vestingExpiry(0);
+        vm.assume(purchaseExpiry + 1 days + _timeAfterPurchasing > vestingExpiry);
+        // accept deal
+        vm.startPrank(address(0x1337));
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
+        (uint256 purchaseTokenPerDealToken, , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).getVestingScheduleDetails(0);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        vm.assume(success);
+        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount > 0);
+        vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337), 0), _purchaseAmount);
+        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
+        // claim
+        vm.warp(purchaseExpiry + 1 days);
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
+        uint256 adjustedDealTokensForUser = ((BASE - AELIN_FEE - sponsorFee) *
+            AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337), 0)) / BASE;
+        AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
+        // claim underlying
+        vm.warp(purchaseExpiry + 1 days + _timeAfterPurchasing);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getAmountVested(address(0x1337), 0), 0);
+        assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)), adjustedDealTokensForUser);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalUnderlyingClaimed(), 0);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(address(0x1337), address(underlyingDealToken), adjustedDealTokensForUser);
+        AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlyingAllSchedules();
+        // after claim checks
+        assertEq(
+            AelinUpFrontDeal(dealAddressOverFullDeposit).getAmountVested(address(0x1337), 0),
+            adjustedDealTokensForUser
+        );
+        assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)), 0);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), adjustedDealTokensForUser);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalUnderlyingClaimed(), adjustedDealTokensForUser);
+        vm.stopPrank();
+    }
+
+    function testClaimAllDuringVest(uint256 _timeAfterPurchasing) public {
+        vm.assume(_timeAfterPurchasing < 2190 days);
+        // deposit underlying
+        vm.startPrank(address(0xDEAD));
+        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        underlyingDealToken.approve(address(dealAddressAllowDeallocation), type(uint256).max);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).depositUnderlyingTokens(1e35);
+        vm.stopPrank();
+        uint256 _purchaseAmount = 6e28;
+        // ensure right window
+        uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
+        uint256 vestingExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).vestingExpiry(0);
+        vm.assume(
+            purchaseExpiry + 1 days + _timeAfterPurchasing >
+                AelinUpFrontDeal(dealAddressOverFullDeposit).vestingCliffExpiry(0)
+        );
+        vm.assume(purchaseExpiry + 1 days + 2 days + _timeAfterPurchasing < vestingExpiry);
+        // accept deal
+        vm.startPrank(address(0x1337));
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
+        (uint256 purchaseTokenPerDealToken, , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).getVestingScheduleDetails(0);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        vm.assume(success);
+        vm.assume((_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken > 0);
+        vm.assume((_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken <= underlyingDealTokenTotal);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
+        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(
+            AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(),
+            (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337), 0),
+            (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken
+        );
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337), 0), _purchaseAmount);
+        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
+        // claim
+        vm.warp(purchaseExpiry + 1 days);
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
+        uint256 adjustedDealTokensForUser = ((BASE - AELIN_FEE - sponsorFee) *
+            AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337), 0)) / BASE;
+        AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
+        // claim underlying
+        vm.warp(purchaseExpiry + 1 days + _timeAfterPurchasing);
+        (, , uint256 vestingPeriod) = AelinUpFrontDeal(dealAddressOverFullDeposit).getVestingScheduleDetails(0);
+        uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        uint256 expectedClaim1 = ((MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)) +
+            AelinUpFrontDeal(dealAddressOverFullDeposit).getAmountVested(address(0x1337), 0)) *
+            (maxTime - AelinUpFrontDeal(dealAddressOverFullDeposit).vestingCliffExpiry(0))) /
+            vestingPeriod -
+            AelinUpFrontDeal(dealAddressOverFullDeposit).getAmountVested(address(0x1337), 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getAmountVested(address(0x1337), 0), 0);
+        assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)), adjustedDealTokensForUser);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalUnderlyingClaimed(), 0);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(address(0x1337), address(underlyingDealToken), expectedClaim1);
+        AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlyingAllSchedules();
+        // after claim checks
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getAmountVested(address(0x1337), 0), expectedClaim1);
+        assertEq(
+            MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)),
+            adjustedDealTokensForUser - expectedClaim1
+        );
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), expectedClaim1);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalUnderlyingClaimed(), expectedClaim1);
+
+        // wait some time and claim again
+        vm.warp(purchaseExpiry + 1 days + _timeAfterPurchasing + 2 days);
+        maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        uint256 expectedClaim2 = ((MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)) +
+            AelinUpFrontDeal(dealAddressOverFullDeposit).getAmountVested(address(0x1337), 0)) *
+            (maxTime - AelinUpFrontDeal(dealAddressOverFullDeposit).vestingCliffExpiry(0))) /
+            vestingPeriod -
+            AelinUpFrontDeal(dealAddressOverFullDeposit).getAmountVested(address(0x1337), 0);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(address(0x1337), address(underlyingDealToken), expectedClaim2);
+        AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlyingAllSchedules();
+        // after claim checks
+        assertEq(
+            AelinUpFrontDeal(dealAddressOverFullDeposit).getAmountVested(address(0x1337), 0),
+            expectedClaim1 + expectedClaim2
+        );
+        assertEq(
+            MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)),
+            adjustedDealTokensForUser - expectedClaim1 - expectedClaim2
+        );
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), expectedClaim1 + expectedClaim2);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalUnderlyingClaimed(), expectedClaim1 + expectedClaim2);
+        vm.stopPrank();
+    }
+
+    function testClaimAllMultiScheduleDeallocateDuringVest() public {
+        uint256 _purchaseAmount = 1e40;
+        uint256 _timeAfterPurchasing = 91 days;
+        vm.startPrank(address(0x1337));
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleSchedules), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            1
+        );
+        (uint256 purchaseTokenPerDealToken2, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            0
+        );
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        // purchase 1
+        uint256 poolSharesAmount1;
+        unchecked {
+            poolSharesAmount1 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+            vm.assume(poolSharesAmount1 > 0);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 1, _purchaseAmount, _purchaseAmount, poolSharesAmount1, poolSharesAmount1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1),
+            _purchaseAmount
+        );
+        // purchase 2
+        uint256 poolSharesAmount2;
+        unchecked {
+            poolSharesAmount2 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken2;
+            vm.assume(poolSharesAmount2 > 0);
+            vm.assume(poolSharesAmount1 + poolSharesAmount2 > underlyingDealTokenTotal);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount2, poolSharesAmount2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1 + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0),
+            _purchaseAmount
+        );
+        // claim
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry() + 1 days);
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        uint256 adjustedDealTokens1 = (poolSharesAmount1 * underlyingDealTokenTotal) /
+            AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares();
+        adjustedDealTokens1 = ((BASE - AELIN_FEE - sponsorFee) * adjustedDealTokens1) / BASE;
+        uint256 adjustedDealTokens2 = (poolSharesAmount2 * underlyingDealTokenTotal) /
+            AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares();
+        adjustedDealTokens2 = ((BASE - AELIN_FEE - sponsorFee) * adjustedDealTokens2) / BASE;
+        AelinUpFrontDeal(dealAddressMultipleSchedules).purchaserClaim();
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            adjustedDealTokens1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokens2
+        );
+        // claim underlying 1
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(1) + 1 days + _timeAfterPurchasing);
+        (, , uint256 vestingPeriod) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(1);
+        uint256 vestingExpiry = AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(1);
+        uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        uint256 expectedClaim1 = ((AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(
+            address(0x1337),
+            1
+        ) + AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1)) *
+            (maxTime - AelinUpFrontDeal(dealAddressMultipleSchedules).vestingCliffExpiry(1))) /
+            vestingPeriod -
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1);
+        (, , vestingPeriod) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(0);
+        vestingExpiry = AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(0);
+        maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        uint256 expectedClaim2 = ((AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(
+            address(0x1337),
+            0
+        ) + AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0)) *
+            (maxTime - AelinUpFrontDeal(dealAddressMultipleSchedules).vestingCliffExpiry(0))) /
+            vestingPeriod -
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1), 0);
+        assertEq(
+            MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)),
+            adjustedDealTokens1 + adjustedDealTokens2
+        );
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), 0);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(address(0x1337), address(underlyingDealToken), expectedClaim1 + expectedClaim2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingAllSchedules();
+        // after claim checks
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1), expectedClaim1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0), expectedClaim2);
+        assertEq(
+            MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)),
+            adjustedDealTokens1 + adjustedDealTokens2 - expectedClaim1 - expectedClaim2
+        );
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), expectedClaim1 + expectedClaim2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), expectedClaim1 + expectedClaim2);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            adjustedDealTokens1 - expectedClaim1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokens2 - expectedClaim2
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0), 0);
+        vm.stopPrank();
+    }
+
+    function testClaimAllMultiScheduleDeallocateFullVest() public {
+        uint256 _purchaseAmount = 1e40;
+        vm.startPrank(address(0x1337));
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleSchedules), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            1
+        );
+        (uint256 purchaseTokenPerDealToken2, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            0
+        );
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        // purchase 1
+        uint256 poolSharesAmount1;
+        unchecked {
+            poolSharesAmount1 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+            vm.assume(poolSharesAmount1 > 0);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 1, _purchaseAmount, _purchaseAmount, poolSharesAmount1, poolSharesAmount1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1),
+            _purchaseAmount
+        );
+        // purchase 2
+        uint256 poolSharesAmount2;
+        unchecked {
+            poolSharesAmount2 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken2;
+            vm.assume(poolSharesAmount2 > 0);
+            vm.assume(poolSharesAmount1 + poolSharesAmount2 > underlyingDealTokenTotal);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount2, poolSharesAmount2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1 + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0),
+            _purchaseAmount
+        );
+        // claim
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry() + 1 days);
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        uint256 adjustedDealTokens1 = (poolSharesAmount1 * underlyingDealTokenTotal) /
+            AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares();
+        adjustedDealTokens1 = ((BASE - AELIN_FEE - sponsorFee) * adjustedDealTokens1) / BASE;
+        uint256 adjustedDealTokens2 = (poolSharesAmount2 * underlyingDealTokenTotal) /
+            AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares();
+        adjustedDealTokens2 = ((BASE - AELIN_FEE - sponsorFee) * adjustedDealTokens2) / BASE;
+        AelinUpFrontDeal(dealAddressMultipleSchedules).purchaserClaim();
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            adjustedDealTokens1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokens2
+        );
+        // claim underlying 1
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(1) + 1 days);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1), 0);
+        assertEq(
+            MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)),
+            adjustedDealTokens1 + adjustedDealTokens2
+        );
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), 0);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(address(0x1337), address(underlyingDealToken), adjustedDealTokens1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingPerSchedule(1);
+        // after claim checks
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1), adjustedDealTokens1);
+        assertEq(MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)), adjustedDealTokens2);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), adjustedDealTokens1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), adjustedDealTokens1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1), 0);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokens2
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1), 0);
+        // claim underlying 2
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(0) + 1 days);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0), 0);
+        assertEq(MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)), adjustedDealTokens2);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), adjustedDealTokens1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), adjustedDealTokens1);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(address(0x1337), address(underlyingDealToken), adjustedDealTokens2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingPerSchedule(0);
+        // after claim checks
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0), adjustedDealTokens2);
+        assertEq(MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)), 0);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), adjustedDealTokens1 + adjustedDealTokens2);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(),
+            adjustedDealTokens1 + adjustedDealTokens2
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0), 0);
+        // try to claim again after claiming
+        vm.expectRevert("no underlying ready to claim");
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingPerSchedule(0);
+        vm.expectRevert("no underlying ready to claim");
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingPerSchedule(1);
+        vm.stopPrank();
+    }
+
+    function testClaimAllMultiScheduleDuringVest() public {
+        uint256 _purchaseAmount = 7e27;
+        uint256 _timeAfterPurchasing = 100 days;
+        vm.startPrank(address(0x1337));
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleSchedules), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            1
+        );
+        (uint256 purchaseTokenPerDealToken2, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            0
+        );
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        // purchase 1
+        uint256 poolSharesAmount1;
+        unchecked {
+            poolSharesAmount1 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+            vm.assume(poolSharesAmount1 > 0);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 1, _purchaseAmount, _purchaseAmount, poolSharesAmount1, poolSharesAmount1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1),
+            _purchaseAmount
+        );
+        // purchase 2
+        uint256 poolSharesAmount2;
+        unchecked {
+            poolSharesAmount2 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken2;
+            vm.assume(poolSharesAmount2 > 0);
+            vm.assume(poolSharesAmount1 + poolSharesAmount2 <= underlyingDealTokenTotal);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount2, poolSharesAmount2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1 + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0),
+            _purchaseAmount
+        );
+        // claim
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry() + 1 days);
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        uint256 adjustedDealTokens1 = ((BASE - AELIN_FEE - sponsorFee) * poolSharesAmount1) / BASE;
+        uint256 adjustedDealTokens2 = ((BASE - AELIN_FEE - sponsorFee) * poolSharesAmount2) / BASE;
+        AelinUpFrontDeal(dealAddressMultipleSchedules).purchaserClaim();
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            adjustedDealTokens1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokens2
+        );
+        // claim underlying 1
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(1) + 1 days + _timeAfterPurchasing);
+        (, , uint256 vestingPeriod) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(1);
+        uint256 vestingExpiry = AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(1);
+        uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        uint256 expectedClaim1 = ((adjustedDealTokens1 +
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1)) *
+            (maxTime - AelinUpFrontDeal(dealAddressMultipleSchedules).vestingCliffExpiry(1))) /
+            vestingPeriod -
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1);
+        (, , vestingPeriod) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(0);
+        vestingExpiry = AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(0);
+        maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        uint256 expectedClaim2 = ((adjustedDealTokens2 +
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0)) *
+            (maxTime - AelinUpFrontDeal(dealAddressMultipleSchedules).vestingCliffExpiry(0))) /
+            vestingPeriod -
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1), 0);
+        assertEq(
+            MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)),
+            adjustedDealTokens1 + adjustedDealTokens2
+        );
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), 0);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(address(0x1337), address(underlyingDealToken), expectedClaim1 + expectedClaim2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingAllSchedules();
+        // after claim checks
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1), expectedClaim1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0), expectedClaim2);
+        assertEq(
+            MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)),
+            adjustedDealTokens1 + adjustedDealTokens2 - expectedClaim1 - expectedClaim2
+        );
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), expectedClaim1 + expectedClaim2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), expectedClaim1 + expectedClaim2);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            adjustedDealTokens1 - expectedClaim1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokens2 - expectedClaim2
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0), 0);
+        vm.stopPrank();
+    }
+
+    function testClaimAllMultiScheduleFullVest() public {
+        uint256 _purchaseAmount = 7e27;
+        vm.startPrank(address(0x1337));
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleSchedules), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealConfig();
+        (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            1
+        );
+        (uint256 purchaseTokenPerDealToken2, , ) = AelinUpFrontDeal(dealAddressMultipleSchedules).getVestingScheduleDetails(
+            0
+        );
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        // purchase 1
+        uint256 poolSharesAmount1;
+        unchecked {
+            poolSharesAmount1 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+            vm.assume(poolSharesAmount1 > 0);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 1, _purchaseAmount, _purchaseAmount, poolSharesAmount1, poolSharesAmount1);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 1), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1),
+            _purchaseAmount
+        );
+        // purchase 2
+        uint256 poolSharesAmount2;
+        unchecked {
+            poolSharesAmount2 = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken2;
+            vm.assume(poolSharesAmount2 > 0);
+            vm.assume(poolSharesAmount1 + poolSharesAmount2 <= underlyingDealTokenTotal);
+        }
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), 0, _purchaseAmount, _purchaseAmount, poolSharesAmount2, poolSharesAmount2);
+        AelinUpFrontDeal(dealAddressMultipleSchedules).acceptDeal(nftPurchaseList, _purchaseAmount, 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPoolShares(), poolSharesAmount1 + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPoolSharesPerUser(address(0x1337), 0), poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalPurchasingAccepted(), 2 * _purchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0),
+            _purchaseAmount
+        );
+        // claim
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).purchaseExpiry() + 1 days);
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressMultipleSchedules).dealData();
+        uint256 adjustedDealTokens1 = ((BASE - AELIN_FEE - sponsorFee) * poolSharesAmount1) / BASE;
+        uint256 adjustedDealTokens2 = ((BASE - AELIN_FEE - sponsorFee) * poolSharesAmount2) / BASE;
+        AelinUpFrontDeal(dealAddressMultipleSchedules).purchaserClaim();
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1),
+            adjustedDealTokens1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0),
+            adjustedDealTokens2
+        );
+        // claim underlying 1
+        vm.warp(AelinUpFrontDeal(dealAddressMultipleSchedules).vestingExpiry(1) + 1 days);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1), 0);
+        assertEq(
+            MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)),
+            adjustedDealTokens1 + adjustedDealTokens2
+        );
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(), 0);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(
+            address(0x1337),
+            address(underlyingDealToken),
+            adjustedDealTokens1 + adjustedDealTokens2
+        );
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingAllSchedules();
+        // after claim checks
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 1), adjustedDealTokens1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getAmountVested(address(0x1337), 0), adjustedDealTokens2);
+        assertEq(MockERC20(dealAddressMultipleSchedules).balanceOf(address(0x1337)), 0);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), adjustedDealTokens1 + adjustedDealTokens2);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleSchedules).totalUnderlyingClaimed(),
+            adjustedDealTokens1 + adjustedDealTokens2
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 1), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getDealTokensPerSchedule(address(0x1337), 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 1), 0);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleSchedules).getPurchaseTokensPerUser(address(0x1337), 0), 0);
+        // try to claim again after claiming
+        vm.expectRevert("no underlying ready to claim");
+        AelinUpFrontDeal(dealAddressMultipleSchedules).claimUnderlyingAllSchedules();
         vm.stopPrank();
     }
 

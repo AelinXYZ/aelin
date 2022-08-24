@@ -21,6 +21,8 @@ contract AelinUpFrontDealFactoryTest is Test {
     uint256 constant MAX_SPONSOR_FEE = 1500;
     uint256 constant AELIN_FEE = 200;
 
+    uint256 constant MAX_VESTING_SCHEDULES = 10;
+
     AelinUpFrontDeal public testUpFrontDeal;
     AelinUpFrontDealFactory public upFrontDealFactory;
     AelinFeeEscrow public testEscrow;
@@ -1336,6 +1338,334 @@ contract AelinUpFrontDealFactoryTest is Test {
 
         vm.expectRevert("cannot have allow list and nft gating");
         upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit, 0);
+    }
+
+    // MULTIPLE VESTING SCHEDULES
+
+    function testCreateDealNoSchedule() public {
+        AelinNftGating.NftCollectionRules[] memory _nftCollectionRules;
+        AelinAllowList.InitData memory _allowListInit;
+
+        IAelinUpFrontDeal.VestingSchedule[] memory vestingMulti;
+
+        IAelinUpFrontDeal.UpFrontDealData memory _dealData;
+        _dealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: address(0xDEAD),
+            sponsor: address(0x123),
+            sponsorFee: 200
+        });
+
+        IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
+        _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
+            underlyingDealTokenTotal: 2e27,
+            purchaseRaiseMinimum: 0,
+            purchaseDuration: 30 days,
+            vestingSchedule: vestingMulti,
+            allowDeallocation: false
+        });
+
+        vm.expectRevert("must have vesting schedule");
+        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit, 0);
+    }
+
+    function testCreateDealTooManySchedules() public {
+        AelinNftGating.NftCollectionRules[] memory _nftCollectionRules;
+        AelinAllowList.InitData memory _allowListInit;
+
+        // Vesting Schedules
+        IAelinUpFrontDeal.VestingSchedule[] memory vestingMulti = new IAelinUpFrontDeal.VestingSchedule[](
+            MAX_VESTING_SCHEDULES + 1
+        );
+        vestingMulti[0].purchaseTokenPerDealToken = 1e18;
+        vestingMulti[0].vestingCliffPeriod = 1 days;
+        vestingMulti[0].vestingPeriod = 10 days;
+
+        IAelinUpFrontDeal.UpFrontDealData memory _dealData;
+        _dealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: address(0xDEAD),
+            sponsor: address(0x123),
+            sponsorFee: 200
+        });
+
+        IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
+        _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
+            underlyingDealTokenTotal: 2e27,
+            purchaseRaiseMinimum: 0,
+            purchaseDuration: 30 days,
+            vestingSchedule: vestingMulti,
+            allowDeallocation: false
+        });
+
+        vm.expectRevert("exceeds max amount of vesting schedules");
+        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit, 0);
+    }
+
+    function testCreateDealMultipleSchedules(
+        uint256 _underlyingDealTokenTotal,
+        uint256 _purchaseTokenPerDealToken1,
+        uint256 _purchaseTokenPerDealToken2,
+        uint256 _vestingPeriod1,
+        uint256 _vestingCliffPeriod1,
+        uint256 _vestingPeriod2,
+        uint256 _vestingCliffPeriod2
+    ) public {
+        vm.assume(_underlyingDealTokenTotal > 0);
+        vm.assume(_underlyingDealTokenTotal < 1e41);
+        vm.assume(_purchaseTokenPerDealToken1 > 0);
+        vm.assume(_purchaseTokenPerDealToken2 > 0);
+        vm.assume(_vestingCliffPeriod1 <= 1825 days);
+        vm.assume(_vestingPeriod1 <= 1825 days);
+        vm.assume(_vestingCliffPeriod2 <= 1825 days);
+        vm.assume(_vestingPeriod2 <= 1825 days);
+
+        // Vesting Schedules
+        IAelinUpFrontDeal.VestingSchedule[] memory vestingMulti = new IAelinUpFrontDeal.VestingSchedule[](2);
+        vestingMulti[0].purchaseTokenPerDealToken = _purchaseTokenPerDealToken1;
+        vestingMulti[0].vestingCliffPeriod = _vestingCliffPeriod1;
+        vestingMulti[0].vestingPeriod = _vestingPeriod1;
+        vestingMulti[1].purchaseTokenPerDealToken = _purchaseTokenPerDealToken2;
+        vestingMulti[1].vestingCliffPeriod = _vestingCliffPeriod2;
+        vestingMulti[1].vestingPeriod = _vestingPeriod2;
+
+        unchecked {
+            uint256 highestPrice = _purchaseTokenPerDealToken1 > _purchaseTokenPerDealToken2
+                ? _purchaseTokenPerDealToken1
+                : _purchaseTokenPerDealToken2;
+            uint256 test = highestPrice * _underlyingDealTokenTotal;
+            vm.assume(test / highestPrice == _underlyingDealTokenTotal);
+            test = test / 10**MockERC20(underlyingDealToken).decimals();
+            vm.assume(test > 0);
+        }
+
+        AelinNftGating.NftCollectionRules[] memory _nftCollectionRules;
+        AelinAllowList.InitData memory _allowListInit;
+
+        IAelinUpFrontDeal.UpFrontDealData memory _dealData;
+        _dealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: address(0xDEAD),
+            sponsor: address(0x123),
+            sponsorFee: 0
+        });
+
+        IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
+        _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
+            underlyingDealTokenTotal: _underlyingDealTokenTotal,
+            purchaseRaiseMinimum: 0,
+            purchaseDuration: 10 days,
+            vestingSchedule: vestingMulti,
+            allowDeallocation: true
+        });
+
+        address dealAddress = upFrontDealFactory.createUpFrontDeal(
+            _dealData,
+            _dealConfig,
+            _nftCollectionRules,
+            _allowListInit,
+            0
+        );
+
+        string memory tempString;
+        address tempAddress;
+        uint256 tempUint;
+        bool tempBool;
+
+        // deal contract storage
+        assertEq(AelinUpFrontDeal(dealAddress).dealFactory(), address(upFrontDealFactory));
+        assertEq(AelinUpFrontDeal(dealAddress).name(), "aeUpFrontDeal-DEAL");
+        assertEq(AelinUpFrontDeal(dealAddress).symbol(), "aeUD-DEAL");
+        assertEq(AelinUpFrontDeal(dealAddress).decimals(), MockERC20(underlyingDealToken).decimals());
+        assertEq(AelinUpFrontDeal(dealAddress).dealStart(), block.timestamp);
+        assertEq(AelinUpFrontDeal(dealAddress).aelinEscrowLogicAddress(), address(testEscrow));
+        assertEq(AelinUpFrontDeal(dealAddress).aelinTreasuryAddress(), aelinTreasury);
+        assertEq(AelinUpFrontDeal(dealAddress).vestingCliffExpiry(0), 0);
+        assertEq(AelinUpFrontDeal(dealAddress).vestingExpiry(0), 0);
+        assertEq(AelinUpFrontDeal(dealAddress).vestingCliffExpiry(1), 0);
+        assertEq(AelinUpFrontDeal(dealAddress).vestingExpiry(1), 0);
+
+        // deal data
+        (tempString, , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(tempString, "DEAL");
+        (, tempString, , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(tempString, "DEAL");
+        (, , tempAddress, , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(tempAddress, address(purchaseToken));
+        (, , , tempAddress, , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(tempAddress, address(underlyingDealToken));
+        (, , , , tempAddress, , ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(tempAddress, address(_dealData.holder));
+        (, , , , , tempAddress, ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(tempAddress, address(_dealData.sponsor));
+        (, , , , , , tempUint) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(tempUint, _dealData.sponsorFee);
+
+        // deal config
+        (tempUint, , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        assertEq(tempUint, _dealConfig.underlyingDealTokenTotal);
+        (, tempUint, , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        assertEq(tempUint, _dealConfig.purchaseRaiseMinimum);
+        (, , tempUint, ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        assertEq(tempUint, _dealConfig.purchaseDuration);
+        (, , , tempBool) = AelinUpFrontDeal(dealAddress).dealConfig();
+        assertEq(tempBool, _dealConfig.allowDeallocation);
+        // vesting schedule details
+        (tempUint, , ) = AelinUpFrontDeal(dealAddress).getVestingScheduleDetails(0);
+        assertEq(tempUint, vestingMulti[0].purchaseTokenPerDealToken);
+        (, tempUint, ) = AelinUpFrontDeal(dealAddress).getVestingScheduleDetails(0);
+        assertEq(tempUint, vestingMulti[0].vestingCliffPeriod);
+        (, , tempUint) = AelinUpFrontDeal(dealAddress).getVestingScheduleDetails(0);
+        assertEq(tempUint, vestingMulti[0].vestingPeriod);
+        (tempUint, , ) = AelinUpFrontDeal(dealAddress).getVestingScheduleDetails(1);
+        assertEq(tempUint, vestingMulti[1].purchaseTokenPerDealToken);
+        (, tempUint, ) = AelinUpFrontDeal(dealAddress).getVestingScheduleDetails(1);
+        assertEq(tempUint, vestingMulti[1].vestingCliffPeriod);
+        (, , tempUint) = AelinUpFrontDeal(dealAddress).getVestingScheduleDetails(1);
+        assertEq(tempUint, vestingMulti[1].vestingPeriod);
+
+        // test allow list
+        (, , , tempBool) = AelinUpFrontDeal(dealAddress).getAllowList(address(0));
+        assertFalse(tempBool);
+
+        // test nft gating
+        (, , tempBool) = AelinUpFrontDeal(dealAddress).getNftGatingDetails(address(0), address(0), 0);
+        assertFalse(tempBool);
+    }
+
+    function testCreateDealMultipleSchedulesWithFullDeposit(
+        uint256 _purchaseTokenPerDealToken1,
+        uint256 _purchaseTokenPerDealToken2,
+        uint256 _vestingPeriod1,
+        uint256 _vestingCliffPeriod1,
+        uint256 _vestingPeriod2,
+        uint256 _vestingCliffPeriod2
+    ) public {
+        vm.assume(_purchaseTokenPerDealToken1 > 0);
+        vm.assume(_purchaseTokenPerDealToken2 > 0);
+        vm.assume(_vestingCliffPeriod1 <= 1825 days);
+        vm.assume(_vestingPeriod1 <= 1825 days);
+        vm.assume(_vestingCliffPeriod2 <= 1825 days);
+        vm.assume(_vestingPeriod2 <= 1825 days);
+
+        vm.startPrank(address(0x1337));
+        deal(address(underlyingDealToken), address(0x1337), type(uint256).max);
+        underlyingDealToken.approve(address(upFrontDealFactory), type(uint256).max);
+
+        // Vesting Schedules
+        IAelinUpFrontDeal.VestingSchedule[] memory vestingMulti = new IAelinUpFrontDeal.VestingSchedule[](2);
+        vestingMulti[0].purchaseTokenPerDealToken = _purchaseTokenPerDealToken1;
+        vestingMulti[0].vestingCliffPeriod = _vestingCliffPeriod1;
+        vestingMulti[0].vestingPeriod = _vestingPeriod1;
+        vestingMulti[1].purchaseTokenPerDealToken = _purchaseTokenPerDealToken2;
+        vestingMulti[1].vestingCliffPeriod = _vestingCliffPeriod2;
+        vestingMulti[1].vestingPeriod = _vestingPeriod2;
+
+        if (true) {
+            unchecked {
+                uint256 highestPrice = _purchaseTokenPerDealToken1 > _purchaseTokenPerDealToken2
+                    ? _purchaseTokenPerDealToken1
+                    : _purchaseTokenPerDealToken2;
+                uint256 test = highestPrice * 2e25;
+                vm.assume(test / highestPrice == 2e25);
+                test = test / 10**MockERC20(underlyingDealToken).decimals();
+                vm.assume(test > 0);
+            }
+        }
+
+        address dealAddress;
+        if (true) {
+            AelinNftGating.NftCollectionRules[] memory _nftCollectionRules;
+            AelinAllowList.InitData memory _allowListInit;
+
+            IAelinUpFrontDeal.UpFrontDealData memory _dealData;
+            _dealData = IAelinUpFrontDeal.UpFrontDealData({
+                name: "DEAL",
+                symbol: "DEAL",
+                purchaseToken: address(purchaseToken),
+                underlyingDealToken: address(underlyingDealToken),
+                holder: address(0xDEAD),
+                sponsor: address(0x123),
+                sponsorFee: 0
+            });
+
+            IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
+            _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
+                underlyingDealTokenTotal: 2e25,
+                purchaseRaiseMinimum: 0,
+                purchaseDuration: 10 days,
+                vestingSchedule: vestingMulti,
+                allowDeallocation: true
+            });
+
+            dealAddress = upFrontDealFactory.createUpFrontDeal(
+                _dealData,
+                _dealConfig,
+                _nftCollectionRules,
+                _allowListInit,
+                3e25
+            );
+        }
+
+        uint256 tempUint;
+        bool tempBool;
+        // deal contract storage
+        assertEq(AelinUpFrontDeal(dealAddress).dealFactory(), address(upFrontDealFactory));
+        assertEq(AelinUpFrontDeal(dealAddress).name(), "aeUpFrontDeal-DEAL");
+        assertEq(AelinUpFrontDeal(dealAddress).symbol(), "aeUD-DEAL");
+        assertEq(AelinUpFrontDeal(dealAddress).decimals(), MockERC20(underlyingDealToken).decimals());
+        assertEq(AelinUpFrontDeal(dealAddress).dealStart(), block.timestamp);
+        assertEq(AelinUpFrontDeal(dealAddress).aelinEscrowLogicAddress(), address(testEscrow));
+        assertEq(AelinUpFrontDeal(dealAddress).aelinTreasuryAddress(), aelinTreasury);
+        assertEq(
+            AelinUpFrontDeal(dealAddress).vestingCliffExpiry(0),
+            block.timestamp + 10 days + vestingMulti[0].vestingCliffPeriod
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddress).vestingExpiry(0),
+            block.timestamp + 10 days + vestingMulti[0].vestingCliffPeriod + vestingMulti[0].vestingPeriod
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddress).vestingCliffExpiry(1),
+            block.timestamp + 10 days + vestingMulti[1].vestingCliffPeriod
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddress).vestingExpiry(1),
+            block.timestamp + 10 days + vestingMulti[1].vestingCliffPeriod + vestingMulti[1].vestingPeriod
+        );
+
+        // vesting schedule details
+        (tempUint, , ) = AelinUpFrontDeal(dealAddress).getVestingScheduleDetails(0);
+        assertEq(tempUint, vestingMulti[0].purchaseTokenPerDealToken);
+        (, tempUint, ) = AelinUpFrontDeal(dealAddress).getVestingScheduleDetails(0);
+        assertEq(tempUint, vestingMulti[0].vestingCliffPeriod);
+        (, , tempUint) = AelinUpFrontDeal(dealAddress).getVestingScheduleDetails(0);
+        assertEq(tempUint, vestingMulti[0].vestingPeriod);
+        (tempUint, , ) = AelinUpFrontDeal(dealAddress).getVestingScheduleDetails(1);
+        assertEq(tempUint, vestingMulti[1].purchaseTokenPerDealToken);
+        (, tempUint, ) = AelinUpFrontDeal(dealAddress).getVestingScheduleDetails(1);
+        assertEq(tempUint, vestingMulti[1].vestingCliffPeriod);
+        (, , tempUint) = AelinUpFrontDeal(dealAddress).getVestingScheduleDetails(1);
+        assertEq(tempUint, vestingMulti[1].vestingPeriod);
+
+        // test allow list
+        (, , , tempBool) = AelinUpFrontDeal(dealAddress).getAllowList(address(0));
+        assertFalse(tempBool);
+
+        // test nft gating
+        (, , tempBool) = AelinUpFrontDeal(dealAddress).getNftGatingDetails(address(0), address(0), 0);
+        assertFalse(tempBool);
+
+        vm.stopPrank();
     }
 
     event DepositDealToken(
