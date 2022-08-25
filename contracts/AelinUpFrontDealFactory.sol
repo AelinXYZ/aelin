@@ -5,7 +5,9 @@ import "./MinimalProxyFactory.sol";
 import "./AelinUpFrontDeal.sol";
 import "./libraries/AelinNftGating.sol";
 import "./libraries/AelinAllowList.sol";
-import {IAelinUpFrontDeal} from "./interfaces/IAelinUpFrontDeal.sol";
+import "./AelinUnderlyingDealToken.sol";
+import "./interfaces/IAelinUnderlyingDealToken.sol";
+import "./interfaces/IAelinUpFrontDeal.sol";
 
 contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
     using SafeERC20 for IERC20;
@@ -32,20 +34,26 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
         UpFrontDealConfig calldata _dealConfig,
         AelinNftGating.NftCollectionRules[] calldata _nftCollectionRules,
         AelinAllowList.InitData calldata _allowListInit,
-        uint256 _depositUnderlyingAmount
+        uint256 _depositUnderlyingAmount,
+        IAelinUnderlyingDealToken.UnderlyingDealTokenConfig calldata _underlyingDealTokenConfig
     ) external returns (address upFrontDealAddress) {
         upFrontDealAddress = _cloneAsMinimalProxy(UP_FRONT_DEAL_LOGIC, "Could not create new deal");
 
         if (_depositUnderlyingAmount > 0) {
-            require(
-                IERC20(_dealData.underlyingDealToken).balanceOf(msg.sender) >= _depositUnderlyingAmount,
-                "not enough balance"
-            );
-            uint256 _balanceBeforeTransfer = ERC20(_dealData.underlyingDealToken).balanceOf(address(this));
-            IERC20(_dealData.underlyingDealToken).safeTransferFrom(msg.sender, address(this), _depositUnderlyingAmount);
-            uint256 _balanceAfterTransfer = IERC20(_dealData.underlyingDealToken).balanceOf(address(this));
-            _depositUnderlyingAmount = _balanceAfterTransfer - _balanceBeforeTransfer;
-            IERC20(_dealData.underlyingDealToken).transfer(upFrontDealAddress, _depositUnderlyingAmount);
+
+            if (_underlyingDealTokenConfig.isFundingDeal == true) {
+                new AelinUnderlyingDealToken(upFrontDealAddress, _depositUnderlyingAmount, _underlyingDealTokenConfig.account, _underlyingDealTokenConfig.mintAmount, _underlyingDealTokenConfig.name, _underlyingDealTokenConfig.symbol);
+            } else {
+                require(
+                    IERC20(_dealData.underlyingDealToken).balanceOf(msg.sender) >= _depositUnderlyingAmount,
+                    "not enough balance"
+                );
+                uint256 _balanceBeforeTransfer = ERC20(_dealData.underlyingDealToken).balanceOf(address(this));
+                IERC20(_dealData.underlyingDealToken).safeTransferFrom(msg.sender, address(this), _depositUnderlyingAmount);
+                uint256 _balanceAfterTransfer = IERC20(_dealData.underlyingDealToken).balanceOf(address(this));
+                _depositUnderlyingAmount = _balanceAfterTransfer - _balanceBeforeTransfer;
+                IERC20(_dealData.underlyingDealToken).transfer(upFrontDealAddress, _depositUnderlyingAmount);
+            }
         }
 
         AelinUpFrontDeal(upFrontDealAddress).initialize(
