@@ -413,7 +413,7 @@ contract AelinPoolPurchase is Test {
 
     // scenario 2 - purchase more amount than the cap per wallet with nft - fail
     function testFailScenario2Unlimited(uint256 purchaseAmount) public {
-        vm.assume(purchaseAmount >= 1e22);
+        vm.assume(purchaseAmount > 1e22);
         vm.assume(purchaseAmount < type(uint256).max);
 
         MockERC721(collectionAddress2).mint(address(this), 1);
