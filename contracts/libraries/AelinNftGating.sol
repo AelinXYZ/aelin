@@ -80,7 +80,7 @@ library AelinNftGating {
                 }
                 _data.hasNftList = true;
             } else {
-                revert("collection is not compatible");
+                require(false, "collection is not compatible");
             }
         } else {
             _data.hasNftList = false;
