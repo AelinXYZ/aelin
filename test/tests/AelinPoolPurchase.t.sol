@@ -840,7 +840,7 @@ contract AelinPoolPurchase is Test {
 
     // combine scenario 2 and 3 and purchase more than allocation - fail
     function testFailScenarios2and3(uint256 purchaseAmount) public {
-        vm.assume(purchaseAmount >= 3e22);
+        vm.assume(purchaseAmount > 3e22);
         vm.assume(purchaseAmount < 1e75);
 
         MockERC721(collectionAddress2).mint(address(this), 1);
