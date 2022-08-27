@@ -1663,7 +1663,7 @@ contract AelinUpFrontDealTest is Test {
 
     function testPurchaserClaimNoDeallocation(uint256 _purchaseAmount) public {
         vm.startPrank(address(0x1337));
-        vm.assume(_purchaseAmount >= 1e28);
+        vm.assume(_purchaseAmount > 1e28);
         // accept deal
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
