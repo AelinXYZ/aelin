@@ -28,6 +28,7 @@ contract DelegateVouchTest is Test {
     }
 
     function testFuzzAddDelegateVouchOnlyOwner(address delegate, address caller) public {
+        vm.assume(caller != aelinCouncil);
         vm.prank(caller);
         vm.expectRevert("Only the contract owner may perform this action");
         DelegateVouch(delegateVouchAddress).addDelegateVouch(delegate);
