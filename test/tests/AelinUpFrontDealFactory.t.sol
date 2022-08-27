@@ -461,6 +461,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         assertEq(AelinUpFrontDeal(dealAddress).purchaseExpiry(), 0);
         assertEq(AelinUpFrontDeal(dealAddress).vestingCliffExpiry(), 0);
         assertEq(AelinUpFrontDeal(dealAddress).vestingExpiry(), 0);
+        assertEq(underlyingDealToken.balanceOf(dealAddress), _depositUnderlyingAmount);
 
         // test allow list
         (, , , _tempBool) = AelinUpFrontDeal(dealAddress).getAllowList(address(0));
