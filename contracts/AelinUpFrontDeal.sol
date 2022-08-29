@@ -119,18 +119,30 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
 
         // deposit underlying token logic
         // check if the underlying token balance is more than 0, meaning the factory contract passed tokens from the creator
-        if (IERC20(_dealData.underlyingDealToken).balanceOf(address(this)) > 0) {
-            uint256 currentDealTokenTotal = IERC20(_dealData.underlyingDealToken).balanceOf(address(this));
+        uint256 currentDealTokenTotal = IERC20(_dealData.underlyingDealToken).balanceOf(address(this));
+        if (currentDealTokenTotal > 0) {
             if (currentDealTokenTotal >= _dealConfig.underlyingDealTokenTotal) {
-                underlyingDepositComplete = true;
-                purchaseExpiry = block.timestamp + _dealConfig.purchaseDuration;
-                vestingCliffExpiry = purchaseExpiry + _dealConfig.vestingCliffPeriod;
-                vestingExpiry = vestingCliffExpiry + _dealConfig.vestingPeriod;
-                emit DealFullyFunded(address(this), block.timestamp, purchaseExpiry, vestingCliffExpiry, vestingExpiry);
+                _startPurchasingPeriod(
+                    _dealConfig.purchaseDuration,
+                    _dealConfig.vestingCliffPeriod,
+                    _dealConfig.vestingPeriod
+                );
             }
 
             emit DepositDealToken(_dealData.underlyingDealToken, _dealCreator, currentDealTokenTotal);
         }
+    }
+
+    function _startPurchasingPeriod(
+        uint256 _purchaseDuration,
+        uint256 _vestingCliffPeriod,
+        uint256 _vestingPeriod
+    ) internal {
+        underlyingDepositComplete = true;
+        purchaseExpiry = block.timestamp + _purchaseDuration;
+        vestingCliffExpiry = purchaseExpiry + _vestingCliffPeriod;
+        vestingExpiry = vestingCliffExpiry + _vestingPeriod;
+        emit DealFullyFunded(address(this), block.timestamp, purchaseExpiry, vestingCliffExpiry, vestingExpiry);
     }
 
     modifier initOnce() {
@@ -157,11 +169,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         uint256 underlyingDealTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
 
         if (balanceAfterTransfer >= dealConfig.underlyingDealTokenTotal) {
-            underlyingDepositComplete = true;
-            purchaseExpiry = block.timestamp + dealConfig.purchaseDuration;
-            vestingCliffExpiry = purchaseExpiry + dealConfig.vestingCliffPeriod;
-            vestingExpiry = vestingCliffExpiry + dealConfig.vestingPeriod;
-            emit DealFullyFunded(address(this), block.timestamp, purchaseExpiry, vestingCliffExpiry, vestingExpiry);
+            _startPurchasingPeriod(dealConfig.purchaseDuration, dealConfig.vestingCliffPeriod, dealConfig.vestingPeriod);
         }
 
         emit DepositDealToken(_underlyingDealToken, msg.sender, underlyingDealTokenAmount);
