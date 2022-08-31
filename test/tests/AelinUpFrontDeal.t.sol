@@ -1806,6 +1806,7 @@ contract AelinUpFrontDealTest is Test {
     function testRevertSponsorClaimNotSponsor(uint256 _purchaseAmount, address _address) public {
         vm.assume(_address != address(0));
         vm.assume(_address != address(0xBEEF));
+        vm.assume(_address != address(dealAddressOverFullDeposit));
         vm.startPrank(_address);
         vm.assume(_purchaseAmount > 10e28);
         vm.assume(_purchaseAmount < 1e35);
@@ -1988,6 +1989,7 @@ contract AelinUpFrontDealTest is Test {
     function testRevertHolderClaimNotHolder(address _address, uint256 _purchaseAmount) public {
         vm.assume(_address != address(0));
         vm.assume(_address != address(0xDEAD));
+        vm.assume(_address != address(dealAddressOverFullDeposit));
         vm.startPrank(_address);
         vm.assume(_purchaseAmount > 6e28);
         vm.assume(_purchaseAmount < 1e35);

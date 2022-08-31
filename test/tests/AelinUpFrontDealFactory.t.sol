@@ -487,6 +487,8 @@ contract AelinUpFrontDealFactoryTest is Test {
         vm.assume(_vestingPeriod <= 1825 days);
         vm.assume(_depositUnderlyingAmount >= _underlyingDealTokenTotal);
         vm.assume(_testAddress != address(0));
+        vm.assume(_testAddress != address(underlyingDealToken));
+        vm.assume(_testAddress != address(purchaseToken));
 
         AelinNftGating.NftCollectionRules[] memory _nftCollectionRules;
         AelinAllowList.InitData memory _allowListInit;
@@ -526,6 +528,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             _allowListInit,
             _depositUnderlyingAmount
         );
+        vm.assume(_testAddress != address(dealAddress));
 
         bool _tempBool;
 
