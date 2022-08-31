@@ -171,20 +171,20 @@ contract AelinDealTest is Test {
             assertEq(openStart, proRataExpiry);
             assertEq(openExpiry, proRataExpiry + openPeriod);
             assertTrue(deposited);
+        } else {
+            assertEq(IERC20(dealToken).balanceOf(address(this)), 1e75 - amount);
+            assertEq(IERC20(dealToken).balanceOf(address(dealAddress)), amount);
+            assertTrue(!AelinDeal(dealAddress).depositComplete());
+            assertEq(proRataPeriod, 30 days);
+            assertEq(proRataStart, 0);
+            assertEq(proRataExpiry, 0);
+            assertEq(AelinDeal(dealAddress).vestingCliffExpiry(), 0);
+            assertEq(AelinDeal(dealAddress).vestingExpiry(), 0);
+            assertEq(openPeriod, 10 days);
+            assertEq(openStart, 0);
+            assertEq(openExpiry, 0);
+            assertTrue(!deposited);
         }
-
-        assertEq(IERC20(dealToken).balanceOf(address(this)), 1e75 - amount);
-        assertEq(IERC20(dealToken).balanceOf(address(dealAddress)), amount);
-        assertTrue(!AelinDeal(dealAddress).depositComplete());
-        assertEq(proRataPeriod, 30 days);
-        assertEq(proRataStart, 0);
-        assertEq(proRataExpiry, 0);
-        assertEq(AelinDeal(dealAddress).vestingCliffExpiry(), 0);
-        assertEq(AelinDeal(dealAddress).vestingExpiry(), 0);
-        assertEq(openPeriod, 10 days);
-        assertEq(openStart, 0);
-        assertEq(openExpiry, 0);
-        assertTrue(!deposited);
     }
 
     function testFuzzDepositUnderlyingExtra(uint256 amount) public {

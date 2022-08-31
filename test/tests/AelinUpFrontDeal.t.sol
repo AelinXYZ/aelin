@@ -989,8 +989,7 @@ contract AelinUpFrontDealTest is Test {
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, 2000);
     }
 
-    function testAcceptDealBasic(address _user, uint256 _purchaseAmount) public {
-        vm.assume(_user != address(0));
+    function testAcceptDealBasic(uint256 _purchaseAmount) public {
         vm.assume(_purchaseAmount > 0);
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressOverFullDeposit
@@ -1000,16 +999,17 @@ contract AelinUpFrontDealTest is Test {
         uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
-        vm.startPrank(_user);
-        deal(address(purchaseToken), _user, type(uint256).max);
+        address user = address(0x456);
+        vm.startPrank(user);
+        deal(address(purchaseToken), user, type(uint256).max);
         purchaseToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
         vm.expectEmit(true, false, false, true);
-        emit AcceptDeal(_user, _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
+        emit AcceptDeal(user, _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(_user), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(user), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(_user), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(user), _purchaseAmount);
         vm.stopPrank();
     }
 

@@ -391,7 +391,6 @@ contract AelinUpFrontDealFactoryTest is Test {
     }
 
     function testFuzzCreateDealWithNonFullDeposit(
-        address _testAddress,
         uint256 _underlyingDealTokenTotal,
         uint256 _purchaseDuration,
         uint256 _vestingPeriod,
@@ -406,7 +405,6 @@ contract AelinUpFrontDealFactoryTest is Test {
         vm.assume(_vestingPeriod <= 1825 days);
         vm.assume(_depositUnderlyingAmount > 0);
         vm.assume(_depositUnderlyingAmount < _underlyingDealTokenTotal);
-        vm.assume(_testAddress != address(0));
 
         AelinNftGating.NftCollectionRules[] memory _nftCollectionRules;
         AelinAllowList.InitData memory _allowListInit;
@@ -446,11 +444,12 @@ contract AelinUpFrontDealFactoryTest is Test {
         bool _tempBool;
 
         // create when msg.sender has enough underlying tokens to fulfill the _depositUnderlyingAmount
-        vm.startPrank(_testAddress);
-        deal(address(underlyingDealToken), _testAddress, type(uint256).max);
+        address testAddress = address(0x456);
+        vm.startPrank(testAddress);
+        deal(address(underlyingDealToken), testAddress, type(uint256).max);
         underlyingDealToken.approve(address(upFrontDealFactory), type(uint256).max);
         vm.expectEmit(true, true, false, false);
-        emit DepositDealToken(address(underlyingDealToken), _testAddress, _depositUnderlyingAmount);
+        emit DepositDealToken(address(underlyingDealToken), testAddress, _depositUnderlyingAmount);
         dealAddress = upFrontDealFactory.createUpFrontDeal(
             _dealData,
             _dealConfig,
@@ -1175,17 +1174,11 @@ contract AelinUpFrontDealFactoryTest is Test {
     }
 
     // reverts when some an address other than 721 or 1155 is provided
-    function testCreatePoolNonCompatibleAddress(address collection) public {
-        vm.assume(collection != address(collectionAddress1));
-        vm.assume(collection != address(collectionAddress2));
-        vm.assume(collection != address(collectionAddress3));
-        vm.assume(collection != address(collectionAddress4));
-        vm.assume(collection != punks);
-
+    function testCreatePoolNonCompatibleAddress() public {
         AelinNftGating.NftCollectionRules[] memory _nftCollectionRules = new AelinNftGating.NftCollectionRules[](1);
         AelinAllowList.InitData memory _allowListInit;
 
-        _nftCollectionRules[0].collectionAddress = collection;
+        _nftCollectionRules[0].collectionAddress = address(testEscrow);
         _nftCollectionRules[0].purchaseAmount = 1e20;
         _nftCollectionRules[0].purchaseAmountPerToken = true;
 

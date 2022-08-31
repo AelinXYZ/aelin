@@ -734,6 +734,8 @@ contract AelinPoolTest is Test {
         vm.assume(purchaseAmount <= 1e27);
         vm.assume(withdrawAmount <= purchaseAmount);
         vm.assume(testAddress != address(0));
+        vm.assume(testAddress != address(purchaseToken));
+        vm.assume(testAddress != address(poolAddress));
 
         vm.startPrank(testAddress);
         deal(address(purchaseToken), testAddress, 1e75);
