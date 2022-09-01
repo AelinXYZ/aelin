@@ -116,21 +116,6 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         AelinNftGating.initialize(_nftCollectionRules, nftGating);
 
         require(!(allowList.hasAllowList && nftGating.hasNftList), "cannot have allow list and nft gating");
-
-        // deposit underlying token logic
-        // check if the underlying token balance is more than 0, meaning the factory contract passed tokens from the creator
-        uint256 currentDealTokenTotal = IERC20(_dealData.underlyingDealToken).balanceOf(address(this));
-        if (currentDealTokenTotal > 0) {
-            if (currentDealTokenTotal >= _dealConfig.underlyingDealTokenTotal) {
-                _startPurchasingPeriod(
-                    _dealConfig.purchaseDuration,
-                    _dealConfig.vestingCliffPeriod,
-                    _dealConfig.vestingPeriod
-                );
-            }
-
-            emit DepositDealToken(_dealData.underlyingDealToken, _dealCreator, currentDealTokenTotal);
-        }
     }
 
     function _startPurchasingPeriod(

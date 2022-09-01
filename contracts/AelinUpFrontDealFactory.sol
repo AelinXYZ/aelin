@@ -31,22 +31,9 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
         UpFrontDealData calldata _dealData,
         UpFrontDealConfig calldata _dealConfig,
         AelinNftGating.NftCollectionRules[] calldata _nftCollectionRules,
-        AelinAllowList.InitData calldata _allowListInit,
-        uint256 _depositUnderlyingAmount
+        AelinAllowList.InitData calldata _allowListInit
     ) external returns (address upFrontDealAddress) {
         upFrontDealAddress = _cloneAsMinimalProxy(UP_FRONT_DEAL_LOGIC, "Could not create new deal");
-
-        if (_depositUnderlyingAmount > 0) {
-            require(
-                IERC20(_dealData.underlyingDealToken).balanceOf(msg.sender) >= _depositUnderlyingAmount,
-                "not enough balance"
-            );
-            uint256 _balanceBeforeTransfer = ERC20(_dealData.underlyingDealToken).balanceOf(address(this));
-            IERC20(_dealData.underlyingDealToken).safeTransferFrom(msg.sender, address(this), _depositUnderlyingAmount);
-            uint256 _balanceAfterTransfer = IERC20(_dealData.underlyingDealToken).balanceOf(address(this));
-            _depositUnderlyingAmount = _balanceAfterTransfer - _balanceBeforeTransfer;
-            IERC20(_dealData.underlyingDealToken).transfer(upFrontDealAddress, _depositUnderlyingAmount);
-        }
 
         AelinUpFrontDeal(upFrontDealAddress).initialize(
             _dealData,
