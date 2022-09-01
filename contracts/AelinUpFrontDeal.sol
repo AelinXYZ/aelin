@@ -58,7 +58,6 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         UpFrontDealConfig calldata _dealConfig,
         AelinNftGating.NftCollectionRules[] calldata _nftCollectionRules,
         AelinAllowList.InitData calldata _allowListInit,
-        address _dealCreator,
         address _aelinTreasuryAddress,
         address _aelinEscrowLogicAddress
     ) external initOnce {

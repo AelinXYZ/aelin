@@ -40,7 +40,6 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
             _dealConfig,
             _nftCollectionRules,
             _allowListInit,
-            msg.sender,
             AELIN_TREASURY,
             AELIN_ESCROW_LOGIC
         );
