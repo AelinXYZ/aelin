@@ -589,4 +589,21 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         );
         _;
     }
+
+    modifier blockTransfer() {
+        require(false, "cannot transfer deal tokens");
+        _;
+    }
+
+    function transfer(address _dst, uint256 _amount) public virtual override blockTransfer returns (bool) {
+        return super.transfer(_dst, _amount);
+    }
+
+    function transferFrom(
+        address _src,
+        address _dst,
+        uint256 _amount
+    ) public virtual override blockTransfer returns (bool) {
+        return super.transferFrom(_src, _dst, _amount);
+    }
 }
