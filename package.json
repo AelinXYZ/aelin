@@ -27,7 +27,13 @@
 		"deploy-aelin:dry-run": "npx hardhat cannon:build --network mainnet aelinTreasuryAddress='0x51b0332E1b3349bcF01689E63e34d8859595e376' --dry-run --port 5001",
 		"deploy-aelin:mainnet": "npx hardhat cannon:build --network mainnet aelinTreasuryAddress='0x51b0332E1b3349bcF01689E63e34d8859595e376'",
 		"deploy-aelin:optimism": "npx hardhat cannon:build --network optimism aelinTreasuryAddress='0x5B8F3fb479571Eca6A06240b21926Db586Cdf10f'",
-		"deploy-aelin:goerli": "npx hardhat cannon:build --network goerli aelinTreasuryAddress='0x5B8F3fb479571Eca6A06240b21926Db586Cdf10f'"
+		"deploy-aelin:goerli": "npx hardhat cannon:build --network goerli aelinTreasuryAddress='0x5B8F3fb479571Eca6A06240b21926Db586Cdf10f'",
+		"verify:mainnet": "npx hardhat --network mainnet cannon:verify",
+		"verify:optimism": "npx hardhat --network optimism cannon:verify",
+		"verify:goerli": "npx hardhat --network goerli cannon:verify",
+		"inspect:mainnet": "npx hardhat --network mainnet cannon:inspect --write-deployments deployments/${PACKAGE_VERSION}",
+		"inspect:optimism": "npx hardhat --network optimism cannon:inspect --write-deployments deployments/${PACKAGE_VERSION}",
+		"inspect:goerli": "npx hardhat --network goerli cannon:verify --write-deployments deployments/${PACKAGE_VERSION}"
 	},
 	"repository": {
 		"type": "git",
@@ -72,6 +78,7 @@
 		"hardhat-cannon": "^1.0.26",
 		"hardhat-gas-reporter": "1.0.4",
 		"hardhat-interact": "0.2.0",
+		"jsonfile": "^6.1.0",
 		"keccak256": "1.0.3",
 		"lodash": "4.17.21",
 		"merkletreejs": "0.2.23",
