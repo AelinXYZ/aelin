@@ -155,57 +155,69 @@ contract AelinUpFrontDealTest is Test {
             dealData,
             dealConfig,
             nftCollectionRulesEmpty,
-            allowListInitEmpty,
-            0
+            allowListInitEmpty
         );
 
         dealAddressAllowDeallocation = upFrontDealFactory.createUpFrontDeal(
             dealData,
             dealConfigAllowDeallocation,
             nftCollectionRulesEmpty,
-            allowListInitEmpty,
-            0
+            allowListInitEmpty
         );
 
         dealAddressOverFullDeposit = upFrontDealFactory.createUpFrontDeal(
             dealData,
             dealConfig,
             nftCollectionRulesEmpty,
-            allowListInitEmpty,
-            1e36
+            allowListInitEmpty
         );
 
         dealAddressAllowList = upFrontDealFactory.createUpFrontDeal(
             dealData,
             dealConfig,
             nftCollectionRulesEmpty,
-            allowListInit,
-            1e35
+            allowListInit
         );
 
         dealAddressNftGating721 = upFrontDealFactory.createUpFrontDeal(
             dealData,
             dealConfig,
             nftCollectionRules721,
-            allowListInitEmpty,
-            1e35
+            allowListInitEmpty
         );
 
         dealAddressNftGatingPunks = upFrontDealFactory.createUpFrontDeal(
             dealData,
             dealConfig,
             nftCollectionRulesPunks,
-            allowListInitEmpty,
-            1e35
+            allowListInitEmpty
         );
 
         dealAddressNftGating1155 = upFrontDealFactory.createUpFrontDeal(
             dealData,
             dealConfig,
             nftCollectionRules1155,
-            allowListInitEmpty,
-            1e35
+            allowListInitEmpty
         );
+
+        vm.stopPrank();
+        vm.startPrank(address(0xDEAD));
+
+        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        underlyingDealToken.approve(address(dealAddressAllowList), type(uint256).max);
+        AelinUpFrontDeal(dealAddressAllowList).depositUnderlyingTokens(1e35);
+
+        underlyingDealToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
+        AelinUpFrontDeal(dealAddressOverFullDeposit).depositUnderlyingTokens(1e36);
+
+        underlyingDealToken.approve(address(dealAddressNftGating721), type(uint256).max);
+        AelinUpFrontDeal(dealAddressNftGating721).depositUnderlyingTokens(1e35);
+
+        underlyingDealToken.approve(address(dealAddressNftGatingPunks), type(uint256).max);
+        AelinUpFrontDeal(dealAddressNftGatingPunks).depositUnderlyingTokens(1e35);
+
+        underlyingDealToken.approve(address(dealAddressNftGating1155), type(uint256).max);
+        AelinUpFrontDeal(dealAddressNftGating1155).depositUnderlyingTokens(1e35);
 
         vm.stopPrank();
     }
@@ -709,7 +721,6 @@ contract AelinUpFrontDealTest is Test {
             dealConfig,
             nftCollectionRulesEmpty,
             allowListInitEmpty,
-            msg.sender,
             aelinTreasury,
             address(testEscrow)
         );

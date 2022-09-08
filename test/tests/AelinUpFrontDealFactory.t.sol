@@ -104,8 +104,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             _dealData,
             _dealConfig,
             _nftCollectionRules,
-            _allowListInit,
-            0
+            _allowListInit
         );
 
         string memory _tempString;
@@ -209,8 +208,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             _dealData,
             _dealConfig,
             _nftCollectionRules,
-            _allowListInit,
-            0
+            _allowListInit
         );
 
         string memory _tempString;
@@ -301,8 +299,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             _dealData,
             _dealConfig,
             _nftCollectionRules,
-            _allowListInit,
-            0
+            _allowListInit
         );
 
         // Revert for passing in null underlying deal token address
@@ -318,7 +315,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         });
 
         vm.expectRevert("cant pass null underlying token address");
-        dealAddress = upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit, 0);
+        dealAddress = upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
 
         // Revert for passing in null holder address
 
@@ -333,231 +330,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         });
 
         vm.expectRevert("cant pass null holder address");
-        dealAddress = upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit, 0);
-    }
-
-    function testFuzzCreateDealWhenDepositNotEnough(
-        address _testAddress,
-        uint256 _underlyingDealTokenTotal,
-        uint256 _purchaseDuration,
-        uint256 _vestingPeriod,
-        uint256 _vestingCliffPeriod,
-        uint256 _depositUnderlyingAmount,
-        bool _allowDeallocation
-    ) public {
-        vm.assume(_underlyingDealTokenTotal > 0);
-        vm.assume(_purchaseDuration >= 30 minutes);
-        vm.assume(_purchaseDuration <= 30 days);
-        vm.assume(_vestingCliffPeriod <= 1825 days);
-        vm.assume(_vestingPeriod <= 1825 days);
-        vm.assume(_depositUnderlyingAmount > 0);
-        vm.assume(_depositUnderlyingAmount < _underlyingDealTokenTotal);
-        vm.assume(_testAddress != address(0));
-
-        AelinNftGating.NftCollectionRules[] memory _nftCollectionRules;
-        AelinAllowList.InitData memory _allowListInit;
-
-        IAelinUpFrontDeal.UpFrontDealData memory _dealData;
-        _dealData = IAelinUpFrontDeal.UpFrontDealData({
-            name: "DEAL",
-            symbol: "DEAL",
-            purchaseToken: address(purchaseToken),
-            underlyingDealToken: address(underlyingDealToken),
-            holder: address(0xDEAD),
-            sponsor: address(0x123),
-            sponsorFee: 0
-        });
-
-        IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
-        _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
-            underlyingDealTokenTotal: _underlyingDealTokenTotal,
-            purchaseTokenPerDealToken: 1e18,
-            purchaseRaiseMinimum: 0,
-            purchaseDuration: _purchaseDuration,
-            vestingPeriod: _vestingPeriod,
-            vestingCliffPeriod: _vestingCliffPeriod,
-            allowDeallocation: _allowDeallocation
-        });
-
-        // create when the msg.sender does not have enough underlying tokens to fulfill the _depositUnderlyingAmount
-        vm.expectRevert("not enough balance");
-        upFrontDealFactory.createUpFrontDeal(
-            _dealData,
-            _dealConfig,
-            _nftCollectionRules,
-            _allowListInit,
-            _depositUnderlyingAmount
-        );
-    }
-
-    function testFuzzCreateDealWithNonFullDeposit(
-        uint256 _underlyingDealTokenTotal,
-        uint256 _purchaseDuration,
-        uint256 _vestingPeriod,
-        uint256 _vestingCliffPeriod,
-        uint256 _depositUnderlyingAmount,
-        bool _allowDeallocation
-    ) public {
-        vm.assume(_underlyingDealTokenTotal > 0);
-        vm.assume(_purchaseDuration >= 30 minutes);
-        vm.assume(_purchaseDuration <= 30 days);
-        vm.assume(_vestingCliffPeriod <= 1825 days);
-        vm.assume(_vestingPeriod <= 1825 days);
-        vm.assume(_depositUnderlyingAmount > 0);
-        vm.assume(_depositUnderlyingAmount < _underlyingDealTokenTotal);
-
-        AelinNftGating.NftCollectionRules[] memory _nftCollectionRules;
-        AelinAllowList.InitData memory _allowListInit;
-
-        IAelinUpFrontDeal.UpFrontDealData memory _dealData;
-        _dealData = IAelinUpFrontDeal.UpFrontDealData({
-            name: "DEAL",
-            symbol: "DEAL",
-            purchaseToken: address(purchaseToken),
-            underlyingDealToken: address(underlyingDealToken),
-            holder: address(0xDEAD),
-            sponsor: address(0x123),
-            sponsorFee: 0
-        });
-
-        IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
-        _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
-            underlyingDealTokenTotal: _underlyingDealTokenTotal,
-            purchaseTokenPerDealToken: 1e18,
-            purchaseRaiseMinimum: 0,
-            purchaseDuration: _purchaseDuration,
-            vestingPeriod: _vestingPeriod,
-            vestingCliffPeriod: _vestingCliffPeriod,
-            allowDeallocation: _allowDeallocation
-        });
-
-        // create when the msg.sender does not have enough underlying tokens to fulfill the _depositUnderlyingAmount
-        vm.expectRevert("not enough balance");
-        address dealAddress = upFrontDealFactory.createUpFrontDeal(
-            _dealData,
-            _dealConfig,
-            _nftCollectionRules,
-            _allowListInit,
-            _depositUnderlyingAmount
-        );
-
-        bool _tempBool;
-
-        // create when msg.sender has enough underlying tokens to fulfill the _depositUnderlyingAmount
-        address testAddress = address(0x456);
-        vm.startPrank(testAddress);
-        deal(address(underlyingDealToken), testAddress, type(uint256).max);
-        underlyingDealToken.approve(address(upFrontDealFactory), type(uint256).max);
-        vm.expectEmit(true, true, false, false);
-        emit DepositDealToken(address(underlyingDealToken), testAddress, _depositUnderlyingAmount);
-        dealAddress = upFrontDealFactory.createUpFrontDeal(
-            _dealData,
-            _dealConfig,
-            _nftCollectionRules,
-            _allowListInit,
-            _depositUnderlyingAmount
-        );
-        assertEq(AelinUpFrontDeal(dealAddress).purchaseExpiry(), 0);
-        assertEq(AelinUpFrontDeal(dealAddress).vestingCliffExpiry(), 0);
-        assertEq(AelinUpFrontDeal(dealAddress).vestingExpiry(), 0);
-        assertEq(underlyingDealToken.balanceOf(dealAddress), _depositUnderlyingAmount);
-
-        // test allow list
-        (, , , _tempBool) = AelinUpFrontDeal(dealAddress).getAllowList(address(0));
-        assertFalse(_tempBool);
-
-        // test nft gating
-        (, , _tempBool) = AelinUpFrontDeal(dealAddress).getNftGatingDetails(address(0), address(0), 0);
-        assertFalse(_tempBool);
-    }
-
-    function testFuzzCreateDealWithFullDeposit(
-        address _testAddress,
-        uint256 _underlyingDealTokenTotal,
-        uint256 _purchaseDuration,
-        uint256 _vestingPeriod,
-        uint256 _vestingCliffPeriod,
-        uint256 _depositUnderlyingAmount,
-        bool _allowDeallocation
-    ) public {
-        vm.assume(_underlyingDealTokenTotal > 0);
-        vm.assume(_purchaseDuration >= 30 minutes);
-        vm.assume(_purchaseDuration <= 30 days);
-        vm.assume(_vestingCliffPeriod <= 1825 days);
-        vm.assume(_vestingPeriod <= 1825 days);
-        vm.assume(_depositUnderlyingAmount >= _underlyingDealTokenTotal);
-        vm.assume(_testAddress != address(0));
-        vm.assume(_testAddress != address(underlyingDealToken));
-        vm.assume(_testAddress != address(purchaseToken));
-
-        AelinNftGating.NftCollectionRules[] memory _nftCollectionRules;
-        AelinAllowList.InitData memory _allowListInit;
-
-        IAelinUpFrontDeal.UpFrontDealData memory _dealData;
-        _dealData = IAelinUpFrontDeal.UpFrontDealData({
-            name: "DEAL",
-            symbol: "DEAL",
-            purchaseToken: address(purchaseToken),
-            underlyingDealToken: address(underlyingDealToken),
-            holder: address(0xDEAD),
-            sponsor: address(0x123),
-            sponsorFee: 0
-        });
-
-        IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
-        _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
-            underlyingDealTokenTotal: _underlyingDealTokenTotal,
-            purchaseTokenPerDealToken: 1e18,
-            purchaseRaiseMinimum: 0,
-            purchaseDuration: _purchaseDuration,
-            vestingPeriod: _vestingPeriod,
-            vestingCliffPeriod: _vestingCliffPeriod,
-            allowDeallocation: _allowDeallocation
-        });
-
-        // create when _depositUnderlyingAmount is enough to fulfill the underlying total amount
-        vm.startPrank(_testAddress);
-        deal(address(underlyingDealToken), _testAddress, type(uint256).max);
-        underlyingDealToken.approve(address(upFrontDealFactory), type(uint256).max);
-        vm.expectEmit(true, true, false, false);
-        emit DepositDealToken(address(underlyingDealToken), _testAddress, _depositUnderlyingAmount);
-        address dealAddress = upFrontDealFactory.createUpFrontDeal(
-            _dealData,
-            _dealConfig,
-            _nftCollectionRules,
-            _allowListInit,
-            _depositUnderlyingAmount
-        );
-        vm.assume(_testAddress != address(dealAddress));
-
-        bool _tempBool;
-
-        // deal contract storage
-        assertEq(AelinUpFrontDeal(dealAddress).dealFactory(), address(upFrontDealFactory));
-        assertEq(AelinUpFrontDeal(dealAddress).name(), "aeUpFrontDeal-DEAL");
-        assertEq(AelinUpFrontDeal(dealAddress).symbol(), "aeUD-DEAL");
-        assertEq(AelinUpFrontDeal(dealAddress).decimals(), MockERC20(underlyingDealToken).decimals());
-        assertEq(AelinUpFrontDeal(dealAddress).dealStart(), block.timestamp);
-        assertEq(AelinUpFrontDeal(dealAddress).aelinEscrowLogicAddress(), address(testEscrow));
-        assertEq(AelinUpFrontDeal(dealAddress).aelinTreasuryAddress(), aelinTreasury);
-
-        assertEq(AelinUpFrontDeal(dealAddress).purchaseExpiry(), block.timestamp + _purchaseDuration);
-        assertEq(
-            AelinUpFrontDeal(dealAddress).vestingCliffExpiry(),
-            block.timestamp + _purchaseDuration + _vestingCliffPeriod
-        );
-        assertEq(
-            AelinUpFrontDeal(dealAddress).vestingExpiry(),
-            block.timestamp + _purchaseDuration + _vestingCliffPeriod + _vestingPeriod
-        );
-
-        // test allow list
-        (, , , _tempBool) = AelinUpFrontDeal(dealAddress).getAllowList(address(0));
-        assertFalse(_tempBool);
-
-        // test nft gating
-        (, , _tempBool) = AelinUpFrontDeal(dealAddress).getNftGatingDetails(address(0), address(0), 0);
-        assertFalse(_tempBool);
+        dealAddress = upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
     }
 
     function testFuzzCreateDealWithAllowList(
@@ -613,8 +386,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             _dealData,
             _dealConfig,
             _nftCollectionRules,
-            _allowListInit,
-            0
+            _allowListInit
         );
 
         string memory _tempString;
@@ -738,7 +510,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         });
 
         vm.expectRevert("allowListAddresses and allowListAmounts arrays should have the same length");
-        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit, 0);
+        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
     }
 
     function testCreateDealWith721() public {
@@ -779,8 +551,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             _dealData,
             _dealConfig,
             _nftCollectionRules,
-            _allowListInit,
-            0
+            _allowListInit
         );
 
         string memory _tempString;
@@ -888,8 +659,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             _dealData,
             _dealConfig,
             _nftCollectionRules,
-            _allowListInit,
-            0
+            _allowListInit
         );
 
         string memory _tempString;
@@ -1009,8 +779,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             _dealData,
             _dealConfig,
             _nftCollectionRules,
-            _allowListInit,
-            0
+            _allowListInit
         );
 
         string memory _tempString;
@@ -1129,7 +898,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         });
 
         vm.expectRevert("can only contain 1155");
-        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit, 0);
+        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
     }
 
     function testRevertCreateDealWith721and1155() public {
@@ -1173,7 +942,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         });
 
         vm.expectRevert("can only contain 721");
-        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit, 0);
+        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
     }
 
     // reverts when some an address other than 721 or 1155 is provided
@@ -1208,7 +977,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         });
 
         vm.expectRevert("collection is not compatible");
-        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit, 0);
+        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
     }
 
     function testRevertNftAndAllowList() public {
@@ -1254,7 +1023,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         });
 
         vm.expectRevert("cannot have allow list and nft gating");
-        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit, 0);
+        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
     }
 
     event DepositDealToken(
