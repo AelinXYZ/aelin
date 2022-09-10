@@ -689,7 +689,7 @@ contract AelinPoolPurchase is Test {
 
     // 1155 - purchase unlimted with tokenId when `purchaseAmountPerToken` is true - fail
     function testFail1155Unlimited(uint256 purchaseAmount) public {
-        vm.assume(purchaseAmount >= 1e22);
+        vm.assume(purchaseAmount > 1e22);
 
         uint256[] memory mintIds = new uint256[](1);
         uint256[] memory mintAmount = new uint256[](1);
