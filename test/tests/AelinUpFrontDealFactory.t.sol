@@ -65,8 +65,6 @@ contract AelinUpFrontDealFactoryTest is Test {
         uint256 _underlyingDealTokenTotal,
         uint256 _purchaseTokenPerDealToken,
         uint256 _purchaseDuration,
-        uint256 _vestingPeriod,
-        uint256 _vestingCliffPeriod,
         bool _allowDeallocation
     ) public {
         vm.assume(_sponsorFee < MAX_SPONSOR_FEE);
@@ -74,8 +72,8 @@ contract AelinUpFrontDealFactoryTest is Test {
         vm.assume(_purchaseTokenPerDealToken > 0);
         vm.assume(_purchaseDuration >= 30 minutes);
         vm.assume(_purchaseDuration <= 30 days);
-        vm.assume(_vestingCliffPeriod <= 1825 days);
-        vm.assume(_vestingPeriod <= 1825 days);
+        uint256 _vestingCliffPeriod = 200 days;
+        uint256 _vestingPeriod = 365 days;
 
         // Vesting Schedules
         IAelinUpFrontDeal.VestingSchedule[] memory vestingSingle = new IAelinUpFrontDeal.VestingSchedule[](1);
