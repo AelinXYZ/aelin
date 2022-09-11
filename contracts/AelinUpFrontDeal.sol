@@ -61,7 +61,6 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         UpFrontDealConfig calldata _dealConfig,
         AelinNftGating.NftCollectionRules[] calldata _nftCollectionRules,
         AelinAllowList.InitData calldata _allowListInit,
-        address _dealCreator,
         address _aelinTreasuryAddress,
         address _aelinEscrowLogicAddress
     ) external initOnce {
@@ -128,23 +127,6 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
 
         vestingCliffExpiry = new uint256[](_dealConfig.vestingSchedule.length);
         vestingExpiry = new uint256[](_dealConfig.vestingSchedule.length);
-
-        // deposit underlying token logic
-        // check if the underlying token balance is more than 0, meaning the factory contract passed tokens from the creator
-        if (IERC20(_dealData.underlyingDealToken).balanceOf(address(this)) > 0) {
-            uint256 currentDealTokenTotal = IERC20(_dealData.underlyingDealToken).balanceOf(address(this));
-            if (currentDealTokenTotal >= _dealConfig.underlyingDealTokenTotal) {
-                underlyingDepositComplete = true;
-                purchaseExpiry = block.timestamp + _dealConfig.purchaseDuration;
-                for (uint256 i; i < _dealConfig.vestingSchedule.length; ++i) {
-                    vestingCliffExpiry[i] = purchaseExpiry + _dealConfig.vestingSchedule[i].vestingCliffPeriod;
-                    vestingExpiry[i] = vestingCliffExpiry[i] + _dealConfig.vestingSchedule[i].vestingPeriod;
-                }
-                emit DealFullyFunded(address(this), block.timestamp, purchaseExpiry, vestingCliffExpiry, vestingExpiry);
-            }
-
-            emit DepositDealToken(_dealData.underlyingDealToken, _dealCreator, currentDealTokenTotal);
-        }
     }
 
     modifier initOnce() {
