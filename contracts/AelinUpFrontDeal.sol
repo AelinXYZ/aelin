@@ -152,6 +152,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         uint256 balanceAfterTransfer = IERC20(_underlyingDealToken).balanceOf(address(this));
         uint256 underlyingDealTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
 
+        // start purchasing period
         if (balanceAfterTransfer >= dealConfig.underlyingDealTokenTotal) {
             underlyingDepositComplete = true;
             purchaseExpiry = block.timestamp + dealConfig.purchaseDuration;
@@ -232,9 +233,9 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         } else if (totalPoolShares > _underlyingDealTokenTotal) {
             // if there is deallocation
             // attempt these computations, if it causes a revert this is overflow protection for purchaserClaim()
-            uint256 test = (((poolSharesPerUser[msg.sender][_vestingIndex] * _underlyingDealTokenTotal) / totalPoolShares) *
-                (BASE - AELIN_FEE - dealData.sponsorFee)) / BASE;
-            test =
+            uint256 mathTest = (((poolSharesPerUser[msg.sender][_vestingIndex] * _underlyingDealTokenTotal) /
+                totalPoolShares) * (BASE - AELIN_FEE - dealData.sponsorFee)) / BASE;
+            mathTest =
                 purchaseTokensPerUser[msg.sender][_vestingIndex] -
                 ((purchaseTokensPerUser[msg.sender][_vestingIndex] * _underlyingDealTokenTotal) / totalPoolShares);
         }
@@ -692,5 +693,22 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
             "does not pass minimum raise"
         );
         _;
+    }
+
+    modifier blockTransfer() {
+        require(false, "cannot transfer deal tokens");
+        _;
+    }
+
+    function transfer(address _dst, uint256 _amount) public virtual override blockTransfer returns (bool) {
+        return super.transfer(_dst, _amount);
+    }
+
+    function transferFrom(
+        address _src,
+        address _dst,
+        uint256 _amount
+    ) public virtual override blockTransfer returns (bool) {
+        return super.transferFrom(_src, _dst, _amount);
     }
 }

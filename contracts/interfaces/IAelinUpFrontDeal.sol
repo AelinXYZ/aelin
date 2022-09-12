@@ -79,7 +79,7 @@ interface IAelinUpFrontDeal {
 
     event HolderClaim(
         address indexed holder,
-        address purchasingToken,
+        address purchaseToken,
         uint256 amountClaimed,
         address underlyingToken,
         uint256 underlyingRefund,

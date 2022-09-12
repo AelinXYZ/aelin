@@ -175,6 +175,7 @@ library AelinNftGating {
                     require(IERC721(_collectionAddress).ownerOf(_tokenIds[j]) == msg.sender, "has to be the token owner");
                     require(!_data.nftId[_collectionAddress][_tokenIds[j]], "tokenId already used");
                     _data.nftId[_collectionAddress][_tokenIds[j]] = true;
+                    emit BlacklistNFT(_collectionAddress, _tokenIds[j]);
                 }
             }
             if (NftCheck.supports1155(_collectionAddress)) {
@@ -195,6 +196,7 @@ library AelinNftGating {
                     );
                     require(!_data.nftId[_collectionAddress][_tokenIds[j]], "tokenId already used");
                     _data.nftId[_collectionAddress][_tokenIds[j]] = true;
+                    emit BlacklistNFT(_collectionAddress, _tokenIds[j]);
                 }
             }
         }
@@ -213,4 +215,5 @@ library AelinNftGating {
         uint256[] tokenIds,
         uint256[] minTokensEligible
     );
+    event BlacklistNFT(address indexed collection, uint256 nftID);
 }
