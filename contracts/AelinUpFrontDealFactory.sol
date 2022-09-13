@@ -31,6 +31,7 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
         AelinNftGating.NftCollectionRules[] calldata _nftCollectionRules,
         AelinAllowList.InitData calldata _allowListInit
     ) external returns (address upFrontDealAddress) {
+        require(_dealData.sponsor == msg.sender, "sponsor must be msg.sender");
         upFrontDealAddress = _cloneAsMinimalProxy(UP_FRONT_DEAL_LOGIC, "Could not create new deal");
 
         AelinUpFrontDeal(upFrontDealAddress).initialize(
