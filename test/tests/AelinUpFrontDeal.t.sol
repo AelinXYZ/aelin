@@ -22,7 +22,7 @@ contract AelinUpFrontDealTest is Test {
     uint256 constant MAX_SPONSOR_FEE = 1500;
     uint256 constant AELIN_FEE = 200;
 
-    address dealCreatorAddress = address(0x1234);
+    address dealCreatorAddress = address(0xBEEF);
 
     address dealAddress;
     address dealAddressAllowDeallocation;
