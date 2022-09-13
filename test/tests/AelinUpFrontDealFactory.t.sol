@@ -375,7 +375,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             allowDeallocation: false
         });
 
-        vm.prank(address(0x123));
+        vm.startPrank(address(0x123));
         vm.expectRevert("cant pass null purchase token address");
         address dealAddress = upFrontDealFactory.createUpFrontDeal(
             _dealData,
@@ -396,7 +396,6 @@ contract AelinUpFrontDealFactoryTest is Test {
             sponsorFee: 200
         });
 
-        vm.prank(address(0x123));
         vm.expectRevert("cant pass null underlying token address");
         dealAddress = upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
 
@@ -412,9 +411,10 @@ contract AelinUpFrontDealFactoryTest is Test {
             sponsorFee: 200
         });
 
-        vm.prank(address(0x123));
         vm.expectRevert("cant pass null holder address");
         dealAddress = upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
+
+        vm.stopPrank();
     }
 
     function testFuzzCreateDealWithAllowList(
