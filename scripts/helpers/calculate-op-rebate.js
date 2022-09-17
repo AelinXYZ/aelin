@@ -4,6 +4,20 @@ const { ethers } = require('ethers');
 const { getAddress } = require('@ethersproject/address');
 
 async function main() {
+	const optimismBatchTransaction = {
+		version: '1.0',
+		chainId: '10',
+		createdAt: 1663452378091,
+		meta: {
+			name: 'Transactions Batch',
+			description: '',
+			txBuilderVersion: '1.10.0',
+			createdFromSafeAddress: '0x5B8F3fb479571Eca6A06240b21926Db586Cdf10f',
+			createdFromOwnerAddress: '',
+			checksum: '0xac6e6cff0490ed6f300b54afbe44e357a7b17a28e2d38966608fd0c2058cfcc2',
+		},
+		transactions: [],
+	};
 	const decimals = 18;
 	const endpoint = 'https://api.thegraph.com/subgraphs/name/aelin-xyz/aelin-optimism';
 
@@ -42,6 +56,23 @@ async function main() {
 			.mul(TOTAL_OP)
 			.div(TOTAL_sUSD);
 		acc[curr[0]] = opAmount.toString();
+		optimismBatchTransaction.transactions.push({
+			to: '0x4200000000000000000000000000000000000042',
+			value: '0',
+			data: null,
+			contractMethod: {
+				inputs: [
+					{ internalType: 'address', name: 'to', type: 'address' },
+					{ internalType: 'uint256', name: 'amount', type: 'uint256' },
+				],
+				name: 'transfer',
+				payable: false,
+			},
+			contractInputsValues: {
+				to: curr[0],
+				amount: opAmount.toString(),
+			},
+		});
 		return acc;
 	}, {});
 
@@ -58,6 +89,14 @@ async function main() {
 	fs.writeFileSync(
 		`./scripts/helpers/op-accepted.json`,
 		JSON.stringify(sortedOutput),
+		function (err) {
+			if (err) return console.log(err);
+		}
+	);
+
+	fs.writeFileSync(
+		`./scripts/helpers/OPTransactionsBatch.json`,
+		JSON.stringify(optimismBatchTransaction),
 		function (err) {
 			if (err) return console.log(err);
 		}
