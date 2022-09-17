@@ -1,8 +1,10 @@
 const fs = require('fs');
 const { request, gql } = require('graphql-request');
+const { ethers } = require('ethers');
 const { getAddress } = require('@ethersproject/address');
 
 async function main() {
+	const decimals = 18;
 	const endpoint = 'https://api.thegraph.com/subgraphs/name/aelin-xyz/aelin-optimism';
 
 	const query = gql`
@@ -17,23 +19,29 @@ async function main() {
 	const variables = {
 		poolAddress: '0xe361Ac500fc1D91d49E2c0204963F2cadbcAF67a',
 	};
-	const TOTAL_sUSD = 1200000;
-	const TOTAL_OP = 866963.2;
+	const TOTAL_sUSD = ethers.utils.parseUnits('1200000', decimals);
+	const TOTAL_OP = ethers.utils.parseUnits('866963.20000000000007', decimals);
 
 	const data = await request(endpoint, query, variables);
 	console.log('data.acceptDeals.length', data.acceptDeals.length);
 
 	let tempData = {};
 	data.acceptDeals.map(({ purchaser, poolTokenAmount }) => {
+		const value = ethers.utils.formatUnits(poolTokenAmount, decimals).toString();
 		if (tempData[getAddress(purchaser)]) {
-			tempData[getAddress(purchaser)] += Number(poolTokenAmount) / 1e18;
+			tempData[getAddress(purchaser)] = String(
+				Number(value) + Number(tempData[getAddress(purchaser)])
+			);
 		} else {
-			tempData[getAddress(purchaser)] = Number(poolTokenAmount) / 1e18;
+			tempData[getAddress(purchaser)] = value;
 		}
 	});
 
 	const readableOutput = Object.entries(tempData).reduce((acc, curr) => {
-		acc[curr[0]] = (curr[1] / TOTAL_sUSD) * TOTAL_OP;
+		const opAmount = ethers.BigNumber.from(ethers.utils.parseUnits(curr[1], decimals))
+			.mul(TOTAL_OP)
+			.div(TOTAL_sUSD);
+		acc[curr[0]] = opAmount.toString();
 		return acc;
 	}, {});
 
