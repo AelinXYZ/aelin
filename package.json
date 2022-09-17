@@ -20,6 +20,7 @@
 		"optimism-bridge-set-contract-data": "hardhat run scripts/optimism-bridge-set-contract-data.js --network optimism",
 		"collect-staker-data": "node scripts/helpers/collect-staker-data.js",
 		"calculate-aelin-pool-distribution": "node scripts/helpers/calculate-aelin-pool-distribution.js",
+		"calculate-op-rebate": "node scripts/helpers/calculate-op-rebate.js",
 		"combine-pool-retro-missing": "node scripts/helpers/combine-pool-retro-missing.js",
 		"final-snx-missing-wallets": "node scripts/helpers/final-snx-missing-wallets.js",
 		"final-snx-missing-wallets-amounts": "node scripts/helpers/final-snx-missing-wallets-amounts.js",
