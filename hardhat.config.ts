@@ -56,7 +56,7 @@ const config: HardhatUserConfig = {
     },
     goerli: {
       url: `https://eth-goerli.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
-      accounts: [`0x${process.env.KOVAN_PRIVATE_KEY}`],
+      accounts: [`0x${process.env.GOERLI_PRIVATE_KEY}`],
     },
     hardhat: {
       initialBaseFeePerGas: 0,

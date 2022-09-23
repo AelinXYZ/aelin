@@ -1,0 +1,81 @@
+{
+  "address": "0x3Bcb765239a01C69b444a19FC56F9ebA87ba517B",
+  "abi": [
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "BlacklistNFT",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "collection",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "nftID",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "PoolWith1155",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "collectionAddress",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "purchaseAmount",
+          "indexed": false
+        },
+        {
+          "type": "bool",
+          "name": "purchaseAmountPerToken",
+          "indexed": false
+        },
+        {
+          "type": "uint256[]",
+          "name": "tokenIds",
+          "indexed": false
+        },
+        {
+          "type": "uint256[]",
+          "name": "minTokensEligible",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "PoolWith721",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "collectionAddress",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "purchaseAmount",
+          "indexed": false
+        },
+        {
+          "type": "bool",
+          "name": "purchaseAmountPerToken",
+          "indexed": false
+        }
+      ]
+    }
+  ],
+  "constructorArgs": [],
+  "deployTxnHash": "0x0dbb759e42c56efa11e405056cea0efa8c1111e3f5d40f71b582898227c54dba",
+  "sourceName": "contracts/libraries/AelinNftGating.sol",
+  "contractName": "AelinNftGating",
+  "deployedOn": "contract.aelinNftGating"
+}

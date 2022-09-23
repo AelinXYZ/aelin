@@ -27,7 +27,7 @@
 		"deploy-aelin:dry-run": "npx hardhat cannon:build --network mainnet aelinTreasuryAddress='0x51b0332E1b3349bcF01689E63e34d8859595e376' --dry-run --port 5001",
 		"deploy-aelin:mainnet": "npx hardhat cannon:build --network mainnet aelinTreasuryAddress='0x51b0332E1b3349bcF01689E63e34d8859595e376'",
 		"deploy-aelin:optimism": "npx hardhat cannon:build --network optimism aelinTreasuryAddress='0x5B8F3fb479571Eca6A06240b21926Db586Cdf10f'",
-		"deploy-aelin:goerli": "npx hardhat cannon:build --network goerli aelinTreasuryAddress='0x5B8F3fb479571Eca6A06240b21926Db586Cdf10f'",
+		"deploy-aelin:goerli": "npx hardhat cannon:build --network goerli aelinTreasuryAddress='0x6144DAf8e2e583cD30C3567861C8E1D95cfA51B5'",
 		"verify:mainnet": "npx hardhat --network mainnet cannon:verify",
 		"verify:optimism": "npx hardhat --network optimism cannon:verify",
 		"verify:goerli": "npx hardhat --network goerli cannon:verify",
