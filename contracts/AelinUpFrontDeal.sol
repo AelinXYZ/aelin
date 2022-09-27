@@ -4,6 +4,7 @@ pragma solidity 0.8.6;
 import "./AelinERC20.sol";
 import "./MinimalProxyFactory.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {AelinDeal} from "./AelinDeal.sol";
 import {AelinPool} from "./AelinPool.sol";
 import {AelinFeeEscrow} from "./AelinFeeEscrow.sol";
@@ -26,6 +27,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     AelinFeeEscrow public aelinFeeEscrow;
     address public dealFactory;
 
+    mapping(uint256 => uint256) private claimedBitMap;
     AelinAllowList.AllowList public allowList;
     AelinNftGating.NftGatingData public nftGating;
     mapping(address => uint256) public purchaseTokensPerUser;
@@ -48,6 +50,13 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     uint256 public purchaseExpiry;
     uint256 public vestingCliffExpiry;
     uint256 public vestingExpiry;
+
+    struct MerkleData {
+        uint256 index;
+        address account;
+        uint256 amount;
+        bytes32[] merkleProof;
+    }
 
     /**
      * @dev initializes the contract configuration, called from the factory contract when creating a new Up Front Deal
@@ -89,6 +98,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         // store pool and deal details as state variables
         dealData = _dealData;
         dealConfig = _dealConfig;
+
         dealStart = block.timestamp;
 
         dealFactory = msg.sender;
@@ -115,6 +125,8 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         AelinNftGating.initialize(_nftCollectionRules, nftGating);
 
         require(!(allowList.hasAllowList && nftGating.hasNftList), "cant have allow list & nft");
+        require(!(allowList.hasAllowList && dealData.merkleRoot != 0), "cant have allow list & merkle");
+        require(!(nftGating.hasNftList && dealData.merkleRoot != 0), "cant have nft & merkle");
     }
 
     function _startPurchasingPeriod(
@@ -174,17 +186,27 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         emit WithdrewExcess(address(this), excessAmount);
     }
 
+    // TODO call accept deal with the merkle proof and verify it
     /**
      * @dev accept deal by depositing purchasing tokens which is converted to a mapping which stores the amount of
      * underlying purchased. pool shares have the same decimals as the underlying deal token
      * @param _nftPurchaseList NFTs to use for accepting the deal if deal is NFT gated
      * @param _purchaseTokenAmount how many purchase tokens will be used to purchase deal token shares
      */
+<<<<<<< HEAD
     function acceptDeal(AelinNftGating.NftPurchaseList[] calldata _nftPurchaseList, uint256 _purchaseTokenAmount)
         external
         lock
     {
         require(underlyingDepositComplete, "deal token not deposited");
+=======
+    function acceptDeal(
+        AelinNftGating.NftPurchaseList[] calldata _nftPurchaseList,
+        MerkleData calldata merkleData,
+        uint256 _purchaseTokenAmount
+    ) external lock {
+        require(underlyingDepositComplete, "deal token not yet deposited");
+>>>>>>> 10497f3 (first pass at new merkle tree based pool logic)
         require(block.timestamp < purchaseExpiry, "not in purchase window");
 
         address _purchaseToken = dealData.purchaseToken;
@@ -197,6 +219,8 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         } else if (allowList.hasAllowList) {
             require(_purchaseTokenAmount <= allowList.amountPerAddress[msg.sender], "more than allocation");
             allowList.amountPerAddress[msg.sender] -= _purchaseTokenAmount;
+        } else if (dealData.merkleRoot != 0) {
+            purchaseMerkleAmount(merkleData);
         }
 
         uint256 balanceBeforeTransfer = IERC20(_purchaseToken).balanceOf(address(this));
@@ -465,6 +489,39 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      */
     function disavow() external {
         emit Disavow(msg.sender);
+    }
+
+    /**
+     * @dev a function that checks if the index leaf node is valid and if the user has purchased.
+     * will set the index node to purchased if approved
+     */
+    function purchaseMerkleAmount(MerkleData calldata merkleData) private {
+        require(!hasPurchasedMerkle(merkleData.index), "Already purchased tokens");
+
+        // Verify the merkle proof.
+        bytes32 node = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
+        require(MerkleProof.verify(merkleData.merkleProof, dealData.merkleRoot, node), "MerkleDistributor: Invalid proof.");
+
+        // Mark it claimed and send the token.
+        _setPurchased(merkleData.index);
+    }
+
+    function _setPurchased(uint256 index) private {
+        uint256 claimedWordIndex = index / 256;
+        uint256 claimedBitIndex = index % 256;
+        claimedBitMap[claimedWordIndex] = claimedBitMap[claimedWordIndex] | (1 << claimedBitIndex);
+    }
+
+    /**
+     * @dev returns if address has purchased merkle
+     * @return uint256 index of the leaf node
+     */
+    function hasPurchasedMerkle(uint256 index) public view returns (bool) {
+        uint256 claimedWordIndex = index / 256;
+        uint256 claimedBitIndex = index % 256;
+        uint256 claimedWord = claimedBitMap[claimedWordIndex];
+        uint256 mask = (1 << claimedBitIndex);
+        return claimedWord & mask == mask;
     }
 
     /**
