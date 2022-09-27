@@ -18,9 +18,9 @@ contract AelinUpFrontDealTest is Test {
     address public aelinTreasury = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
     address public punks = address(0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB);
 
-    uint256 constant BASE = 10000;
-    uint256 constant MAX_SPONSOR_FEE = 1500;
-    uint256 constant AELIN_FEE = 200;
+    uint256 constant BASE = 100 * 10**18;
+    uint256 constant MAX_SPONSOR_FEE = 15 * 10**18;
+    uint256 constant AELIN_FEE = 2 * 10**18;
 
     address dealCreatorAddress = address(0xBEEF);
 

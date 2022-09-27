@@ -209,7 +209,7 @@ contract AelinUpFrontDealFactoryTest is Test {
 
         vm.prank(address(0x123));
         vm.expectRevert("sponsor must be msg.sender");
-        address dealAddress = upFrontDealFactory.createUpFrontDeal(
+        upFrontDealFactory.createUpFrontDeal(
             _dealData,
             _dealConfig,
             _nftCollectionRules,
