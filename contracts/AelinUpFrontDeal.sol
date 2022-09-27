@@ -219,8 +219,8 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         } else if (allowList.hasAllowList) {
             require(_purchaseTokenAmount <= allowList.amountPerAddress[msg.sender], "more than allocation");
             allowList.amountPerAddress[msg.sender] -= _purchaseTokenAmount;
-        } else if (dealData.merkleRoot != 0) {
-            purchaseMerkleAmount(merkleData);
+        } else if (dealData.merkelRoot != 0) {
+            purchaseMerkleAmount(merkleData, _purchaseTokenAmount);
         }
 
         uint256 balanceBeforeTransfer = IERC20(_purchaseToken).balanceOf(address(this));
@@ -495,20 +495,21 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      * @dev a function that checks if the index leaf node is valid and if the user has purchased.
      * will set the index node to purchased if approved
      */
-    function purchaseMerkleAmount(MerkleData calldata merkleData) private {
+    function purchaseMerkleAmount(MerkleData calldata merkleData, uint256 _purchaseTokenAmount) private {
         require(!hasPurchasedMerkle(merkleData.index), "Already purchased tokens");
 
         // Verify the merkle proof.
         bytes32 node = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
-        require(MerkleProof.verify(merkleData.merkleProof, dealData.merkleRoot, node), "MerkleDistributor: Invalid proof.");
+        require(MerkleProof.verify(merkleData.merkleProof, dealData.merkelRoot, node), "MerkleDistributor: Invalid proof.");
+        require(merkleData.amount >= _purchaseTokenAmount, "purchasing more than allowance");
 
         // Mark it claimed and send the token.
         _setPurchased(merkleData.index);
     }
 
-    function _setPurchased(uint256 index) private {
-        uint256 claimedWordIndex = index / 256;
-        uint256 claimedBitIndex = index % 256;
+    function _setPurchased(uint256 _index) private {
+        uint256 claimedWordIndex = _index / 256;
+        uint256 claimedBitIndex = _index % 256;
         claimedBitMap[claimedWordIndex] = claimedBitMap[claimedWordIndex] | (1 << claimedBitIndex);
     }
 
@@ -516,9 +517,9 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      * @dev returns if address has purchased merkle
      * @return uint256 index of the leaf node
      */
-    function hasPurchasedMerkle(uint256 index) public view returns (bool) {
-        uint256 claimedWordIndex = index / 256;
-        uint256 claimedBitIndex = index % 256;
+    function hasPurchasedMerkle(uint256 _index) public view returns (bool) {
+        uint256 claimedWordIndex = _index / 256;
+        uint256 claimedBitIndex = _index % 256;
         uint256 claimedWord = claimedBitMap[claimedWordIndex];
         uint256 mask = (1 << claimedBitIndex);
         return claimedWord & mask == mask;
