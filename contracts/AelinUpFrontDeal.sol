@@ -61,8 +61,9 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         address _aelinEscrowLogicAddress
     ) external initOnce {
         // pool initialization checks
-        require(_dealData.purchaseToken != address(0), "cant pass null purchase token address");
-        require(_dealData.underlyingDealToken != address(0), "cant pass null underlying token address");
+        require(_dealData.purchaseToken != _dealData.underlyingDealToken, "purchase & underlying the same");
+        require(_dealData.purchaseToken != address(0), "cant pass null purchase address");
+        require(_dealData.underlyingDealToken != address(0), "cant pass null underlying address");
         require(_dealData.holder != address(0), "cant pass null holder address");
 
         require(_dealConfig.purchaseDuration >= 30 minutes && _dealConfig.purchaseDuration <= 30 days, "not within limit");
@@ -82,7 +83,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
             uint256 _totalIntendedRaise = (_dealConfig.purchaseTokenPerDealToken * _dealConfig.underlyingDealTokenTotal) /
                 10**underlyingTokenDecimals;
             require(_totalIntendedRaise > 0, "intended raise too small");
-            require(_dealConfig.purchaseRaiseMinimum <= _totalIntendedRaise, "raise minimum is greater than deal total");
+            require(_dealConfig.purchaseRaiseMinimum <= _totalIntendedRaise, "raise min greater deal total");
         }
 
         // store pool and deal details as state variables
@@ -113,7 +114,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         // if yes, store it in `nftCollectionDetails` and `nftId` and emit respective events for 721 and 1155
         AelinNftGating.initialize(_nftCollectionRules, nftGating);
 
-        require(!(allowList.hasAllowList && nftGating.hasNftList), "cannot have allow list and nft gating");
+        require(!(allowList.hasAllowList && nftGating.hasNftList), "cant have allow list & nft");
     }
 
     function _startPurchasingPeriod(
@@ -129,7 +130,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     }
 
     modifier initOnce() {
-        require(!calledInitialize, "can only initialize once");
+        require(!calledInitialize, "can only init once");
         calledInitialize = true;
         _;
     }
@@ -183,7 +184,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         external
         lock
     {
-        require(underlyingDepositComplete, "deal token not yet deposited");
+        require(underlyingDepositComplete, "deal token not deposited");
         require(block.timestamp < purchaseExpiry, "not in purchase window");
 
         address _purchaseToken = dealData.purchaseToken;
@@ -220,7 +221,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         poolSharesPerUser[msg.sender] += poolSharesAmount;
 
         if (!dealConfig.allowDeallocation) {
-            require(totalPoolShares <= _underlyingDealTokenTotal, "purchased amount over total");
+            require(totalPoolShares <= _underlyingDealTokenTotal, "purchased amount > total");
         } else if (totalPoolShares > _underlyingDealTokenTotal) {
             // if there is deallocation
             // attempt these computations, if it causes a revert this is overflow protection for purchaserClaim()
@@ -576,7 +577,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     }
 
     modifier purchasingOver() {
-        require(underlyingDepositComplete, "underlying deposit not complete");
+        require(underlyingDepositComplete, "underlying deposit incomplete");
         require(block.timestamp > purchaseExpiry, "purchase period not over");
         _;
     }
@@ -584,13 +585,13 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     modifier passMinimumRaise() {
         require(
             dealConfig.purchaseRaiseMinimum == 0 || totalPurchasingAccepted > dealConfig.purchaseRaiseMinimum,
-            "does not pass minimum raise"
+            "does not pass min raise"
         );
         _;
     }
 
     modifier blockTransfer() {
-        require(false, "cannot transfer deal tokens");
+        require(false, "cant transfer deal tokens");
         _;
     }
 
