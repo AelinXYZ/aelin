@@ -83,7 +83,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
             uint256 _totalIntendedRaise = (_dealConfig.purchaseTokenPerDealToken * _dealConfig.underlyingDealTokenTotal) /
                 10**underlyingTokenDecimals;
             require(_totalIntendedRaise > 0, "intended raise too small");
-            require(_dealConfig.purchaseRaiseMinimum <= _totalIntendedRaise, "raise min greater deal total");
+            require(_dealConfig.purchaseRaiseMinimum <= _totalIntendedRaise, "raise min > deal total");
         }
 
         // store pool and deal details as state variables
