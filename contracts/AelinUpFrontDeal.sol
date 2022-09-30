@@ -400,8 +400,13 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         amountVested[msg.sender] += underlyingDealTokensClaimed;
         _burn(msg.sender, underlyingDealTokensClaimed);
         totalUnderlyingClaimed += underlyingDealTokensClaimed;
-        IERC20(_underlyingDealToken).safeTransfer(msg.sender, underlyingDealTokensClaimed);
-        emit ClaimedUnderlyingDealToken(msg.sender, _underlyingDealToken, underlyingDealTokensClaimed);
+        // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
+        // although it will generally never happen as solidity rounds down so there should always be a little bit left
+        uint256 precisionAdjustedClaim = underlyingDealTokensClaimed > IERC20(_underlyingDealToken).balanceOf(address(this))
+            ? IERC20(dealData.purchaseToken).balanceOf(address(this))
+            : underlyingDealTokensClaimed;
+        IERC20(_underlyingDealToken).safeTransfer(msg.sender, precisionAdjustedClaim);
+        emit ClaimedUnderlyingDealToken(msg.sender, _underlyingDealToken, precisionAdjustedClaim);
     }
 
     /**
