@@ -69,6 +69,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         require(_dealData.sponsorFee <= MAX_SPONSOR_FEE, "exceeds max sponsor fee");
 
         uint8 purchaseTokenDecimals = IERC20Decimals(_dealData.purchaseToken).decimals();
+        // NOTE do we need this?
         require(purchaseTokenDecimals <= DEAL_TOKEN_DECIMALS, "purchase token not compatible");
 
         require(1825 days >= _dealConfig.vestingCliffPeriod, "max 5 year cliff");
@@ -221,14 +222,6 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
 
         if (!dealConfig.allowDeallocation) {
             require(totalPoolShares <= _underlyingDealTokenTotal, "purchased amount over total");
-        } else if (totalPoolShares > _underlyingDealTokenTotal) {
-            // if there is deallocation
-            // attempt these computations, if it causes a revert this is overflow protection for purchaserClaim()
-            uint256 mathTest = (((poolSharesPerUser[msg.sender] * _underlyingDealTokenTotal) / totalPoolShares) *
-                (BASE - AELIN_FEE - dealData.sponsorFee)) / BASE;
-            mathTest =
-                purchaseTokensPerUser[msg.sender] -
-                ((purchaseTokensPerUser[msg.sender] * _underlyingDealTokenTotal) / totalPoolShares);
         }
 
         emit AcceptDeal(
@@ -264,11 +257,15 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
                     ((purchaseTokensPerUser[msg.sender] * _underlyingDealTokenTotal) / totalPoolShares);
                 purchaseTokensPerUser[msg.sender] = 0;
 
+                uint256 precisionAdjustedRefund = purchasingRefund > IERC20(dealData.purchaseToken).balanceOf(address(this))
+                    ? IERC20(dealData.purchaseToken).balanceOf(address(this))
+                    : purchasingRefund;
+
                 // mint deal tokens and transfer purchase token refund
                 _mint(msg.sender, adjustedDealTokensForUser);
-                IERC20(dealData.purchaseToken).safeTransfer(msg.sender, purchasingRefund);
+                IERC20(dealData.purchaseToken).safeTransfer(msg.sender, precisionAdjustedRefund);
 
-                emit ClaimDealTokens(msg.sender, adjustedDealTokensForUser, purchasingRefund);
+                emit ClaimDealTokens(msg.sender, adjustedDealTokensForUser, precisionAdjustedRefund);
             } else {
                 // mint deal tokens when there is no deallocation
                 uint256 adjustedDealTokensForUser = ((BASE - AELIN_FEE - dealData.sponsorFee) *
@@ -332,8 +329,14 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
                 uint256 _underlyingTokenDecimals = IERC20Decimals(_underlyingDealToken).decimals();
                 uint256 _totalIntendedRaise = (dealConfig.purchaseTokenPerDealToken * _underlyingDealTokenTotal) /
                     10**_underlyingTokenDecimals;
-                IERC20(_purchaseToken).safeTransfer(_holder, _totalIntendedRaise);
-                emit HolderClaim(_holder, _purchaseToken, _totalIntendedRaise, _underlyingDealToken, 0, block.timestamp);
+
+                uint256 precisionAdjustedRaise = _totalIntendedRaise >
+                    IERC20(dealData.purchaseToken).balanceOf(address(this))
+                    ? IERC20(dealData.purchaseToken).balanceOf(address(this))
+                    : _totalIntendedRaise;
+
+                IERC20(_purchaseToken).safeTransfer(_holder, precisionAdjustedRaise);
+                emit HolderClaim(_holder, _purchaseToken, precisionAdjustedRaise, _underlyingDealToken, 0, block.timestamp);
             } else {
                 // holder receives raise
                 uint256 _currentBalance = IERC20(_purchaseToken).balanceOf(address(this));
