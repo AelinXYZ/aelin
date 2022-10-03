@@ -239,6 +239,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     function purchaserClaim() public lock purchasingOver {
         require(poolSharesPerUser[msg.sender] > 0, "no pool shares to claim with");
 
+        address _purchaseToken = dealData.purchaseToken;
         uint256 _purchaseRaiseMinimum = dealConfig.purchaseRaiseMinimum;
 
         if (_purchaseRaiseMinimum == 0 || totalPurchasingAccepted > _purchaseRaiseMinimum) {
@@ -257,13 +258,13 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
                     ((purchaseTokensPerUser[msg.sender] * _underlyingDealTokenTotal) / totalPoolShares);
                 purchaseTokensPerUser[msg.sender] = 0;
 
-                uint256 precisionAdjustedRefund = purchasingRefund > IERC20(dealData.purchaseToken).balanceOf(address(this))
-                    ? IERC20(dealData.purchaseToken).balanceOf(address(this))
+                uint256 precisionAdjustedRefund = purchasingRefund > IERC20(_purchaseToken).balanceOf(address(this))
+                    ? IERC20(_purchaseToken).balanceOf(address(this))
                     : purchasingRefund;
 
                 // mint deal tokens and transfer purchase token refund
                 _mint(msg.sender, adjustedDealTokensForUser);
-                IERC20(dealData.purchaseToken).safeTransfer(msg.sender, precisionAdjustedRefund);
+                IERC20(_purchaseToken).safeTransfer(msg.sender, precisionAdjustedRefund);
 
                 emit ClaimDealTokens(msg.sender, adjustedDealTokensForUser, precisionAdjustedRefund);
             } else {
@@ -280,7 +281,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
             uint256 currentBalance = purchaseTokensPerUser[msg.sender];
             purchaseTokensPerUser[msg.sender] = 0;
             poolSharesPerUser[msg.sender] = 0;
-            IERC20(dealData.purchaseToken).safeTransfer(msg.sender, currentBalance);
+            IERC20(_purchaseToken).safeTransfer(msg.sender, currentBalance);
             emit ClaimDealTokens(msg.sender, 0, currentBalance);
         }
     }
@@ -330,9 +331,8 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
                 uint256 _totalIntendedRaise = (dealConfig.purchaseTokenPerDealToken * _underlyingDealTokenTotal) /
                     10**_underlyingTokenDecimals;
 
-                uint256 precisionAdjustedRaise = _totalIntendedRaise >
-                    IERC20(dealData.purchaseToken).balanceOf(address(this))
-                    ? IERC20(dealData.purchaseToken).balanceOf(address(this))
+                uint256 precisionAdjustedRaise = _totalIntendedRaise > IERC20(_purchaseToken).balanceOf(address(this))
+                    ? IERC20(_purchaseToken).balanceOf(address(this))
                     : _totalIntendedRaise;
 
                 IERC20(_purchaseToken).safeTransfer(_holder, precisionAdjustedRaise);
@@ -400,13 +400,8 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         amountVested[msg.sender] += underlyingDealTokensClaimed;
         _burn(msg.sender, underlyingDealTokensClaimed);
         totalUnderlyingClaimed += underlyingDealTokensClaimed;
-        // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
-        // although it will generally never happen as solidity rounds down so there should always be a little bit left
-        uint256 precisionAdjustedClaim = underlyingDealTokensClaimed > IERC20(_underlyingDealToken).balanceOf(address(this))
-            ? IERC20(dealData.purchaseToken).balanceOf(address(this))
-            : underlyingDealTokensClaimed;
-        IERC20(_underlyingDealToken).safeTransfer(msg.sender, precisionAdjustedClaim);
-        emit ClaimedUnderlyingDealToken(msg.sender, _underlyingDealToken, precisionAdjustedClaim);
+        IERC20(_underlyingDealToken).safeTransfer(msg.sender, underlyingDealTokensClaimed);
+        emit ClaimedUnderlyingDealToken(msg.sender, _underlyingDealToken, underlyingDealTokensClaimed);
     }
 
     /**
@@ -415,7 +410,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      */
     function claimableUnderlyingTokens(address _purchaser) public view purchasingOver returns (uint256) {
         uint256 _vestingPeriod = dealConfig.vestingPeriod;
-        uint256 underlyingClaimable;
+        uint256 precisionAdjustedUnderlyingClaimable;
 
         uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
         if (
@@ -424,14 +419,21 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         ) {
             uint256 timeElapsed = maxTime - vestingCliffExpiry;
 
-            underlyingClaimable = _vestingPeriod == 0
+            uint256 underlyingClaimable = _vestingPeriod == 0
                 ? balanceOf(_purchaser)
                 : ((balanceOf(_purchaser) + amountVested[_purchaser]) * timeElapsed) /
                     _vestingPeriod -
                     amountVested[_purchaser];
+            // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
+            // although it will generally never happen as solidity rounds down so there should always be a little bit left
+            address _underlyingDealToken = dealData.underlyingDealToken;
+            precisionAdjustedUnderlyingClaimable = underlyingClaimable >
+                IERC20(_underlyingDealToken).balanceOf(address(this))
+                ? IERC20(_underlyingDealToken).balanceOf(address(this))
+                : underlyingClaimable;
         }
 
-        return (underlyingClaimable);
+        return (precisionAdjustedUnderlyingClaimable);
     }
 
     /**

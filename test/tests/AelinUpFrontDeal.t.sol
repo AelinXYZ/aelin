@@ -126,7 +126,7 @@ contract AelinUpFrontDealTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0xBEEF),
-            sponsorFee: 100
+            sponsorFee: 1 * 10**18
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory dealConfig;
@@ -258,7 +258,7 @@ contract AelinUpFrontDealTest is Test {
         (, , , , , tempAddress, ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(tempAddress, address(0xBEEF));
         (, , , , , , tempUint) = AelinUpFrontDeal(dealAddress).dealData();
-        assertEq(tempUint, 100);
+        assertEq(tempUint, 1e18);
         // deal config
         (tempUint, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
         assertEq(tempUint, 1e35);
@@ -314,7 +314,7 @@ contract AelinUpFrontDealTest is Test {
         (, , , , , tempAddress, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealData();
         assertEq(tempAddress, address(0xBEEF));
         (, , , , , , tempUint) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealData();
-        assertEq(tempUint, 100);
+        assertEq(tempUint, 1e18);
         // deal config
         (tempUint, , , , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealConfig();
         assertEq(tempUint, 1e35);
@@ -373,7 +373,7 @@ contract AelinUpFrontDealTest is Test {
         (, , , , , tempAddress, ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
         assertEq(tempAddress, address(0xBEEF));
         (, , , , , , tempUint) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
-        assertEq(tempUint, 100);
+        assertEq(tempUint, 1e18);
         // deal config
         (tempUint, , , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
         assertEq(tempUint, 1e35);
@@ -429,7 +429,7 @@ contract AelinUpFrontDealTest is Test {
         (, , , , , tempAddress, ) = AelinUpFrontDeal(dealAddressAllowList).dealData();
         assertEq(tempAddress, address(0xBEEF));
         (, , , , , , tempUint) = AelinUpFrontDeal(dealAddressAllowList).dealData();
-        assertEq(tempUint, 100);
+        assertEq(tempUint, 1e18);
         // deal config
         (tempUint, , , , , , ) = AelinUpFrontDeal(dealAddressAllowList).dealConfig();
         assertEq(tempUint, 1e35);
@@ -509,7 +509,7 @@ contract AelinUpFrontDealTest is Test {
         (, , , , , tempAddress, ) = AelinUpFrontDeal(dealAddressNftGating721).dealData();
         assertEq(tempAddress, address(0xBEEF));
         (, , , , , , tempUint) = AelinUpFrontDeal(dealAddressNftGating721).dealData();
-        assertEq(tempUint, 100);
+        assertEq(tempUint, 1e18);
         // deal config
         (tempUint, , , , , , ) = AelinUpFrontDeal(dealAddressNftGating721).dealConfig();
         assertEq(tempUint, 1e35);
@@ -577,7 +577,7 @@ contract AelinUpFrontDealTest is Test {
         (, , , , , tempAddress, ) = AelinUpFrontDeal(dealAddressNftGatingPunks).dealData();
         assertEq(tempAddress, address(0xBEEF));
         (, , , , , , tempUint) = AelinUpFrontDeal(dealAddressNftGatingPunks).dealData();
-        assertEq(tempUint, 100);
+        assertEq(tempUint, 1e18);
         // deal config
         (tempUint, , , , , , ) = AelinUpFrontDeal(dealAddressNftGatingPunks).dealConfig();
         assertEq(tempUint, 1e35);
@@ -645,7 +645,7 @@ contract AelinUpFrontDealTest is Test {
         (, , , , , tempAddress, ) = AelinUpFrontDeal(dealAddressNftGating1155).dealData();
         assertEq(tempAddress, address(0xBEEF));
         (, , , , , , tempUint) = AelinUpFrontDeal(dealAddressNftGating1155).dealData();
-        assertEq(tempUint, 100);
+        assertEq(tempUint, 1e18);
         // deal config
         (tempUint, , , , , , ) = AelinUpFrontDeal(dealAddressNftGating1155).dealConfig();
         assertEq(tempUint, 1e35);
@@ -2937,6 +2937,47 @@ contract AelinUpFrontDealTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
+                              massivePool
+    //////////////////////////////////////////////////////////////*/
+
+    function testMillionUserPool() public {
+        // deposit underlying
+        vm.startPrank(address(0xDEAD));
+        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        underlyingDealToken.approve(address(dealAddressAllowDeallocation), type(uint256).max);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).depositUnderlyingTokens(1e35);
+        vm.stopPrank();
+        // purchasing
+        uint256 totalPurchaseAccepted;
+        uint256 totalPoolShares;
+        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
+            dealAddressAllowDeallocation
+        ).dealConfig();
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        for (uint256 i = 1; i < 1000000; ++i) {
+            uint256 _purchaseAmount = 1e34 + i;
+            uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+            require(poolSharesAmount > 0, "purchase amount too small");
+            vm.assume(poolSharesAmount > 0);
+            AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+            address user = makeAddr(i);
+            deal(address(purchaseToken), user, _purchaseAmount);
+            vm.startPrank(user);
+            purchaseToken.approve(address(dealAddressAllowDeallocation), _purchaseAmount);
+            totalPurchaseAccepted += _purchaseAmount;
+            totalPoolShares += poolSharesAmount;
+            vm.expectEmit(true, false, false, true);
+            emit AcceptDeal(user, _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
+            AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, _purchaseAmount);
+            assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPoolShares(), totalPoolShares);
+            assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPoolSharesPerUser(user), poolSharesAmount);
+            assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted(), totalPurchaseAccepted);
+            assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(user), _purchaseAmount);
+            vm.stopPrank();
+        }
+    }
+
+    /*//////////////////////////////////////////////////////////////
                                 events
     //////////////////////////////////////////////////////////////*/
 
@@ -2986,4 +3027,10 @@ contract AelinUpFrontDealTest is Test {
     event Disavow(address indexed voucher);
 
     event WithdrewExcess(address UpFrontDealAddress, uint256 amountWithdrawn);
+
+    // creates a labeled address
+    function makeAddr(uint256 num) internal returns (address addr) {
+        uint256 privateKey = uint256(keccak256(abi.encodePacked(num)));
+        addr = vm.addr(privateKey);
+    }
 }
