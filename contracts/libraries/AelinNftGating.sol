@@ -118,7 +118,7 @@ library AelinNftGating {
             NftCollectionRules memory nftCollectionRules = _data.nftCollectionDetails[_collectionAddress];
             require(nftCollectionRules.collectionAddress == _collectionAddress, "collection not in the pool");
 
-            if (nftCollectionRules.purchaseAmountPerToken) {
+            if (nftCollectionRules.purchaseAmountPerToken && nftCollectionRules.purchaseAmount > 0) {
                 if (NftCheck.supports1155(_collectionAddress)) {
                     for (uint256 j; j < _tokenIds.length; ++j) {
                         unchecked {
