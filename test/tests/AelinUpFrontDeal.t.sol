@@ -715,7 +715,7 @@ contract AelinUpFrontDealTest is Test {
             allowDeallocation: false
         });
 
-        vm.expectRevert("can only initialize once");
+        vm.expectRevert("can only init once");
         AelinUpFrontDeal(dealAddress).initialize(
             dealData,
             dealConfig,
@@ -734,47 +734,47 @@ contract AelinUpFrontDealTest is Test {
         vm.assume(_testAddress != address(0));
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         vm.prank(_testAddress);
-        vm.expectRevert("deal token not yet deposited");
+        vm.expectRevert("deal token not deposited");
         AelinUpFrontDeal(dealAddress).acceptDeal(nftPurchaseList, 1e18);
     }
 
     function testPurchaserCannotClaimBeforeDeposit(address _testAddress) public {
         vm.assume(_testAddress != address(0));
         vm.prank(_testAddress);
-        vm.expectRevert("underlying deposit not complete");
+        vm.expectRevert("underlying deposit incomplete");
         AelinUpFrontDeal(dealAddress).purchaserClaim();
     }
 
     function testSponsorCannotClaimBeforeDeposit() public {
         vm.prank(address(0xBEEF));
-        vm.expectRevert("underlying deposit not complete");
+        vm.expectRevert("underlying deposit incomplete");
         AelinUpFrontDeal(dealAddress).sponsorClaim();
     }
 
     function testHolderCannotClaimBeforeDeposit() public {
         vm.prank(address(0xDEAD));
-        vm.expectRevert("underlying deposit not complete");
+        vm.expectRevert("underlying deposit incomplete");
         AelinUpFrontDeal(dealAddress).holderClaim();
     }
 
     function testTreasuryCannotClaimBeforeDeposit(address _testAddress) public {
         vm.assume(_testAddress != address(0));
         vm.prank(_testAddress);
-        vm.expectRevert("underlying deposit not complete");
+        vm.expectRevert("underlying deposit incomplete");
         AelinUpFrontDeal(dealAddress).feeEscrowClaim();
     }
 
     function testCannotClaimUnderlyingBeforeDeposit(address _testAddress) public {
         vm.assume(_testAddress != address(0));
         vm.prank(_testAddress);
-        vm.expectRevert("underlying deposit not complete");
+        vm.expectRevert("underlying deposit incomplete");
         AelinUpFrontDeal(dealAddress).claimUnderlying();
     }
 
     function testClaimableBeforeDeposit(address _testAddress) public {
         vm.assume(_testAddress != address(0));
         vm.prank(_testAddress);
-        vm.expectRevert("underlying deposit not complete");
+        vm.expectRevert("underlying deposit incomplete");
         AelinUpFrontDeal(dealAddress).claimableUnderlyingTokens(_testAddress);
     }
 
@@ -958,7 +958,7 @@ contract AelinUpFrontDealTest is Test {
     function testRevertAcceptDealBeforeDeposit(address _user, uint256 _purchaseAmount) public {
         vm.prank(_user);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
-        vm.expectRevert("deal token not yet deposited");
+        vm.expectRevert("deal token not deposited");
         AelinUpFrontDeal(dealAddress).acceptDeal(nftPurchaseList, _purchaseAmount);
     }
 
@@ -1105,7 +1105,7 @@ contract AelinUpFrontDealTest is Test {
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount1);
         // user2 acceptDeal
         vm.prank(user2);
-        vm.expectRevert("purchased amount over total");
+        vm.expectRevert("purchased amount > total");
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, purchaseAmount2);
     }
 
@@ -1621,7 +1621,7 @@ contract AelinUpFrontDealTest is Test {
 
     function testRevertPurchaserClaimNotInWindow() public {
         vm.startPrank(address(0x1337));
-        vm.expectRevert("underlying deposit not complete");
+        vm.expectRevert("underlying deposit incomplete");
         AelinUpFrontDeal(dealAddress).purchaserClaim();
         vm.expectRevert("purchase period not over");
         AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
@@ -1776,7 +1776,7 @@ contract AelinUpFrontDealTest is Test {
 
     function testRevertSponsorClaimNotInWindow() public {
         vm.startPrank(address(0x1337));
-        vm.expectRevert("underlying deposit not complete");
+        vm.expectRevert("underlying deposit incomplete");
         AelinUpFrontDeal(dealAddress).sponsorClaim();
         vm.expectRevert("purchase period not over");
         AelinUpFrontDeal(dealAddressOverFullDeposit).sponsorClaim();
@@ -1809,7 +1809,7 @@ contract AelinUpFrontDealTest is Test {
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
         vm.warp(purchaseExpiry + 1 days);
-        vm.expectRevert("does not pass minimum raise");
+        vm.expectRevert("does not pass min raise");
         AelinUpFrontDeal(dealAddressOverFullDeposit).sponsorClaim();
         vm.stopPrank();
     }
@@ -1990,7 +1990,7 @@ contract AelinUpFrontDealTest is Test {
 
     function testRevertHolderClaimNotInWindow() public {
         vm.startPrank(address(0x1337));
-        vm.expectRevert("underlying deposit not complete");
+        vm.expectRevert("underlying deposit incomplete");
         AelinUpFrontDeal(dealAddress).holderClaim();
         vm.expectRevert("purchase period not over");
         AelinUpFrontDeal(dealAddressOverFullDeposit).holderClaim();
@@ -2235,7 +2235,7 @@ contract AelinUpFrontDealTest is Test {
 
     function testRevertEscrowClaimNotInWindow() public {
         vm.startPrank(address(0x1337));
-        vm.expectRevert("underlying deposit not complete");
+        vm.expectRevert("underlying deposit incomplete");
         AelinUpFrontDeal(dealAddress).feeEscrowClaim();
         vm.expectRevert("purchase period not over");
         AelinUpFrontDeal(dealAddressOverFullDeposit).feeEscrowClaim();
@@ -2334,7 +2334,7 @@ contract AelinUpFrontDealTest is Test {
 
     function testRevertClaimableUnderlyingNotInWindow() public {
         vm.startPrank(address(0x1337));
-        vm.expectRevert("underlying deposit not complete");
+        vm.expectRevert("underlying deposit incomplete");
         AelinUpFrontDeal(dealAddress).claimableUnderlyingTokens(address(0x1337));
         vm.expectRevert("purchase period not over");
         AelinUpFrontDeal(dealAddressOverFullDeposit).claimableUnderlyingTokens(address(0x1337));
@@ -2600,7 +2600,7 @@ contract AelinUpFrontDealTest is Test {
 
     function testRevertClaimNotInWindow() public {
         vm.startPrank(address(0x1337));
-        vm.expectRevert("underlying deposit not complete");
+        vm.expectRevert("underlying deposit incomplete");
         AelinUpFrontDeal(dealAddress).claimUnderlying();
         vm.expectRevert("purchase period not over");
         AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlying();
@@ -2630,7 +2630,7 @@ contract AelinUpFrontDealTest is Test {
         // claim attempt
         uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
         vm.warp(purchaseExpiry + 1 days);
-        vm.expectRevert("does not pass minimum raise");
+        vm.expectRevert("does not pass min raise");
         AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlying();
         vm.stopPrank();
     }
@@ -2929,9 +2929,9 @@ contract AelinUpFrontDealTest is Test {
         assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)), adjustedDealTokensForUser);
         assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
         // attempt deal token transfers
-        vm.expectRevert("cannot transfer deal tokens");
+        vm.expectRevert("cant transfer deal tokens");
         MockERC20(dealAddressOverFullDeposit).transfer(address(0x1111), 1);
-        vm.expectRevert("cannot transfer deal tokens");
+        vm.expectRevert("cant transfer deal tokens");
         MockERC20(dealAddressOverFullDeposit).transferFrom(address(0x1337), address(0x1111), 1);
         vm.stopPrank();
     }

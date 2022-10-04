@@ -209,12 +209,7 @@ contract AelinUpFrontDealFactoryTest is Test {
 
         vm.prank(address(0x123));
         vm.expectRevert("sponsor must be msg.sender");
-        upFrontDealFactory.createUpFrontDeal(
-            _dealData,
-            _dealConfig,
-            _nftCollectionRules,
-            _allowListInit
-        );
+        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
     }
 
     function testFuzzCreateDealWithMinimumRaise(
@@ -351,7 +346,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         });
 
         vm.startPrank(address(0x123));
-        vm.expectRevert("cant pass null purchase token address");
+        vm.expectRevert("cant pass null purchase address");
         address dealAddress = upFrontDealFactory.createUpFrontDeal(
             _dealData,
             _dealConfig,
@@ -371,7 +366,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             sponsorFee: 200
         });
 
-        vm.expectRevert("cant pass null underlying token address");
+        vm.expectRevert("cant pass null underlying address");
         dealAddress = upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
 
         // Revert for passing in null holder address
@@ -1090,7 +1085,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         });
 
         vm.prank(address(0x123));
-        vm.expectRevert("cannot have allow list and nft gating");
+        vm.expectRevert("cant have allow list & nft");
         upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
     }
 
