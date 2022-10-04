@@ -222,7 +222,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         poolSharesPerUser[msg.sender] += poolSharesAmount;
 
         if (!dealConfig.allowDeallocation) {
-            require(totalPoolShares <= _underlyingDealTokenTotal, "purchased amount over total");
+            require(totalPoolShares <= _underlyingDealTokenTotal, "purchased amount > total");
         }
 
         emit AcceptDeal(
