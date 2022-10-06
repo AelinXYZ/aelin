@@ -3257,75 +3257,75 @@ contract AelinUpFrontDealTest is Test {
     //                           massivePool
     // //////////////////////////////////////////////////////////////*/
 
-    function testThousandsUserPool() public {
-        // deposit underlying
-        vm.startPrank(address(0xDEAD));
-        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
-        underlyingDealToken.approve(address(dealAddressAllowDeallocation), type(uint256).max);
-        AelinUpFrontDeal(dealAddressAllowDeallocation).depositUnderlyingTokens(1e35);
-        vm.stopPrank();
-        // purchasing
-        uint256 totalPurchaseAccepted;
-        uint256 totalPoolShares;
-        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
-            dealAddressAllowDeallocation
-        ).dealConfig();
-        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
-        vm.fee(1 gwei);
-        for (uint256 i = 1; i < 20000; ++i) {
-            uint256 _purchaseAmount = 1e34 + i;
-            uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
-            require(poolSharesAmount > 0, "purchase amount too small");
-            vm.assume(poolSharesAmount > 0);
-            if (i % 200 == 0) {
-                vm.roll(block.number + 1);
-            }
-            AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
-            address user = makeAddr(i);
-            deal(address(purchaseToken), user, _purchaseAmount);
-            vm.startPrank(user);
-            purchaseToken.approve(address(dealAddressAllowDeallocation), _purchaseAmount);
-            totalPurchaseAccepted += _purchaseAmount;
-            totalPoolShares += poolSharesAmount;
-            vm.expectEmit(true, false, false, true);
-            emit AcceptDeal(user, _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
-            AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, _purchaseAmount);
-            assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPoolShares(), totalPoolShares);
-            assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPoolSharesPerUser(user), poolSharesAmount);
-            assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted(), totalPurchaseAccepted);
-            assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(user), _purchaseAmount);
-            vm.stopPrank();
-        }
-        uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry();
-        vm.warp(purchaseExpiry + 1000);
-        for (uint256 i = 1; i < 20000; ++i) {
-            if (i % 200 == 0) {
-                vm.roll(block.number + 1);
-            }
-            address user = makeAddr(i);
-            vm.startPrank(user);
-            AelinUpFrontDeal(dealAddressAllowDeallocation).purchaserClaim();
-            vm.stopPrank();
-        }
-        vm.startPrank(address(0xDEAD));
-        assertEq(purchaseToken.balanceOf(address(0xDEAD)), 0);
-        uint256 contractRemainingBalance = purchaseToken.balanceOf(dealAddressAllowDeallocation);
-        uint256 intendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10**underlyingTokenDecimals;
-        console.log("intendedRaise test 2", intendedRaise);
-        console.log("contractRemainingBalance test 2", contractRemainingBalance);
-        assertGt(intendedRaise, contractRemainingBalance);
-        vm.expectEmit(true, false, false, true);
-        emit HolderClaim(
-            address(0xDEAD),
-            address(purchaseToken),
-            contractRemainingBalance,
-            address(underlyingDealToken),
-            0,
-            block.timestamp
-        );
-        AelinUpFrontDeal(dealAddressAllowDeallocation).holderClaim();
-        assertEq(purchaseToken.balanceOf(address(0xDEAD)), contractRemainingBalance);
-    }
+    // function testThousandsUserPool() public {
+    //     // deposit underlying
+    //     vm.startPrank(address(0xDEAD));
+    //     deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+    //     underlyingDealToken.approve(address(dealAddressAllowDeallocation), type(uint256).max);
+    //     AelinUpFrontDeal(dealAddressAllowDeallocation).depositUnderlyingTokens(1e35);
+    //     vm.stopPrank();
+    //     // purchasing
+    //     uint256 totalPurchaseAccepted;
+    //     uint256 totalPoolShares;
+    //     (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
+    //         dealAddressAllowDeallocation
+    //     ).dealConfig();
+    //     uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+    //     vm.fee(1 gwei);
+    //     for (uint256 i = 1; i < 20000; ++i) {
+    //         uint256 _purchaseAmount = 1e34 + i;
+    //         uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+    //         require(poolSharesAmount > 0, "purchase amount too small");
+    //         vm.assume(poolSharesAmount > 0);
+    //         if (i % 200 == 0) {
+    //             vm.roll(block.number + 1);
+    //         }
+    //         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+    //         address user = makeAddr(i);
+    //         deal(address(purchaseToken), user, _purchaseAmount);
+    //         vm.startPrank(user);
+    //         purchaseToken.approve(address(dealAddressAllowDeallocation), _purchaseAmount);
+    //         totalPurchaseAccepted += _purchaseAmount;
+    //         totalPoolShares += poolSharesAmount;
+    //         vm.expectEmit(true, false, false, true);
+    //         emit AcceptDeal(user, _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
+    //         AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, _purchaseAmount);
+    //         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPoolShares(), totalPoolShares);
+    //         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPoolSharesPerUser(user), poolSharesAmount);
+    //         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted(), totalPurchaseAccepted);
+    //         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(user), _purchaseAmount);
+    //         vm.stopPrank();
+    //     }
+    //     uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry();
+    //     vm.warp(purchaseExpiry + 1000);
+    //     for (uint256 i = 1; i < 20000; ++i) {
+    //         if (i % 200 == 0) {
+    //             vm.roll(block.number + 1);
+    //         }
+    //         address user = makeAddr(i);
+    //         vm.startPrank(user);
+    //         AelinUpFrontDeal(dealAddressAllowDeallocation).purchaserClaim();
+    //         vm.stopPrank();
+    //     }
+    //     vm.startPrank(address(0xDEAD));
+    //     assertEq(purchaseToken.balanceOf(address(0xDEAD)), 0);
+    //     uint256 contractRemainingBalance = purchaseToken.balanceOf(dealAddressAllowDeallocation);
+    //     uint256 intendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10**underlyingTokenDecimals;
+    //     console.log("intendedRaise test 2", intendedRaise);
+    //     console.log("contractRemainingBalance test 2", contractRemainingBalance);
+    //     assertGt(intendedRaise, contractRemainingBalance);
+    //     vm.expectEmit(true, false, false, true);
+    //     emit HolderClaim(
+    //         address(0xDEAD),
+    //         address(purchaseToken),
+    //         contractRemainingBalance,
+    //         address(underlyingDealToken),
+    //         0,
+    //         block.timestamp
+    //     );
+    //     AelinUpFrontDeal(dealAddressAllowDeallocation).holderClaim();
+    //     assertEq(purchaseToken.balanceOf(address(0xDEAD)), contractRemainingBalance);
+    // }
 
     /*//////////////////////////////////////////////////////////////
                                 events
