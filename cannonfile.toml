@@ -1,0 +1,42 @@
+name = "AelinCannon"
+description = "Deploy Aelin factory contracts using Cannon"
+version = "0.0.1"
+keywords = ["aelin", "cannon"]
+
+[setting.aelinTreasuryAddress] # Create an overridable setting
+defaultValue = "0x0000000000000000000000000000000000000000" # will throw an error if no value is passed
+
+[contract.aelinAllowList]
+artifact = "AelinAllowList"
+
+[contract.aelinNftGating]
+artifact = "AelinNftGating"
+
+[contract.nftCheck]
+artifact = "NftCheck"
+
+[contract.aelinEscrowLogic]
+artifact = "AelinFeeEscrow" # Specifies the name of the contract to be deployed
+
+[contract.dealLogic]
+artifact = "AelinDeal" # Specifies the name of the contract to be deployed
+
+[contract.poolLogic]
+artifact = "AelinPool" # Specifies the name of the contract to be deployed
+
+[contract.upFrontDealLogic]
+artifact = "AelinUpFrontDeal" # Specifies the name of the contract to be deployed
+libraries.AelinAllowList = "<%= contracts.aelinAllowList.address %>"
+libraries.AelinNftGating = "<%= contracts.aelinNftGating.address %>"
+libraries.NftCheck = "<%= contracts.nftCheck.address %>"
+depends = ["contract.aelinAllowList", "contract.aelinNftGating", "contract.nftCheck"]
+
+[contract.poolFactory]
+artifact = "AelinPoolFactory" # Specifies the name of the contract to be deployed
+args = ["<%= contracts.poolLogic.address %>", "<%= contracts.dealLogic.address %>", "<%= settings.aelinTreasuryAddress %>", "<%= contracts.aelinEscrowLogic.address %>"]
+depends = ["contract.poolLogic", "contract.dealLogic", "contract.aelinEscrowLogic"]
+
+[contract.upFrontDealFactory]
+artifact = "AelinUpFrontDealFactory" # Specifies the name of the contract to be deployed
+args = ["<%= contracts.upFrontDealLogic.address %>", "<%= contracts.aelinEscrowLogic.address %>", "<%= settings.aelinTreasuryAddress %>"]
+depends = ["contract.upFrontDealLogic", "contract.aelinEscrowLogic"]

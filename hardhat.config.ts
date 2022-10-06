@@ -8,6 +8,7 @@ import "hardhat-interact";
 import "solidity-coverage";
 import "@nomiclabs/hardhat-etherscan";
 import "dotenv/config";
+import "hardhat-cannon";
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
@@ -46,7 +47,7 @@ const config: HardhatUserConfig = {
     },
     mainnet: {
       url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
-      accounts: [`0x${process.env.OP_PRIVATE_KEY}`],
+      accounts: [`0x${process.env.MAINNET_PRIVATE_KEY}`],
       gasMultiplier: 1.5,
     },
     kovan: {
@@ -55,7 +56,7 @@ const config: HardhatUserConfig = {
     },
     goerli: {
       url: `https://eth-goerli.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
-      accounts: [`0x${process.env.KOVAN_PRIVATE_KEY}`],
+      accounts: [`0x${process.env.GOERLI_PRIVATE_KEY}`],
     },
     hardhat: {
       initialBaseFeePerGas: 0,
