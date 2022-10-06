@@ -3,7 +3,7 @@ name: Aelin CI
 on:
   push:
   pull_request:
-    branches: [main, dev, dev-fork, aelip-19]
+    branches: [main, dev, dev-fork, aelip19]
 
 jobs:
   audit:
