@@ -47,7 +47,12 @@
 	"homepage": "https://github.com/samhagan/aelin#readme",
 	"resolutions": {
 		"minimist": "1.2.6",
-		"json-schema": "0.4.0"
+		"json-schema": "0.4.0",
+		"underscore": ">=1.12.1",
+		"async": ">=2.6.4",
+		"node-fetch": ">=2.6.7",
+		"lodash": ">=4.17.21",
+		"yargs-parser": ">=5.0.1"
 	},
 	"devDependencies": {
 		"@eth-optimism/contracts": "0.3.4",
