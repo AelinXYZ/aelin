@@ -3257,7 +3257,7 @@ contract AelinUpFrontDealTest is Test {
     //                           massivePool
     // //////////////////////////////////////////////////////////////*/
 
-    function testMillionUserPool() public {
+    function testThousandsUserPool() public {
         // deposit underlying
         vm.startPrank(address(0xDEAD));
         deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
