@@ -19,201 +19,201 @@ jobs:
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # pin@v2
 
       - name: Audit dependencies
-        run: yarn audit --level high
+        run: npm audit --audit-level=critical
 
       - name: Lockfile lint
-        run: lockfile-lint -p yarn.lock --allowed-hosts npm yarn --allowed-schemes "https:" "npm:"
+        run: lockfile-lint -p package-lock.json --type npm --allowed-hosts npm --allowed-schemes "https:" "npm:"
 
-  # lint:
-  #   needs: audit
-  #   # run only on audit success or audit skipped
-  #   if: always() && (needs.audit.result == 'success' || needs.audit.result == 'skipped')
-  #   runs-on: ubuntu-latest
+  lint:
+    needs: audit
+    # run only on audit success or audit skipped
+    if: always() && (needs.audit.result == 'success' || needs.audit.result == 'skipped')
+    runs-on: ubuntu-latest
 
-  #   container:
-  #     image: synthetixio/docker-node:16.17-alpine
+    container:
+      image: synthetixio/docker-node:16.17-alpine
 
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # pin@v2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # pin@v2
 
-  #     - name: Set yarn cache directory
-  #       run: yarn config set cache-folder .npm-cache
-  #       continue-on-error: true
+      - name: Set npm cache directory
+        run: npm config set cache .npm-cache --global
+        continue-on-error: true
 
-  #     - uses: actions/cache@c64c572235d810460d0d6876e9c705ad5002b353 # pin@v2
-  #       with:
-  #         path: |
-  #           .npm-cache
-  #           node_modules
-  #         key: ${{ runner.os }}-alpine-node-${{ hashFiles('**/package-lock.json') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-alpine-node-
-  #       continue-on-error: true
+      - uses: actions/cache@c64c572235d810460d0d6876e9c705ad5002b353 # pin@v2
+        with:
+          path: |
+            .npm-cache
+            node_modules
+          key: ${{ runner.os }}-alpine-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-alpine-node-
+        continue-on-error: true
 
-  #     # fixes permission issues on gh actions + docker + npm@8
-  #     - name: Chown workspace
-  #       run: chown -R $(whoami) .
+      # fixes permission issues on gh actions + docker + npm@8
+      - name: Chown workspace
+        run: chown -R $(whoami) .
 
-  #     # mkdir -p node_modules fixes https://github.com/npm/cli/issues/3208 starting from npm@7
-  #     - name: Install dependencies
-  #       run: |
-  #         mkdir -p node_modules
-  #         npm install --prefer-offline --no-audit --legacy-peer-deps
+      # mkdir -p node_modules fixes https://github.com/npm/cli/issues/3208 starting from npm@7
+      - name: Install dependencies
+        run: |
+          mkdir -p node_modules
+          npm install --prefer-offline --no-audit --legacy-peer-deps
 
-  #     - name: Lint
-  #       run: npm run lint:sarif
+      - name: Lint
+        run: npm run lint:sarif
 
-  #     - name: Upload lint results
-  #       if: always()
-  #       uses: github/codeql-action/upload-sarif@21830ef0c1f0f06f2d82ba3f1f07cb3ffe543ed7 # pin@codeql-bundle-20210517
-  #       with:
-  #         sarif_file: lint-results.sarif
-  #       continue-on-error: true
+      - name: Upload lint results
+        if: always()
+        uses: github/codeql-action/upload-sarif@21830ef0c1f0f06f2d82ba3f1f07cb3ffe543ed7 # pin@codeql-bundle-20210517
+        with:
+          sarif_file: lint-results.sarif
+        continue-on-error: true
 
-  # foundry-tests:
-  #   runs-on: ubuntu-latest
-  #   env:
-  #     ALCHEMY_URL: ${{ secrets.ALCHEMY_URL }}
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #       with:
-  #         submodules: recursive
+  foundry-tests:
+    runs-on: ubuntu-latest
+    env:
+      ALCHEMY_URL: ${{ secrets.ALCHEMY_URL }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
-  #     - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v2
 
-  #     - name: Install dependecies
-  #       run: npm install
+      - name: Install dependecies
+        run: npm install
 
-  #     - name: Install Foundry
-  #       uses: foundry-rs/foundry-toolchain@v1
-  #       with:
-  #         version: nightly
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
 
-  #     - name: Install deps
-  #       run: forge install
+      - name: Install deps
+        run: forge install
 
-  #     - name: Run Tests without fork
-  #       run: forge test --no-match-contract NftCheck --no-match-test testPunksPurchasePool
+      - name: Run Tests without fork
+        run: forge test --no-match-contract NftCheck --no-match-test testPunksPurchasePool
 
-  #     - name: Run NftCheck tests with fork
-  #       run: forge test --match-contract NftCheck --fork-url ${ALCHEMY_URL}
+      - name: Run NftCheck tests with fork
+        run: forge test --match-contract NftCheck --fork-url ${ALCHEMY_URL}
 
-  #     - name: Run Punks tests with fork
-  #       run: forge test --match-contract AelinPoolPurchase --match-test testPunksPurchasePool --fork-url ${ALCHEMY_URL}
+      - name: Run Punks tests with fork
+        run: forge test --match-contract AelinPoolPurchase --match-test testPunksPurchasePool --fork-url ${ALCHEMY_URL}
 
-  # test:
-  #   needs: lint
-  #   if: always()
-  #   runs-on: ubuntu-latest
-  #   env:
-  #     KOVAN_PRIVATE_KEY: ${{ secrets.KOVAN_PRIVATE_KEY }}
-  #     ALCHEMY_URL: ${{ secrets.ALCHEMY_URL }}
-  #     ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
-  #     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-  #     OP_API_KEY: ${{ secrets.OP_API_KEY }}
-  #     OP_PRIVATE_KEY: ${{ secrets.OP_PRIVATE_KEY }}
+  test:
+    needs: lint
+    if: always()
+    runs-on: ubuntu-latest
+    env:
+      KOVAN_PRIVATE_KEY: ${{ secrets.KOVAN_PRIVATE_KEY }}
+      ALCHEMY_URL: ${{ secrets.ALCHEMY_URL }}
+      ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      OP_API_KEY: ${{ secrets.OP_API_KEY }}
+      OP_PRIVATE_KEY: ${{ secrets.OP_PRIVATE_KEY }}
 
-  #   container:
-  #     image: synthetixio/docker-sec-tools:16.17-alpine
+    container:
+      image: synthetixio/docker-sec-tools:16.17-alpine
 
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # pin@v2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # pin@v2
 
-  #     - name: Set npm cache directory
-  #       run: npm config set cache .npm-cache --global
-  #       continue-on-error: true
+      - name: Set npm cache directory
+        run: npm config set cache .npm-cache --global
+        continue-on-error: true
 
-  #     - uses: actions/cache@c64c572235d810460d0d6876e9c705ad5002b353 # pin@v2
-  #       with:
-  #         path: |
-  #           .npm-cache
-  #           node_modules
-  #         key: ${{ runner.os }}-alpine-node-${{ hashFiles('**/package-lock.json') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-alpine-node-
-  #       continue-on-error: true
+      - uses: actions/cache@c64c572235d810460d0d6876e9c705ad5002b353 # pin@v2
+        with:
+          path: |
+            .npm-cache
+            node_modules
+          key: ${{ runner.os }}-alpine-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-alpine-node-
+        continue-on-error: true
 
-  #     # fixes permission issues on gh actions + docker + npm@8
-  #     - name: Chown workspace
-  #       run: chown -R $(whoami) .
+      # fixes permission issues on gh actions + docker + npm@8
+      - name: Chown workspace
+        run: chown -R $(whoami) .
 
-  #     # mkdir -p node_modules fixes https://github.com/npm/cli/issues/3208 starting from npm@7
-  #     - name: Install dependencies
-  #       run: |
-  #         mkdir -p node_modules
-  #         npm install --prefer-offline --no-audit --legacy-peer-deps
+      # mkdir -p node_modules fixes https://github.com/npm/cli/issues/3208 starting from npm@7
+      - name: Install dependencies
+        run: |
+          mkdir -p node_modules
+          npm install --prefer-offline --no-audit --legacy-peer-deps
 
-  #     - name: Compile
-  #       run: npm run compile
+      - name: Compile
+        run: npm run compile
 
-  #     - name: Test
-  #       run: npm run test
+      - name: Test
+        run: npm run test
 
-  #     - name: Generate coverage
-  #       run: npm run coverage -- --testfiles "test/unit/*.ts"
+      - name: Generate coverage
+        run: npm run coverage -- --testfiles "test/unit/*.ts"
 
-  #     - name: Upload coverage
-  #       run: codecov -t ${CODECOV_TOKEN} -f coverage.json
+      - name: Upload coverage
+        run: codecov -t ${CODECOV_TOKEN} -f coverage.json
 
-  # build:
-  #   needs: test
-  #   if: always()
-  #   runs-on: ubuntu-latest
+  build:
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
 
-  #   container:
-  #     image: synthetixio/docker-node:16.17-alpine
+    container:
+      image: synthetixio/docker-node:16.17-alpine
 
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # pin@v2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # pin@v2
 
-  #     - name: Set npm cache directory
-  #       run: npm config set cache .npm-cache --global
-  #       continue-on-error: true
+      - name: Set npm cache directory
+        run: npm config set cache .npm-cache --global
+        continue-on-error: true
 
-  #     - uses: actions/cache@c64c572235d810460d0d6876e9c705ad5002b353 # pin@v2
-  #       with:
-  #         path: |
-  #           .npm-cache
-  #           node_modules
-  #         key: ${{ runner.os }}-alpine-node-${{ hashFiles('**/package-lock.json') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-alpine-node-
-  #       continue-on-error: true
+      - uses: actions/cache@c64c572235d810460d0d6876e9c705ad5002b353 # pin@v2
+        with:
+          path: |
+            .npm-cache
+            node_modules
+          key: ${{ runner.os }}-alpine-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-alpine-node-
+        continue-on-error: true
 
-  #     # fixes permission issues on gh actions + docker + npm@8
-  #     - name: Chown workspace
-  #       run: chown -R $(whoami) .
+      # fixes permission issues on gh actions + docker + npm@8
+      - name: Chown workspace
+        run: chown -R $(whoami) .
 
-  #     # mkdir -p node_modules fixes https://github.com/npm/cli/issues/3208 starting from npm@7
-  #     - name: Install dependencies
-  #       run: |
-  #         mkdir -p node_modules
-  #         npm install --prefer-offline --no-audit --legacy-peer-deps
+      # mkdir -p node_modules fixes https://github.com/npm/cli/issues/3208 starting from npm@7
+      - name: Install dependencies
+        run: |
+          mkdir -p node_modules
+          npm install --prefer-offline --no-audit --legacy-peer-deps
 
-  #     - name: Cache build cache
-  #       uses: actions/cache@c64c572235d810460d0d6876e9c705ad5002b353 # pin@v2
-  #       with:
-  #         path: cache
-  #         key: ${{ runner.os }}-alpine-cache-${{ hashFiles('**/package-lock.json') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-alpine-cache-
-  #       continue-on-error: true
+      - name: Cache build cache
+        uses: actions/cache@c64c572235d810460d0d6876e9c705ad5002b353 # pin@v2
+        with:
+          path: cache
+          key: ${{ runner.os }}-alpine-cache-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-alpine-cache-
+        continue-on-error: true
 
-  #     - name: Build
-  #       run: npm run build
+      - name: Build
+        run: npm run build
 
-  #     - name: Compress build
-  #       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.event_name == 'pull_request'
-  #       run: tar -zcvf build.tar.gz build
-  #       continue-on-error: true
+      - name: Compress build
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.event_name == 'pull_request'
+        run: tar -zcvf build.tar.gz build
+        continue-on-error: true
 
-  #     - name: Archive build
-  #       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.event_name == 'pull_request'
-  #       uses: actions/upload-artifact@27121b0bdffd731efa15d66772be8dc71245d074 # pin@v2
-  #       with:
-  #         name: build
-  #         path: build.tar.gz
-  #       continue-on-error: true
+      - name: Archive build
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.event_name == 'pull_request'
+        uses: actions/upload-artifact@27121b0bdffd731efa15d66772be8dc71245d074 # pin@v2
+        with:
+          name: build
+          path: build.tar.gz
+        continue-on-error: true
