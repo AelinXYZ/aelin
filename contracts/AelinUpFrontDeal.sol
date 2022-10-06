@@ -70,7 +70,6 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         require(_dealData.sponsorFee <= MAX_SPONSOR_FEE, "exceeds max sponsor fee");
 
         uint8 purchaseTokenDecimals = IERC20Decimals(_dealData.purchaseToken).decimals();
-
         require(purchaseTokenDecimals <= DEAL_TOKEN_DECIMALS, "purchase token not compatible");
 
         require(1825 days >= _dealConfig.vestingCliffPeriod, "max 5 year cliff");
