@@ -193,20 +193,12 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      * @param _nftPurchaseList NFTs to use for accepting the deal if deal is NFT gated
      * @param _purchaseTokenAmount how many purchase tokens will be used to purchase deal token shares
      */
-<<<<<<< HEAD
-    function acceptDeal(AelinNftGating.NftPurchaseList[] calldata _nftPurchaseList, uint256 _purchaseTokenAmount)
-        external
-        lock
-    {
-        require(underlyingDepositComplete, "deal token not deposited");
-=======
     function acceptDeal(
         AelinNftGating.NftPurchaseList[] calldata _nftPurchaseList,
         MerkleData calldata merkleData,
         uint256 _purchaseTokenAmount
     ) external lock {
-        require(underlyingDepositComplete, "deal token not yet deposited");
->>>>>>> 10497f3 (first pass at new merkle tree based pool logic)
+        require(underlyingDepositComplete, "deal token not deposited");
         require(block.timestamp < purchaseExpiry, "not in purchase window");
 
         address _purchaseToken = dealData.purchaseToken;
