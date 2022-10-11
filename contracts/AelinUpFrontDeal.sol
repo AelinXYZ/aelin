@@ -489,16 +489,20 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      */
     function purchaseMerkleAmount(MerkleData calldata merkleData, uint256 _purchaseTokenAmount) private {
         require(!hasPurchasedMerkle(merkleData.index), "Already purchased tokens");
+        require(msg.sender == merkleData.account, "cant purchase others tokens");
+        require(merkleData.amount >= _purchaseTokenAmount, "purchasing more than allowance");
 
         // Verify the merkle proof.
         bytes32 node = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
         require(MerkleProof.verify(merkleData.merkleProof, dealData.merkelRoot, node), "MerkleDistributor: Invalid proof.");
-        require(merkleData.amount >= _purchaseTokenAmount, "purchasing more than allowance");
 
         // Mark it claimed and send the token.
         _setPurchased(merkleData.index);
     }
 
+    /**
+     * @dev sets the claimedBitMap to true for that index
+     */
     function _setPurchased(uint256 _index) private {
         uint256 claimedWordIndex = _index / 256;
         uint256 claimedBitIndex = _index % 256;
