@@ -127,6 +127,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         require(!(allowList.hasAllowList && nftGating.hasNftList), "cant have allow list & nft");
         require(!(allowList.hasAllowList && dealData.merkleRoot != 0), "cant have allow list & merkle");
         require(!(nftGating.hasNftList && dealData.merkleRoot != 0), "cant have nft & merkle");
+        require(!(dealData.ipfsHash == 0 && dealData.merkleRoot != 0), "merkle needs ipfs hash");
     }
 
     function _startPurchasingPeriod(
@@ -211,7 +212,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         } else if (allowList.hasAllowList) {
             require(_purchaseTokenAmount <= allowList.amountPerAddress[msg.sender], "more than allocation");
             allowList.amountPerAddress[msg.sender] -= _purchaseTokenAmount;
-        } else if (dealData.merkelRoot != 0) {
+        } else if (dealData.merkleRoot != 0) {
             purchaseMerkleAmount(merkleData, _purchaseTokenAmount);
         }
 
@@ -494,7 +495,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
 
         // Verify the merkle proof.
         bytes32 node = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
-        require(MerkleProof.verify(merkleData.merkleProof, dealData.merkelRoot, node), "MerkleDistributor: Invalid proof.");
+        require(MerkleProof.verify(merkleData.merkleProof, dealData.merkleRoot, node), "MerkleDistributor: Invalid proof.");
 
         // Mark it claimed and send the token.
         _setPurchased(merkleData.index);
