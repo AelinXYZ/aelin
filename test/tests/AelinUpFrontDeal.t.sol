@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "../../contracts/libraries/AelinNftGating.sol";
 import "../../contracts/libraries/AelinAllowList.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {AelinUpFrontDeal} from "contracts/AelinUpFrontDeal.sol";
 import {AelinUpFrontDealFactory} from "contracts/AelinUpFrontDealFactory.sol";
 import {AelinFeeEscrow} from "contracts/AelinFeeEscrow.sol";
@@ -3326,6 +3327,108 @@ contract AelinUpFrontDealTest is Test {
         AelinUpFrontDeal(dealAddressAllowDeallocation).holderClaim();
         assertEq(purchaseToken.balanceOf(address(0xDEAD)), contractRemainingBalance);
     }
+
+    // /*//////////////////////////////////////////////////////////////
+    //                           merkleTree
+    // //////////////////////////////////////////////////////////////*/
+
+    function testNoIpfsHashFailure() public {
+        IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
+        merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: address(0xDEAD),
+            sponsor: address(0xBEEF),
+            sponsorFee: 1 * 10**18,
+            merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
+        });
+        vm.prank(address(0xBEEF));
+        vm.expectRevert("merkle needs ipfs hash");
+        merkleDealData = upFrontDealFactory.createUpFrontDeal(
+            dealData,
+            dealConfig,
+            nftCollectionRulesEmpty,
+            allowListInitEmpty
+        );
+    }
+
+    function testNoNftListFailure() public {
+        IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
+        merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: address(0xDEAD),
+            sponsor: address(0xBEEF),
+            sponsorFee: 1 * 10**18,
+            merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7,
+            ipfsHash: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
+        });
+        vm.prank(address(0xBEEF));
+        vm.expectRevert("cant have nft & merkle");
+        merkleDealData = upFrontDealFactory.createUpFrontDeal(
+            dealData,
+            dealConfig,
+            nftCollectionRules721,
+            allowListInitEmpty
+        );
+    }
+
+    function testNoAllowListFailure() public {
+        IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
+        merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: address(0xDEAD),
+            sponsor: address(0xBEEF),
+            sponsorFee: 1 * 10**18,
+            merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7,
+            ipfsHash: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
+        });
+        vm.prank(address(0xBEEF));
+        vm.expectRevert("cant have allow list & merkle");
+        merkleDealData = upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListInit);
+    }
+
+    // function testPurchaseAmountTooHighFailure() public {}
+
+    // function testInvalidProofFailure() public {}
+
+    // function testNotMessageSenderFailure() public {}
+
+    // function testAlreadyPurchasedTokensFailure() public {}
+
+    // function testMerklePurchaseWorking() public {
+    // WIP
+    // Merkle tree created from leaves ['a', 'b', 'c'].
+    // Leaf is 'a'.
+    // bytes32[] memory proof = new bytes32[](2);
+    // proof[0] = 0xb5553de315e0edf504d9150af82dafa5c4667fa618ed0a6f19c69b41166c5510;
+    // proof[1] = 0x0b42b6393c1f53060fe3ddbfcd7aadcca894465a5a438f69c87d790b2299b9b2;
+    // bytes32 root = 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7;
+    // bytes32 leaf = 0x3ac225168df54212a25c1c01fd35bebfea408fdac2e31ddd6f80a4bbf9a5f1cb;
+    // assertEq(MerkleProof.verify(proof, root, leaf), noDamage);
+    // IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
+    // merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
+    //     name: "DEAL",
+    //     symbol: "DEAL",
+    //     purchaseToken: address(purchaseToken),
+    //     underlyingDealToken: address(underlyingDealToken),
+    //     holder: address(0xDEAD),
+    //     sponsor: address(0xBEEF),
+    //     sponsorFee: 1 * 10**18,
+    //     merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7,
+    //     ipfsHash: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
+    // });
+    // vm.prank(address(0xBEEF));
+    // vm.expectRevert("cant have allow list & merkle");
+    // merkleDealData = upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListInit);
+    // }
 
     /*//////////////////////////////////////////////////////////////
                                 events
