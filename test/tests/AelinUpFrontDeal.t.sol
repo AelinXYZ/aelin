@@ -3354,46 +3354,57 @@ contract AelinUpFrontDealTest is Test {
         upFrontDealFactory.createUpFrontDeal(merkleDealData, sharedDealConfig, nftCollectionRulesEmpty, allowListInitEmpty);
     }
 
-    // function testNoNftListFailure() public {
-    //     IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
-    //     merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
-    //         name: "DEAL",
-    //         symbol: "DEAL",
-    //         purchaseToken: address(purchaseToken),
-    //         underlyingDealToken: address(underlyingDealToken),
-    //         holder: address(0xDEAD),
-    //         sponsor: address(0xBEEF),
-    //         sponsorFee: 1 * 10**18,
-    //         merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7,
-    //         ipfsHash: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
-    //     });
-    //     vm.prank(address(0xBEEF));
-    //     vm.expectRevert("cant have nft & merkle");
-    //     merkleDealData = upFrontDealFactory.createUpFrontDeal(
-    //         dealData,
-    //         dealConfig,
-    //         nftCollectionRules721,
-    //         allowListInitEmpty
-    //     );
-    // }
+    function testNoNftListFailure() public {
+        IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
+        AelinAllowList.InitData memory allowListInitEmpty;
 
-    // function testNoAllowListFailure() public {
-    //     IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
-    //     merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
-    //         name: "DEAL",
-    //         symbol: "DEAL",
-    //         purchaseToken: address(purchaseToken),
-    //         underlyingDealToken: address(underlyingDealToken),
-    //         holder: address(0xDEAD),
-    //         sponsor: address(0xBEEF),
-    //         sponsorFee: 1 * 10**18,
-    //         merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7,
-    //         ipfsHash: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
-    //     });
-    //     vm.prank(address(0xBEEF));
-    //     vm.expectRevert("cant have allow list & merkle");
-    //     merkleDealData = upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListInit);
-    // }
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRules721 = new AelinNftGating.NftCollectionRules[](1);
+
+        nftCollectionRules721[0].collectionAddress = address(collectionAddress1);
+        nftCollectionRules721[0].purchaseAmount = 1e20;
+        nftCollectionRules721[0].purchaseAmountPerToken = true;
+
+        merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: address(0xDEAD),
+            sponsor: address(0xBEEF),
+            sponsorFee: 1 * 10**18,
+            merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7,
+            ipfsHash: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
+        });
+        vm.prank(address(0xBEEF));
+        vm.expectRevert("cant have nft & merkle");
+        upFrontDealFactory.createUpFrontDeal(merkleDealData, sharedDealConfig, nftCollectionRules721, allowListInitEmpty);
+    }
+
+    function testNoAllowListFailure() public {
+        IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
+        AelinAllowList.InitData memory allowListInit;
+
+        merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: address(0xDEAD),
+            sponsor: address(0xBEEF),
+            sponsorFee: 1 * 10**18,
+            merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7,
+            ipfsHash: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
+        });
+        address[] memory testAllowListAddresses = new address[](1);
+        uint256[] memory testAllowListAmounts = new uint256[](1);
+        testAllowListAddresses[0] = address(0x1337);
+        testAllowListAmounts[0] = 1e18;
+        allowListInit.allowListAddresses = testAllowListAddresses;
+        allowListInit.allowListAmounts = testAllowListAmounts;
+        vm.prank(address(0xBEEF));
+        vm.expectRevert("cant have allow list & merkle");
+        upFrontDealFactory.createUpFrontDeal(merkleDealData, sharedDealConfig, nftCollectionRulesEmpty, allowListInit);
+    }
 
     // function testPurchaseAmountTooHighFailure() public {}
 
