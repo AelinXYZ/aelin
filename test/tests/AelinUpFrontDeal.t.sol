@@ -3406,7 +3406,47 @@ contract AelinUpFrontDealTest is Test {
         upFrontDealFactory.createUpFrontDeal(merkleDealData, sharedDealConfig, nftCollectionRulesEmpty, allowListInit);
     }
 
-    // function testPurchaseAmountTooHighFailure() public {}
+    function testPurchaseAmountTooHighFailure() public {
+        AelinAllowList.InitData memory allowListInitEmpty;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        IAelinUpFrontDeal.UpFrontMerkleData memory merkleData;
+
+        merkleData.account = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+        merkleData.index = 0;
+        merkleData.amount = 100;
+        // Merkle tree created from ../mocks/merkletree.json
+        merkleData.merkleProof = new bytes32[](2);
+        merkleData.merkleProof[0] = 0x02be7caae0db02910f3798c46245de6eddc92bc1a996750e94bf1c7089dcb523;
+        merkleData.merkleProof[1] = 0xece7bc0776e226452750c01472a66fefab26a047a54d2d9f9b73166fd9f16002;
+        bytes32 root = 0xcb1c7ee72e982df4dc9029227bafe538cea861e6a06a49c6ad1ab69397fa3e1c;
+        bytes32 leaf = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
+        assertEq(MerkleProof.verify(merkleData.merkleProof, root, leaf), true);
+        IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
+        merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: address(0xDEAD),
+            sponsor: address(0xBEEF),
+            sponsorFee: 1 * 10**18,
+            merkleRoot: root,
+            ipfsHash: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
+        });
+        vm.prank(address(0xBEEF));
+        address merkleDealAddress = upFrontDealFactory.createUpFrontDeal(
+            merkleDealData,
+            sharedDealConfig,
+            nftCollectionRulesEmpty,
+            allowListInitEmpty
+        );
+        address user = address(0x456);
+        vm.startPrank(user);
+        deal(address(purchaseToken), user, type(uint256).max);
+        purchaseToken.approve(address(merkleDealAddress), type(uint256).max);
+        vm.expectRevert("purchasing more than allowance");
+        AelinUpFrontDeal(merkleDealAddress).acceptDeal(nftPurchaseList, merkleData, 101);
+    }
 
     // function testInvalidProofFailure() public {}
 
@@ -3414,32 +3454,45 @@ contract AelinUpFrontDealTest is Test {
 
     // function testAlreadyPurchasedTokensFailure() public {}
 
-    // function testMerklePurchaseWorking() public {
-    // WIP
-    // Merkle tree created from leaves ['a', 'b', 'c'].
-    // Leaf is 'a'.
-    // bytes32[] memory proof = new bytes32[](2);
-    // proof[0] = 0xb5553de315e0edf504d9150af82dafa5c4667fa618ed0a6f19c69b41166c5510;
-    // proof[1] = 0x0b42b6393c1f53060fe3ddbfcd7aadcca894465a5a438f69c87d790b2299b9b2;
-    // bytes32 root = 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7;
-    // bytes32 leaf = 0x3ac225168df54212a25c1c01fd35bebfea408fdac2e31ddd6f80a4bbf9a5f1cb;
-    // assertEq(MerkleProof.verify(proof, root, leaf), noDamage);
-    // IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
-    // merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
-    //     name: "DEAL",
-    //     symbol: "DEAL",
-    //     purchaseToken: address(purchaseToken),
-    //     underlyingDealToken: address(underlyingDealToken),
-    //     holder: address(0xDEAD),
-    //     sponsor: address(0xBEEF),
-    //     sponsorFee: 1 * 10**18,
-    //     merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7,
-    //     ipfsHash: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
-    // });
-    // vm.prank(address(0xBEEF));
-    // vm.expectRevert("cant have allow list & merkle");
-    // merkleDealData = upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListInit);
-    // }
+    function testMerklePurchaseWorking() public {
+        AelinAllowList.InitData memory allowListInitEmpty;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        IAelinUpFrontDeal.UpFrontMerkleData memory merkleData;
+        merkleData.account = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+        merkleData.index = 0;
+        merkleData.amount = 100;
+        // Merkle tree created from ../mocks/merkletree.json
+        merkleData.merkleProof = new bytes32[](2);
+        merkleData.merkleProof[0] = 0x02be7caae0db02910f3798c46245de6eddc92bc1a996750e94bf1c7089dcb523;
+        merkleData.merkleProof[1] = 0xece7bc0776e226452750c01472a66fefab26a047a54d2d9f9b73166fd9f16002;
+        bytes32 root = 0xcb1c7ee72e982df4dc9029227bafe538cea861e6a06a49c6ad1ab69397fa3e1c;
+        bytes32 leaf = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
+        assertEq(MerkleProof.verify(merkleData.merkleProof, root, leaf), true);
+        IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
+        merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: address(0xDEAD),
+            sponsor: address(0xBEEF),
+            sponsorFee: 1 * 10**18,
+            merkleRoot: root,
+            ipfsHash: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
+        });
+        vm.prank(address(0xBEEF));
+        address merkleDealAddress = upFrontDealFactory.createUpFrontDeal(
+            merkleDealData,
+            sharedDealConfig,
+            nftCollectionRulesEmpty,
+            allowListInitEmpty
+        );
+        address user = address(0x456);
+        vm.startPrank(user);
+        deal(address(purchaseToken), user, type(uint256).max);
+        purchaseToken.approve(address(merkleDealAddress), type(uint256).max);
+        AelinUpFrontDeal(merkleDealAddress).acceptDeal(nftPurchaseList, merkleData, 100);
+    }
 
     /*//////////////////////////////////////////////////////////////
                                 events
