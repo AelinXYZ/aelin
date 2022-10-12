@@ -1,37 +1,37 @@
 {
-	"merkleRoot": "0xcb1c7ee72e982df4dc9029227bafe538cea861e6a06a49c6ad1ab69397fa3e1c",
-	"tokenTotal": "0x0a00",
+	"merkleRoot": "0x3e6f463625369879b7583baf245a0ac065bd8a9bcb180ecc0ac126d5d71c94bb",
+	"tokenTotal": "0x03e8",
 	"claims": {
 		"0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f": {
 			"index": 0,
-			"amount": "0x0100",
+			"amount": "0x64",
 			"proof": [
-				"0x02be7caae0db02910f3798c46245de6eddc92bc1a996750e94bf1c7089dcb523",
-				"0xece7bc0776e226452750c01472a66fefab26a047a54d2d9f9b73166fd9f16002"
+				"0xfa0a69af54d730226f27b04a7fd8ac77312321e142342afe85789c470d98af8b",
+				"0x08dc84848cfc1b922ae607cc2af96186b9ebad7dbacdac0e1e16498d4d668968"
 			]
 		},
 		"0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45": {
 			"index": 1,
-			"amount": "0x0300",
+			"amount": "0x012c",
 			"proof": [
-				"0xf66bfb15bbb36416686cf21421b9e91787d2d5d0b51bf6ddbfa182526c524cb3",
-				"0x262aba90d962eaaf409d00588655416b02b669bc19f0551f98860a4bfbe4a39b"
+				"0x01d9b9a8f81d36fcdc7b42f6d046e80322c76e4bfc2e7268bc5836daefcb0e1b",
+				"0x6e6e69baebe1517d01b2e091a9846d1e804deb013799817cbb2eae34fd588b8d"
 			]
 		},
 		"0xE9bD9f77b864F658F3D1b807157B994fCd52B50B": {
 			"index": 2,
-			"amount": "0x0400",
+			"amount": "0x0190",
 			"proof": [
-				"0x8b771a6bcbe05a2692c7261f0bd57263b928e7cad4af8d68c2ecbae8903b9947",
-				"0x262aba90d962eaaf409d00588655416b02b669bc19f0551f98860a4bfbe4a39b"
+				"0xdefa96435aec82d201dbd2e5f050fb4e1fef5edac90ce1e03953f916a5e1132d",
+				"0x08dc84848cfc1b922ae607cc2af96186b9ebad7dbacdac0e1e16498d4d668968"
 			]
 		},
 		"0xFF3f759B7ae44Cd75f6A9F714c9E1F4c6950D2aC": {
 			"index": 3,
-			"amount": "0x0200",
+			"amount": "0xc8",
 			"proof": [
-				"0x68de9ea8bc4f9376714cd180a888b051634a2e2d775af9e29d911fe191624eba",
-				"0xece7bc0776e226452750c01472a66fefab26a047a54d2d9f9b73166fd9f16002"
+				"0x680b4fbe83d755a7d55a7ba9545b74b3c7d88965ca09d21d2a7693f34fd1363c",
+				"0x6e6e69baebe1517d01b2e091a9846d1e804deb013799817cbb2eae34fd588b8d"
 			]
 		}
 	}
