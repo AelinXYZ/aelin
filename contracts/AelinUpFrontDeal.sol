@@ -31,6 +31,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     mapping(address => uint256) public purchaseTokensPerUser;
     mapping(address => uint256) public poolSharesPerUser;
     mapping(address => uint256) public amountVested;
+    mapping(address => uint256) public lastVesting;
 
     uint256 public totalPurchasingAccepted;
     uint256 public totalPoolShares;
@@ -398,6 +399,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         require(underlyingDealTokensClaimed > 0, "no underlying ready to claim");
         address _underlyingDealToken = dealData.underlyingDealToken;
         amountVested[msg.sender] += underlyingDealTokensClaimed;
+        lastVesting[msg.sender] = block.timestamp;
         _burn(msg.sender, underlyingDealTokensClaimed);
         totalUnderlyingClaimed += underlyingDealTokensClaimed;
         IERC20(_underlyingDealToken).safeTransfer(msg.sender, underlyingDealTokensClaimed);
@@ -413,17 +415,16 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         uint256 precisionAdjustedUnderlyingClaimable;
 
         uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        uint256 minTime = vestingCliffExpiry > lastVesting[_purchaser] ? vestingCliffExpiry : lastVesting[_purchaser];
         if (
             balanceOf(_purchaser) > 0 &&
             (maxTime > vestingCliffExpiry || (maxTime == vestingCliffExpiry && _vestingPeriod == 0))
         ) {
-            uint256 timeElapsed = maxTime - vestingCliffExpiry;
+            uint256 timeElapsed = maxTime - minTime;
 
             uint256 underlyingClaimable = _vestingPeriod == 0
                 ? balanceOf(_purchaser)
-                : ((balanceOf(_purchaser) + amountVested[_purchaser]) * timeElapsed) /
-                    _vestingPeriod -
-                    amountVested[_purchaser];
+                : (balanceOf(_purchaser) * timeElapsed) / _vestingPeriod;
             // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
             // although it will generally never happen as solidity rounds down so there should always be a little bit left
             address _underlyingDealToken = dealData.underlyingDealToken;
@@ -599,12 +600,10 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         _;
     }
 
-    modifier blockTransfer() {
-        require(false, "cant transfer deal tokens");
-        _;
-    }
-
-    function transfer(address _dst, uint256 _amount) public virtual override blockTransfer returns (bool) {
+    function transfer(address _dst, uint256 _amount) public virtual override returns (bool) {
+        if (lastVesting[msg.sender] > 0) {
+            lastVesting[_dst] = lastVesting[msg.sender];
+        }
         return super.transfer(_dst, _amount);
     }
 
@@ -612,7 +611,10 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         address _src,
         address _dst,
         uint256 _amount
-    ) public virtual override blockTransfer returns (bool) {
+    ) public virtual override returns (bool) {
+        if (lastVesting[msg.sender] > 0) {
+            lastVesting[_dst] = lastVesting[msg.sender];
+        }
         return super.transferFrom(_src, _dst, _amount);
     }
 }

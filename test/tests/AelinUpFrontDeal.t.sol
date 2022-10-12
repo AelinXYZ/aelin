@@ -2860,12 +2860,12 @@ contract AelinUpFrontDealTest is Test {
 
         // wait some time and claim again
         vm.warp(purchaseExpiry + 1 days + _timeAfterPurchasing + 2 days);
+        uint256 vestingCliffExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).lastVesting(address(0x1337));
+        uint256 lastVesting = AelinUpFrontDeal(dealAddressOverFullDeposit).vestingCliffExpiry();
         maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
-        uint256 expectedClaim2 = ((MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)) +
-            AelinUpFrontDeal(dealAddressOverFullDeposit).getAmountVested(address(0x1337))) *
-            (maxTime - AelinUpFrontDeal(dealAddressOverFullDeposit).vestingCliffExpiry())) /
-            vestingPeriod -
-            AelinUpFrontDeal(dealAddressOverFullDeposit).getAmountVested(address(0x1337));
+        uint256 minTime = vestingCliffExpiry > lastVesting ? vestingCliffExpiry : lastVesting;
+        uint256 expectedClaim2 = ((MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337))) * (maxTime - minTime)) /
+            vestingPeriod;
         vm.expectEmit(true, false, false, true);
         emit ClaimedUnderlyingDealToken(address(0x1337), address(underlyingDealToken), expectedClaim2);
         AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlying();
@@ -2887,54 +2887,54 @@ contract AelinUpFrontDealTest is Test {
                         Deal Token Transfers Blocked
     //////////////////////////////////////////////////////////////*/
 
-    function testDealTokenTransferBlocked() public {
-        vm.startPrank(address(0x1337));
-        uint256 _purchaseAmount = 1e29;
-        // accept deal
-        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
-        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
-            dealAddressOverFullDeposit
-        ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
-        vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
-        vm.assume(poolSharesAmount > 0);
-        vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
-        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
-        deal(address(purchaseToken), address(0x1337), type(uint256).max);
-        purchaseToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
-        vm.expectEmit(true, false, false, true);
-        emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
-        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
-        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
-        assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)), 0);
-        // claim
-        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
-        uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
-        vm.warp(purchaseExpiry + 1 days);
-        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
-        uint256 poolSharesPerUser = AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337));
-        uint256 adjustedDealTokensForUser = ((BASE - AELIN_FEE - sponsorFee) * poolSharesPerUser) / BASE;
-        vm.expectEmit(true, false, false, true);
-        emit ClaimDealTokens(address(0x1337), adjustedDealTokensForUser, 0);
-        AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), 0);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), 0);
-        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
-        assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)), adjustedDealTokensForUser);
-        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
-        // attempt deal token transfers
-        vm.expectRevert("cant transfer deal tokens");
-        MockERC20(dealAddressOverFullDeposit).transfer(address(0x1111), 1);
-        vm.expectRevert("cant transfer deal tokens");
-        MockERC20(dealAddressOverFullDeposit).transferFrom(address(0x1337), address(0x1111), 1);
-        vm.stopPrank();
-    }
+    // function testDealTokenTransferBlocked() public {
+    //     vm.startPrank(address(0x1337));
+    //     uint256 _purchaseAmount = 1e29;
+    //     // accept deal
+    //     uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+    //     (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
+    //         dealAddressOverFullDeposit
+    //     ).dealConfig();
+    //     (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+    //     vm.assume(success);
+    //     uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+    //     vm.assume(poolSharesAmount > 0);
+    //     vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
+    //     AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+    //     deal(address(purchaseToken), address(0x1337), type(uint256).max);
+    //     purchaseToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
+    //     vm.expectEmit(true, false, false, true);
+    //     emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
+    //     AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, _purchaseAmount);
+    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
+    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
+    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+    //     assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
+    //     assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)), 0);
+    //     // claim
+    //     assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
+    //     uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
+    //     vm.warp(purchaseExpiry + 1 days);
+    //     (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
+    //     uint256 poolSharesPerUser = AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337));
+    //     uint256 adjustedDealTokensForUser = ((BASE - AELIN_FEE - sponsorFee) * poolSharesPerUser) / BASE;
+    //     vm.expectEmit(true, false, false, true);
+    //     emit ClaimDealTokens(address(0x1337), adjustedDealTokensForUser, 0);
+    //     AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
+    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), 0);
+    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
+    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), 0);
+    //     assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
+    //     assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)), adjustedDealTokensForUser);
+    //     assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+    //     // attempt deal token transfers
+    //     vm.expectRevert("cant transfer deal tokens");
+    //     MockERC20(dealAddressOverFullDeposit).transfer(address(0x1111), 1);
+    //     vm.expectRevert("cant transfer deal tokens");
+    //     MockERC20(dealAddressOverFullDeposit).transferFrom(address(0x1337), address(0x1111), 1);
+    //     vm.stopPrank();
+    // }
 
     // /*//////////////////////////////////////////////////////////////
     //                  Scenarios with precision error
@@ -3326,6 +3326,195 @@ contract AelinUpFrontDealTest is Test {
         AelinUpFrontDeal(dealAddressAllowDeallocation).holderClaim();
         assertEq(purchaseToken.balanceOf(address(0xDEAD)), contractRemainingBalance);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                            Deal Tokens transfer
+    //////////////////////////////////////////////////////////////*/
+
+    function testTransferFullBalanceThenClaimUnderlying() public {
+        vm.startPrank(address(0x1337));
+        uint256 _purchaseAmount = 1e29;
+
+        // Deal config
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (
+            uint256 underlyingDealTokenTotal,
+            uint256 purchaseTokenPerDealToken,
+            ,
+            ,
+            uint256 vestingPeriod,
+            uint256 vestingCliffPeriod,
+
+        ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
+
+        // Accept deal
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        vm.assume(success);
+        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount > 0);
+        vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
+        assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)), 0);
+
+        // Claim deal tokens
+        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
+        uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
+        vm.warp(purchaseExpiry + 1 days);
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
+        uint256 poolSharesPerUser = AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337));
+        uint256 adjustedDealTokensForUser = ((BASE - AELIN_FEE - sponsorFee) * poolSharesPerUser) / BASE;
+        vm.expectEmit(true, false, false, true);
+        emit ClaimDealTokens(address(0x1337), adjustedDealTokensForUser, 0);
+        AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), 0);
+        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
+        assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)), adjustedDealTokensForUser);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+
+        // Attempt deal token transfers
+        MockERC20(dealAddressOverFullDeposit).transfer(address(0x1111), adjustedDealTokensForUser);
+        assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)), 0);
+        assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1111)), adjustedDealTokensForUser);
+
+        // Claim underlying deal tokens
+        // Cliff hasn't been reached so any attempt to claim the underlying deal token should fail
+        vm.expectRevert("no underlying ready to claim");
+        AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlying();
+
+        vm.warp(purchaseExpiry + vestingCliffPeriod + vestingPeriod);
+
+        // 0x1337 doesn't have deal tokens so shouldn't be able to claim
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).claimableUnderlyingTokens(address(0x1337)), 0);
+        vm.expectRevert("no underlying ready to claim");
+        AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlying();
+
+        // 0x1111 should be able to claim the totality of their deal tokens
+        vm.stopPrank();
+        vm.startPrank(address(0x1111));
+        assertEq(
+            AelinUpFrontDeal(dealAddressOverFullDeposit).claimableUnderlyingTokens(address(0x1111)),
+            adjustedDealTokensForUser
+        );
+        AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlying();
+        assertEq(underlyingDealToken.balanceOf(address(0x1111)), adjustedDealTokensForUser);
+        vm.stopPrank();
+    }
+
+    function testTransferPartialBalanceThenClaimUnderlying() public {
+        vm.startPrank(address(0x1337));
+        uint256 _purchaseAmount = 1e29;
+
+        // Deal config
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (
+            uint256 underlyingDealTokenTotal,
+            uint256 purchaseTokenPerDealToken,
+            ,
+            ,
+            uint256 vestingPeriod,
+            uint256 vestingCliffPeriod,
+
+        ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
+
+        // Accept deal
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        vm.assume(success);
+        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount > 0);
+        vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        deal(address(purchaseToken), address(0x1337), type(uint256).max);
+        purchaseToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
+        assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)), 0);
+
+        // Claim deal tokens
+        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
+        uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
+        vm.warp(purchaseExpiry + 1 days);
+        (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
+        uint256 poolSharesPerUser = AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337));
+        uint256 adjustedDealTokensForUser = ((BASE - AELIN_FEE - sponsorFee) * poolSharesPerUser) / BASE;
+        vm.expectEmit(true, false, false, true);
+        emit ClaimDealTokens(address(0x1337), adjustedDealTokensForUser, 0);
+        AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), 0);
+        assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
+        assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)), adjustedDealTokensForUser);
+        assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
+
+        // Attempt deal token transfers
+        uint256 transferAmount = 1e25;
+        MockERC20(dealAddressOverFullDeposit).transfer(address(0x1111), transferAmount);
+        assertEq(
+            MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)),
+            adjustedDealTokensForUser - transferAmount
+        );
+        assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1111)), transferAmount);
+
+        // Claim underlying deal tokens
+        // Cliff hasn't been reached so any attempt to claim the underlying deal token should fail
+        vm.expectRevert("no underlying ready to claim");
+        AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlying();
+
+        // Flash forward to 1 day after cliff ends
+        vm.warp(purchaseExpiry + vestingCliffPeriod + 1 days);
+
+        uint256 underlyingClaimable;
+        uint256 timeElapsed = block.timestamp - AelinUpFrontDeal(dealAddressOverFullDeposit).vestingCliffExpiry();
+
+        underlyingClaimable =
+            ((MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)) +
+                AelinUpFrontDeal(dealAddressOverFullDeposit).getAmountVested(address(0x1337))) * timeElapsed) /
+            vestingPeriod -
+            AelinUpFrontDeal(dealAddressOverFullDeposit).getAmountVested(address(0x1337));
+
+        uint256 claimable = AelinUpFrontDeal(dealAddressOverFullDeposit).claimableUnderlyingTokens(address(0x1337));
+        assertEq(claimable, underlyingClaimable);
+
+        // // 0x1337 doesn't have deal tokens so shouldn't be able to claim
+        // assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).claimableUnderlyingTokens(address(0x1337)), 0);
+        // vm.expectRevert("no underlying ready to claim");
+        // AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlying();
+
+        // // 0x1111 should be able to claim the totality of their deal tokens
+        // vm.stopPrank();
+        // vm.startPrank(address(0x1111));
+        // assertEq(
+        //     AelinUpFrontDeal(dealAddressOverFullDeposit).claimableUnderlyingTokens(address(0x1111)),
+        //     adjustedDealTokensForUser
+        // );
+        // AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlying();
+        // assertEq(underlyingDealToken.balanceOf(address(0x1111)), adjustedDealTokensForUser);
+        // vm.stopPrank();
+    }
+
+    function transferPartialBalance() public {}
+
+    function transferFromFullBalance() public {}
+
+    function transferFromPartialBalance() public {}
 
     /*//////////////////////////////////////////////////////////////
                                 events
