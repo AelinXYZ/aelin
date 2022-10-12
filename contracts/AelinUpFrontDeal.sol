@@ -51,13 +51,6 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     uint256 public vestingCliffExpiry;
     uint256 public vestingExpiry;
 
-    struct MerkleData {
-        uint256 index;
-        address account;
-        uint256 amount;
-        bytes32[] merkleProof;
-    }
-
     /**
      * @dev initializes the contract configuration, called from the factory contract when creating a new Up Front Deal
      */
@@ -196,7 +189,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      */
     function acceptDeal(
         AelinNftGating.NftPurchaseList[] calldata _nftPurchaseList,
-        MerkleData calldata merkleData,
+        UpFrontMerkleData calldata merkleData,
         uint256 _purchaseTokenAmount
     ) external lock {
         require(underlyingDepositComplete, "deal token not deposited");
@@ -488,7 +481,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      * @dev a function that checks if the index leaf node is valid and if the user has purchased.
      * will set the index node to purchased if approved
      */
-    function purchaseMerkleAmount(MerkleData calldata merkleData, uint256 _purchaseTokenAmount) private {
+    function purchaseMerkleAmount(UpFrontMerkleData calldata merkleData, uint256 _purchaseTokenAmount) private {
         require(!hasPurchasedMerkle(merkleData.index), "Already purchased tokens");
         require(msg.sender == merkleData.account, "cant purchase others tokens");
         require(merkleData.amount >= _purchaseTokenAmount, "purchasing more than allowance");

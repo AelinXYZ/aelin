@@ -26,6 +26,13 @@ interface IAelinUpFrontDeal {
         bool allowDeallocation;
     }
 
+    struct UpFrontMerkleData {
+        uint256 index;
+        address account;
+        uint256 amount;
+        bytes32[] merkleProof;
+    }
+
     event CreateUpFrontDeal(
         address indexed dealAddress,
         string name,
