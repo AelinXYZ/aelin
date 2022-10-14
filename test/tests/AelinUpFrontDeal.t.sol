@@ -4,6 +4,7 @@ pragma solidity 0.8.6;
 import "forge-std/Test.sol";
 import "../../contracts/libraries/AelinNftGating.sol";
 import "../../contracts/libraries/AelinAllowList.sol";
+import "../../contracts/libraries/MerkleTree.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {AelinUpFrontDeal} from "contracts/AelinUpFrontDeal.sol";
@@ -46,7 +47,7 @@ contract AelinUpFrontDealTest is Test {
 
     AelinNftGating.NftCollectionRules[] public nftCollectionRulesEmpty;
     IAelinUpFrontDeal.UpFrontDealConfig public sharedDealConfig;
-    IAelinUpFrontDeal.UpFrontMerkleData public merkleDataEmpty;
+    MerkleTree.UpFrontMerkleData public merkleDataEmpty;
 
     function setUp() public {
         testUpFrontDeal = new AelinUpFrontDeal();
@@ -3409,7 +3410,7 @@ contract AelinUpFrontDealTest is Test {
     function testPurchaseAmountTooHighFailure() public {
         AelinAllowList.InitData memory allowListInitEmpty;
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
-        IAelinUpFrontDeal.UpFrontMerkleData memory merkleData;
+        MerkleTree.UpFrontMerkleData memory merkleData;
 
         merkleData.account = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
         merkleData.index = 0;
@@ -3456,7 +3457,7 @@ contract AelinUpFrontDealTest is Test {
     function testInvalidProofFailure() public {
         AelinAllowList.InitData memory allowListInitEmpty;
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
-        IAelinUpFrontDeal.UpFrontMerkleData memory merkleData;
+        MerkleTree.UpFrontMerkleData memory merkleData;
         merkleData.account = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
         merkleData.index = 0;
         merkleData.amount = 100;
@@ -3503,7 +3504,7 @@ contract AelinUpFrontDealTest is Test {
         vm.assume(_investor != address(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f));
         AelinAllowList.InitData memory allowListInitEmpty;
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
-        IAelinUpFrontDeal.UpFrontMerkleData memory merkleData;
+        MerkleTree.UpFrontMerkleData memory merkleData;
 
         merkleData.account = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
         merkleData.index = 0;
@@ -3549,7 +3550,7 @@ contract AelinUpFrontDealTest is Test {
     function testAlreadyPurchasedTokensFailure() public {
         AelinAllowList.InitData memory allowListInitEmpty;
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
-        IAelinUpFrontDeal.UpFrontMerkleData memory merkleData;
+        MerkleTree.UpFrontMerkleData memory merkleData;
         merkleData.account = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
         merkleData.index = 0;
         merkleData.amount = 100;
@@ -3596,7 +3597,7 @@ contract AelinUpFrontDealTest is Test {
     function testMerklePurchaseWorking() public {
         AelinAllowList.InitData memory allowListInitEmpty;
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
-        IAelinUpFrontDeal.UpFrontMerkleData memory merkleData;
+        MerkleTree.UpFrontMerkleData memory merkleData;
         merkleData.account = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
         merkleData.index = 0;
         merkleData.amount = 100;

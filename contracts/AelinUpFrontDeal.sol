@@ -11,6 +11,7 @@ import {AelinFeeEscrow} from "./AelinFeeEscrow.sol";
 import {IAelinUpFrontDeal} from "./interfaces/IAelinUpFrontDeal.sol";
 import "./libraries/AelinNftGating.sol";
 import "./libraries/AelinAllowList.sol";
+import "./libraries/MerkleTree.sol";
 
 contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal {
     using SafeERC20 for IERC20;
@@ -27,7 +28,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     AelinFeeEscrow public aelinFeeEscrow;
     address public dealFactory;
 
-    mapping(uint256 => uint256) private claimedBitMap;
+    MerkleTree.TrackClaimed private trackClaimed;
     AelinAllowList.AllowList public allowList;
     AelinNftGating.NftGatingData public nftGating;
     mapping(address => uint256) public purchaseTokensPerUser;
@@ -189,7 +190,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      */
     function acceptDeal(
         AelinNftGating.NftPurchaseList[] calldata _nftPurchaseList,
-        UpFrontMerkleData calldata merkleData,
+        MerkleTree.UpFrontMerkleData calldata merkleData,
         uint256 _purchaseTokenAmount
     ) external lock {
         require(underlyingDepositComplete, "deal token not deposited");
@@ -206,7 +207,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
             require(_purchaseTokenAmount <= allowList.amountPerAddress[msg.sender], "more than allocation");
             allowList.amountPerAddress[msg.sender] -= _purchaseTokenAmount;
         } else if (dealData.merkleRoot != 0) {
-            purchaseMerkleAmount(merkleData, _purchaseTokenAmount);
+            MerkleTree.purchaseMerkleAmount(merkleData, trackClaimed, _purchaseTokenAmount, dealData.merkleRoot);
         }
 
         uint256 balanceBeforeTransfer = IERC20(_purchaseToken).balanceOf(address(this));
@@ -478,44 +479,6 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     }
 
     /**
-     * @dev a function that checks if the index leaf node is valid and if the user has purchased.
-     * will set the index node to purchased if approved
-     */
-    function purchaseMerkleAmount(UpFrontMerkleData calldata merkleData, uint256 _purchaseTokenAmount) private {
-        require(!hasPurchasedMerkle(merkleData.index), "Already purchased tokens");
-        require(msg.sender == merkleData.account, "cant purchase others tokens");
-        require(merkleData.amount >= _purchaseTokenAmount, "purchasing more than allowance");
-
-        // Verify the merkle proof.
-        bytes32 node = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
-        require(MerkleProof.verify(merkleData.merkleProof, dealData.merkleRoot, node), "MerkleDistributor: Invalid proof.");
-
-        // Mark it claimed and send the token.
-        _setPurchased(merkleData.index);
-    }
-
-    /**
-     * @dev sets the claimedBitMap to true for that index
-     */
-    function _setPurchased(uint256 _index) private {
-        uint256 claimedWordIndex = _index / 256;
-        uint256 claimedBitIndex = _index % 256;
-        claimedBitMap[claimedWordIndex] = claimedBitMap[claimedWordIndex] | (1 << claimedBitIndex);
-    }
-
-    /**
-     * @dev returns if address has purchased merkle
-     * @return uint256 index of the leaf node
-     */
-    function hasPurchasedMerkle(uint256 _index) public view returns (bool) {
-        uint256 claimedWordIndex = _index / 256;
-        uint256 claimedBitIndex = _index % 256;
-        uint256 claimedWord = claimedBitMap[claimedWordIndex];
-        uint256 mask = (1 << claimedBitIndex);
-        return claimedWord & mask == mask;
-    }
-
-    /**
      * @dev returns allow list information
      * @param _userAddress address to use in returning the amountPerAddress
      * @return address[] returns array of addresses included in the allow list
@@ -621,6 +584,14 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      */
     function getAmountVested(address _address) public view returns (uint256) {
         return (amountVested[_address]);
+    }
+
+    /**
+     * @dev hasPurchasedMerkle
+     * @param _index index of leaf node/ address to check
+     */
+    function hasPurchasedMerkle(uint256 _index) public view returns (bool) {
+        return MerkleTree.hasPurchasedMerkle(trackClaimed, _index);
     }
 
     modifier onlyHolder() {
