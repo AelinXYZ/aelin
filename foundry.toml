@@ -12,7 +12,11 @@ remappings = [
     'ds-test/=lib/forge-std/lib/ds-test/src/',
     'forge-std/=lib/forge-std/src/',
 ]
-# libraries = ["contracts/libraries/AelinAllowList.sol:AelinAllowList:0xd1eC5c6B49EB207f4eD6Bcf1C6eb1b23E02854a7", "contracts/libraries/AelinNftGating.sol:AelinNftGating:0xc589A2b87D7fd18D262BE9FCcd47Dc6615284005"]
+# libraries = [
+#     "contracts/libraries/MerkleTree.sol:MerkleTree:0xeDaCa3AeEeDE55C6B5804cEBB9262d31576b493D",
+#     "contracts/libraries/AelinAllowList.sol:AelinAllowList:0xd1eC5c6B49EB207f4eD6Bcf1C6eb1b23E02854a7",
+#     "contracts/libraries/AelinNftGating.sol:AelinNftGating:0xc589A2b87D7fd18D262BE9FCcd47Dc6615284005"
+# ]
 fuzz_max_global_rejects = 50000000
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
