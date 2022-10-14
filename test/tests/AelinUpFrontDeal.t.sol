@@ -3453,9 +3453,54 @@ contract AelinUpFrontDealTest is Test {
         AelinUpFrontDeal(merkleDealAddress).acceptDeal(nftPurchaseList, merkleData, 101);
     }
 
-    // function testInvalidProofFailure() public {}
+    function testInvalidProofFailure() public {
+        AelinAllowList.InitData memory allowListInitEmpty;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        IAelinUpFrontDeal.UpFrontMerkleData memory merkleData;
+        merkleData.account = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+        merkleData.index = 0;
+        merkleData.amount = 100;
+        // Merkle tree created from ../mocks/merkletree.json
+        merkleData.merkleProof = new bytes32[](2);
+        merkleData.merkleProof[0] = 0xfa0a69af54d730226f27b04a7fd8ac77312321e142342afe85789c470d98af8b;
+        merkleData.merkleProof[1] = 0x08dc84848cfc1b922ae607cc2af96186b9ebad7dbacdac0e1e16498d4d668988;
+        bytes32 root = 0x3e6f463625369879b7583baf245a0ac065bd8a9bcb180ecc0ac126d5d71c94bb;
+        bytes32 leaf = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
+        assertEq(MerkleProof.verify(merkleData.merkleProof, root, leaf), false);
+        IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
+        merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: address(0xDEAD),
+            sponsor: address(0xBEEF),
+            sponsorFee: 1 * 10**18,
+            merkleRoot: root,
+            ipfsHash: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
+        });
+        vm.prank(address(0xBEEF));
+        address merkleDealAddress = upFrontDealFactory.createUpFrontDeal(
+            merkleDealData,
+            sharedDealConfig,
+            nftCollectionRulesEmpty,
+            allowListInitEmpty
+        );
+        vm.startPrank(address(0xDEAD));
+        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        underlyingDealToken.approve(address(merkleDealAddress), type(uint256).max);
+        AelinUpFrontDeal(merkleDealAddress).depositUnderlyingTokens(1e35);
+        vm.stopPrank();
+        address user = address(merkleData.account);
+        vm.startPrank(user);
+        deal(address(purchaseToken), user, type(uint256).max);
+        purchaseToken.approve(address(merkleDealAddress), type(uint256).max);
+        vm.expectRevert("MerkleDistributor: Invalid proof.");
+        AelinUpFrontDeal(merkleDealAddress).acceptDeal(nftPurchaseList, merkleData, 100);
+    }
 
-    function testNotMessageSenderFailure() public {
+    function testNotMessageSenderFailure(address _investor) public {
+        vm.assume(_investor != address(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f));
         AelinAllowList.InitData memory allowListInitEmpty;
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         IAelinUpFrontDeal.UpFrontMerkleData memory merkleData;
@@ -3494,15 +3539,59 @@ contract AelinUpFrontDealTest is Test {
         underlyingDealToken.approve(address(merkleDealAddress), type(uint256).max);
         AelinUpFrontDeal(merkleDealAddress).depositUnderlyingTokens(1e35);
         vm.stopPrank();
-        address user = address(0x456);
-        vm.startPrank(user);
-        deal(address(purchaseToken), user, type(uint256).max);
+        vm.startPrank(_investor);
+        deal(address(purchaseToken), _investor, type(uint256).max);
         purchaseToken.approve(address(merkleDealAddress), type(uint256).max);
         vm.expectRevert("cant purchase others tokens");
         AelinUpFrontDeal(merkleDealAddress).acceptDeal(nftPurchaseList, merkleData, 101);
     }
 
-    // function testAlreadyPurchasedTokensFailure() public {}
+    function testAlreadyPurchasedTokensFailure() public {
+        AelinAllowList.InitData memory allowListInitEmpty;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        IAelinUpFrontDeal.UpFrontMerkleData memory merkleData;
+        merkleData.account = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+        merkleData.index = 0;
+        merkleData.amount = 100;
+        // Merkle tree created from ../mocks/merkletree.json
+        merkleData.merkleProof = new bytes32[](2);
+        merkleData.merkleProof[0] = 0xfa0a69af54d730226f27b04a7fd8ac77312321e142342afe85789c470d98af8b;
+        merkleData.merkleProof[1] = 0x08dc84848cfc1b922ae607cc2af96186b9ebad7dbacdac0e1e16498d4d668968;
+        bytes32 root = 0x3e6f463625369879b7583baf245a0ac065bd8a9bcb180ecc0ac126d5d71c94bb;
+        bytes32 leaf = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
+        assertEq(MerkleProof.verify(merkleData.merkleProof, root, leaf), true);
+        IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
+        merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: address(0xDEAD),
+            sponsor: address(0xBEEF),
+            sponsorFee: 1 * 10**18,
+            merkleRoot: root,
+            ipfsHash: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
+        });
+        vm.prank(address(0xBEEF));
+        address merkleDealAddress = upFrontDealFactory.createUpFrontDeal(
+            merkleDealData,
+            sharedDealConfig,
+            nftCollectionRulesEmpty,
+            allowListInitEmpty
+        );
+        vm.startPrank(address(0xDEAD));
+        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        underlyingDealToken.approve(address(merkleDealAddress), type(uint256).max);
+        AelinUpFrontDeal(merkleDealAddress).depositUnderlyingTokens(1e35);
+        vm.stopPrank();
+        address user = address(merkleData.account);
+        vm.startPrank(user);
+        deal(address(purchaseToken), user, type(uint256).max);
+        purchaseToken.approve(address(merkleDealAddress), type(uint256).max);
+        AelinUpFrontDeal(merkleDealAddress).acceptDeal(nftPurchaseList, merkleData, 100);
+        vm.expectRevert("Already purchased tokens");
+        AelinUpFrontDeal(merkleDealAddress).acceptDeal(nftPurchaseList, merkleData, 100);
+    }
 
     function testMerklePurchaseWorking() public {
         AelinAllowList.InitData memory allowListInitEmpty;
@@ -3517,8 +3606,6 @@ contract AelinUpFrontDealTest is Test {
         merkleData.merkleProof[1] = 0x08dc84848cfc1b922ae607cc2af96186b9ebad7dbacdac0e1e16498d4d668968;
         bytes32 root = 0x3e6f463625369879b7583baf245a0ac065bd8a9bcb180ecc0ac126d5d71c94bb;
         bytes32 leaf = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
-        bool test = MerkleProof.verify(merkleData.merkleProof, root, leaf);
-        console.log("test", test);
         assertEq(MerkleProof.verify(merkleData.merkleProof, root, leaf), true);
         IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
         merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
