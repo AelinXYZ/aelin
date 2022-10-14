@@ -34,7 +34,9 @@ interface IAelinUpFrontDeal {
         address underlyingDealToken,
         address indexed holder,
         address indexed sponsor,
-        uint256 sponsorFee
+        uint256 sponsorFee,
+        bytes32 merkleRoot,
+        bytes32 ipfsHash
     );
 
     event CreateUpFrontDealConfig(
