@@ -132,7 +132,7 @@ contract AelinUpFrontDealTest is Test {
             holder: address(0xDEAD),
             sponsor: address(0xBEEF),
             sponsorFee: 1 * 10**18,
-            ipfsHash: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            ipfsHash: "",
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000
         });
 
@@ -709,7 +709,7 @@ contract AelinUpFrontDealTest is Test {
             holder: address(0xDEAD),
             sponsor: address(0xBEEF),
             sponsorFee: 100,
-            ipfsHash: 0,
+            ipfsHash: "",
             merkleRoot: 0
         });
 
@@ -2959,7 +2959,7 @@ contract AelinUpFrontDealTest is Test {
             holder: address(0xBAAF),
             sponsor: address(0xDEED),
             sponsorFee: 0,
-            ipfsHash: 0,
+            ipfsHash: "",
             merkleRoot: 0
         });
 
@@ -3112,7 +3112,7 @@ contract AelinUpFrontDealTest is Test {
             holder: address(0xBAAF),
             sponsor: address(0xDEED),
             sponsorFee: 0,
-            ipfsHash: 0,
+            ipfsHash: "",
             merkleRoot: 0
         });
 
@@ -3348,7 +3348,7 @@ contract AelinUpFrontDealTest is Test {
             sponsor: address(0xBEEF),
             sponsorFee: 1 * 10**18,
             merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7,
-            ipfsHash: 0
+            ipfsHash: ""
         });
         vm.prank(address(0xBEEF));
         vm.expectRevert("merkle needs ipfs hash");
@@ -3374,7 +3374,7 @@ contract AelinUpFrontDealTest is Test {
             sponsor: address(0xBEEF),
             sponsorFee: 1 * 10**18,
             merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7,
-            ipfsHash: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
+            ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
         });
         vm.prank(address(0xBEEF));
         vm.expectRevert("cant have nft & merkle");
@@ -3394,7 +3394,7 @@ contract AelinUpFrontDealTest is Test {
             sponsor: address(0xBEEF),
             sponsorFee: 1 * 10**18,
             merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7,
-            ipfsHash: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
+            ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
         });
         address[] memory testAllowListAddresses = new address[](1);
         uint256[] memory testAllowListAmounts = new uint256[](1);
@@ -3432,7 +3432,7 @@ contract AelinUpFrontDealTest is Test {
             sponsor: address(0xBEEF),
             sponsorFee: 1 * 10**18,
             merkleRoot: root,
-            ipfsHash: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
+            ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
         });
         vm.prank(address(0xBEEF));
         address merkleDealAddress = upFrontDealFactory.createUpFrontDeal(
@@ -3478,7 +3478,7 @@ contract AelinUpFrontDealTest is Test {
             sponsor: address(0xBEEF),
             sponsorFee: 1 * 10**18,
             merkleRoot: root,
-            ipfsHash: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
+            ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
         });
         vm.prank(address(0xBEEF));
         address merkleDealAddress = upFrontDealFactory.createUpFrontDeal(
@@ -3526,7 +3526,7 @@ contract AelinUpFrontDealTest is Test {
             sponsor: address(0xBEEF),
             sponsorFee: 1 * 10**18,
             merkleRoot: root,
-            ipfsHash: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
+            ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
         });
         vm.prank(address(0xBEEF));
         address merkleDealAddress = upFrontDealFactory.createUpFrontDeal(
@@ -3571,7 +3571,7 @@ contract AelinUpFrontDealTest is Test {
             sponsor: address(0xBEEF),
             sponsorFee: 1 * 10**18,
             merkleRoot: root,
-            ipfsHash: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
+            ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
         });
         vm.prank(address(0xBEEF));
         address merkleDealAddress = upFrontDealFactory.createUpFrontDeal(
@@ -3618,7 +3618,7 @@ contract AelinUpFrontDealTest is Test {
             sponsor: address(0xBEEF),
             sponsorFee: 1 * 10**18,
             merkleRoot: root,
-            ipfsHash: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7
+            ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
         });
         vm.prank(address(0xBEEF));
         address merkleDealAddress = upFrontDealFactory.createUpFrontDeal(

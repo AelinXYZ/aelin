@@ -121,7 +121,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         require(!(allowList.hasAllowList && nftGating.hasNftList), "cant have allow list & nft");
         require(!(allowList.hasAllowList && dealData.merkleRoot != 0), "cant have allow list & merkle");
         require(!(nftGating.hasNftList && dealData.merkleRoot != 0), "cant have nft & merkle");
-        require(!(dealData.ipfsHash == 0 && dealData.merkleRoot != 0), "merkle needs ipfs hash");
+        require(!(bytes(dealData.ipfsHash).length == 0 && dealData.merkleRoot != 0), "merkle needs ipfs hash");
     }
 
     function _startPurchasingPeriod(

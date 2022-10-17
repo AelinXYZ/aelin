@@ -88,7 +88,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             sponsor: address(0x123),
             sponsorFee: _sponsorFee,
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            ipfsHash: 0x0000000000000000000000000000000000000000000000000000000000000000
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -114,7 +114,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         address _tempAddress;
         uint256 _tempUint;
         bool _tempBool;
-        bytes32 _ipfsHash;
+        string memory _ipfsHash;
         bytes32 _merkleRoot;
 
         // deal contract storage
@@ -203,7 +203,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             sponsor: _sender,
             sponsorFee: _sponsorFee,
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            ipfsHash: 0x0000000000000000000000000000000000000000000000000000000000000000
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -252,7 +252,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             sponsor: address(0x123),
             sponsorFee: 200,
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            ipfsHash: 0x0000000000000000000000000000000000000000000000000000000000000000
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -278,7 +278,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         address _tempAddress;
         uint256 _tempUint;
         bool _tempBool;
-        bytes32 _ipfsHash;
+        string memory _ipfsHash;
         bytes32 _merkleRoot;
 
         // deal contract storage
@@ -351,7 +351,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             sponsor: address(0x123),
             sponsorFee: 200,
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            ipfsHash: 0x0000000000000000000000000000000000000000000000000000000000000000
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -385,7 +385,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             sponsor: address(0x123),
             sponsorFee: 200,
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            ipfsHash: 0x0000000000000000000000000000000000000000000000000000000000000000
+            ipfsHash: ""
         });
 
         vm.expectRevert("cant pass null underlying address");
@@ -402,7 +402,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             sponsor: address(0x123),
             sponsorFee: 200,
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            ipfsHash: 0x0000000000000000000000000000000000000000000000000000000000000000
+            ipfsHash: ""
         });
 
         vm.expectRevert("cant pass null holder address");
@@ -448,7 +448,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             sponsor: address(0x123),
             sponsorFee: 200,
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            ipfsHash: 0x0000000000000000000000000000000000000000000000000000000000000000
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -474,7 +474,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         address _tempAddress;
         uint256 _tempUint;
         bool _tempBool;
-        bytes32 _ipfsHash;
+        string memory _ipfsHash;
         bytes32 _merkleRoot;
 
         // deal contract storage
@@ -584,7 +584,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             sponsor: address(0x123),
             sponsorFee: 200,
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            ipfsHash: 0x0000000000000000000000000000000000000000000000000000000000000000
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -625,7 +625,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             sponsor: address(0x123),
             sponsorFee: 200,
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            ipfsHash: 0x0000000000000000000000000000000000000000000000000000000000000000
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -651,7 +651,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         address _tempAddress;
         uint256 _tempUint;
         bool _tempBool;
-        bytes32 _ipfsHash;
+        string memory _ipfsHash;
         bytes32 _merkleRoot;
 
         // deal contract storage
@@ -742,7 +742,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             sponsor: address(0x123),
             sponsorFee: 200,
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            ipfsHash: 0x0000000000000000000000000000000000000000000000000000000000000000
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -768,7 +768,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         address _tempAddress;
         uint256 _tempUint;
         bool _tempBool;
-        bytes32 _ipfsHash;
+        string memory _ipfsHash;
         bytes32 _merkleRoot;
 
         // deal contract storage
@@ -871,7 +871,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             sponsor: address(0x123),
             sponsorFee: 200,
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            ipfsHash: 0x0000000000000000000000000000000000000000000000000000000000000000
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -897,7 +897,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         address _tempAddress;
         uint256 _tempUint;
         bool _tempBool;
-        bytes32 _ipfsHash;
+        string memory _ipfsHash;
         bytes32 _merkleRoot;
 
         // deal contract storage
@@ -1002,7 +1002,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             sponsor: address(0x123),
             sponsorFee: 200,
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            ipfsHash: 0x0000000000000000000000000000000000000000000000000000000000000000
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -1049,7 +1049,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             sponsor: address(0x123),
             sponsorFee: 200,
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            ipfsHash: 0x0000000000000000000000000000000000000000000000000000000000000000
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -1087,7 +1087,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             sponsor: address(0x123),
             sponsorFee: 200,
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            ipfsHash: 0x0000000000000000000000000000000000000000000000000000000000000000
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -1136,7 +1136,7 @@ contract AelinUpFrontDealFactoryTest is Test {
             sponsor: address(0x123),
             sponsorFee: 200,
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
-            ipfsHash: 0x0000000000000000000000000000000000000000000000000000000000000000
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;

@@ -54,8 +54,8 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
             _dealData.sponsor,
             _dealData.holder,
             _dealData.sponsorFee,
-            _dealData.ipfsHash,
-            _dealData.merkleRoot
+            _dealData.merkleRoot,
+            _dealData.ipfsHash
         );
 
         emit CreateUpFrontDealConfig(
