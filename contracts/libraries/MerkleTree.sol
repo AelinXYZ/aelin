@@ -24,7 +24,7 @@ library MerkleTree {
         TrackClaimed storage self,
         uint256 _purchaseTokenAmount,
         bytes32 merkleRoot
-    ) public {
+    ) external {
         require(!hasPurchasedMerkle(self, merkleData.index), "Already purchased tokens");
         require(msg.sender == merkleData.account, "cant purchase others tokens");
         require(merkleData.amount >= _purchaseTokenAmount, "purchasing more than allowance");

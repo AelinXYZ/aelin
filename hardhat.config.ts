@@ -32,7 +32,7 @@ const config: HardhatUserConfig = {
       },
     ],
   },
-  defaultNetwork: "hardhat",
+  defaultNetwork: "cannon",
   mocha: {
     // this needs to be long because CI takes a while to fork mainnet data from alchemy
     timeout: 1000000,
@@ -56,7 +56,8 @@ const config: HardhatUserConfig = {
     },
     goerli: {
       url: `https://eth-goerli.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
-      accounts: [`0x${process.env.KOVAN_PRIVATE_KEY}`],
+      accounts: [`0x${process.env.GOERLI_PRIVATE_KEY}`],
+      chainId: 5,
     },
     hardhat: {
       initialBaseFeePerGas: 0,
