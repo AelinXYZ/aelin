@@ -31,6 +31,7 @@ contract AelinUpFrontDealFactoryTest is Test {
     MockERC1155 public collectionAddress3;
     MockERC1155 public collectionAddress4;
 
+    IAelinUpFrontDeal.UpFrontDealInfo public dealInfo;
     IAelinUpFrontDeal.UpFrontDealData public dealData;
     IAelinUpFrontDeal.UpFrontDealConfig public dealConfig;
 
@@ -91,6 +92,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             ipfsHash: ""
         });
 
+        IAelinUpFrontDeal.UpFrontDealInfo memory _dealInfo;
+        _dealInfo = IAelinUpFrontDeal.UpFrontDealInfo({twitter: "", url: "", discord: "", mirrorPostHash: ""});
+
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
         _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
             underlyingDealTokenTotal: _underlyingDealTokenTotal,
@@ -106,6 +110,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         address dealAddress = upFrontDealFactory.createUpFrontDeal(
             _dealData,
             _dealConfig,
+            _dealInfo,
             _nftCollectionRules,
             _allowListInit
         );
@@ -206,6 +211,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             ipfsHash: ""
         });
 
+        IAelinUpFrontDeal.UpFrontDealInfo memory _dealInfo;
+        _dealInfo = IAelinUpFrontDeal.UpFrontDealInfo({twitter: "", url: "", discord: "", mirrorPostHash: ""});
+
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
         _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
             underlyingDealTokenTotal: _underlyingDealTokenTotal,
@@ -219,7 +227,7 @@ contract AelinUpFrontDealFactoryTest is Test {
 
         vm.prank(address(0x123));
         vm.expectRevert("sponsor must be msg.sender");
-        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
+        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _dealInfo, _nftCollectionRules, _allowListInit);
     }
 
     function testFuzzCreateDealWithMinimumRaise(
@@ -255,6 +263,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             ipfsHash: ""
         });
 
+        IAelinUpFrontDeal.UpFrontDealInfo memory _dealInfo;
+        _dealInfo = IAelinUpFrontDeal.UpFrontDealInfo({twitter: "", url: "", discord: "", mirrorPostHash: ""});
+
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
         _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
             underlyingDealTokenTotal: _underlyingDealTokenTotal,
@@ -270,6 +281,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         address dealAddress = upFrontDealFactory.createUpFrontDeal(
             _dealData,
             _dealConfig,
+            _dealInfo,
             _nftCollectionRules,
             _allowListInit
         );
@@ -354,6 +366,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             ipfsHash: ""
         });
 
+        IAelinUpFrontDeal.UpFrontDealInfo memory _dealInfo;
+        _dealInfo = IAelinUpFrontDeal.UpFrontDealInfo({twitter: "", url: "", discord: "", mirrorPostHash: ""});
+
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
         _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
             underlyingDealTokenTotal: 2e27,
@@ -370,6 +385,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         address dealAddress = upFrontDealFactory.createUpFrontDeal(
             _dealData,
             _dealConfig,
+            _dealInfo,
             _nftCollectionRules,
             _allowListInit
         );
@@ -389,7 +405,13 @@ contract AelinUpFrontDealFactoryTest is Test {
         });
 
         vm.expectRevert("cant pass null underlying address");
-        dealAddress = upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
+        dealAddress = upFrontDealFactory.createUpFrontDeal(
+            _dealData,
+            _dealConfig,
+            _dealInfo,
+            _nftCollectionRules,
+            _allowListInit
+        );
 
         // Revert for passing in null holder address
 
@@ -406,7 +428,13 @@ contract AelinUpFrontDealFactoryTest is Test {
         });
 
         vm.expectRevert("cant pass null holder address");
-        dealAddress = upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
+        dealAddress = upFrontDealFactory.createUpFrontDeal(
+            _dealData,
+            _dealConfig,
+            _dealInfo,
+            _nftCollectionRules,
+            _allowListInit
+        );
 
         vm.stopPrank();
     }
@@ -451,6 +479,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             ipfsHash: ""
         });
 
+        IAelinUpFrontDeal.UpFrontDealInfo memory _dealInfo;
+        _dealInfo = IAelinUpFrontDeal.UpFrontDealInfo({twitter: "", url: "", discord: "", mirrorPostHash: ""});
+
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
         _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
             underlyingDealTokenTotal: _underlyingDealTokenTotal,
@@ -466,6 +497,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         address dealAddress = upFrontDealFactory.createUpFrontDeal(
             _dealData,
             _dealConfig,
+            _dealInfo,
             _nftCollectionRules,
             _allowListInit
         );
@@ -587,6 +619,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             ipfsHash: ""
         });
 
+        IAelinUpFrontDeal.UpFrontDealInfo memory _dealInfo;
+        _dealInfo = IAelinUpFrontDeal.UpFrontDealInfo({twitter: "", url: "", discord: "", mirrorPostHash: ""});
+
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
         _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
             underlyingDealTokenTotal: _underlyingDealTokenTotal,
@@ -600,7 +635,7 @@ contract AelinUpFrontDealFactoryTest is Test {
 
         vm.prank(address(0x123));
         vm.expectRevert("allowListAddresses and allowListAmounts arrays should have the same length");
-        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
+        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _dealInfo, _nftCollectionRules, _allowListInit);
     }
 
     function testCreateDealWith721() public {
@@ -628,6 +663,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             ipfsHash: ""
         });
 
+        IAelinUpFrontDeal.UpFrontDealInfo memory _dealInfo;
+        _dealInfo = IAelinUpFrontDeal.UpFrontDealInfo({twitter: "", url: "", discord: "", mirrorPostHash: ""});
+
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
         _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
             underlyingDealTokenTotal: 2e27,
@@ -643,6 +681,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         address dealAddress = upFrontDealFactory.createUpFrontDeal(
             _dealData,
             _dealConfig,
+            _dealInfo,
             _nftCollectionRules,
             _allowListInit
         );
@@ -756,10 +795,14 @@ contract AelinUpFrontDealFactoryTest is Test {
             allowDeallocation: false
         });
 
+        IAelinUpFrontDeal.UpFrontDealInfo memory _dealInfo;
+        _dealInfo = IAelinUpFrontDeal.UpFrontDealInfo({twitter: "", url: "", discord: "", mirrorPostHash: ""});
+
         vm.prank(address(0x123));
         address dealAddress = upFrontDealFactory.createUpFrontDeal(
             _dealData,
             _dealConfig,
+            _dealInfo,
             _nftCollectionRules,
             _allowListInit
         );
@@ -874,6 +917,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             ipfsHash: ""
         });
 
+        IAelinUpFrontDeal.UpFrontDealInfo memory _dealInfo;
+        _dealInfo = IAelinUpFrontDeal.UpFrontDealInfo({twitter: "", url: "", discord: "", mirrorPostHash: ""});
+
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
         _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
             underlyingDealTokenTotal: 2e27,
@@ -889,6 +935,7 @@ contract AelinUpFrontDealFactoryTest is Test {
         address dealAddress = upFrontDealFactory.createUpFrontDeal(
             _dealData,
             _dealConfig,
+            _dealInfo,
             _nftCollectionRules,
             _allowListInit
         );
@@ -1016,9 +1063,12 @@ contract AelinUpFrontDealFactoryTest is Test {
             allowDeallocation: false
         });
 
+        IAelinUpFrontDeal.UpFrontDealInfo memory _dealInfo;
+        _dealInfo = IAelinUpFrontDeal.UpFrontDealInfo({twitter: "", url: "", discord: "", mirrorPostHash: ""});
+
         vm.prank(address(0x123));
         vm.expectRevert("can only contain 1155");
-        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
+        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _dealInfo, _nftCollectionRules, _allowListInit);
     }
 
     function testRevertCreateDealWith721and1155() public {
@@ -1052,6 +1102,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             ipfsHash: ""
         });
 
+        IAelinUpFrontDeal.UpFrontDealInfo memory _dealInfo;
+        _dealInfo = IAelinUpFrontDeal.UpFrontDealInfo({twitter: "", url: "", discord: "", mirrorPostHash: ""});
+
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
         _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
             underlyingDealTokenTotal: 2e27,
@@ -1065,7 +1118,7 @@ contract AelinUpFrontDealFactoryTest is Test {
 
         vm.prank(address(0x123));
         vm.expectRevert("can only contain 721");
-        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
+        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _dealInfo, _nftCollectionRules, _allowListInit);
     }
 
     // reverts when some an address other than 721 or 1155 is provided
@@ -1101,9 +1154,12 @@ contract AelinUpFrontDealFactoryTest is Test {
             allowDeallocation: false
         });
 
+        IAelinUpFrontDeal.UpFrontDealInfo memory _dealInfo;
+        _dealInfo = IAelinUpFrontDeal.UpFrontDealInfo({twitter: "", url: "", discord: "", mirrorPostHash: ""});
+
         vm.prank(address(0x123));
         vm.expectRevert("collection is not compatible");
-        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
+        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _dealInfo, _nftCollectionRules, _allowListInit);
     }
 
     function testRevertNftAndAllowList() public {
@@ -1139,6 +1195,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             ipfsHash: ""
         });
 
+        IAelinUpFrontDeal.UpFrontDealInfo memory _dealInfo;
+        _dealInfo = IAelinUpFrontDeal.UpFrontDealInfo({twitter: "", url: "", discord: "", mirrorPostHash: ""});
+
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
         _dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
             underlyingDealTokenTotal: 2e27,
@@ -1152,7 +1211,7 @@ contract AelinUpFrontDealFactoryTest is Test {
 
         vm.prank(address(0x123));
         vm.expectRevert("cant have allow list & nft");
-        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
+        upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _dealInfo, _nftCollectionRules, _allowListInit);
     }
 
     // event DepositDealToken(
