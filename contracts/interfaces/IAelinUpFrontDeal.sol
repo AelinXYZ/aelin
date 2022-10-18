@@ -26,6 +26,15 @@ interface IAelinUpFrontDeal {
         bool allowDeallocation;
     }
 
+    struct UpFrontDealInfo {
+        string twitter;
+        string url;
+        string discord;
+        string mirrorPostHash;
+    }
+
+    event CreateUpFrontInfo(string indexed twitter, string indexed url, string discord, string mirrorPostHash);
+
     event CreateUpFrontDeal(
         address indexed dealAddress,
         string name,

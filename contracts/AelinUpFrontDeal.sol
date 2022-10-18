@@ -22,6 +22,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
 
     UpFrontDealData public dealData;
     UpFrontDealConfig public dealConfig;
+    UpFrontDealInfo public dealInfo;
 
     address public aelinTreasuryAddress;
     address public aelinEscrowLogicAddress;
@@ -58,6 +59,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     function initialize(
         UpFrontDealData calldata _dealData,
         UpFrontDealConfig calldata _dealConfig,
+        UpFrontDealInfo calldata _dealInfo,
         AelinNftGating.NftCollectionRules[] calldata _nftCollectionRules,
         AelinAllowList.InitData calldata _allowListInit,
         address _aelinTreasuryAddress,
@@ -92,6 +94,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         // store pool and deal details as state variables
         dealData = _dealData;
         dealConfig = _dealConfig;
+        dealInfo = _dealInfo;
 
         dealStart = block.timestamp;
 

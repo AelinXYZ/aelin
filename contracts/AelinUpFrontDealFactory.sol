@@ -30,6 +30,7 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
     function createUpFrontDeal(
         UpFrontDealData calldata _dealData,
         UpFrontDealConfig calldata _dealConfig,
+        UpFrontDealInfo calldata _dealInfo,
         AelinNftGating.NftCollectionRules[] calldata _nftCollectionRules,
         AelinAllowList.InitData calldata _allowListInit
     ) external returns (address upFrontDealAddress) {
@@ -39,6 +40,7 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
         AelinUpFrontDeal(upFrontDealAddress).initialize(
             _dealData,
             _dealConfig,
+            _dealInfo,
             _nftCollectionRules,
             _allowListInit,
             AELIN_TREASURY,
@@ -68,5 +70,7 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
             _dealConfig.vestingCliffPeriod,
             _dealConfig.allowDeallocation
         );
+
+        emit CreateUpFrontInfo(_dealInfo.twitter, _dealInfo.url, _dealInfo.discord, _dealInfo.mirrorPostHash);
     }
 }
