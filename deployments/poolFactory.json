@@ -1,0 +1,227 @@
+{
+  "address": "0x5016D259772Be7AdDcA5Cc48eAFb910E60d290c9",
+  "abi": [
+    {
+      "type": "constructor",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "_aelinPoolLogic"
+        },
+        {
+          "type": "address",
+          "name": "_aelinDealLogic"
+        },
+        {
+          "type": "address",
+          "name": "_aelinTreasury"
+        },
+        {
+          "type": "address",
+          "name": "_aelinEscrow"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "CreatePool",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "poolAddress",
+          "indexed": true
+        },
+        {
+          "type": "string",
+          "name": "name",
+          "indexed": false
+        },
+        {
+          "type": "string",
+          "name": "symbol",
+          "indexed": false
+        },
+        {
+          "type": "uint256",
+          "name": "purchaseTokenCap",
+          "indexed": false
+        },
+        {
+          "type": "address",
+          "name": "purchaseToken",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "duration",
+          "indexed": false
+        },
+        {
+          "type": "uint256",
+          "name": "sponsorFee",
+          "indexed": false
+        },
+        {
+          "type": "address",
+          "name": "sponsor",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "purchaseDuration",
+          "indexed": false
+        },
+        {
+          "type": "bool",
+          "name": "hasAllowList",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "AELIN_DEAL_LOGIC",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "address"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "AELIN_ESCROW_LOGIC",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "address"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "AELIN_POOL_LOGIC",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "address"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "AELIN_TREASURY",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "address"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "createPool",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "tuple",
+          "name": "_poolData",
+          "components": [
+            {
+              "type": "string",
+              "name": "name"
+            },
+            {
+              "type": "string",
+              "name": "symbol"
+            },
+            {
+              "type": "uint256",
+              "name": "purchaseTokenCap"
+            },
+            {
+              "type": "address",
+              "name": "purchaseToken"
+            },
+            {
+              "type": "uint256",
+              "name": "duration"
+            },
+            {
+              "type": "uint256",
+              "name": "sponsorFee"
+            },
+            {
+              "type": "uint256",
+              "name": "purchaseDuration"
+            },
+            {
+              "type": "address[]",
+              "name": "allowListAddresses"
+            },
+            {
+              "type": "uint256[]",
+              "name": "allowListAmounts"
+            },
+            {
+              "type": "tuple[]",
+              "name": "nftCollectionRules",
+              "components": [
+                {
+                  "type": "uint256",
+                  "name": "purchaseAmount"
+                },
+                {
+                  "type": "address",
+                  "name": "collectionAddress"
+                },
+                {
+                  "type": "bool",
+                  "name": "purchaseAmountPerToken"
+                },
+                {
+                  "type": "uint256[]",
+                  "name": "tokenIds"
+                },
+                {
+                  "type": "uint256[]",
+                  "name": "minTokensEligible"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "type": "address"
+        }
+      ]
+    }
+  ],
+  "constructorArgs": [
+    "0x50Da30F6743EF5dF222b63687D728ef3d0F2a84d",
+    "0x14E6253006ad4054AAca9Fc36FB7206a12a1A890",
+    "0x6144DAf8e2e583cD30C3567861C8E1D95cfA51B5",
+    "0x3235878Eacad149f3c32a038568ae192fA61E241"
+  ],
+  "deployTxnHash": "0x24086b28c3d866014cdeacbca0b62d45a14c4161c199aaddf1c7111302d244fc",
+  "sourceName": "contracts/AelinPoolFactory.sol",
+  "contractName": "AelinPoolFactory",
+  "deployedOn": "contract.poolFactory"
+}

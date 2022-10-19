@@ -1,0 +1,49 @@
+{
+  "address": "0x1c4930460f9a700b723A14532F97017E2e70E023",
+  "abi": [
+    {
+      "type": "function",
+      "name": "IERC1155_ID",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "bytes4"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "IERC165_ID",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "bytes4"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "IERC721_ID",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "bytes4"
+        }
+      ]
+    }
+  ],
+  "constructorArgs": [],
+  "deployTxnHash": "0x36b82d8944f26f881f4d866020b802a2299d050b3609980ba4e2e76573ac52ac",
+  "sourceName": "contracts/libraries/NftCheck.sol",
+  "contractName": "NftCheck",
+  "deployedOn": "contract.nftCheck"
+}

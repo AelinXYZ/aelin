@@ -59,6 +59,11 @@ const config: HardhatUserConfig = {
       accounts: [`0x${process.env.GOERLI_PRIVATE_KEY}`],
       chainId: 5,
     },
+    "arbitrum-goerli": {
+      url: `https://arb-goerli.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+      accounts: [`0x${process.env.GOERLI_PRIVATE_KEY}`],
+      chainId: 421613,
+    },
     hardhat: {
       initialBaseFeePerGas: 0,
       forking: {

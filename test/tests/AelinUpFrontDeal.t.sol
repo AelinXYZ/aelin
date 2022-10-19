@@ -3496,7 +3496,7 @@ contract AelinUpFrontDealTest is Test {
         vm.startPrank(user);
         deal(address(purchaseToken), user, type(uint256).max);
         purchaseToken.approve(address(merkleDealAddress), type(uint256).max);
-        vm.expectRevert("MerkleDistributor: Invalid proof.");
+        vm.expectRevert("MerkleTree.sol: Invalid proof.");
         AelinUpFrontDeal(merkleDealAddress).acceptDeal(nftPurchaseList, merkleData, 100);
     }
 

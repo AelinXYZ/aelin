@@ -34,13 +34,16 @@
 		"build:goerli": "npx hardhat cannon:build aelinTreasuryAddress='0x6144DAf8e2e583cD30C3567861C8E1D95cfA51B5'",
 		"deploy:goerli": "npx hardhat cannon:deploy aelincannon:0.0.1 aelinTreasuryAddress='0x6144DAf8e2e583cD30C3567861C8E1D95cfA51B5' --network goerli",
 		"verify:goerli": "npx hardhat cannon:verify aelincannon:0.0.1 --network goerli",
-		"forge-deploy:AelinFeeEscrow": "forge create --rpc-url https://goerli.infura.io/v3/${INFURA_API_KEY} --private-key $GOERLI_PRIVATE_KEY contracts/AelinFeeEscrow.sol:AelinFeeEscrow --etherscan-api-key $ETHERSCAN_API_KEY --verify",
-		"forge-deploy:MerkleTree": "forge create --rpc-url https://goerli.infura.io/v3/${INFURA_API_KEY} --private-key $GOERLI_PRIVATE_KEY contracts/libraries/MerkleTree.sol:MerkleTree --etherscan-api-key $ETHERSCAN_API_KEY --verify",
-		"forge-deploy:AelinAllowList": "forge create --rpc-url https://goerli.infura.io/v3/${INFURA_API_KEY} --private-key $GOERLI_PRIVATE_KEY contracts/libraries/AelinAllowList.sol:AelinAllowList --etherscan-api-key $ETHERSCAN_API_KEY --verify",
-		"forge-deploy:AelinNftGating": "forge create --rpc-url https://goerli.infura.io/v3/${INFURA_API_KEY} --private-key $GOERLI_PRIVATE_KEY contracts/libraries/AelinNftGating.sol:AelinNftGating --etherscan-api-key $ETHERSCAN_API_KEY --verify",
-		"forge-deploy:NftCheck": "forge create --rpc-url https://goerli.infura.io/v3/${INFURA_API_KEY} --private-key $GOERLI_PRIVATE_KEY contracts/libraries/NftCheck.sol:NftCheck --etherscan-api-key $ETHERSCAN_API_KEY --verify",
-		"forge-deploy:AelinUpFrontDeal": "forge create --rpc-url https://goerli.infura.io/v3/${INFURA_API_KEY} --private-key $GOERLI_PRIVATE_KEY contracts/AelinUpFrontDeal.sol:AelinUpFrontDeal --etherscan-api-key $ETHERSCAN_API_KEY --verify",
-		"forge-deploy:AelinUpFrontDealFactory": "forge create --rpc-url https://goerli.infura.io/v3/${INFURA_API_KEY} --private-key $GOERLI_PRIVATE_KEY contracts/AelinUpFrontDealFactory.sol:AelinUpFrontDealFactory --etherscan-api-key $ETHERSCAN_API_KEY --verify --constructor-args 0xAde0C38096A1d714B91C889323B4C06d285c73eb 0x7450a72AAeC28dB46B3A37152d1C5CEF55fC3bF6 0x6144DAf8e2e583cD30C3567861C8E1D95cfA51B5"
+		"build:arbitrum-goerli": "npx hardhat cannon:build aelinTreasuryAddress='0x6144DAf8e2e583cD30C3567861C8E1D95cfA51B5'",
+		"deploy:arbitrum-goerli": "npx hardhat cannon:deploy aelincannon:0.0.1 aelinTreasuryAddress='0x6144DAf8e2e583cD30C3567861C8E1D95cfA51B5' --network arbitrum-goerli",
+		"verify:arbitrum-goerli": "npx hardhat cannon:verify aelincannon:0.0.1 --network arbitrum-goerli",
+		"forge-deploy:AelinFeeEscrow": "forge create --rpc-url https://arb-goerli.g.alchemy.com/v2/${ALCHEMY_API_KEY} --private-key $GOERLI_PRIVATE_KEY contracts/AelinFeeEscrow.sol:AelinFeeEscrow --etherscan-api-key $ETHERSCAN_API_KEY --verify",
+		"forge-deploy:MerkleTree": "forge create --rpc-url https://arb-goerli.g.alchemy.com/v2/${ALCHEMY_API_KEY} --private-key $GOERLI_PRIVATE_KEY contracts/libraries/MerkleTree.sol:MerkleTree --etherscan-api-key $ETHERSCAN_API_KEY --verify",
+		"forge-deploy:AelinAllowList": "forge create --rpc-url https://arb-goerli.g.alchemy.com/v2/${ALCHEMY_API_KEY} --private-key $GOERLI_PRIVATE_KEY contracts/libraries/AelinAllowList.sol:AelinAllowList --etherscan-api-key $ETHERSCAN_API_KEY --verify",
+		"forge-deploy:AelinNftGating": "forge create --rpc-url https://arb-goerli.g.alchemy.com/v2/${ALCHEMY_API_KEY} --private-key $GOERLI_PRIVATE_KEY contracts/libraries/AelinNftGating.sol:AelinNftGating --etherscan-api-key $ETHERSCAN_API_KEY --verify",
+		"forge-deploy:NftCheck": "forge create --rpc-url https://arb-goerli.g.alchemy.com/v2/${ALCHEMY_API_KEY} --private-key $GOERLI_PRIVATE_KEY contracts/libraries/NftCheck.sol:NftCheck --etherscan-api-key $ETHERSCAN_API_KEY --verify",
+		"forge-deploy:AelinUpFrontDeal": "forge create --rpc-url https://arb-goerli.g.alchemy.com/v2/${ALCHEMY_API_KEY} --private-key $GOERLI_PRIVATE_KEY contracts/AelinUpFrontDeal.sol:AelinUpFrontDeal --etherscan-api-key $ETHERSCAN_API_KEY --verify",
+		"forge-deploy:AelinUpFrontDealFactory": "forge create --rpc-url https://arb-goerli.g.alchemy.com/v2/${ALCHEMY_API_KEY} --private-key $GOERLI_PRIVATE_KEY contracts/AelinUpFrontDealFactory.sol:AelinUpFrontDealFactory --etherscan-api-key $ETHERSCAN_API_KEY --verify --constructor-args 0xAde0C38096A1d714B91C889323B4C06d285c73eb 0x7450a72AAeC28dB46B3A37152d1C5CEF55fC3bF6 0x6144DAf8e2e583cD30C3567861C8E1D95cfA51B5"
 	},
 	"repository": {
 		"type": "git",

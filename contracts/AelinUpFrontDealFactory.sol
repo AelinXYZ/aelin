@@ -51,8 +51,8 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
             string(abi.encodePacked("aeUD-", _dealData.symbol)),
             _dealData.purchaseToken,
             _dealData.underlyingDealToken,
-            _dealData.sponsor,
             _dealData.holder,
+            _dealData.sponsor,
             _dealData.sponsorFee,
             _dealData.merkleRoot,
             _dealData.ipfsHash

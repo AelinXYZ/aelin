@@ -181,16 +181,16 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         emit WithdrewExcess(address(this), excessAmount);
     }
 
-    // TODO call accept deal with the merkle proof and verify it
     /**
      * @dev accept deal by depositing purchasing tokens which is converted to a mapping which stores the amount of
      * underlying purchased. pool shares have the same decimals as the underlying deal token
      * @param _nftPurchaseList NFTs to use for accepting the deal if deal is NFT gated
+     * @param _merkleData Merkle Proof data to prove investors allocation
      * @param _purchaseTokenAmount how many purchase tokens will be used to purchase deal token shares
      */
     function acceptDeal(
         AelinNftGating.NftPurchaseList[] calldata _nftPurchaseList,
-        MerkleTree.UpFrontMerkleData calldata merkleData,
+        MerkleTree.UpFrontMerkleData calldata _merkleData,
         uint256 _purchaseTokenAmount
     ) external lock {
         require(underlyingDepositComplete, "deal token not deposited");
@@ -207,7 +207,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
             require(_purchaseTokenAmount <= allowList.amountPerAddress[msg.sender], "more than allocation");
             allowList.amountPerAddress[msg.sender] -= _purchaseTokenAmount;
         } else if (dealData.merkleRoot != 0) {
-            MerkleTree.purchaseMerkleAmount(merkleData, trackClaimed, _purchaseTokenAmount, dealData.merkleRoot);
+            MerkleTree.purchaseMerkleAmount(_merkleData, trackClaimed, _purchaseTokenAmount, dealData.merkleRoot);
         }
 
         uint256 balanceBeforeTransfer = IERC20(_purchaseToken).balanceOf(address(this));

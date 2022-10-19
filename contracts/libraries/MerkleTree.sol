@@ -31,7 +31,7 @@ library MerkleTree {
 
         // Verify the merkle proof.
         bytes32 node = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
-        require(MerkleProof.verify(merkleData.merkleProof, merkleRoot, node), "MerkleDistributor: Invalid proof.");
+        require(MerkleProof.verify(merkleData.merkleProof, merkleRoot, node), "MerkleTree.sol: Invalid proof.");
 
         // Mark it claimed and send the token.
         _setPurchased(self, merkleData.index);
@@ -48,7 +48,7 @@ library MerkleTree {
 
     /**
      * @dev returns if address has purchased merkle
-     * @return uint256 index of the leaf node
+     * @return bool index of the leaf node has purchased or not
      */
     function hasPurchasedMerkle(TrackClaimed storage self, uint256 _index) public view returns (bool) {
         uint256 claimedWordIndex = _index / 256;
