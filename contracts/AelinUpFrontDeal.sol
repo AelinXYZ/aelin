@@ -419,6 +419,8 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721
         require(claimableAmount > 0, "no underlying ready to claim");
         address _underlyingDealToken = dealData.underlyingDealToken;
         tokenDetails[_tokenId].lastClaimedAt = block.timestamp;
+        amountVested[msg.sender] += claimableAmount;
+        totalUnderlyingClaimed += claimableAmount;
         IERC20(_underlyingDealToken).safeTransfer(_owner, claimableAmount);
         emit ClaimedUnderlyingDealToken(_owner, _underlyingDealToken, claimableAmount);
     }
@@ -429,13 +431,14 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721
      */
 
     function claimableUnderlyingTokens(uint256 _tokenId) public view returns (uint256) {
+        TokenDetails memory schedule = tokenDetails[_tokenId];
         uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        uint256 minTime = schedule.lastClaimedAt > vestingCliffExpiry ? schedule.lastClaimedAt : vestingCliffExpiry;
         uint256 vestingPeriod = dealConfig.vestingPeriod;
         uint256 precisionAdjustedUnderlyingClaimable;
 
         if (maxTime > vestingCliffExpiry) {
-            uint256 underlyingClaimable = (tokenDetails[_tokenId].share * (maxTime - tokenDetails[_tokenId].lastClaimedAt)) /
-                vestingPeriod;
+            uint256 underlyingClaimable = (schedule.share * (maxTime - minTime)) / vestingPeriod;
 
             // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
             // although it will generally never happen as solidity rounds down so there should always be a little bit left
@@ -583,6 +586,8 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721
      * @dev getAmountVested
      * @param _address address to check
      */
+
+    //Note: do we need all these getters? They are all declared as public.
     function getAmountVested(address _address) public view returns (uint256) {
         return (amountVested[_address]);
     }
@@ -631,8 +636,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721
         address _to,
         uint256 _tokenId,
         bytes memory _data
-    ) public virtual {
-        require(ownerOf(_tokenId) == msg.sender, "must be owner to transfer");
+    ) public {
         super._safeTransfer(msg.sender, _to, _tokenId, _data);
     }
 
