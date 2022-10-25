@@ -1,4 +1,4 @@
-name = "AelinCannon"
+name = "aelincannon"
 description = "Deploy Aelin factory contracts using Cannon"
 version = "0.0.1"
 keywords = ["aelin", "cannon"]
@@ -15,6 +15,9 @@ artifact = "AelinNftGating"
 [contract.nftCheck]
 artifact = "NftCheck"
 
+[contract.merkleTree]
+artifact = "MerkleTree"
+
 [contract.aelinEscrowLogic]
 artifact = "AelinFeeEscrow" # Specifies the name of the contract to be deployed
 
@@ -29,7 +32,8 @@ artifact = "AelinUpFrontDeal" # Specifies the name of the contract to be deploye
 libraries.AelinAllowList = "<%= contracts.aelinAllowList.address %>"
 libraries.AelinNftGating = "<%= contracts.aelinNftGating.address %>"
 libraries.NftCheck = "<%= contracts.nftCheck.address %>"
-depends = ["contract.aelinAllowList", "contract.aelinNftGating", "contract.nftCheck"]
+libraries.MerkleTree = "<%= contracts.merkleTree.address %>"
+depends = ["contract.aelinAllowList", "contract.aelinNftGating", "contract.nftCheck", "contract.merkleTree"]
 
 [contract.poolFactory]
 artifact = "AelinPoolFactory" # Specifies the name of the contract to be deployed

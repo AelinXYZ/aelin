@@ -4,12 +4,14 @@ pragma solidity 0.8.6;
 import "./AelinERC20.sol";
 import "./MinimalProxyFactory.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {AelinDeal} from "./AelinDeal.sol";
 import {AelinPool} from "./AelinPool.sol";
 import {AelinFeeEscrow} from "./AelinFeeEscrow.sol";
 import {IAelinUpFrontDeal} from "./interfaces/IAelinUpFrontDeal.sol";
 import "./libraries/AelinNftGating.sol";
 import "./libraries/AelinAllowList.sol";
+import "./libraries/MerkleTree.sol";
 
 contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal {
     using SafeERC20 for IERC20;
@@ -26,6 +28,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
     AelinFeeEscrow public aelinFeeEscrow;
     address public dealFactory;
 
+    MerkleTree.TrackClaimed private trackClaimed;
     AelinAllowList.AllowList public allowList;
     AelinNftGating.NftGatingData public nftGating;
     mapping(address => uint256) public purchaseTokensPerUser;
@@ -70,7 +73,6 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         require(_dealData.sponsorFee <= MAX_SPONSOR_FEE, "exceeds max sponsor fee");
 
         uint8 purchaseTokenDecimals = IERC20Decimals(_dealData.purchaseToken).decimals();
-        require(purchaseTokenDecimals <= DEAL_TOKEN_DECIMALS, "purchase token not compatible");
 
         require(1825 days >= _dealConfig.vestingCliffPeriod, "max 5 year cliff");
         require(1825 days >= _dealConfig.vestingPeriod, "max 5 year vesting");
@@ -79,6 +81,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         require(_dealConfig.purchaseTokenPerDealToken > 0, "invalid deal price");
 
         uint8 underlyingTokenDecimals = IERC20Decimals(_dealData.underlyingDealToken).decimals();
+        require(purchaseTokenDecimals <= underlyingTokenDecimals, "purchase token not compatible");
         if (_dealConfig.purchaseRaiseMinimum > 0) {
             uint256 _totalIntendedRaise = (_dealConfig.purchaseTokenPerDealToken * _dealConfig.underlyingDealTokenTotal) /
                 10**underlyingTokenDecimals;
@@ -89,6 +92,7 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         // store pool and deal details as state variables
         dealData = _dealData;
         dealConfig = _dealConfig;
+
         dealStart = block.timestamp;
 
         dealFactory = msg.sender;
@@ -115,6 +119,9 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         AelinNftGating.initialize(_nftCollectionRules, nftGating);
 
         require(!(allowList.hasAllowList && nftGating.hasNftList), "cant have allow list & nft");
+        require(!(allowList.hasAllowList && dealData.merkleRoot != 0), "cant have allow list & merkle");
+        require(!(nftGating.hasNftList && dealData.merkleRoot != 0), "cant have nft & merkle");
+        require(!(bytes(dealData.ipfsHash).length == 0 && dealData.merkleRoot != 0), "merkle needs ipfs hash");
     }
 
     function _startPurchasingPeriod(
@@ -178,12 +185,14 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      * @dev accept deal by depositing purchasing tokens which is converted to a mapping which stores the amount of
      * underlying purchased. pool shares have the same decimals as the underlying deal token
      * @param _nftPurchaseList NFTs to use for accepting the deal if deal is NFT gated
+     * @param _merkleData Merkle Proof data to prove investors allocation
      * @param _purchaseTokenAmount how many purchase tokens will be used to purchase deal token shares
      */
-    function acceptDeal(AelinNftGating.NftPurchaseList[] calldata _nftPurchaseList, uint256 _purchaseTokenAmount)
-        external
-        lock
-    {
+    function acceptDeal(
+        AelinNftGating.NftPurchaseList[] calldata _nftPurchaseList,
+        MerkleTree.UpFrontMerkleData calldata _merkleData,
+        uint256 _purchaseTokenAmount
+    ) external lock {
         require(underlyingDepositComplete, "deal token not deposited");
         require(block.timestamp < purchaseExpiry, "not in purchase window");
 
@@ -197,6 +206,8 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
         } else if (allowList.hasAllowList) {
             require(_purchaseTokenAmount <= allowList.amountPerAddress[msg.sender], "more than allocation");
             allowList.amountPerAddress[msg.sender] -= _purchaseTokenAmount;
+        } else if (dealData.merkleRoot != 0) {
+            MerkleTree.purchaseMerkleAmount(_merkleData, trackClaimed, _purchaseTokenAmount, dealData.merkleRoot);
         }
 
         uint256 balanceBeforeTransfer = IERC20(_purchaseToken).balanceOf(address(this));
@@ -573,6 +584,14 @@ contract AelinUpFrontDeal is AelinERC20, MinimalProxyFactory, IAelinUpFrontDeal 
      */
     function getAmountVested(address _address) public view returns (uint256) {
         return (amountVested[_address]);
+    }
+
+    /**
+     * @dev hasPurchasedMerkle
+     * @param _index index of leaf node/ address to check
+     */
+    function hasPurchasedMerkle(uint256 _index) public view returns (bool) {
+        return MerkleTree.hasPurchasedMerkle(trackClaimed, _index);
     }
 
     modifier onlyHolder() {

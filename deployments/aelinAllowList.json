@@ -1,0 +1,27 @@
+{
+  "address": "0x3501FeA2E052C72665BA128A31471279D6732CD0",
+  "abi": [
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "AllowlistAddress",
+      "inputs": [
+        {
+          "type": "address[]",
+          "name": "allowListAddresses",
+          "indexed": true
+        },
+        {
+          "type": "uint256[]",
+          "name": "allowlistAmounts",
+          "indexed": false
+        }
+      ]
+    }
+  ],
+  "constructorArgs": [],
+  "deployTxnHash": "0x773d1d6389287f08f4c401586e68cdef5c82821884241e524b187b5d86338142",
+  "sourceName": "contracts/libraries/AelinAllowList.sol",
+  "contractName": "AelinAllowList",
+  "deployedOn": "contract.aelinAllowList"
+}
