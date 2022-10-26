@@ -36,7 +36,7 @@ contract AelinFeeEscrow {
 
     function initialize(address _treasury, address _escrowedToken) external initOnce {
         treasury = _treasury;
-        vestingExpiry = block.timestamp;
+        vestingExpiry = block.timestamp + 180 days;
         escrowedToken = _escrowedToken;
         emit InitializeEscrow(msg.sender, _treasury, vestingExpiry, escrowedToken);
     }
