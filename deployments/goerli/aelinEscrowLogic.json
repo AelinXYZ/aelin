@@ -1,0 +1,172 @@
+{
+  "address": "0xd86fa258E21e826eC29C17138Ad42c80B4734a71",
+  "abi": [
+    {
+      "type": "constructor",
+      "payable": false,
+      "inputs": []
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "DelayEscrow",
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "vestingExpiry",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "InitializeEscrow",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "dealAddress",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "treasury",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "vestingExpiry",
+          "indexed": false
+        },
+        {
+          "type": "address",
+          "name": "escrowedToken",
+          "indexed": true
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "SetTreasury",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "treasury",
+          "indexed": true
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "acceptTreasury",
+      "constant": false,
+      "payable": false,
+      "inputs": [],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "delayEscrow",
+      "constant": false,
+      "payable": false,
+      "inputs": [],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "escrowedToken",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "address"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "futureTreasury",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "address"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "initialize",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "_treasury"
+        },
+        {
+          "type": "address",
+          "name": "_escrowedToken"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "setTreasury",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "_treasury"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "treasury",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "address"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "vestingExpiry",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "withdrawToken",
+      "constant": false,
+      "payable": false,
+      "inputs": [],
+      "outputs": []
+    }
+  ],
+  "constructorArgs": [],
+  "deployTxnHash": "0xfbdaa7452bdf9a841d4055d80a117c98670aca4974c69995fc563a37d5553d0d",
+  "sourceName": "contracts/AelinFeeEscrow.sol",
+  "contractName": "AelinFeeEscrow",
+  "deployedOn": "contract.aelinEscrowLogic"
+}

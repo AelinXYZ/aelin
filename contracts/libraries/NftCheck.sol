@@ -10,11 +10,11 @@ library NftCheck {
     bytes4 public constant IERC1155_ID = type(IERC1155).interfaceId;
     bytes4 public constant IERC721_ID = type(IERC721).interfaceId;
 
-    function supports721(address collectionAddress) internal view returns(bool) {
+    function supports721(address collectionAddress) internal view returns (bool) {
         return _supportsInterface(collectionAddress, IERC721_ID);
     }
 
-    function supports1155(address collectionAddress) internal view returns(bool) {
+    function supports1155(address collectionAddress) internal view returns (bool) {
         return _supportsInterface(collectionAddress, IERC1155_ID);
     }
 

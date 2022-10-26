@@ -15,7 +15,9 @@ async function main() {
 	}
 
 	const AelinFeeEscrow = await ethers.getContractFactory('AelinFeeEscrow');
-	const aelinFeeEscrow = await AelinFeeEscrow.deploy();
+	const aelinFeeEscrow = await AelinFeeEscrow.deploy({
+		// gasPrice: ethers.utils.parseUnits('15', 'gwei'),
+	});
 
 	console.log('AelinFeeEscrow address:', aelinFeeEscrow.address);
 }
