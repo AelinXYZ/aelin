@@ -1,5 +1,5 @@
 {
-  "address": "0x826C67663Aa629A7F2da089d11a39e52423Af11c",
+  "address": "0x4465A2a34684D5fDe76EfD1597553F6D81617412",
   "abi": [
     {
       "type": "event",
@@ -506,7 +506,7 @@
         },
         {
           "type": "tuple",
-          "name": "merkleData",
+          "name": "_merkleData",
           "components": [
             {
               "type": "uint256",
@@ -1465,7 +1465,7 @@
     }
   ],
   "constructorArgs": [],
-  "deployTxnHash": "0x46515efb534e9f008ca2cf0e315b3d3c4b30284e9aa00ec08357f636c01f346b",
+  "deployTxnHash": "0xfdd7afccabf3ba5ab8cc35e0983cfb35a0e9388a06b34d0bd560f0905e1526f7",
   "sourceName": "contracts/AelinUpFrontDeal.sol",
   "contractName": "AelinUpFrontDeal",
   "deployedOn": "contract.upFrontDealLogic"

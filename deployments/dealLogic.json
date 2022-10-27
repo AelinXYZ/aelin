@@ -1,5 +1,5 @@
 {
-  "address": "0x14E6253006ad4054AAca9Fc36FB7206a12a1A890",
+  "address": "0x3da77794534C072dED3014cA139390b704C5d8C1",
   "abi": [
     {
       "type": "constructor",
@@ -908,7 +908,7 @@
     }
   ],
   "constructorArgs": [],
-  "deployTxnHash": "0x92a225b263eb97b4715ddb761617fe954a752ea82b85645b53416188011c2222",
+  "deployTxnHash": "0xeb407c43167608fe44610226cdc106c05e696b16f82dcd36f8dd282b06fac9bc",
   "sourceName": "contracts/AelinDeal.sol",
   "contractName": "AelinDeal",
   "deployedOn": "contract.dealLogic"

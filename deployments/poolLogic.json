@@ -1,5 +1,5 @@
 {
-  "address": "0x50Da30F6743EF5dF222b63687D728ef3d0F2a84d",
+  "address": "0x82EAA001029D4686b343B53Ce6E7f1823725e736",
   "abi": [
     {
       "type": "constructor",
@@ -1266,7 +1266,7 @@
     }
   ],
   "constructorArgs": [],
-  "deployTxnHash": "0x0374bc4d891b4d2bdf4c2de8377bdf041cf0b1a586556546ebeb585e14908644",
+  "deployTxnHash": "0x54c07fa28194c3a7d42a46d8c95eb8e9833f620b39766b7c992c1babecea6549",
   "sourceName": "contracts/AelinPool.sol",
   "contractName": "AelinPool",
   "deployedOn": "contract.poolLogic"
