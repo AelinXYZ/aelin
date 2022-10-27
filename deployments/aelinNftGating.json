@@ -1,5 +1,5 @@
 {
-  "address": "0x2D5b16bba3Fd279A02E984a15410779E06a1ED74",
+  "address": "0x8bb1E2134925fA6fE9358c37B290aaE6c6D640BF",
   "abi": [
     {
       "type": "event",
@@ -74,7 +74,7 @@
     }
   ],
   "constructorArgs": [],
-  "deployTxnHash": "0x96d055ca6616e30af76e15ad8e41ad9cf6cb639a904d9e3a621753da5739dce3",
+  "deployTxnHash": "0x6de1628b3e010dac6a84d03b3589aace1ba5ff70a5fa9b4eef8ea951d2340a3f",
   "sourceName": "contracts/libraries/AelinNftGating.sol",
   "contractName": "AelinNftGating",
   "deployedOn": "contract.aelinNftGating"

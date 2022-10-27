@@ -1,5 +1,5 @@
 {
-  "address": "0x3501FeA2E052C72665BA128A31471279D6732CD0",
+  "address": "0x80aFb16eB991BC0a5Bfc0515A562dAD362084C4b",
   "abi": [
     {
       "type": "event",
@@ -20,7 +20,7 @@
     }
   ],
   "constructorArgs": [],
-  "deployTxnHash": "0x773d1d6389287f08f4c401586e68cdef5c82821884241e524b187b5d86338142",
+  "deployTxnHash": "0x557d0fc56ecd4ca70dfbdbde67af55461a949966dc964e47b69a1d0cfff12407",
   "sourceName": "contracts/libraries/AelinAllowList.sol",
   "contractName": "AelinAllowList",
   "deployedOn": "contract.aelinAllowList"

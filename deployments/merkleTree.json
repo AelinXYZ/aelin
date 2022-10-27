@@ -1,8 +1,8 @@
 {
-  "address": "0x7c7afeEA25b1aa7b67200125779eB93c2B30F75e",
+  "address": "0x1fa677ca369b97Ab30707373531cB050b1c3a7c6",
   "abi": [],
   "constructorArgs": [],
-  "deployTxnHash": "0xf1192e7c370118df54f2b4761d0a38a192b06025636b1146e633f89b29808374",
+  "deployTxnHash": "0xcd1260f4b65ddd067d258a890b7637946fc11a2d82609ad98d47eb5fffafdf78",
   "sourceName": "contracts/libraries/MerkleTree.sol",
   "contractName": "MerkleTree",
   "deployedOn": "contract.merkleTree"
