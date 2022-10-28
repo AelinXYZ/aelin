@@ -86,7 +86,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: _sponsorFee
+            sponsorFee: _sponsorFee,
+            merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -112,6 +114,8 @@ contract AelinUpFrontDealFactoryTest is Test {
         address _tempAddress;
         uint256 _tempUint;
         bool _tempBool;
+        string memory _ipfsHash;
+        bytes32 _merkleRoot;
 
         // deal contract storage
         assertEq(AelinUpFrontDeal(dealAddress).dealFactory(), address(upFrontDealFactory));
@@ -122,20 +126,24 @@ contract AelinUpFrontDealFactoryTest is Test {
         assertEq(AelinUpFrontDeal(dealAddress).aelinTreasuryAddress(), aelinTreasury);
 
         // deal data
-        (_tempString, , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (_tempString, , , , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempString, "DEAL");
-        (, _tempString, , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, _tempString, , , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempString, "DEAL");
-        (, , _tempAddress, , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , _tempAddress, , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(purchaseToken));
-        (, , , _tempAddress, , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , _tempAddress, , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(underlyingDealToken));
-        (, , , , _tempAddress, , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , _tempAddress, , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(_dealData.holder));
-        (, , , , , _tempAddress, ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , , _tempAddress, , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(_dealData.sponsor));
-        (, , , , , , _tempUint) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , , , _tempUint, , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempUint, _dealData.sponsorFee);
+        (, , , , , , , _merkleRoot, ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(_merkleRoot, _dealData.merkleRoot);
+        (, , , , , , , , _ipfsHash) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(_ipfsHash, _dealData.ipfsHash);
 
         // deal config
         (_tempUint, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
@@ -192,7 +200,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: _sender,
-            sponsorFee: _sponsorFee
+            sponsorFee: _sponsorFee,
+            merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -239,7 +249,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 200
+            sponsorFee: 200,
+            merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -265,6 +277,8 @@ contract AelinUpFrontDealFactoryTest is Test {
         address _tempAddress;
         uint256 _tempUint;
         bool _tempBool;
+        string memory _ipfsHash;
+        bytes32 _merkleRoot;
 
         // deal contract storage
         assertEq(AelinUpFrontDeal(dealAddress).dealFactory(), address(upFrontDealFactory));
@@ -275,20 +289,24 @@ contract AelinUpFrontDealFactoryTest is Test {
         assertEq(AelinUpFrontDeal(dealAddress).aelinTreasuryAddress(), aelinTreasury);
 
         // deal data
-        (_tempString, , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (_tempString, , , , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempString, "DEAL");
-        (, _tempString, , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, _tempString, , , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempString, "DEAL");
-        (, , _tempAddress, , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , _tempAddress, , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(purchaseToken));
-        (, , , _tempAddress, , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , _tempAddress, , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(underlyingDealToken));
-        (, , , , _tempAddress, , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , _tempAddress, , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(_dealData.holder));
-        (, , , , , _tempAddress, ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , , _tempAddress, , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(_dealData.sponsor));
-        (, , , , , , _tempUint) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , , , _tempUint, , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempUint, _dealData.sponsorFee);
+        (, , , , , , , _merkleRoot, ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(_merkleRoot, _dealData.merkleRoot);
+        (, , , , , , , , _ipfsHash) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(_ipfsHash, _dealData.ipfsHash);
 
         // deal config
         (_tempUint, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
@@ -329,7 +347,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 200
+            sponsorFee: 200,
+            merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -361,7 +381,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(0),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 200
+            sponsorFee: 200,
+            merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            ipfsHash: ""
         });
 
         vm.expectRevert("cant pass null underlying address");
@@ -376,7 +398,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0),
             sponsor: address(0x123),
-            sponsorFee: 200
+            sponsorFee: 200,
+            merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            ipfsHash: ""
         });
 
         vm.expectRevert("cant pass null holder address");
@@ -420,7 +444,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 200
+            sponsorFee: 200,
+            merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -446,6 +472,8 @@ contract AelinUpFrontDealFactoryTest is Test {
         address _tempAddress;
         uint256 _tempUint;
         bool _tempBool;
+        string memory _ipfsHash;
+        bytes32 _merkleRoot;
 
         // deal contract storage
         assertEq(AelinUpFrontDeal(dealAddress).dealFactory(), address(upFrontDealFactory));
@@ -456,20 +484,24 @@ contract AelinUpFrontDealFactoryTest is Test {
         assertEq(AelinUpFrontDeal(dealAddress).aelinTreasuryAddress(), aelinTreasury);
 
         // deal data
-        (_tempString, , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (_tempString, , , , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempString, "DEAL");
-        (, _tempString, , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, _tempString, , , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempString, "DEAL");
-        (, , _tempAddress, , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , _tempAddress, , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(purchaseToken));
-        (, , , _tempAddress, , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , _tempAddress, , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(underlyingDealToken));
-        (, , , , _tempAddress, , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , _tempAddress, , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(_dealData.holder));
-        (, , , , , _tempAddress, ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , , _tempAddress, , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(_dealData.sponsor));
-        (, , , , , , _tempUint) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , , , _tempUint, , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempUint, _dealData.sponsorFee);
+        (, , , , , , , _merkleRoot, ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(_merkleRoot, _dealData.merkleRoot);
+        (, , , , , , , , _ipfsHash) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(_ipfsHash, _dealData.ipfsHash);
 
         // deal config
         (_tempUint, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
@@ -547,7 +579,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 200
+            sponsorFee: 200,
+            merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -586,7 +620,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 200
+            sponsorFee: 200,
+            merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -612,6 +648,8 @@ contract AelinUpFrontDealFactoryTest is Test {
         address _tempAddress;
         uint256 _tempUint;
         bool _tempBool;
+        string memory _ipfsHash;
+        bytes32 _merkleRoot;
 
         // deal contract storage
         assertEq(AelinUpFrontDeal(dealAddress).dealFactory(), address(upFrontDealFactory));
@@ -622,20 +660,24 @@ contract AelinUpFrontDealFactoryTest is Test {
         assertEq(AelinUpFrontDeal(dealAddress).aelinTreasuryAddress(), aelinTreasury);
 
         // deal data
-        (_tempString, , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (_tempString, , , , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempString, "DEAL");
-        (, _tempString, , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, _tempString, , , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempString, "DEAL");
-        (, , _tempAddress, , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , _tempAddress, , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(purchaseToken));
-        (, , , _tempAddress, , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , _tempAddress, , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(underlyingDealToken));
-        (, , , , _tempAddress, , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , _tempAddress, , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(_dealData.holder));
-        (, , , , , _tempAddress, ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , , _tempAddress, , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(_dealData.sponsor));
-        (, , , , , , _tempUint) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , , , _tempUint, , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempUint, _dealData.sponsorFee);
+        (, , , , , , , _merkleRoot, ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(_merkleRoot, _dealData.merkleRoot);
+        (, , , , , , , , _ipfsHash) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(_ipfsHash, _dealData.ipfsHash);
 
         // deal config
         (_tempUint, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
@@ -694,7 +736,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 200
+            sponsorFee: 200,
+            merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -720,6 +764,8 @@ contract AelinUpFrontDealFactoryTest is Test {
         address _tempAddress;
         uint256 _tempUint;
         bool _tempBool;
+        string memory _ipfsHash;
+        bytes32 _merkleRoot;
 
         // deal contract storage
         assertEq(AelinUpFrontDeal(dealAddress).dealFactory(), address(upFrontDealFactory));
@@ -730,20 +776,24 @@ contract AelinUpFrontDealFactoryTest is Test {
         assertEq(AelinUpFrontDeal(dealAddress).aelinTreasuryAddress(), aelinTreasury);
 
         // deal data
-        (_tempString, , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (_tempString, , , , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempString, "DEAL");
-        (, _tempString, , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, _tempString, , , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempString, "DEAL");
-        (, , _tempAddress, , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , _tempAddress, , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(purchaseToken));
-        (, , , _tempAddress, , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , _tempAddress, , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(underlyingDealToken));
-        (, , , , _tempAddress, , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , _tempAddress, , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(_dealData.holder));
-        (, , , , , _tempAddress, ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , , _tempAddress, , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(_dealData.sponsor));
-        (, , , , , , _tempUint) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , , , _tempUint, , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempUint, _dealData.sponsorFee);
+        (, , , , , , , _merkleRoot, ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(_merkleRoot, _dealData.merkleRoot);
+        (, , , , , , , , _ipfsHash) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(_ipfsHash, _dealData.ipfsHash);
 
         // deal config
         (_tempUint, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
@@ -814,7 +864,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 200
+            sponsorFee: 200,
+            merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -840,6 +892,8 @@ contract AelinUpFrontDealFactoryTest is Test {
         address _tempAddress;
         uint256 _tempUint;
         bool _tempBool;
+        string memory _ipfsHash;
+        bytes32 _merkleRoot;
 
         // deal contract storage
         assertEq(AelinUpFrontDeal(dealAddress).dealFactory(), address(upFrontDealFactory));
@@ -850,20 +904,24 @@ contract AelinUpFrontDealFactoryTest is Test {
         assertEq(AelinUpFrontDeal(dealAddress).aelinTreasuryAddress(), aelinTreasury);
 
         // deal data
-        (_tempString, , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (_tempString, , , , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempString, "DEAL");
-        (, _tempString, , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, _tempString, , , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempString, "DEAL");
-        (, , _tempAddress, , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , _tempAddress, , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(purchaseToken));
-        (, , , _tempAddress, , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , _tempAddress, , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(underlyingDealToken));
-        (, , , , _tempAddress, , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , _tempAddress, , , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(_dealData.holder));
-        (, , , , , _tempAddress, ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , , _tempAddress, , , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempAddress, address(_dealData.sponsor));
-        (, , , , , , _tempUint) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , , , _tempUint, , ) = AelinUpFrontDeal(dealAddress).dealData();
         assertEq(_tempUint, _dealData.sponsorFee);
+        (, , , , , , , _merkleRoot, ) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(_merkleRoot, _dealData.merkleRoot);
+        (, , , , , , , , _ipfsHash) = AelinUpFrontDeal(dealAddress).dealData();
+        assertEq(_ipfsHash, _dealData.ipfsHash);
 
         // deal config
         (_tempUint, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
@@ -936,7 +994,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 200
+            sponsorFee: 200,
+            merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -981,7 +1041,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 200
+            sponsorFee: 200,
+            merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -1017,7 +1079,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 200
+            sponsorFee: 200,
+            merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -1064,7 +1128,9 @@ contract AelinUpFrontDealFactoryTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0x123),
-            sponsorFee: 200
+            sponsorFee: 200,
+            merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            ipfsHash: ""
         });
 
         IAelinUpFrontDeal.UpFrontDealConfig memory _dealConfig;
@@ -1083,20 +1149,22 @@ contract AelinUpFrontDealFactoryTest is Test {
         upFrontDealFactory.createUpFrontDeal(_dealData, _dealConfig, _nftCollectionRules, _allowListInit);
     }
 
-    event DepositDealToken(
-        address indexed underlyingDealTokenAddress,
-        address indexed depositor,
-        uint256 underlyingDealTokenAmount
-    );
+    // event DepositDealToken(
+    //     address indexed underlyingDealTokenAddress,
+    //     address indexed depositor,
+    //     uint256 underlyingDealTokenAmount
+    // );
 
-    event CreateUpFrontDeal(
-        address indexed dealAddress,
-        string name,
-        string symbol,
-        address purchaseToken,
-        address underlyingDealToken,
-        address indexed holder,
-        address indexed sponsor,
-        uint256 sponsorFee
-    );
+    // event CreateUpFrontDeal(
+    //     address indexed dealAddress,
+    //     string name,
+    //     string symbol,
+    //     address purchaseToken,
+    //     address underlyingDealToken,
+    //     address indexed holder,
+    //     address indexed sponsor,
+    //     uint256 sponsorFee,
+    //     bytes32 merkleRoot,
+    //     bytes32 ipfsHash
+    // );
 }

@@ -39,7 +39,7 @@ library AelinNftGating {
      * @param _nftCollectionRules array of all nft collection rule data
      * @param _data contract storage data passed by reference
      */
-    function initialize(NftCollectionRules[] calldata _nftCollectionRules, NftGatingData storage _data) public {
+    function initialize(NftCollectionRules[] calldata _nftCollectionRules, NftGatingData storage _data) external {
         if (_nftCollectionRules.length > 0) {
             // if the first address supports punks or 721, the entire pool only supports 721 or punks
             if (
@@ -104,7 +104,7 @@ library AelinNftGating {
         NftPurchaseList[] calldata _nftPurchaseList,
         NftGatingData storage _data,
         uint256 _purchaseTokenAmount
-    ) public returns (uint256) {
+    ) external returns (uint256) {
         require(_data.hasNftList, "pool does not have an NFT list");
         require(_nftPurchaseList.length > 0, "must provide purchase list");
 

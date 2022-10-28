@@ -14,7 +14,7 @@ library AelinAllowList {
         bool hasAllowList;
     }
 
-    function initialize(InitData calldata _init, AllowList storage _self) public {
+    function initialize(InitData calldata _init, AllowList storage _self) external {
         if (_init.allowListAddresses.length > 0 || _init.allowListAmounts.length > 0) {
             require(
                 _init.allowListAddresses.length == _init.allowListAmounts.length,

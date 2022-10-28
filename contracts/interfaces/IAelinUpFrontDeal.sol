@@ -12,6 +12,8 @@ interface IAelinUpFrontDeal {
         address holder;
         address sponsor;
         uint256 sponsorFee;
+        bytes32 merkleRoot;
+        string ipfsHash;
     }
 
     struct UpFrontDealConfig {
@@ -32,7 +34,9 @@ interface IAelinUpFrontDeal {
         address underlyingDealToken,
         address indexed holder,
         address indexed sponsor,
-        uint256 sponsorFee
+        uint256 sponsorFee,
+        bytes32 merkleRoot,
+        string ipfsHash
     );
 
     event CreateUpFrontDealConfig(

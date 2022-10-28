@@ -88,13 +88,13 @@ contract AelinFeeEscrowTest is Test {
     function testInitialize() public {
         assertTrue(AelinDeal(dealAddress).depositComplete());
         assertEq(AelinFeeEscrow(escrowAddress).treasury(), address(aelinTreasury));
-        assertEq(AelinFeeEscrow(escrowAddress).vestingExpiry(), block.timestamp);
+        assertEq(AelinFeeEscrow(escrowAddress).vestingExpiry(), block.timestamp + 180 days);
         assertEq(AelinFeeEscrow(escrowAddress).escrowedToken(), address(dealToken));
     }
 
     function testInitializeEvent() public {
         vm.expectEmit(true, true, true, true, address(testEscrow));
-        emit InitializeEscrow(address(this), aelinTreasury, block.timestamp, address(dealToken));
+        emit InitializeEscrow(address(this), aelinTreasury, block.timestamp + 180 days, address(dealToken));
         AelinFeeEscrow(testEscrow).initialize(aelinTreasury, address(dealToken));
     }
 
@@ -132,8 +132,12 @@ contract AelinFeeEscrowTest is Test {
         AelinFeeEscrow(escrowAddress).acceptTreasury();
     }
 
-    function testDelayEscrow() public {
+    function testDelayEscrow(uint256 timestamp) public {
+        // 90 days + block.timestamp which is 30 days
+        vm.assume(timestamp > 120 days);
+        vm.assume(timestamp < 1e75);
         vm.prank(address(aelinTreasury));
+        vm.warp(timestamp);
         vm.expectEmit(false, false, false, true, address(escrowAddress));
         emit DelayEscrow(block.timestamp + 90 days);
         AelinFeeEscrow(escrowAddress).delayEscrow();
@@ -141,15 +145,20 @@ contract AelinFeeEscrowTest is Test {
         assertEq(AelinFeeEscrow(escrowAddress).vestingExpiry(), block.timestamp + 90 days);
     }
 
-    function testFailDelayEscrow() public {
-        vm.prank(address(aelinTreasury));
+    function testFailDelayEscrow(uint256 timestamp) public {
+        vm.assume(timestamp < 120 days);
+        vm.warp(timestamp);
+        vm.startPrank(address(aelinTreasury));
         vm.expectEmit(false, false, false, true, address(escrowAddress));
         emit DelayEscrow(block.timestamp + 90 days);
         AelinFeeEscrow(escrowAddress).delayEscrow();
         AelinFeeEscrow(escrowAddress).delayEscrow();
     }
 
-    function testFailDelayEscrowDiffAddress(address testAddress) public {
+    function testFailDelayEscrowDiffAddress(uint256 timestamp, address testAddress) public {
+        vm.assume(timestamp > 120 days);
+        vm.assume(timestamp < type(uint256).max);
+        vm.warp(timestamp);
         vm.assume(address(aelinTreasury) != testAddress);
         vm.prank(testAddress);
         AelinFeeEscrow(escrowAddress).delayEscrow();

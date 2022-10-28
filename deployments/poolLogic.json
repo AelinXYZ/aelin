@@ -1,0 +1,1273 @@
+{
+  "address": "0x82EAA001029D4686b343B53Ce6E7f1823725e736",
+  "abi": [
+    {
+      "type": "constructor",
+      "payable": false,
+      "inputs": []
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "AcceptDeal",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "purchaser",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "dealAddress",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "poolTokenAmount",
+          "indexed": false
+        },
+        {
+          "type": "uint256",
+          "name": "sponsorFee",
+          "indexed": false
+        },
+        {
+          "type": "uint256",
+          "name": "aelinFee",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "AelinToken",
+      "inputs": [
+        {
+          "type": "string",
+          "name": "name",
+          "indexed": false
+        },
+        {
+          "type": "string",
+          "name": "symbol",
+          "indexed": false
+        },
+        {
+          "type": "uint8",
+          "name": "decimals",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "AllowlistAddress",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "purchaser",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "allowlistAmount",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "Approval",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "owner",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "spender",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "value",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "BlacklistNFT",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "collection",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "nftID",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "CreateDeal",
+      "inputs": [
+        {
+          "type": "string",
+          "name": "name",
+          "indexed": false
+        },
+        {
+          "type": "string",
+          "name": "symbol",
+          "indexed": false
+        },
+        {
+          "type": "address",
+          "name": "sponsor",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "dealContract",
+          "indexed": true
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "DealDetail",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "dealContract",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "underlyingDealToken",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "purchaseTokenTotalForDeal",
+          "indexed": false
+        },
+        {
+          "type": "uint256",
+          "name": "underlyingDealTokenTotal",
+          "indexed": false
+        },
+        {
+          "type": "uint256",
+          "name": "vestingPeriod",
+          "indexed": false
+        },
+        {
+          "type": "uint256",
+          "name": "vestingCliff",
+          "indexed": false
+        },
+        {
+          "type": "uint256",
+          "name": "proRataRedemptionPeriod",
+          "indexed": false
+        },
+        {
+          "type": "uint256",
+          "name": "openRedemptionPeriod",
+          "indexed": false
+        },
+        {
+          "type": "address",
+          "name": "holder",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "holderFundingDuration",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "Disavow",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "voucher",
+          "indexed": true
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "PoolWith1155",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "collectionAddress",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "purchaseAmount",
+          "indexed": false
+        },
+        {
+          "type": "bool",
+          "name": "purchaseAmountPerToken",
+          "indexed": false
+        },
+        {
+          "type": "uint256[]",
+          "name": "tokenIds",
+          "indexed": false
+        },
+        {
+          "type": "uint256[]",
+          "name": "minTokensEligible",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "PoolWith721",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "collectionAddress",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "purchaseAmount",
+          "indexed": false
+        },
+        {
+          "type": "bool",
+          "name": "purchaseAmountPerToken",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "PurchasePoolToken",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "purchaser",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "purchaseTokenAmount",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "SetSponsor",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "sponsor",
+          "indexed": true
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "Transfer",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "from",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "to",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "value",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "Vouch",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "voucher",
+          "indexed": true
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "WithdrawFromPool",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "purchaser",
+          "indexed": true
+        },
+        {
+          "type": "uint256",
+          "name": "purchaseTokenAmount",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "acceptDealTokens",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "_poolTokenAmount"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "acceptMaxDealTokens",
+      "constant": false,
+      "payable": false,
+      "inputs": [],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "acceptSponsor",
+      "constant": false,
+      "payable": false,
+      "inputs": [],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "aelinDeal",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "address"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "aelinDealLogicAddress",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "address"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "aelinEscrowLogicAddress",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "address"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "aelinTreasuryAddress",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "address"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "allowList",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "allowance",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "owner"
+        },
+        {
+          "type": "address",
+          "name": "spender"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "amountAccepted",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "amountWithdrawn",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "approve",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "spender"
+        },
+        {
+          "type": "uint256",
+          "name": "amount"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "balanceOf",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "account"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "createDeal",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "_underlyingDealToken"
+        },
+        {
+          "type": "uint256",
+          "name": "_purchaseTokenTotalForDeal"
+        },
+        {
+          "type": "uint256",
+          "name": "_underlyingDealTokenTotal"
+        },
+        {
+          "type": "uint256",
+          "name": "_vestingPeriod"
+        },
+        {
+          "type": "uint256",
+          "name": "_vestingCliffPeriod"
+        },
+        {
+          "type": "uint256",
+          "name": "_proRataRedemptionPeriod"
+        },
+        {
+          "type": "uint256",
+          "name": "_openRedemptionPeriod"
+        },
+        {
+          "type": "address",
+          "name": "_holder"
+        },
+        {
+          "type": "uint256",
+          "name": "_holderFundingDuration"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "address"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "decimals",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint8"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "decreaseAllowance",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "spender"
+        },
+        {
+          "type": "uint256",
+          "name": "subtractedValue"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "disavow",
+      "constant": false,
+      "payable": false,
+      "inputs": [],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "futureSponsor",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "address"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "hasAllowList",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "hasNftList",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "holder",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "address"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "holderFundingExpiry",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "increaseAllowance",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "spender"
+        },
+        {
+          "type": "uint256",
+          "name": "addedValue"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "initialize",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "tuple",
+          "name": "_poolData",
+          "components": [
+            {
+              "type": "string",
+              "name": "name"
+            },
+            {
+              "type": "string",
+              "name": "symbol"
+            },
+            {
+              "type": "uint256",
+              "name": "purchaseTokenCap"
+            },
+            {
+              "type": "address",
+              "name": "purchaseToken"
+            },
+            {
+              "type": "uint256",
+              "name": "duration"
+            },
+            {
+              "type": "uint256",
+              "name": "sponsorFee"
+            },
+            {
+              "type": "uint256",
+              "name": "purchaseDuration"
+            },
+            {
+              "type": "address[]",
+              "name": "allowListAddresses"
+            },
+            {
+              "type": "uint256[]",
+              "name": "allowListAmounts"
+            },
+            {
+              "type": "tuple[]",
+              "name": "nftCollectionRules",
+              "components": [
+                {
+                  "type": "uint256",
+                  "name": "purchaseAmount"
+                },
+                {
+                  "type": "address",
+                  "name": "collectionAddress"
+                },
+                {
+                  "type": "bool",
+                  "name": "purchaseAmountPerToken"
+                },
+                {
+                  "type": "uint256[]",
+                  "name": "tokenIds"
+                },
+                {
+                  "type": "uint256[]",
+                  "name": "minTokensEligible"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "address",
+          "name": "_sponsor"
+        },
+        {
+          "type": "address",
+          "name": "_aelinDealLogicAddress"
+        },
+        {
+          "type": "address",
+          "name": "_aelinTreasuryAddress"
+        },
+        {
+          "type": "address",
+          "name": "_aelinEscrowLogicAddress"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "maxDealAccept",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "_purchaser"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "maxProRataAmount",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "_purchaser"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "name",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "nftCollectionDetails",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": "purchaseAmount"
+        },
+        {
+          "type": "address",
+          "name": "collectionAddress"
+        },
+        {
+          "type": "bool",
+          "name": "purchaseAmountPerToken"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "nftId",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address"
+        },
+        {
+          "type": "uint256"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "nftWalletUsedForPurchase",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address"
+        },
+        {
+          "type": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "numberOfDeals",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint8"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "openPeriodEligible",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "poolExpiry",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "poolFactory",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "address"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "proRataConversion",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "purchaseExpiry",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "purchasePoolTokens",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "_purchaseTokenAmount"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "purchasePoolTokensWithNft",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "tuple[]",
+          "name": "_nftPurchaseList",
+          "components": [
+            {
+              "type": "address",
+              "name": "collectionAddress"
+            },
+            {
+              "type": "uint256[]",
+              "name": "tokenIds"
+            }
+          ]
+        },
+        {
+          "type": "uint256",
+          "name": "_purchaseTokenAmount"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "purchaseToken",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "address"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "purchaseTokenCap",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "purchaseTokenDecimals",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint8"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "purchaseTokenTotalForDeal",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "setSponsor",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "_sponsor"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "sponsor",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "address"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "sponsorFee",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "symbol",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "totalAmountAccepted",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "totalAmountWithdrawn",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "totalSupply",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "transfer",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "_dst"
+        },
+        {
+          "type": "uint256",
+          "name": "_amount"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "transferFrom",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "_src"
+        },
+        {
+          "type": "address",
+          "name": "_dst"
+        },
+        {
+          "type": "uint256",
+          "name": "_amount"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "vouch",
+      "constant": false,
+      "payable": false,
+      "inputs": [],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "withdrawFromPool",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "_purchaseTokenAmount"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "withdrawMaxFromPool",
+      "constant": false,
+      "payable": false,
+      "inputs": [],
+      "outputs": []
+    }
+  ],
+  "constructorArgs": [],
+  "deployTxnHash": "0x54c07fa28194c3a7d42a46d8c95eb8e9833f620b39766b7c992c1babecea6549",
+  "sourceName": "contracts/AelinPool.sol",
+  "contractName": "AelinPool",
+  "deployedOn": "contract.poolLogic"
+}
