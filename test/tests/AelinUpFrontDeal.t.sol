@@ -3190,6 +3190,7 @@ contract AelinUpFrontDealTest is Test {
     //         uint256 vestingCliffPeriod,
 
     //     ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
+    //     (, , , , , , uint256 sponsorFee, , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
     //     (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
     //     vm.assume(success);
     //     uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
@@ -3200,65 +3201,65 @@ contract AelinUpFrontDealTest is Test {
     //     purchaseToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
     //     vm.expectEmit(true, false, false, true);
     //     emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
-    //     AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, _purchaseAmount);
+    //     AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
     //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
     //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
     //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
     //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
     //     assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
-    //     assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)), 0);
+    //     assertEq(MockERC721(dealAddressOverFullDeposit).balanceOf(address(0x1337)), 0);
     //     // claim
     //     assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
     //     uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
     //     vm.warp(purchaseExpiry + 1 days);
-    //     (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
     //     uint256 poolSharesPerUser = AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337));
     //     uint256 adjustedShareAmountForUser = ((BASE - AELIN_FEE - sponsorFee) * poolSharesPerUser) / BASE;
-    //     uint256 tokenCount = AelinUpFrontDeal(dealAddressOverFullDeposit).tokenCount();
+    //     uint256 vestingTokenId = AelinUpFrontDeal(dealAddressOverFullDeposit).tokenCount();
     //     vm.expectEmit(true, false, false, true);
-    //     emit ClaimVestingToken(address(0x1337), tokenCount, adjustedShareAmountForUser, 0);
+    //     emit ClaimVestingToken(address(0x1337), vestingTokenId, adjustedShareAmountForUser, 0);
     //     AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
     //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), 0);
     //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
     //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), 0);
     //     assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
     //     assertEq(MockERC721(dealAddressOverFullDeposit).balanceOf(address(0x1337)), 1);
-    //     assertEq(MockERC721(dealAddressOverFullDeposit).ownerOf(tokenCount), address(0x1337));
+    //     assertEq(MockERC721(dealAddressOverFullDeposit).ownerOf(vestingTokenId), address(0x1337));
     //     assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
     //     // check there is a claimable amount
-    //     vm.warp(block.timestamp + vestingCliffPeriod + 1 days);
-    //     (uint256 userShare, uint256 lastClaimedAt) = AelinUpFrontDeal(dealAddressOverFullDeposit).tokenDetails(tokenCount);
-    //     uint256 claimableAmount = (userShare * (block.timestamp - lastClaimedAt)) / vestingPeriod;
-    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).claimableUnderlyingTokens(tokenCount), claimableAmount);
+    //     vm.warp(vestingCliffPeriod + 1 days);
+    //     (uint256 userShare, uint256 lastClaimedAt) = AelinUpFrontDeal(dealAddressOverFullDeposit).tokenDetails(
+    //         vestingTokenId
+    //     );
+
     //     // attempt deal token transfers
-    //     MockERC721(dealAddressOverFullDeposit).transfer(address(0x1111), tokenCount, "0x0");
+    //     MockERC721(dealAddressOverFullDeposit).transfer(address(0x1111), vestingTokenId, "0x0");
     //     // check the new ownership
     //     assertEq(MockERC721(dealAddressOverFullDeposit).balanceOf(address(0x1337)), 0);
     //     assertEq(MockERC721(dealAddressOverFullDeposit).balanceOf(address(0x1111)), 1);
-    //     assertEq(MockERC721(dealAddressOverFullDeposit).ownerOf(tokenCount), address(0x1111));
+    //     assertEq(MockERC721(dealAddressOverFullDeposit).ownerOf(vestingTokenId), address(0x1111));
     //     vm.assume(claimableAmount > 0);
-    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).claimableUnderlyingTokens(tokenCount), claimableAmount);
+    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).claimableUnderlyingTokens(vestingTokenId), claimableAmount);
     //     vm.expectRevert("ERC721: transfer from incorrect owner");
-    //     MockERC721(dealAddressOverFullDeposit).transfer(address(0x1337), tokenCount, "0x0");
+    //     MockERC721(dealAddressOverFullDeposit).transfer(address(0x1337), vestingTokenId, "0x0");
 
-    //     // attempt to claim the underlying deal token
-    //     vm.expectRevert("must be owner to claim");
-    //     AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlying(tokenCount);
-    //     vm.stopPrank();
-    //     vm.startPrank(address(0x1111));
-    //     AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlying(tokenCount);
-    //     assertEq(underlyingDealToken.balanceOf(address(0x1111)), claimableAmount);
+    //     // // attempt to claim the underlying deal token
+    //     // vm.expectRevert("must be owner to claim");
+    //     // AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlying(vestingTokenId);
+    //     // vm.stopPrank();
+    //     // vm.startPrank(address(0x1111));
+    //     // AelinUpFrontDeal(dealAddressOverFullDeposit).claimUnderlying(vestingTokenId);
+    //     // assertEq(underlyingDealToken.balanceOf(address(0x1111)), claimableAmount);
 
-    //     // attempt to transfer the token back
-    //     MockERC721(dealAddressOverFullDeposit).transfer(address(0x1337), tokenCount, "0x0");
-    //     assertEq(MockERC721(dealAddressOverFullDeposit).balanceOf(address(0x1337)), 1);
-    //     assertEq(MockERC721(dealAddressOverFullDeposit).balanceOf(address(0x1111)), 0);
-    //     (uint256 newUserShare, uint256 newlastClaimedAt) = AelinUpFrontDeal(dealAddressOverFullDeposit).tokenDetails(
-    //         tokenCount
-    //     );
-    //     // only lastClaimedAt changed
-    //     assertEq(newlastClaimedAt, block.timestamp);
-    //     assertEq(newUserShare, userShare);
+    //     // // attempt to transfer the token back
+    //     // MockERC721(dealAddressOverFullDeposit).transfer(address(0x1337), vestingTokenId, "0x0");
+    //     // assertEq(MockERC721(dealAddressOverFullDeposit).balanceOf(address(0x1337)), 1);
+    //     // assertEq(MockERC721(dealAddressOverFullDeposit).balanceOf(address(0x1111)), 0);
+    //     // (uint256 newUserShare, uint256 newlastClaimedAt) = AelinUpFrontDeal(dealAddressOverFullDeposit).tokenDetails(
+    //     //     vestingTokenId
+    //     // );
+    //     // // only lastClaimedAt changed
+    //     // assertEq(newlastClaimedAt, block.timestamp);
+    //     // assertEq(newUserShare, userShare);
     //     vm.stopPrank();
     // }
 
