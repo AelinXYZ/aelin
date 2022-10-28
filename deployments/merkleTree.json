@@ -1,0 +1,9 @@
+{
+  "address": "0x1fa677ca369b97Ab30707373531cB050b1c3a7c6",
+  "abi": [],
+  "constructorArgs": [],
+  "deployTxnHash": "0xcd1260f4b65ddd067d258a890b7637946fc11a2d82609ad98d47eb5fffafdf78",
+  "sourceName": "contracts/libraries/MerkleTree.sol",
+  "contractName": "MerkleTree",
+  "deployedOn": "contract.merkleTree"
+}
