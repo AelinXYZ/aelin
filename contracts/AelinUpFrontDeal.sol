@@ -290,8 +290,8 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721
             purchaseTokensPerUser[msg.sender] = 0;
 
             // mint vesting token and create schedule
-            _createVestingSchedule(msg.sender, adjustedShareAmountForUser, block.timestamp);
-            emit ClaimVestingToken(msg.sender, tokenCount, adjustedShareAmountForUser, precisionAdjustedRefund);
+            uint256 tokenId = _createVestingToken(msg.sender, adjustedShareAmountForUser, block.timestamp);
+            emit ClaimVestingToken(msg.sender, tokenId, adjustedShareAmountForUser, precisionAdjustedRefund);
         } else {
             // Claim Refund
             uint256 refundAmount = purchaseTokensPerUser[msg.sender];
@@ -318,7 +318,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721
         uint256 _sponsorFeeAmt = (totalSold * dealData.sponsorFee) / BASE;
 
         // mint vesting token and create schedule
-        _createVestingSchedule(_sponsor, _sponsorFeeAmt, block.timestamp);
+        _createVestingToken(_sponsor, _sponsorFeeAmt, block.timestamp);
         emit SponsorClaim(_sponsor, _sponsorFeeAmt);
 
         if (!feeEscrowClaimed) {
@@ -461,14 +461,16 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721
         return precisionAdjustedUnderlyingClaimable;
     }
 
-    function _createVestingSchedule(
+    function _createVestingToken(
         address _to,
         uint256 _amount,
         uint256 _timestamp
-    ) internal {
-        _mint(_to, tokenCount);
-        tokenDetails[tokenCount] = TokenDetails(_amount, _timestamp);
+    ) internal returns (uint256) {
+        uint256 tokenId = tokenCount;
+        _mint(_to, tokenId);
+        tokenDetails[tokenId] = TokenDetails(_amount, _timestamp);
         tokenCount += 1;
+        return tokenId;
     }
 
     /**
@@ -644,7 +646,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721
         require(schedule.share - _shareAmount > 0, "cant transfer more than current share");
 
         tokenDetails[_tokenId] = TokenDetails(schedule.share - _shareAmount, schedule.lastClaimedAt);
-        _createVestingSchedule(_to, _shareAmount, schedule.lastClaimedAt);
+        _createVestingToken(_to, _shareAmount, schedule.lastClaimedAt);
     }
 
     function transfer(
