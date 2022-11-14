@@ -16,6 +16,12 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
         AELIN_VLP_LOGIC = new AelinVLP();
     }
 
+    // problems
+    // how to combine both phases together logistically
+    // you have the first phase and then what happens
+    // in the first phase you LP all at once - how to split up the vesting contracts for this purpose
+    // you have a mega LP vesting contract that can be split between smaller contracts
+    // how to handle migration
     /**
      createVLP() Arguments:
         - launch phase struct
@@ -31,13 +37,14 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
             - LP % share ownership on each side
             - vesting schedules
             - access rules (private, NFT gated or merkle)
-        - array of single sided rewards struct
+        - array of single sided rewards struct (cap 10)
             - token to send
             - vesting schedule
             - reward per quote asset deposited
             - migration struct
                 - boolean (if can migrate)
                 - reward per quote asset deposited (different value available for migrating)
+                - vesting schedule
      */
     function createVLP() external returns (address vlpAddress) {
         vlpAddress = _cloneAsMinimalProxy(AELIN_VLP_LOGIC, "Could not create new deal");
