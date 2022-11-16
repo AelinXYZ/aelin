@@ -74,14 +74,9 @@ interface IAelinUpFrontDeal {
         uint256 totalDealTokens
     );
 
-    event ClaimVestingToken(
-        address indexed user,
-        uint256 indexed tokenId,
-        uint256 shareAllocated,
-        uint256 amountPurchasingReturned
-    );
+    event CreateVestingToken(address indexed user, uint256 indexed tokenId, uint256 amount, uint256 lastClaimedAt);
 
-    event ClaimRefund(address indexed user, uint256 refundAmount);
+    event ClaimDealTokens(address indexed user, uint256 amountMinted, uint256 amountPurchasingReturned);
 
     event SponsorClaim(address indexed sponsor, uint256 amountMinted);
 

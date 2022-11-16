@@ -1026,9 +1026,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(user, _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(user), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(user), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(user), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(user), _purchaseAmount);
         vm.stopPrank();
     }
 
@@ -1060,8 +1060,8 @@ contract AelinUpFrontDealTest is Test {
                 user = _user2;
             }
             vm.startPrank(user);
-            uint256 usersPurchaseTokens = AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(user);
-            uint256 usersPoolShares = AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(user);
+            uint256 usersPurchaseTokens = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(user);
+            uint256 usersPoolShares = AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(user);
             vm.expectEmit(true, false, false, true);
             emit AcceptDeal(
                 user,
@@ -1073,12 +1073,12 @@ contract AelinUpFrontDealTest is Test {
             AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
             assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount * (i + 1));
             assertEq(
-                AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(user),
+                AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(user),
                 usersPoolShares + poolSharesAmount
             );
             assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount * (i + 1));
             assertEq(
-                AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(user),
+                AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(user),
                 usersPurchaseTokens + _purchaseAmount
             );
             vm.stopPrank();
@@ -1143,9 +1143,9 @@ contract AelinUpFrontDealTest is Test {
         AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount1);
         assertTrue(poolSharesAmount1 > underlyingDealTokenTotal);
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPoolShares(), poolSharesAmount1);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPoolSharesPerUser(user1), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).poolSharesPerUser(user1), poolSharesAmount1);
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted(), purchaseAmount1);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(user1), purchaseAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseTokensPerUser(user1), purchaseAmount1);
         vm.stopPrank();
     }
 
@@ -1200,9 +1200,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount1, _purchaseAmount1, poolSharesAmount1, poolSharesAmount1);
         AelinUpFrontDeal(dealAddressAllowList).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount1);
         assertEq(AelinUpFrontDeal(dealAddressAllowList).totalPoolShares(), poolSharesAmount1);
-        assertEq(AelinUpFrontDeal(dealAddressAllowList).getPoolSharesPerUser(address(0x1337)), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressAllowList).poolSharesPerUser(address(0x1337)), poolSharesAmount1);
         assertEq(AelinUpFrontDeal(dealAddressAllowList).totalPurchasingAccepted(), _purchaseAmount1);
-        assertEq(AelinUpFrontDeal(dealAddressAllowList).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressAllowList).purchaseTokensPerUser(address(0x1337)), _purchaseAmount1);
         vm.stopPrank();
         // user2
         vm.startPrank(address(0xBEEF));
@@ -1212,9 +1212,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0xBEEF), _purchaseAmount2, _purchaseAmount2, poolSharesAmount2, poolSharesAmount2);
         AelinUpFrontDeal(dealAddressAllowList).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount2);
         assertEq(AelinUpFrontDeal(dealAddressAllowList).totalPoolShares(), poolSharesAmount1 + poolSharesAmount2);
-        assertEq(AelinUpFrontDeal(dealAddressAllowList).getPoolSharesPerUser(address(0xBEEF)), poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressAllowList).poolSharesPerUser(address(0xBEEF)), poolSharesAmount2);
         assertEq(AelinUpFrontDeal(dealAddressAllowList).totalPurchasingAccepted(), _purchaseAmount1 + _purchaseAmount2);
-        assertEq(AelinUpFrontDeal(dealAddressAllowList).getPurchaseTokensPerUser(address(0xBEEF)), _purchaseAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressAllowList).purchaseTokensPerUser(address(0xBEEF)), _purchaseAmount2);
         vm.stopPrank();
         // user3
         vm.startPrank(address(0xDEED));
@@ -1227,12 +1227,12 @@ contract AelinUpFrontDealTest is Test {
             AelinUpFrontDeal(dealAddressAllowList).totalPoolShares(),
             poolSharesAmount1 + poolSharesAmount2 + poolSharesAmount3
         );
-        assertEq(AelinUpFrontDeal(dealAddressAllowList).getPoolSharesPerUser(address(0xDEED)), poolSharesAmount3);
+        assertEq(AelinUpFrontDeal(dealAddressAllowList).poolSharesPerUser(address(0xDEED)), poolSharesAmount3);
         assertEq(
             AelinUpFrontDeal(dealAddressAllowList).totalPurchasingAccepted(),
             _purchaseAmount1 + _purchaseAmount2 + _purchaseAmount3
         );
-        assertEq(AelinUpFrontDeal(dealAddressAllowList).getPurchaseTokensPerUser(address(0xDEED)), _purchaseAmount3);
+        assertEq(AelinUpFrontDeal(dealAddressAllowList).purchaseTokensPerUser(address(0xDEED)), _purchaseAmount3);
         vm.stopPrank();
     }
 
@@ -1342,9 +1342,9 @@ contract AelinUpFrontDealTest is Test {
         AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         // checks after purchase
         assertEq(AelinUpFrontDeal(dealAddressNftGating721).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressNftGating721).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressNftGating721).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressNftGating721).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressNftGating721).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressNftGating721).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
             address(collectionAddress1),
             address(0x1337),
@@ -1542,9 +1542,9 @@ contract AelinUpFrontDealTest is Test {
         AelinUpFrontDeal(dealAddressNftGating1155).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         // checks after purchase
         assertEq(AelinUpFrontDeal(dealAddressNftGating1155).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressNftGating1155).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressNftGating1155).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressNftGating1155).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressNftGating1155).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressNftGating1155).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         (walletClaimed, NftIdUsed, ) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(
             address(collectionAddress4),
             address(0x1337),
@@ -1659,19 +1659,19 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         // claim attempt
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
         vm.warp(purchaseExpiry + 1 days);
         vm.expectEmit(true, false, false, true);
-        emit ClaimRefund(address(0x1337), _purchaseAmount);
+        emit ClaimDealTokens(address(0x1337), 0, _purchaseAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), 0);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), 0);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max);
     }
 
@@ -1695,9 +1695,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)), 0);
         // claim
@@ -1705,14 +1705,14 @@ contract AelinUpFrontDealTest is Test {
         uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
         vm.warp(purchaseExpiry + 1 days);
         (, , , , , , uint256 sponsorFee, , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
-        uint256 poolSharesPerUser = AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337));
+        uint256 poolSharesPerUser = AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337));
         uint256 adjustedShareAmountForUser = ((BASE - AELIN_FEE - sponsorFee) * poolSharesPerUser) / BASE;
         uint256 tokenCount = AelinUpFrontDeal(dealAddressOverFullDeposit).tokenCount();
         vm.expectEmit(true, true, false, true);
-        emit ClaimVestingToken(address(0x1337), tokenCount, adjustedShareAmountForUser, 0);
+        emit ClaimDealTokens(address(0x1337), adjustedShareAmountForUser, 0);
         AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), 0);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), 0);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
@@ -1721,7 +1721,7 @@ contract AelinUpFrontDealTest is Test {
         assertEq(MockERC721(dealAddressOverFullDeposit).ownerOf(tokenCount), address(0x1337));
         (uint256 userShare, uint256 lastClaimedAt) = AelinUpFrontDeal(dealAddressOverFullDeposit).tokenDetails(tokenCount);
         assertEq(userShare, adjustedShareAmountForUser);
-        assertEq(lastClaimedAt, block.timestamp);
+        assertEq(lastClaimedAt, AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry());
         vm.stopPrank();
     }
 
@@ -1752,28 +1752,28 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         assertEq(MockERC20(dealAddressAllowDeallocation).balanceOf(address(0x1337)), 0);
         // claim
-        uint256 adjustedShareAmountForUser = (((AelinUpFrontDeal(dealAddressAllowDeallocation).getPoolSharesPerUser(
+        uint256 adjustedShareAmountForUser = (((AelinUpFrontDeal(dealAddressAllowDeallocation).poolSharesPerUser(
             address(0x1337)
         ) * underlyingDealTokenTotal) / AelinUpFrontDeal(dealAddressAllowDeallocation).totalPoolShares()) *
             (BASE - AELIN_FEE - sponsorFee)) / BASE;
         uint256 totalIntendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10**underlyingTokenDecimals;
-        uint256 purchasingRefund = AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(address(0x1337)) -
-            ((AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(address(0x1337)) *
-                totalIntendedRaise) / AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted());
+        uint256 purchasingRefund = AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseTokensPerUser(address(0x1337)) -
+            ((AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseTokensPerUser(address(0x1337)) * totalIntendedRaise) /
+                AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted());
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         uint256 tokenCount = AelinUpFrontDeal(dealAddressAllowDeallocation).tokenCount();
         vm.warp(AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry() + 1 days);
         vm.expectEmit(true, true, false, true);
-        emit ClaimVestingToken(address(0x1337), tokenCount, adjustedShareAmountForUser, purchasingRefund);
+        emit ClaimDealTokens(address(0x1337), adjustedShareAmountForUser, purchasingRefund);
         AelinUpFrontDeal(dealAddressAllowDeallocation).purchaserClaim();
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPoolSharesPerUser(address(0x1337)), 0);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).poolSharesPerUser(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseTokensPerUser(address(0x1337)), 0);
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted(), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount + purchasingRefund);
         assertEq(underlyingDealToken.balanceOf(address(0x1337)), 0);
@@ -1782,7 +1782,7 @@ contract AelinUpFrontDealTest is Test {
         assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(tokenCount), address(0x1337));
         (uint256 userShare, uint256 lastClaimedAt) = AelinUpFrontDeal(dealAddressAllowDeallocation).tokenDetails(tokenCount);
         assertEq(userShare, adjustedShareAmountForUser);
-        assertEq(lastClaimedAt, block.timestamp);
+        assertEq(lastClaimedAt, AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry());
 
         vm.stopPrank();
     }
@@ -1822,19 +1822,19 @@ contract AelinUpFrontDealTest is Test {
         uint256 tokenCount = AelinUpFrontDeal(dealAddressAllowDeallocation).tokenCount();
 
         // claim user 2
-        uint256 adjustedShareAmountForUser = (((AelinUpFrontDeal(dealAddressAllowDeallocation).getPoolSharesPerUser(
+        uint256 adjustedShareAmountForUser = (((AelinUpFrontDeal(dealAddressAllowDeallocation).poolSharesPerUser(
             address(0x1338)
         ) * underlyingDealTokenTotal) / AelinUpFrontDeal(dealAddressAllowDeallocation).totalPoolShares()) *
             (BASE - AELIN_FEE - sponsorFee)) / BASE;
-        uint256 purchasingRefund = AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(address(0x1338)) -
-            ((AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(address(0x1338)) *
-                totalIntendedRaise) / AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted());
+        uint256 purchasingRefund = AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseTokensPerUser(address(0x1338)) -
+            ((AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseTokensPerUser(address(0x1338)) * totalIntendedRaise) /
+                AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted());
         vm.expectEmit(true, true, false, true);
-        emit ClaimVestingToken(address(0x1338), tokenCount, adjustedShareAmountForUser, purchasingRefund);
+        emit ClaimDealTokens(address(0x1338), adjustedShareAmountForUser, purchasingRefund);
         AelinUpFrontDeal(dealAddressAllowDeallocation).purchaserClaim();
         (uint256 userShare, uint256 lastClaimedAt) = AelinUpFrontDeal(dealAddressAllowDeallocation).tokenDetails(tokenCount);
         assertEq(userShare, adjustedShareAmountForUser);
-        assertEq(lastClaimedAt, block.timestamp);
+        assertEq(lastClaimedAt, AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry());
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).balanceOf(address(0x1338)), 1);
         assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(tokenCount), address(0x1338));
         vm.stopPrank();
@@ -1843,20 +1843,20 @@ contract AelinUpFrontDealTest is Test {
         vm.startPrank(address(0x1337));
         tokenCount = AelinUpFrontDeal(dealAddressAllowDeallocation).tokenCount();
         adjustedShareAmountForUser =
-            (((AelinUpFrontDeal(dealAddressAllowDeallocation).getPoolSharesPerUser(address(0x1337)) *
+            (((AelinUpFrontDeal(dealAddressAllowDeallocation).poolSharesPerUser(address(0x1337)) *
                 underlyingDealTokenTotal) / AelinUpFrontDeal(dealAddressAllowDeallocation).totalPoolShares()) *
                 (BASE - AELIN_FEE - sponsorFee)) /
             BASE;
         purchasingRefund =
-            AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(address(0x1337)) -
-            ((AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(address(0x1337)) *
-                totalIntendedRaise) / AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted());
+            AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseTokensPerUser(address(0x1337)) -
+            ((AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseTokensPerUser(address(0x1337)) * totalIntendedRaise) /
+                AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted());
         vm.expectEmit(true, true, false, true);
-        emit ClaimVestingToken(address(0x1337), tokenCount, adjustedShareAmountForUser, purchasingRefund);
+        emit ClaimDealTokens(address(0x1337), adjustedShareAmountForUser, purchasingRefund);
         AelinUpFrontDeal(dealAddressAllowDeallocation).purchaserClaim();
         (userShare, lastClaimedAt) = AelinUpFrontDeal(dealAddressAllowDeallocation).tokenDetails(tokenCount);
         assertEq(userShare, adjustedShareAmountForUser);
-        assertEq(lastClaimedAt, block.timestamp);
+        assertEq(lastClaimedAt, AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry());
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).balanceOf(address(0x1337)), 1);
         assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(tokenCount), address(0x1337));
         vm.stopPrank();
@@ -1892,9 +1892,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         vm.stopPrank();
         // attempt claim
         vm.startPrank(address(0xBEEF));
@@ -1927,9 +1927,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(_address, _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(_address), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(_address), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(_address), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(_address), _purchaseAmount);
         // attempt claim
         assertEq(purchaseToken.balanceOf(_address), type(uint256).max - _purchaseAmount);
         uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
@@ -1959,9 +1959,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         vm.stopPrank();
         // claim
@@ -2000,9 +2000,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         vm.stopPrank();
         // claim
@@ -2052,9 +2052,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         vm.stopPrank();
         // claim
@@ -2110,9 +2110,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(_address, _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(_address), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(_address), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(_address), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(_address), _purchaseAmount);
         // attempt claim
         assertEq(purchaseToken.balanceOf(_address), type(uint256).max - _purchaseAmount);
         uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
@@ -2142,9 +2142,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         vm.stopPrank();
         // claim
@@ -2185,9 +2185,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         vm.stopPrank();
         // attempt claim
         vm.startPrank(address(0xDEAD));
@@ -2231,9 +2231,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         vm.stopPrank();
         // claim
@@ -2291,9 +2291,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         vm.stopPrank();
         // claim
@@ -2354,9 +2354,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         vm.stopPrank();
         // claim
@@ -2401,9 +2401,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         vm.stopPrank();
         // claim
@@ -2460,9 +2460,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         // claim
         assertEq(address(AelinUpFrontDeal(dealAddressOverFullDeposit).aelinFeeEscrow()), address(0));
@@ -2510,9 +2510,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         // claim
         assertEq(address(AelinUpFrontDeal(dealAddressOverFullDeposit).aelinFeeEscrow()), address(0));
@@ -2575,9 +2575,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         // claim
         uint256 vestingTokenId = AelinUpFrontDeal(dealAddressOverFullDeposit).tokenCount();
@@ -2622,15 +2622,15 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         // claim
         vm.warp(purchaseExpiry + 1 days);
         uint256 vestingTokenId = AelinUpFrontDeal(dealAddressOverFullDeposit).tokenCount();
         uint256 adjustedShareAmountForUser = ((BASE - AELIN_FEE - sponsorFee) *
-            AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337))) / BASE;
+            AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337))) / BASE;
         AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
         // claimable underlying
         vm.warp(purchaseExpiry + 1 days + _timeAfterPurchasing);
@@ -2678,9 +2678,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         // claim
         vm.warp(purchaseExpiry + 1 days);
@@ -2744,9 +2744,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         // claim attempt
         uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
         vm.warp(purchaseExpiry + 1 days);
@@ -2785,9 +2785,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         // claim
         assertEq(address(AelinUpFrontDeal(dealAddressOverFullDeposit).aelinFeeEscrow()), address(0));
@@ -2843,9 +2843,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         assertEq(vestingTokenId, 0);
         // claim
@@ -2886,15 +2886,15 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         // claim
         vm.warp(purchaseExpiry + 1 days);
         (, , , , , , uint256 sponsorFee, , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
         uint256 adjustedShareAmountForUser = ((BASE - AELIN_FEE - sponsorFee) *
-            AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337))) / BASE;
+            AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337))) / BASE;
         uint256 vestingTokenId = AelinUpFrontDeal(dealAddressOverFullDeposit).tokenCount();
         AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
         // claim underlying
@@ -2948,17 +2948,17 @@ contract AelinUpFrontDealTest is Test {
             (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken
         );
         assertEq(
-            AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)),
+            AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)),
             (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken
         );
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         // claim
         vm.warp(purchaseExpiry + 1 days);
         (, , , , , , uint256 sponsorFee, , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
         uint256 adjustedShareAmountForUser = ((BASE - AELIN_FEE - sponsorFee) *
-            AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337))) / BASE;
+            AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337))) / BASE;
         uint256 vestingTokenId = AelinUpFrontDeal(dealAddressOverFullDeposit).tokenCount();
         AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
         // claim underlying
@@ -3014,17 +3014,17 @@ contract AelinUpFrontDealTest is Test {
     //         (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken
     //     );
     //     assertEq(
-    //         AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)),
+    //         AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)),
     //         (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken
     //     );
     //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
     //     assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
     //     // claim
     //     vm.warp(purchaseExpiry + 1 days);
     //     (, , , , , , uint256 sponsorFee) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
     //     uint256 adjustedShareAmountForUser = ((BASE - AELIN_FEE - sponsorFee) *
-    //         AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337))) / BASE;
+    //         AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337))) / BASE;
     //     AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
     //     // claim underlying
     //     vm.warp(purchaseExpiry + 1 days + _timeAfterPurchasing);
@@ -3105,9 +3105,9 @@ contract AelinUpFrontDealTest is Test {
         emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         assertEq(MockERC20(dealAddressOverFullDeposit).balanceOf(address(0x1337)), 0);
         // claim
@@ -3115,15 +3115,15 @@ contract AelinUpFrontDealTest is Test {
         uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
         vm.warp(purchaseExpiry + 1 days);
         (, , , , , , uint256 sponsorFee, , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
-        uint256 poolSharesPerUser = AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337));
+        uint256 poolSharesPerUser = AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337));
         uint256 adjustedShareAmountForUser = ((BASE - AELIN_FEE - sponsorFee) * poolSharesPerUser) / BASE;
         uint256 tokenCount = AelinUpFrontDeal(dealAddressOverFullDeposit).tokenCount();
         vm.expectEmit(true, false, false, true);
-        emit ClaimVestingToken(address(0x1337), tokenCount, adjustedShareAmountForUser, 0);
+        emit ClaimDealTokens(address(0x1337), adjustedShareAmountForUser, 0);
         AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), 0);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), 0);
+        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), 0);
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
         assertEq(MockERC721(dealAddressOverFullDeposit).balanceOf(address(0x1337)), 1);
         assertEq(MockERC721(dealAddressOverFullDeposit).ownerOf(tokenCount), address(0x1337));
@@ -3199,24 +3199,24 @@ contract AelinUpFrontDealTest is Test {
     //     emit AcceptDeal(address(0x1337), _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
     //     AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
     //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(), poolSharesAmount);
-    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
+    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), poolSharesAmount);
     //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
+    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), _purchaseAmount);
     //     assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
     //     assertEq(MockERC721(dealAddressOverFullDeposit).balanceOf(address(0x1337)), 0);
     //     // claim
     //     assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
     //     uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
     //     vm.warp(purchaseExpiry + 1 days);
-    //     uint256 poolSharesPerUser = AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337));
+    //     uint256 poolSharesPerUser = AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337));
     //     uint256 adjustedShareAmountForUser = ((BASE - AELIN_FEE - sponsorFee) * poolSharesPerUser) / BASE;
     //     uint256 vestingTokenId = AelinUpFrontDeal(dealAddressOverFullDeposit).tokenCount();
     //     vm.expectEmit(true, false, false, true);
-    //     emit ClaimVestingToken(address(0x1337), vestingTokenId, adjustedShareAmountForUser, 0);
+    //     emit ClaimDealTokens(address(0x1337), adjustedShareAmountForUser, 0);
     //     AelinUpFrontDeal(dealAddressOverFullDeposit).purchaserClaim();
-    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)), 0);
+    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).poolSharesPerUser(address(0x1337)), 0);
     //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
-    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), 0);
+    //     assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseTokensPerUser(address(0x1337)), 0);
     //     assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - _purchaseAmount);
     //     assertEq(MockERC721(dealAddressOverFullDeposit).balanceOf(address(0x1337)), 1);
     //     assertEq(MockERC721(dealAddressOverFullDeposit).ownerOf(vestingTokenId), address(0x1337));
@@ -3352,18 +3352,18 @@ contract AelinUpFrontDealTest is Test {
         vm.stopPrank();
         vm.startPrank(address(0x1337));
 
-        uint256 adjustedShareAmountForUser = (((AelinUpFrontDeal(upfrontDealAddress).getPoolSharesPerUser(address(0x1337)) *
+        uint256 adjustedShareAmountForUser = (((AelinUpFrontDeal(upfrontDealAddress).poolSharesPerUser(address(0x1337)) *
             underlyingDealTokenTotal) / AelinUpFrontDeal(upfrontDealAddress).totalPoolShares()) * (BASE - AELIN_FEE)) / BASE;
 
-        uint256 purchasingRefund = AelinUpFrontDeal(upfrontDealAddress).getPurchaseTokensPerUser(address(0x1337)) -
-            ((AelinUpFrontDeal(upfrontDealAddress).getPurchaseTokensPerUser(address(0x1337)) * totalIntendedRaise) /
+        uint256 purchasingRefund = AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(address(0x1337)) -
+            ((AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(address(0x1337)) * totalIntendedRaise) /
                 AelinUpFrontDeal(upfrontDealAddress).totalPurchasingAccepted());
 
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - purchaseAmount1);
         vm.expectEmit(true, false, false, true);
         uint256 tokenCount = AelinUpFrontDeal(upfrontDealAddress).tokenCount();
         assertEq(tokenCount, 0);
-        emit ClaimVestingToken(address(0x1337), tokenCount, adjustedShareAmountForUser, purchasingRefund);
+        emit ClaimDealTokens(address(0x1337), adjustedShareAmountForUser, purchasingRefund);
         AelinUpFrontDeal(upfrontDealAddress).purchaserClaim();
 
         // First purchaser gets refunded entirely
@@ -3374,20 +3374,20 @@ contract AelinUpFrontDealTest is Test {
         vm.startPrank(address(0x1338));
 
         adjustedShareAmountForUser =
-            (((AelinUpFrontDeal(upfrontDealAddress).getPoolSharesPerUser(address(0x1338)) * underlyingDealTokenTotal) /
+            (((AelinUpFrontDeal(upfrontDealAddress).poolSharesPerUser(address(0x1338)) * underlyingDealTokenTotal) /
                 AelinUpFrontDeal(upfrontDealAddress).totalPoolShares()) * (BASE - AELIN_FEE)) /
             BASE;
 
         purchasingRefund =
-            AelinUpFrontDeal(upfrontDealAddress).getPurchaseTokensPerUser(address(0x1338)) -
-            ((AelinUpFrontDeal(upfrontDealAddress).getPurchaseTokensPerUser(address(0x1338)) * totalIntendedRaise) /
+            AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(address(0x1338)) -
+            ((AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(address(0x1338)) * totalIntendedRaise) /
                 AelinUpFrontDeal(upfrontDealAddress).totalPurchasingAccepted());
 
         assertEq(purchaseToken.balanceOf(address(0x1338)), type(uint256).max - purchaseAmount2);
         vm.expectEmit(true, false, false, true);
         tokenCount = AelinUpFrontDeal(upfrontDealAddress).tokenCount();
         assertEq(tokenCount, 1);
-        emit ClaimVestingToken(address(0x1338), tokenCount, adjustedShareAmountForUser, purchasingRefund);
+        emit ClaimDealTokens(address(0x1338), adjustedShareAmountForUser, purchasingRefund);
         AelinUpFrontDeal(upfrontDealAddress).purchaserClaim();
 
         // Second purchaser gets refunded entirely
@@ -3398,13 +3398,13 @@ contract AelinUpFrontDealTest is Test {
         vm.startPrank(address(0x1339));
 
         adjustedShareAmountForUser =
-            (((AelinUpFrontDeal(upfrontDealAddress).getPoolSharesPerUser(address(0x1339)) * underlyingDealTokenTotal) /
+            (((AelinUpFrontDeal(upfrontDealAddress).poolSharesPerUser(address(0x1339)) * underlyingDealTokenTotal) /
                 AelinUpFrontDeal(upfrontDealAddress).totalPoolShares()) * (BASE - AELIN_FEE)) /
             BASE;
 
         purchasingRefund =
-            AelinUpFrontDeal(upfrontDealAddress).getPurchaseTokensPerUser(address(0x1339)) -
-            ((AelinUpFrontDeal(upfrontDealAddress).getPurchaseTokensPerUser(address(0x1339)) * totalIntendedRaise) /
+            AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(address(0x1339)) -
+            ((AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(address(0x1339)) * totalIntendedRaise) /
                 AelinUpFrontDeal(upfrontDealAddress).totalPurchasingAccepted());
 
         assertEq(purchaseToken.balanceOf(address(0x1339)), type(uint256).max - purchaseAmount3);
@@ -3416,7 +3416,7 @@ contract AelinUpFrontDealTest is Test {
         vm.expectEmit(true, false, false, true);
         tokenCount = AelinUpFrontDeal(upfrontDealAddress).tokenCount();
         assertEq(tokenCount, 2);
-        emit ClaimVestingToken(address(0x1339), tokenCount, adjustedShareAmountForUser, contractRemainingBalance);
+        emit ClaimDealTokens(address(0x1339), adjustedShareAmountForUser, contractRemainingBalance);
         assertEq(purchaseToken.balanceOf(address(0x1339)), type(uint256).max - purchaseAmount3);
         AelinUpFrontDeal(upfrontDealAddress).purchaserClaim();
         assertEq(purchaseToken.balanceOf(address(0x1339)), type(uint256).max - purchaseAmount3 + contractRemainingBalance);
@@ -3500,18 +3500,18 @@ contract AelinUpFrontDealTest is Test {
         vm.stopPrank();
         vm.startPrank(address(0x1337));
 
-        uint256 adjustedShareAmountForUser = (((AelinUpFrontDeal(upfrontDealAddress).getPoolSharesPerUser(address(0x1337)) *
+        uint256 adjustedShareAmountForUser = (((AelinUpFrontDeal(upfrontDealAddress).poolSharesPerUser(address(0x1337)) *
             underlyingDealTokenTotal) / AelinUpFrontDeal(upfrontDealAddress).totalPoolShares()) * (BASE - AELIN_FEE)) / BASE;
 
-        uint256 purchasingRefund = AelinUpFrontDeal(upfrontDealAddress).getPurchaseTokensPerUser(address(0x1337)) -
-            ((AelinUpFrontDeal(upfrontDealAddress).getPurchaseTokensPerUser(address(0x1337)) * totalIntendedRaise) /
+        uint256 purchasingRefund = AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(address(0x1337)) -
+            ((AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(address(0x1337)) * totalIntendedRaise) /
                 AelinUpFrontDeal(upfrontDealAddress).totalPurchasingAccepted());
 
         assertEq(purchaseToken.balanceOf(address(0x1337)), type(uint256).max - purchaseAmount1);
         uint256 tokenCount = AelinUpFrontDeal(upfrontDealAddress).tokenCount();
         assertEq(tokenCount, 0);
         vm.expectEmit(true, false, false, true);
-        emit ClaimVestingToken(address(0x1337), tokenCount, adjustedShareAmountForUser, purchasingRefund);
+        emit ClaimDealTokens(address(0x1337), adjustedShareAmountForUser, purchasingRefund);
         AelinUpFrontDeal(upfrontDealAddress).purchaserClaim();
 
         // First purchaser gets refunded entirely
@@ -3522,20 +3522,20 @@ contract AelinUpFrontDealTest is Test {
         vm.startPrank(address(0x1338));
 
         adjustedShareAmountForUser =
-            (((AelinUpFrontDeal(upfrontDealAddress).getPoolSharesPerUser(address(0x1338)) * underlyingDealTokenTotal) /
+            (((AelinUpFrontDeal(upfrontDealAddress).poolSharesPerUser(address(0x1338)) * underlyingDealTokenTotal) /
                 AelinUpFrontDeal(upfrontDealAddress).totalPoolShares()) * (BASE - AELIN_FEE)) /
             BASE;
 
         purchasingRefund =
-            AelinUpFrontDeal(upfrontDealAddress).getPurchaseTokensPerUser(address(0x1338)) -
-            ((AelinUpFrontDeal(upfrontDealAddress).getPurchaseTokensPerUser(address(0x1338)) * totalIntendedRaise) /
+            AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(address(0x1338)) -
+            ((AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(address(0x1338)) * totalIntendedRaise) /
                 AelinUpFrontDeal(upfrontDealAddress).totalPurchasingAccepted());
 
         assertEq(purchaseToken.balanceOf(address(0x1338)), type(uint256).max - purchaseAmount2);
         tokenCount = AelinUpFrontDeal(upfrontDealAddress).tokenCount();
         assertEq(tokenCount, 1);
         vm.expectEmit(true, false, false, true);
-        emit ClaimVestingToken(address(0x1338), tokenCount, adjustedShareAmountForUser, purchasingRefund);
+        emit ClaimDealTokens(address(0x1338), adjustedShareAmountForUser, purchasingRefund);
         AelinUpFrontDeal(upfrontDealAddress).purchaserClaim();
 
         // Second purchaser gets refunded entirely
@@ -3546,20 +3546,20 @@ contract AelinUpFrontDealTest is Test {
         vm.startPrank(address(0x1339));
 
         adjustedShareAmountForUser =
-            (((AelinUpFrontDeal(upfrontDealAddress).getPoolSharesPerUser(address(0x1339)) * underlyingDealTokenTotal) /
+            (((AelinUpFrontDeal(upfrontDealAddress).poolSharesPerUser(address(0x1339)) * underlyingDealTokenTotal) /
                 AelinUpFrontDeal(upfrontDealAddress).totalPoolShares()) * (BASE - AELIN_FEE)) /
             BASE;
 
         purchasingRefund =
-            AelinUpFrontDeal(upfrontDealAddress).getPurchaseTokensPerUser(address(0x1339)) -
-            ((AelinUpFrontDeal(upfrontDealAddress).getPurchaseTokensPerUser(address(0x1339)) * totalIntendedRaise) /
+            AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(address(0x1339)) -
+            ((AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(address(0x1339)) * totalIntendedRaise) /
                 AelinUpFrontDeal(upfrontDealAddress).totalPurchasingAccepted());
 
         assertEq(purchaseToken.balanceOf(address(0x1339)), type(uint256).max - purchaseAmount3);
         tokenCount = AelinUpFrontDeal(upfrontDealAddress).tokenCount();
         assertEq(tokenCount, 2);
         vm.expectEmit(true, false, false, true);
-        emit ClaimVestingToken(address(0x1339), tokenCount, adjustedShareAmountForUser, purchasingRefund);
+        emit ClaimDealTokens(address(0x1339), adjustedShareAmountForUser, purchasingRefund);
         assertEq(purchaseToken.balanceOf(address(0x1339)), type(uint256).max - purchaseAmount3);
         AelinUpFrontDeal(upfrontDealAddress).purchaserClaim();
         assertEq(purchaseToken.balanceOf(address(0x1339)), type(uint256).max - purchaseAmount3 + purchasingRefund);
@@ -3626,9 +3626,9 @@ contract AelinUpFrontDealTest is Test {
             emit AcceptDeal(user, _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
             AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
             assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPoolShares(), totalPoolShares);
-            assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPoolSharesPerUser(user), poolSharesAmount);
+            assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).poolSharesPerUser(user), poolSharesAmount);
             assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted(), totalPurchaseAccepted);
-            assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(user), _purchaseAmount);
+            assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseTokensPerUser(user), _purchaseAmount);
             vm.stopPrank();
         }
         uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry();
@@ -3997,14 +3997,9 @@ contract AelinUpFrontDealTest is Test {
         uint256 totalDealTokens
     );
 
-    event ClaimVestingToken(
-        address indexed user,
-        uint256 indexed tokenId,
-        uint256 shareAllocated,
-        uint256 amountPurchasingReturned
-    );
+    event CreateVestingToken(address indexed user, uint256 indexed tokenId, uint256 amount, uint256 lastClaimedAt);
 
-    event ClaimRefund(address indexed user, uint256 refundAmount);
+    event ClaimDealTokens(address indexed user, uint256 amountMinted, uint256 amountPurchasingReturned);
 
     event SponsorClaim(address indexed sponsor, uint256 amountMinted);
 

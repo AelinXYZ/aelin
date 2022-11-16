@@ -290,15 +290,15 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721
             purchaseTokensPerUser[msg.sender] = 0;
 
             // mint vesting token and create schedule
-            uint256 tokenId = _createVestingToken(msg.sender, adjustedShareAmountForUser, block.timestamp);
-            emit ClaimVestingToken(msg.sender, tokenId, adjustedShareAmountForUser, precisionAdjustedRefund);
+            _createVestingToken(msg.sender, adjustedShareAmountForUser, purchaseExpiry);
+            emit ClaimDealTokens(msg.sender, adjustedShareAmountForUser, precisionAdjustedRefund);
         } else {
             // Claim Refund
             uint256 refundAmount = purchaseTokensPerUser[msg.sender];
             purchaseTokensPerUser[msg.sender] = 0;
             poolSharesPerUser[msg.sender] = 0;
             IERC20(_purchaseToken).safeTransfer(msg.sender, refundAmount);
-            emit ClaimRefund(msg.sender, refundAmount);
+            emit ClaimDealTokens(msg.sender, 0, refundAmount);
         }
     }
 
@@ -318,7 +318,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721
         uint256 _sponsorFeeAmt = (totalSold * dealData.sponsorFee) / BASE;
 
         // mint vesting token and create schedule
-        _createVestingToken(_sponsor, _sponsorFeeAmt, block.timestamp);
+        _createVestingToken(_sponsor, _sponsorFeeAmt, purchaseExpiry);
         emit SponsorClaim(_sponsor, _sponsorFeeAmt);
 
         if (!feeEscrowClaimed) {
@@ -465,12 +465,11 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721
         address _to,
         uint256 _amount,
         uint256 _timestamp
-    ) internal returns (uint256) {
-        uint256 tokenId = tokenCount;
-        _mint(_to, tokenId);
-        tokenDetails[tokenId] = TokenDetails(_amount, _timestamp);
+    ) internal {
+        _mint(_to, tokenCount);
+        tokenDetails[tokenCount] = TokenDetails(_amount, _timestamp);
+        emit CreateVestingToken(_to, tokenCount, _amount, _timestamp);
         tokenCount += 1;
-        return tokenId;
     }
 
     /**
@@ -586,22 +585,6 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721
             nftGating.nftId[_collection][_nftId],
             nftGating.hasNftList
         );
-    }
-
-    /**
-     * @dev getPurchaseTokensPerUser
-     * @param _address address to check
-     */
-    function getPurchaseTokensPerUser(address _address) public view returns (uint256) {
-        return (purchaseTokensPerUser[_address]);
-    }
-
-    /**
-     * @dev getPoolSharesPerUser
-     * @param _address address to check
-     */
-    function getPoolSharesPerUser(address _address) public view returns (uint256) {
-        return (poolSharesPerUser[_address]);
     }
 
     /**
