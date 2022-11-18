@@ -407,7 +407,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721
         }
     }
 
-    function claimUnderlyingMutlipleEntries(uint256[] memory _indices) external {
+    function claimUnderlyingMultipleEntries(uint256[] memory _indices) external {
         for (uint256 i = 0; i < _indices.length; i++) {
             _claimUnderlying(msg.sender, _indices[i]);
         }
@@ -626,8 +626,8 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721
     ) public nonReentrant {
         TokenDetails memory schedule = tokenDetails[_tokenId];
         require(schedule.share > 0, "schedule does not exist");
-        require(schedule.share - _shareAmount > 0, "cant transfer more than current share");
-
+        require(_shareAmount > 0, "share amount should be > 0");
+        require(schedule.share > _shareAmount, "cant transfer more than current share");
         tokenDetails[_tokenId] = TokenDetails(schedule.share - _shareAmount, schedule.lastClaimedAt);
         _createVestingToken(_to, _shareAmount, schedule.lastClaimedAt);
     }
