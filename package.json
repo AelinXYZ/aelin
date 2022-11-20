@@ -24,6 +24,7 @@
 		"combine-pool-retro-missing": "node scripts/helpers/combine-pool-retro-missing.js",
 		"final-snx-missing-wallets": "node scripts/helpers/final-snx-missing-wallets.js",
 		"final-snx-missing-wallets-amounts": "node scripts/helpers/final-snx-missing-wallets-amounts.js",
+		"create-csv": "node scripts/helpers/csv.js",
 		"deploy-script": "hardhat run scripts/... --network ...",
 		"build:mainnet": "npx hardhat cannon:build aelinTreasuryAddress='0x51b0332E1b3349bcF01689E63e34d8859595e376'",
 		"deploy:mainnet": "npx hardhat cannon:deploy aelincannon:0.0.1 aelinTreasuryAddress='0x51b0332E1b3349bcF01689E63e34d8859595e376' --network mainnet",
@@ -111,5 +112,9 @@
 		"typechain": "5.1.2",
 		"typescript": "4.3.5",
 		"whatwg-url": "^11.0.0"
+	},
+	"dependencies": {
+		"@ethersproject/units": "^5.7.0",
+		"json-2-csv": "^3.17.2"
 	}
 }
