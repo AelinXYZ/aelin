@@ -16,35 +16,42 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
         AELIN_VLP_LOGIC = new AelinVLP();
     }
 
+    // so you have a single contract that holds all the LP tokens
+    // then you have individual vesting contracts per user that are tied to unlocking these LP units
+    // when you LP during the launch phase then you create a vesting entry that starts at the end of the deposit window with preset terms? what about deallocation and settling? hmmmmmm
+    // if there are 20M deposited then the deallocation function kicks in across all positions for the vesting schedule created during the launch phase
+
+    // in main phase if you LP then your vesting schedule is locked at whatever rate it is
+
     // problems
     // how to combine both phases together logistically
     // you have the first phase and then what happens
     // in the first phase you LP all at once - how to split up the vesting contracts for this purpose
     // you have a mega LP vesting contract that can be split between smaller contracts
     // how to handle migration
+    // managing protocol fees and swapping and distributing them
     /**
      createVLP() Arguments:
+        - AMM contract to deposit into
+        - pairing
+        - weighting
+        - LP % share ownership on each side
+        - vesting schedules
+        - access rules (private, NFT gated or merkle)
         - launch phase struct
             - boolean (has launch phase?) 
             - initial price
             - deposit window
             - deposit window allocation strategy
             - window to LP funds to AMM or else investors can withdraw
-        - AMM data struct (could be an array maybe using multiple AMMs)
-            - AMM contract to deposit into
-            - pairing
-            - weighting
-            - LP % share ownership on each side
-            - vesting schedules
-            - access rules (private, NFT gated or merkle)
         - array of single sided rewards struct (cap 10)
             - token to send
             - vesting schedule
             - reward per quote asset deposited
             - migration struct
                 - boolean (if can migrate)
-                - reward per quote asset deposited (different value available for migrating)
-                - vesting schedule
+                - reward per quote asset deposited (can be custom for migraters)
+                - vesting schedule (can be custom for migraters)
      */
     function createVLP() external returns (address vlpAddress) {
         vlpAddress = _cloneAsMinimalProxy(AELIN_VLP_LOGIC, "Could not create new deal");
