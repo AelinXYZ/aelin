@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import "./AelinERC721.sol";
+import "./AelinVestingToken.sol";
 import "./MinimalProxyFactory.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -15,7 +15,7 @@ import "./libraries/AelinNftGating.sol";
 import "./libraries/AelinAllowList.sol";
 import "./libraries/MerkleTree.sol";
 
-contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721 {
+contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestingToken {
     using SafeERC20 for IERC20;
 
     uint256 constant BASE = 100 * 10**18;
@@ -52,9 +52,6 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721
     uint256 public purchaseExpiry;
     uint256 public vestingCliffExpiry;
     uint256 public vestingExpiry;
-
-    uint256 public tokenCount;
-    mapping(uint256 => TokenDetails) public tokenDetails;
 
     /**
      * @dev initializes the contract configuration, called from the factory contract when creating a new Up Front Deal
@@ -290,7 +287,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721
             purchaseTokensPerUser[msg.sender] = 0;
 
             // mint vesting token and create schedule
-            _createVestingToken(msg.sender, adjustedShareAmountForUser, purchaseExpiry);
+            _mintVestingToken(msg.sender, adjustedShareAmountForUser, purchaseExpiry);
             emit ClaimDealTokens(msg.sender, adjustedShareAmountForUser, precisionAdjustedRefund);
         } else {
             // Claim Refund
@@ -318,7 +315,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721
         uint256 _sponsorFeeAmt = (totalSold * dealData.sponsorFee) / BASE;
 
         // mint vesting token and create schedule
-        _createVestingToken(_sponsor, _sponsorFeeAmt, purchaseExpiry);
+        _mintVestingToken(_sponsor, _sponsorFeeAmt, purchaseExpiry);
         emit SponsorClaim(_sponsor, _sponsorFeeAmt);
 
         if (!feeEscrowClaimed) {
@@ -459,17 +456,6 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721
             }
         }
         return precisionAdjustedUnderlyingClaimable;
-    }
-
-    function _createVestingToken(
-        address _to,
-        uint256 _amount,
-        uint256 _timestamp
-    ) internal {
-        _mint(_to, tokenCount);
-        tokenDetails[tokenCount] = TokenDetails(_amount, _timestamp);
-        emit CreateVestingToken(_to, tokenCount, _amount, _timestamp);
-        tokenCount += 1;
     }
 
     /**
@@ -617,26 +603,5 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinERC721
             "does not pass min raise"
         );
         _;
-    }
-
-    function transferVestingShare(
-        address _to,
-        uint256 _tokenId,
-        uint256 _shareAmount
-    ) public nonReentrant {
-        TokenDetails memory schedule = tokenDetails[_tokenId];
-        require(schedule.share > 0, "schedule does not exist");
-        require(_shareAmount > 0, "share amount should be > 0");
-        require(schedule.share > _shareAmount, "cant transfer more than current share");
-        tokenDetails[_tokenId] = TokenDetails(schedule.share - _shareAmount, schedule.lastClaimedAt);
-        _createVestingToken(_to, _shareAmount, schedule.lastClaimedAt);
-    }
-
-    function transfer(
-        address _to,
-        uint256 _tokenId,
-        bytes memory _data
-    ) public {
-        _safeTransfer(msg.sender, _to, _tokenId, _data);
     }
 }

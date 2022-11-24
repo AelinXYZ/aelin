@@ -19,4 +19,28 @@ interface IAelinDeal {
         uint256 start;
         uint256 expiry;
     }
+
+    event SetHolder(address indexed holder);
+    event DealFullyFunded(
+        address indexed poolAddress,
+        uint256 proRataRedemptionStart,
+        uint256 proRataRedemptionExpiry,
+        uint256 openRedemptionStart,
+        uint256 openRedemptionExpiry
+    );
+    event DepositDealToken(
+        address indexed underlyingDealTokenAddress,
+        address indexed depositor,
+        uint256 underlyingDealTokenAmount
+    );
+    event WithdrawUnderlyingDealToken(
+        address indexed underlyingDealTokenAddress,
+        address indexed depositor,
+        uint256 underlyingDealTokenAmount
+    );
+    event ClaimedUnderlyingDealToken(
+        address indexed underlyingDealTokenAddress,
+        address indexed recipient,
+        uint256 underlyingDealTokensClaimed
+    );
 }
