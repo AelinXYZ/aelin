@@ -1,27 +1,28 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import {IAelinPool} from "./IAelinPool.sol";
+import "../../libraries/AelinNftGating.sol";
+import "../../libraries/AelinAllowList.sol";
 
-interface IAelinVLP {
+interface IVestAMM {
     struct VestingSchedule {
         uint256 vestingPeriod;
         uint256 vestingCliffPeriod;
     }
 
     enum Deallocation {
-        NoneAndCapped,
+        None,
         Proportional,
         Laminar
     }
 
-    // TBD access rules here or maybe not
+    // assume 50/50 to deposit ratio to start
     struct AMMData {
-        address ammContract;
+        address ammContract; // could be null if no liquidity yet
         address quoteAsset;
         address baseAsset;
-        uint256 baseAssetWeight; // NOTE only using 2 assets to start probably so can just do 100-this value for the quote asset weight
-        uint256 investorShare;
+        uint256 baseAssetAmount;
+        uint256 depositorShare; // 0 to 100. Defaults to 50
         VestingSchedule vestingData;
     }
 
@@ -44,6 +45,22 @@ interface IAelinVLP {
         VestingSchedule vestingData;
         MigrationRules migrationRules;
     }
+
+    struct DepositToken {
+        address depositToken;
+        uint256 amount;
+    }
+
+    struct DealAccess {
+        bytes32 merkleRoot;
+        string ipfsHash;
+        AelinNftGating.NftCollectionRules[] nftCollectionRules;
+        AelinAllowList.InitData allowListInit;
+    }
+
+    event DepositPoolToken(address indexed baseAsset, address indexed depositor, uint256 baseAssetAmount);
+
+    event NewVestAMM(AMMData ammData, LiquidityLaunch liquidityLaunch, DealAccess dealAccess);
 
     event SetHolder(address indexed holder);
 
