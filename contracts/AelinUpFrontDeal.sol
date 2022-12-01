@@ -423,7 +423,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
         uint256 claimableAmount = claimableUnderlyingTokens(_tokenId);
         require(claimableAmount > 0, "no underlying ready to claim");
         address _underlyingDealToken = dealData.underlyingDealToken;
-        tokenDetails[_tokenId].lastClaimedAt = block.timestamp;
+        vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
         totalUnderlyingClaimed += claimableAmount;
         IERC20(_underlyingDealToken).safeTransfer(_owner, claimableAmount);
         emit ClaimedUnderlyingDealToken(_owner, _underlyingDealToken, claimableAmount);
@@ -435,7 +435,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
      */
 
     function claimableUnderlyingTokens(uint256 _tokenId) public view returns (uint256) {
-        TokenDetails memory schedule = tokenDetails[_tokenId];
+        VestingDetails memory schedule = vestingDetails[_tokenId];
         uint256 precisionAdjustedUnderlyingClaimable;
 
         if (schedule.lastClaimedAt > 0) {

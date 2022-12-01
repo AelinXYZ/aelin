@@ -179,33 +179,11 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
     }
 
     /**
-     * @dev a view showing the number of claimable deal tokens and the
-     * amount of the underlying deal token a purchaser gets in return
+     * @dev a view showing the number of claimable underlying deal
      */
-    // function claimableTokens(address purchaser)
-    //     public
-    //     view
-    //     returns (uint256 underlyingClaimable, uint256 dealTokensClaimable)
-    // {
-    //     underlyingClaimable = 0;
-    //     dealTokensClaimable = 0;
-
-    //     uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
-    //     if (
-    //         balanceOf(purchaser) > 0 &&
-    //         (maxTime > vestingCliffExpiry || (maxTime == vestingCliffExpiry && vestingPeriod == 0))
-    //     ) {
-    //         uint256 timeElapsed = maxTime - vestingCliffExpiry;
-
-    //         dealTokensClaimable = vestingPeriod == 0
-    //             ? balanceOf(purchaser)
-    //             : ((balanceOf(purchaser) + amountVested[purchaser]) * timeElapsed) / vestingPeriod - amountVested[purchaser];
-    //         underlyingClaimable = (underlyingPerDealExchangeRate * dealTokensClaimable) / 1e18;
-    //     }
-    // }
 
     function claimableUnderlyingTokens(uint256 _tokenId) public view returns (uint256) {
-        TokenDetails memory schedule = tokenDetails[_tokenId];
+        VestingDetails memory schedule = vestingDetails[_tokenId];
         uint256 precisionAdjustedUnderlyingClaimable;
 
         if (schedule.lastClaimedAt > 0) {
@@ -231,43 +209,27 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
      * of their underlying tokens once they have vested according to the schedule
      * created by the sponsor
      */
-    function claimUnderlyingTokens(uint256 _tokenId) external returns (uint256) {
-        return _claimUnderlyingTokens(msg.sender, _tokenId);
+    function claimUnderlyingTokens(uint256 _tokenId) external {
+        _claimUnderlyingTokens(msg.sender, _tokenId);
     }
 
-    function _claimUnderlyingTokens(address _owner, uint256 _tokenId) internal returns (uint256) {
+    function _claimUnderlyingTokens(address _owner, uint256 _tokenId) internal {
         require(ownerOf(_tokenId) == _owner, "must be owner to claim");
         uint256 claimableAmount = claimableUnderlyingTokens(_tokenId);
         require(claimableAmount > 0, "no underlying ready to claim");
-        tokenDetails[_tokenId].lastClaimedAt = block.timestamp;
+        vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
         totalUnderlyingClaimed += claimableAmount;
         IERC20(underlyingDealToken).safeTransfer(_owner, claimableAmount);
         emit ClaimedUnderlyingDealToken(underlyingDealToken, _owner, claimableAmount);
     }
-
-    // function _claim(address recipient) internal returns (uint256) {
-    //     (uint256 underlyingDealTokensClaimed, uint256 dealTokensClaimed) = claimableTokens(recipient);
-    //     if (dealTokensClaimed > 0) {
-    //         amountVested[recipient] += dealTokensClaimed;
-    //         totalUnderlyingClaimed += underlyingDealTokensClaimed;
-    //         _burn(recipient, dealTokensClaimed);
-    //         IERC20(underlyingDealToken).safeTransfer(recipient, underlyingDealTokensClaimed);
-    //         emit ClaimedUnderlyingDealToken(underlyingDealToken, recipient, underlyingDealTokensClaimed);
-    //     }
-    //     return dealTokensClaimed;
-    // }
 
     /**
      * @dev allows the purchaser to mint deal tokens. this method is also used
      * to send deal tokens to the sponsor. It may only be called from the pool
      * contract that created this deal
      */
-    function mintVestingToken(
-        address _to,
-        uint256 _amount,
-        uint256 _timestamp
-    ) external depositCompleted onlyPool {
-        _mintVestingToken(_to, _amount, _timestamp);
+    function mintVestingToken(address _to, uint256 _amount) external depositCompleted onlyPool {
+        _mintVestingToken(_to, _amount, vestingCliffExpiry);
     }
 
     /**

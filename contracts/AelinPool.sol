@@ -417,7 +417,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256 sponsorFeeAmt = (poolTokenDealFormatted * sponsorFee) / BASE;
 
         aelinDeal.mintVestingToken(sponsor, sponsorFeeAmt);
-        aelinDeal.protocolMint(aelinFeeAmt);
+        aelinDeal.transferProtocolFee(aelinFeeAmt);
         aelinDeal.mintVestingToken(_recipient, poolTokenDealFormatted - (sponsorFeeAmt + aelinFeeAmt));
         IERC20(purchaseToken).safeTransfer(holder, _poolTokenAmount);
         emit AcceptDeal(_recipient, address(aelinDeal), _poolTokenAmount, sponsorFeeAmt, aelinFeeAmt);

@@ -2,7 +2,7 @@
 pragma solidity 0.8.6;
 
 interface IAelinVestingToken {
-    struct TokenDetails {
+    struct VestingDetails {
         uint256 share;
         uint256 lastClaimedAt;
     }

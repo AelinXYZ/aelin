@@ -5,8 +5,13 @@ import "./AelinERC721.sol";
 import "./interfaces/IAelinVestingToken.sol";
 
 contract AelinVestingToken is AelinERC721, IAelinVestingToken {
-    mapping(uint256 => TokenDetails) public tokenDetails;
+    mapping(uint256 => VestingDetails) public vestingDetails;
     uint256 public tokenCount;
+
+    function _burnVestingToken(uint256 _tokenId) internal {
+        _burn(_tokenId);
+        delete vestingDetails[_tokenId];
+    }
 
     function _mintVestingToken(
         address _to,
@@ -14,7 +19,7 @@ contract AelinVestingToken is AelinERC721, IAelinVestingToken {
         uint256 _timestamp
     ) internal {
         _mint(_to, tokenCount);
-        tokenDetails[tokenCount] = TokenDetails(_amount, _timestamp);
+        vestingDetails[tokenCount] = VestingDetails(_amount, _timestamp);
         emit VestingTokenMinted(_to, tokenCount, _amount, _timestamp);
         tokenCount += 1;
     }
@@ -24,11 +29,11 @@ contract AelinVestingToken is AelinERC721, IAelinVestingToken {
         uint256 _tokenId,
         uint256 _shareAmount
     ) public nonReentrant {
-        TokenDetails memory schedule = tokenDetails[_tokenId];
+        VestingDetails memory schedule = vestingDetails[_tokenId];
         require(schedule.share > 0, "schedule does not exist");
         require(_shareAmount > 0, "share amount should be > 0");
         require(schedule.share > _shareAmount, "cant transfer more than current share");
-        tokenDetails[_tokenId] = TokenDetails(schedule.share - _shareAmount, schedule.lastClaimedAt);
+        vestingDetails[_tokenId] = VestingDetails(schedule.share - _shareAmount, schedule.lastClaimedAt);
         _mintVestingToken(_to, _shareAmount, schedule.lastClaimedAt);
     }
 
