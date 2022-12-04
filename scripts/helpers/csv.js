@@ -6,7 +6,7 @@ const fs = require('fs/promises');
 const json2csv = require('json-2-csv');
 const path = require('path');
 
-const MAX_WALLETS = 300000;
+const MAX_WALLETS = 35000;
 const MAX_ALLOCATION = 100000;
 const MIN_ALLOCATION = 1;
 
@@ -15,7 +15,7 @@ const fileExists = async (path) => !!(await fs.stat(path).catch((e) => false));
 const createCSVFile = async (rows) => {
 	const csv = await json2csv.json2csvAsync(rows);
 
-	const fileName = 'csv-for-merkel-tree.csv';
+	const fileName = '35K.csv';
 	const folder = `${process.cwd()}/scripts/helpers/`;
 
 	const isExist = await fileExists(path.join(folder, fileName));
@@ -35,10 +35,7 @@ const main = async () => {
 	for (let x = 0; x < MAX_WALLETS; x++) {
 		const randomWallet = Wallet.createRandom();
 
-		const randomAllocation = parseUnits(
-			String(Math.random() * (MAX_ALLOCATION - MIN_ALLOCATION) + MIN_ALLOCATION),
-			18
-		).toString();
+		const randomAllocation = '10000000000';
 
 		const row = {
 			address: randomWallet.address,
