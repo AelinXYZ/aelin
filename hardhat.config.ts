@@ -66,10 +66,10 @@ const config: HardhatUserConfig = {
       accounts: [`0x${process.env.ARBITRUM_PRIVATE_KEY}`],
       chainId: 42161,
     },
-    "arbitrum-goerli": {
-      url: `https://arb-goerli.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
-      accounts: [`0x${process.env.GOERLI_PRIVATE_KEY}`],
-      chainId: 421613,
+    polygon: {
+      url: `https://polygon-mainnet.infura.io/v3/${process.env.INFURA_POLY_API_KEY}`,
+      accounts: [`0x${process.env.POLYGON_PRIVATE_KEY}`],
+      chainId: 137,
     },
     hardhat: {
       initialBaseFeePerGas: 0,

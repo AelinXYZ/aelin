@@ -1,4 +1,4 @@
-[default]
+[profile.default]
 src = 'contracts'
 out = 'artifacts'
 libs = ['lib']
@@ -13,9 +13,10 @@ remappings = [
     'forge-std/=lib/forge-std/src/',
 ]
 # libraries = [
-#     "contracts/libraries/MerkleTree.sol:MerkleTree:0x70B0D8c1a00B937Cbb08DcA33812670D235157Bc",
-#     "contracts/libraries/AelinAllowList.sol:AelinAllowList:0xAA837deD11f623F6F56d03A5496FA6af71E6c9F5",
-#     "contracts/libraries/AelinNftGating.sol:AelinNftGating:0x103Dc458C4CEb1B47A4CF031919e426218a34048"
+#     "contracts/libraries/MerkleTree.sol:MerkleTree:0x806ec726fc022525a478608e162f528b5deee788",
+#     "contracts/libraries/AelinAllowList.sol:AelinAllowList:0x3c312abcef37e63e8ca3ac0c370fb1f8e74c0cec",
+#     "contracts/libraries/AelinNftGating.sol:AelinNftGating:0xfa0de0e65292c12ed22c80da331ca2806a84215d",
+#     "contracts/libraries/NftCheck.sol:NftCheck:0xa7a86ec3c266435c580354d8c9a33b1bc91697a7"
 # ]
 fuzz_max_global_rejects = 50000000
 
