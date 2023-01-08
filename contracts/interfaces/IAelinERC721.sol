@@ -5,6 +5,7 @@ interface IAelinERC721 {
     struct TokenDetails {
         uint256 share;
         uint256 lastClaimedAt;
+        uint256 vestingIndex;
     }
 
     event SetAelinERC721(string name, string symbol);
