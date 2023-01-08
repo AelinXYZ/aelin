@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
+import "./AelinERC20.sol";
 import "./AelinDeal.sol";
 import "./interfaces/IAelinPool.sol";
 import "./interfaces/ICryptoPunks.sol";
@@ -415,9 +416,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256 aelinFeeAmt = (poolTokenDealFormatted * AELIN_FEE) / BASE;
         uint256 sponsorFeeAmt = (poolTokenDealFormatted * sponsorFee) / BASE;
 
-        aelinDeal.mint(sponsor, sponsorFeeAmt);
-        aelinDeal.protocolMint(aelinFeeAmt);
-        aelinDeal.mint(_recipient, poolTokenDealFormatted - (sponsorFeeAmt + aelinFeeAmt));
+        aelinDeal.mintVestingToken(sponsor, sponsorFeeAmt);
+        aelinDeal.transferProtocolFee(aelinFeeAmt);
+        aelinDeal.mintVestingToken(_recipient, poolTokenDealFormatted - (sponsorFeeAmt + aelinFeeAmt));
         IERC20(purchaseToken).safeTransfer(holder, _poolTokenAmount);
         emit AcceptDeal(_recipient, address(aelinDeal), _poolTokenAmount, sponsorFeeAmt, aelinFeeAmt);
     }
