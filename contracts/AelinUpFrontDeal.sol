@@ -18,9 +18,9 @@ import "./libraries/MerkleTree.sol";
 contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestingToken {
     using SafeERC20 for IERC20;
 
-    uint256 constant BASE = 100 * 10**18;
-    uint256 constant MAX_SPONSOR_FEE = 15 * 10**18;
-    uint256 constant AELIN_FEE = 2 * 10**18;
+    uint256 constant BASE = 100 * 10 ** 18;
+    uint256 constant MAX_SPONSOR_FEE = 15 * 10 ** 18;
+    uint256 constant AELIN_FEE = 2 * 10 ** 18;
 
     UpFrontDealData public dealData;
     UpFrontDealConfig public dealConfig;
@@ -86,7 +86,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
 
         if (_dealConfig.purchaseRaiseMinimum > 0) {
             uint256 _totalIntendedRaise = (_dealConfig.purchaseTokenPerDealToken * _dealConfig.underlyingDealTokenTotal) /
-                10**underlyingTokenDecimals;
+                10 ** underlyingTokenDecimals;
             require(_totalIntendedRaise > 0, "intended raise too small");
             require(_dealConfig.purchaseRaiseMinimum <= _totalIntendedRaise, "raise min > deal total");
         }
@@ -194,7 +194,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
         MerkleTree.UpFrontMerkleData calldata _merkleData,
         uint256 _purchaseTokenAmount
     ) external nonReentrant {
-        require(underlyingDepositComplete, "deal token not deposited");
+        require(underlyingDepositComplete, "underlying deposit incomplete");
         require(block.timestamp < purchaseExpiry, "not in purchase window");
 
         address _purchaseToken = dealData.purchaseToken;
@@ -223,7 +223,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
 
         // this takes into account the decimal conversion between purchasing token and underlying deal token
         // pool shares having the same amount of decimals as underlying deal tokens
-        uint256 poolSharesAmount = (purchaseTokenAmount * 10**underlyingTokenDecimals) / _purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (purchaseTokenAmount * 10 ** underlyingTokenDecimals) / _purchaseTokenPerDealToken;
         require(poolSharesAmount > 0, "purchase amount too small");
 
         // pool shares directly correspond to the amount of deal tokens that can be minted
@@ -344,7 +344,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
             if (deallocate) {
                 uint256 _underlyingTokenDecimals = IERC20Extended(_underlyingDealToken).decimals();
                 uint256 _totalIntendedRaise = (dealConfig.purchaseTokenPerDealToken * _underlyingDealTokenTotal) /
-                    10**_underlyingTokenDecimals;
+                    10 ** _underlyingTokenDecimals;
 
                 uint256 precisionAdjustedRaise = _totalIntendedRaise > IERC20(_purchaseToken).balanceOf(address(this))
                     ? IERC20(_purchaseToken).balanceOf(address(this))
@@ -497,16 +497,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
      * @return uint256 allow list amount for _userAddress input
      * @return bool true if this deal has an allow list
      */
-    function getAllowList(address _userAddress)
-        public
-        view
-        returns (
-            address[] memory,
-            uint256[] memory,
-            uint256,
-            bool
-        )
-    {
+    function getAllowList(address _userAddress) public view returns (address[] memory, uint256[] memory, uint256, bool) {
         return (
             allowList.allowListAddresses,
             allowList.allowListAmounts,
@@ -524,17 +515,9 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
      * @return uint256[] for ERC1155, included token IDs for this collection
      * @return uint256[] for ERC1155, min number of tokens required for participating
      */
-    function getNftCollectionDetails(address _collection)
-        public
-        view
-        returns (
-            uint256,
-            address,
-            bool,
-            uint256[] memory,
-            uint256[] memory
-        )
-    {
+    function getNftCollectionDetails(
+        address _collection
+    ) public view returns (uint256, address, bool, uint256[] memory, uint256[] memory) {
         return (
             nftGating.nftCollectionDetails[_collection].purchaseAmount,
             nftGating.nftCollectionDetails[_collection].collectionAddress,
@@ -557,15 +540,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
         address _collection,
         address _wallet,
         uint256 _nftId
-    )
-        public
-        view
-        returns (
-            bool,
-            bool,
-            bool
-        )
-    {
+    ) public view returns (bool, bool, bool) {
         return (
             nftGating.nftWalletUsedForPurchase[_collection][_wallet],
             nftGating.nftId[_collection][_nftId],

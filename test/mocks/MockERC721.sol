@@ -16,11 +16,7 @@ contract MockERC721 is ERC721 {
         _burn(tokenId);
     }
 
-    function transfer(
-        address _to,
-        uint256 _tokenId,
-        bytes memory _data
-    ) public {
+    function transfer(address _to, uint256 _tokenId, bytes memory _data) public {
         _safeTransfer(msg.sender, _to, _tokenId, _data);
     }
 }

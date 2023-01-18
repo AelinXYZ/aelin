@@ -16,6 +16,7 @@ import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockERC20CustomDecimals} from "../mocks/MockERC20CustomDecimals.sol";
 import {MockERC721} from "../mocks/MockERC721.sol";
 import {MockERC1155} from "../mocks/MockERC1155.sol";
+import {MockPunks} from "../mocks/MockPunks.sol";
 
 contract AelinUpFrontDealTest is Test {
     using SafeERC20 for IERC20;
@@ -35,6 +36,7 @@ contract AelinUpFrontDealTest is Test {
     MockERC721 public collectionAddress3;
     MockERC1155 public collectionAddress4;
     MockERC1155 public collectionAddress5;
+    MockPunks public collectionAddressPunks;
 
     AelinNftGating.NftCollectionRules[] public nftCollectionRulesEmpty;
     IAelinUpFrontDeal.UpFrontDealConfig public sharedDealConfig;
@@ -42,6 +44,9 @@ contract AelinUpFrontDealTest is Test {
 
     address dealCreatorAddress = address(0xBEEF);
     address dealHolderAddress = address(0xDEAD);
+    address user1 = address(0x1337);
+    address user2 = address(0x1338);
+    address user3 = address(0x1339);
 
     address dealAddress;
     address dealAddressAllowDeallocation;
@@ -62,6 +67,7 @@ contract AelinUpFrontDealTest is Test {
         collectionAddress3 = new MockERC721("TestCollection", "TC");
         collectionAddress4 = new MockERC1155("");
         collectionAddress5 = new MockERC1155("");
+        collectionAddressPunks = new MockPunks();
 
         vm.startPrank(dealCreatorAddress);
         deal(address(this), type(uint256).max);
@@ -1197,39 +1203,225 @@ contract AelinUpFrontDealTest is Test {
 
     /*//////////////////////////////////////////////////////////////
                                   acceptDeal()
-        //////////////////////////////////////////////////////////////*/
+    //////////////////////////////////////////////////////////////*/
 
     // Revert scenarios
 
-    function testRevertAcceptDealBeforeDepositComplete(address _user, uint256 _purchaseAmount) public {}
+    function testRevertAcceptDealBeforeDepositComplete(address _user, uint256 _purchaseAmount) public {
+        vm.prank(_user);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        vm.expectRevert("underlying deposit incomplete");
+        AelinUpFrontDeal(dealAddress).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+    }
 
-    function testRevertAcceptDealNotInPurchaseWindow(address _user, uint256 _purchaseAmount) public {}
+    function testRevertAcceptDealNotInPurchaseWindow(address _user, uint256 _purchaseAmount) public {
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
 
-    function testRevertAcceptDealNotEnoughTokens() public {}
+        // deposit to start purchase period
+        vm.startPrank(dealHolderAddress);
+        deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
+        underlyingDealToken.approve(address(dealAddress), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(underlyingDealTokenTotal);
+        vm.stopPrank();
 
-    function testRevertAcceptDealOverTotal() public {}
+        // warp past purchase period and try to accept deal
+        uint256 purchaseExpiry = AelinUpFrontDeal(dealAddress).purchaseExpiry();
+        vm.warp(purchaseExpiry + 1000);
+        vm.startPrank(_user);
+        vm.expectRevert("not in purchase window");
+        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
 
-    function testRevertAcceptDealNotInAllowList(address _user, uint256 _purchaseAmount) public {}
+        // try on a contract that was deposited during intialize
+        purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
+        vm.warp(purchaseExpiry + 1000);
+        vm.expectRevert("not in purchase window");
+        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+    }
 
-    function testRevertAcceptDealOverAllowListAllocation(uint256 _purchaseAmount) public {}
+    function testRevertAcceptDealNotEnoughTokens() public {
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        uint256 tokenAmount = 100;
+        vm.prank(user1);
+        deal(address(purchaseToken), user1, tokenAmount);
+        purchaseToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
+        vm.expectRevert("not enough purchaseToken");
+        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, tokenAmount + 1);
+        vm.stopPrank();
+    }
 
-    function testRevertAcceptDealNoNftList() public {}
+    function testRevertAcceptDealOverAllowListAllocation(uint256 _purchaseAmount) public {
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressAllowList), type(uint256).max);
+        (, , uint256 allocatedAmount, ) = AelinUpFrontDeal(dealAddressAllowList).getAllowList(user1);
+        vm.expectRevert("more than allocation");
+        AelinUpFrontDeal(dealAddressAllowList).acceptDeal(nftPurchaseList, merkleDataEmpty, allocatedAmount + 1);
+        vm.stopPrank();
+    }
 
-    function testRevertAcceptDealNoNftPurchaseList() public {}
+    function testRevertPurchaseAmountTooSmall(uint256 _purchaseAmount) public {
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressAllowList), type(uint256).max);
+        (, , uint256 allocatedAmount, ) = AelinUpFrontDeal(dealAddressAllowList).getAllowList(user1);
+        vm.expectRevert("purchase amount too small");
+        AelinUpFrontDeal(dealAddressAllowList).acceptDeal(nftPurchaseList, merkleDataEmpty, 0);
+        vm.stopPrank();
+    }
 
-    function testRevertAcceptDealNftCollectionNotInTheList() public {}
+    function testRevertAcceptDealOverTotal() public {
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
+            dealAddressOverFullDeposit
+        ).dealConfig();
 
-    function testRevertAcceptDealERC720MustBeOwner() public {}
+        uint256 raiseAmount = (underlyingDealTokenTotal * purchaseTokenPerDealToken) / 10 ** underlyingTokenDecimals;
 
-    function testRevertAcceptDealPunksMustBeOwner() public {}
+        // User 1 tries to deposit more than the total purchase amount
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
 
-    function testRevertAcceptDealERC721AlreadyUsed() public {}
+        uint256 expectedPoolShareAmount = ((raiseAmount + 1e18) * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        assertGt(expectedPoolShareAmount, underlyingDealTokenTotal);
+        vm.expectRevert("purchased amount > total");
+        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, raiseAmount + 1e18);
 
-    function testRevertAcceptDealERC721WalletAlreadyUsed() public {}
+        // User 1 now deposits less than the total purchase amount
+        uint256 purchaseAmount1 = raiseAmount - 2e18;
+        expectedPoolShareAmount = (purchaseAmount1 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user1, purchaseAmount1, purchaseAmount1, expectedPoolShareAmount, expectedPoolShareAmount);
+        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount1);
+        vm.stopPrank();
 
-    function testRevertAcceptDealERC721OverAllowed() public {}
+        // User 2 now deposits more than the total purchase amount
+        vm.startPrank(user2);
+        deal(address(purchaseToken), user2, type(uint256).max);
+        purchaseToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
+        uint256 purchaseAmount2 = purchaseAmount1 + 3e18;
+        uint256 totalPoolShares = ((purchaseAmount2 + purchaseAmount1) * 10 ** underlyingTokenDecimals) /
+            purchaseTokenPerDealToken;
+        assertGt(totalPoolShares, underlyingDealTokenTotal);
+        vm.expectRevert("purchased amount > total");
+        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount2);
+        vm.stopPrank();
+    }
 
-    function testRevertAcceptDealERC1155BalanceTooLow() public {}
+    function testRevertAcceptDealNotInAllowList(uint256 _purchaseAmount) public {
+        vm.assume(_purchaseAmount > 0);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        vm.startPrank(user2);
+        deal(address(purchaseToken), user2, type(uint256).max);
+        purchaseToken.approve(address(dealAddressAllowList), type(uint256).max);
+        vm.expectRevert("more than allocation");
+        AelinUpFrontDeal(dealAddressAllowList).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+    }
+
+    function testRevertAcceptDealNoNftList(uint256 _purchaseAmount) public {
+        vm.startPrank(user1);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](2);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressAllowList), type(uint256).max);
+        vm.expectRevert("pool does not have an NFT list");
+        AelinUpFrontDeal(dealAddressAllowList).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+    }
+
+    function testRevertAcceptDealNoNftPurchaseList(uint256 _purchaseAmount) public {
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating721), type(uint256).max);
+        vm.expectRevert("must provide purchase list");
+        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+    }
+
+    function testRevertAcceptDealNftCollectionNotSupported(uint256 _purchaseAmount) public {
+        vm.startPrank(user1);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](2);
+        nftPurchaseList[0].collectionAddress = punks;
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating721), type(uint256).max);
+        vm.expectRevert("collection not in the pool");
+        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+    }
+
+    function testRevertAcceptDealERC720MustBeOwner(uint256 _purchaseAmount) public {
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating721), type(uint256).max);
+        uint256[] memory tokenIdsArray = new uint256[](2);
+        tokenIdsArray[0] = 1;
+        tokenIdsArray[1] = 2;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress1);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+        // We mint the tokens to another user
+        MockERC721(collectionAddress1).mint(user2, 1);
+        MockERC721(collectionAddress1).mint(user2, 2);
+        vm.expectRevert("has to be the token owner");
+        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+    }
+
+    function testRevertAcceptDealPunksMustBeOwner(uint256 _purchaseAmount) public {
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGatingPunks), type(uint256).max);
+
+        // Since punks address is hardcoded we need to cheat and link the Mock contract to the address
+        bytes memory punksContractCode = address(collectionAddressPunks).code;
+        vm.etch(punks, punksContractCode);
+        uint256[] memory tokenIdsArray = new uint256[](2);
+        // We mint some punks to another user
+        MockPunks(punks).mint(user2, 1);
+        MockPunks(punks).mint(user2, 2);
+        tokenIdsArray[0] = 1;
+        tokenIdsArray[1] = 2;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(punks);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+
+        // We mint the tokens to another user
+        vm.expectRevert("not the owner");
+        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+    }
+
+    function testRevertAcceptDealERC1155BalanceTooLow(uint256 _purchaseAmount) public {
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating721), type(uint256).max);
+        uint256[] memory tokenIdsArray = new uint256[](2);
+        tokenIdsArray[0] = 1;
+        tokenIdsArray[1] = 2;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress4);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+        // We mint the tokens to another user
+        MockERC1155(collectionAddress4).mint(user2, 1, 1, "");
+        MockERC1155(collectionAddress4).mint(user2, 2, 1, "");
+        vm.expectRevert("erc1155 balance too low");
+        AelinUpFrontDeal(dealAddressNftGating1155).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+    }
+
+    function testRevertAcceptDealERC721AlreadyUsed(uint256 _purchaseAmount) public {}
+
+    function testRevertAcceptDealERC721WalletAlreadyUsed(uint256 _purchaseAmount) public {}
+
+    function testRevertAcceptDealERC721OverAllowed(uint256 _purchaseAmount) public {}
 
     // Pass scenarios
 
@@ -1449,4 +1641,12 @@ contract AelinUpFrontDealTest is Test {
     event Disavow(address indexed voucher);
 
     event WithdrewExcess(address UpFrontDealAddress, uint256 amountWithdrawn);
+
+    event AcceptDeal(
+        address indexed user,
+        uint256 amountPurchased,
+        uint256 totalPurchased,
+        uint256 amountDealTokens,
+        uint256 totalDealTokens
+    );
 }
