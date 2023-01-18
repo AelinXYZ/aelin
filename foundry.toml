@@ -1,4 +1,5 @@
-[default]
+
+[profile.default]
 src = 'contracts'
 out = 'artifacts'
 libs = ['lib']
@@ -12,11 +13,11 @@ remappings = [
     'ds-test/=lib/forge-std/lib/ds-test/src/',
     'forge-std/=lib/forge-std/src/',
 ]
-# libraries = [
-#     "contracts/libraries/MerkleTree.sol:MerkleTree:0x70B0D8c1a00B937Cbb08DcA33812670D235157Bc",
-#     "contracts/libraries/AelinAllowList.sol:AelinAllowList:0xAA837deD11f623F6F56d03A5496FA6af71E6c9F5",
-#     "contracts/libraries/AelinNftGating.sol:AelinNftGating:0x103Dc458C4CEb1B47A4CF031919e426218a34048"
-# ]
-fuzz_max_global_rejects = 50000000
 
-# See more config options https://github.com/foundry-rs/foundry/tree/master/config
+fuzz_max_global_rejects = 50000000
+ 
+libraries = [
+    "contracts/libraries/AelinAllowList.sol:AelinAllowList:0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+    "contracts/libraries/MerkleTree.sol:MerkleTree:0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+    "contracts/libraries/AelinNftGating.sol:AelinNftGating:0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
+]
