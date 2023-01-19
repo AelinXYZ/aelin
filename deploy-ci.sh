@@ -26,24 +26,6 @@ addresses=()
 
 echo "*******  DEPLOYING ALL CONTRACTS TO PERFORM END-TO-END TESTS ********"
 
-
-# Reset foundry.toml
-echo "[profile.default]
-src = 'contracts'
-out = 'artifacts'
-libs = ['lib']
-remappings = [
-    '@ensdomains/=node_modules/@ensdomains/',
-    '@eth-optimism/=node_modules/@eth-optimism/',
-    '@openzeppelin/=node_modules/@openzeppelin/',
-    'eth-gas-reporter/=node_modules/eth-gas-reporter/',
-    'hardhat/=node_modules/hardhat/',
-    'openzeppelin-solidity-2.3.0/=node_modules/openzeppelin-solidity-2.3.0/',
-    'ds-test/=lib/forge-std/lib/ds-test/src/',
-    'forge-std/=lib/forge-std/src/',
-]
-" > foundry.toml
-
 # 1. Deploying contracts
 for i in {0..6}
 do
@@ -73,7 +55,7 @@ echo "AelinUpFrontDeal_address=$address_aelinUpFrontDeal"
 # 4. Deploying AelinUpFrontDealFactory
 output_aelinUpFrontDealFactory=$(forge create --rpc-url http://anvil:8545 --private-key $private_key contracts/AelinUpFrontDealFactory.sol:AelinUpFrontDealFactory --constructor-args $address_aelinUpFrontDeal ${addresses[0]} $tresury)
 address_aelinUpFrontDealFactory=$(echo "$output_aelinUpFrontDealFactory" | grep "Deployed to: " | awk '{print $3}')
-echo "AelinUpFrontDeal_address=$address_aelinUpFrontDealFactory" >> .env.linuz
+echo "AelinUpFrontDealFactory_address=$address_aelinUpFrontDealFactory" >> .env.linuz
 echo "AelinUpFrontDealFactory_address=$address_aelinUpFrontDealFactory"
 
 # 5. Deploying AelinPoolFactory
