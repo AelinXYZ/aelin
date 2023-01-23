@@ -47,13 +47,16 @@ contract AelinUpFrontDealTest is Test {
     address user1 = address(0x1337);
     address user2 = address(0x1338);
     address user3 = address(0x1339);
+    address user4 = address(0x1340);
 
-    address dealAddress;
+    address dealAddressNoDeallocationNoDeposit;
+    address dealAddressAllowDeallocationNoDeposit;
+    address dealAddressNoDeallocation;
     address dealAddressAllowDeallocation;
-    address dealAddressOverFullDeposit;
     address dealAddressAllowList;
     address dealAddressNftGating721;
     address dealAddressNftGatingPunks;
+    address dealAddressNftGatingPunksPerToken;
     address dealAddressNftGating1155;
 
     function setUp() public {
@@ -83,9 +86,9 @@ contract AelinUpFrontDealTest is Test {
 
         address[] memory testAllowListAddresses = new address[](3);
         uint256[] memory testAllowListAmounts = new uint256[](3);
-        testAllowListAddresses[0] = address(0x1337);
-        testAllowListAddresses[1] = address(0xBEEF);
-        testAllowListAddresses[2] = address(0xDEED);
+        testAllowListAddresses[0] = user1;
+        testAllowListAddresses[1] = user2;
+        testAllowListAddresses[2] = user3;
         testAllowListAmounts[0] = 1e18;
         testAllowListAmounts[1] = 2e18;
         testAllowListAmounts[2] = 3e18;
@@ -95,7 +98,8 @@ contract AelinUpFrontDealTest is Test {
         // NFT Gating
 
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules721 = getERC721Collection();
-        AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = getPunksCollection();
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = getPunksCollection(false);
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunksPerToken = getPunksCollection(true);
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules1155 = getERC1155Collection();
 
         // Deal initialization
@@ -135,7 +139,21 @@ contract AelinUpFrontDealTest is Test {
             allowDeallocation: true
         });
 
-        dealAddress = upFrontDealFactory.createUpFrontDeal(
+        dealAddressNoDeallocationNoDeposit = upFrontDealFactory.createUpFrontDeal(
+            dealData,
+            dealConfig,
+            nftCollectionRulesEmpty,
+            allowListInitEmpty
+        );
+
+        dealAddressAllowDeallocationNoDeposit = upFrontDealFactory.createUpFrontDeal(
+            dealData,
+            dealConfigAllowDeallocation,
+            nftCollectionRulesEmpty,
+            allowListInitEmpty
+        );
+
+        dealAddressNoDeallocation = upFrontDealFactory.createUpFrontDeal(
             dealData,
             dealConfig,
             nftCollectionRulesEmpty,
@@ -145,13 +163,6 @@ contract AelinUpFrontDealTest is Test {
         dealAddressAllowDeallocation = upFrontDealFactory.createUpFrontDeal(
             dealData,
             dealConfigAllowDeallocation,
-            nftCollectionRulesEmpty,
-            allowListInitEmpty
-        );
-
-        dealAddressOverFullDeposit = upFrontDealFactory.createUpFrontDeal(
-            dealData,
-            dealConfig,
             nftCollectionRulesEmpty,
             allowListInitEmpty
         );
@@ -177,6 +188,13 @@ contract AelinUpFrontDealTest is Test {
             allowListInitEmpty
         );
 
+        dealAddressNftGatingPunksPerToken = upFrontDealFactory.createUpFrontDeal(
+            dealData,
+            dealConfig,
+            nftCollectionRulesPunksPerToken,
+            allowListInitEmpty
+        );
+
         dealAddressNftGating1155 = upFrontDealFactory.createUpFrontDeal(
             dealData,
             dealConfig,
@@ -189,17 +207,25 @@ contract AelinUpFrontDealTest is Test {
 
         // Deposit underlying tokens to save time for next tests
         deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        underlyingDealToken.approve(address(dealAddressNoDeallocation), type(uint256).max);
+        AelinUpFrontDeal(dealAddressNoDeallocation).depositUnderlyingTokens(1e35);
+
+        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        underlyingDealToken.approve(address(dealAddressAllowDeallocation), type(uint256).max);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).depositUnderlyingTokens(1e35);
+
+        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
         underlyingDealToken.approve(address(dealAddressAllowList), type(uint256).max);
         AelinUpFrontDeal(dealAddressAllowList).depositUnderlyingTokens(1e35);
-
-        underlyingDealToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
-        AelinUpFrontDeal(dealAddressOverFullDeposit).depositUnderlyingTokens(1e36);
 
         underlyingDealToken.approve(address(dealAddressNftGating721), type(uint256).max);
         AelinUpFrontDeal(dealAddressNftGating721).depositUnderlyingTokens(1e35);
 
         underlyingDealToken.approve(address(dealAddressNftGatingPunks), type(uint256).max);
         AelinUpFrontDeal(dealAddressNftGatingPunks).depositUnderlyingTokens(1e35);
+
+        underlyingDealToken.approve(address(dealAddressNftGatingPunksPerToken), type(uint256).max);
+        AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).depositUnderlyingTokens(1e35);
 
         underlyingDealToken.approve(address(dealAddressNftGating1155), type(uint256).max);
         AelinUpFrontDeal(dealAddressNftGating1155).depositUnderlyingTokens(1e35);
@@ -239,14 +265,14 @@ contract AelinUpFrontDealTest is Test {
             });
     }
 
-    function getAllowList() public pure returns (AelinAllowList.InitData memory) {
+    function getAllowList() public view returns (AelinAllowList.InitData memory) {
         AelinAllowList.InitData memory allowList;
 
         address[] memory testAllowListAddresses = new address[](3);
         uint256[] memory testAllowListAmounts = new uint256[](3);
-        testAllowListAddresses[0] = address(0x1337);
-        testAllowListAddresses[1] = address(0xBEEF);
-        testAllowListAddresses[2] = address(0xDEED);
+        testAllowListAddresses[0] = user1;
+        testAllowListAddresses[1] = user2;
+        testAllowListAddresses[2] = user3;
         testAllowListAmounts[0] = 1e18;
         testAllowListAmounts[1] = 2e18;
         testAllowListAmounts[2] = 3e18;
@@ -293,12 +319,12 @@ contract AelinUpFrontDealTest is Test {
         return nftCollectionRules1155;
     }
 
-    function getPunksCollection() public view returns (AelinNftGating.NftCollectionRules[] memory) {
+    function getPunksCollection(bool _purchaseIsPerToken) public view returns (AelinNftGating.NftCollectionRules[] memory) {
         AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = new AelinNftGating.NftCollectionRules[](1);
 
         nftCollectionRulesPunks[0].collectionAddress = address(punks);
         nftCollectionRulesPunks[0].purchaseAmount = 1e22;
-        nftCollectionRulesPunks[0].purchaseAmountPerToken = false;
+        nftCollectionRulesPunks[0].purchaseAmountPerToken = _purchaseIsPerToken;
 
         return nftCollectionRulesPunks;
     }
@@ -317,7 +343,7 @@ contract AelinUpFrontDealTest is Test {
         IAelinUpFrontDeal.UpFrontDealConfig memory dealConfig = getDealConfig();
 
         vm.expectRevert("can only init once");
-        AelinUpFrontDeal(dealAddress).initialize(
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).initialize(
             dealData,
             dealConfig,
             nftCollectionRulesEmpty,
@@ -501,7 +527,7 @@ contract AelinUpFrontDealTest is Test {
         vm.startPrank(dealCreatorAddress);
 
         AelinAllowList.InitData memory allowListInitEmpty;
-        AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = getPunksCollection();
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = getPunksCollection(false);
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules1155 = getERC1155Collection();
 
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules = new AelinNftGating.NftCollectionRules[](3);
@@ -542,60 +568,181 @@ contract AelinUpFrontDealTest is Test {
 
     // Pass scenarios
 
+    function testInitializeNoDeallocationNoDeposit() public {
+        string memory tempString;
+        address tempAddress;
+        uint256 tempUint;
+        bool tempBool;
+        // balance
+        assertEq(underlyingDealToken.balanceOf(address(dealAddressNoDeallocationNoDeposit)), 0);
+        // deal contract storage
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealFactory(), address(upFrontDealFactory));
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).name(), "aeUpFrontDeal-DEAL");
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).symbol(), "aeUD-DEAL");
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealStart(), block.timestamp);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).aelinEscrowLogicAddress(), address(testEscrow));
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).aelinTreasuryAddress(), aelinTreasury);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).tokenCount(), 0);
+        // underlying hasn't been deposited yet so deal has't started
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).purchaseExpiry(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).vestingCliffExpiry(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).vestingExpiry(), 0);
+        // deal data
+        (tempString, , , , , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
+        assertEq(tempString, "DEAL");
+        (, tempString, , , , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
+        assertEq(tempString, "DEAL");
+        (, , tempAddress, , , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
+        assertEq(tempAddress, address(purchaseToken));
+        (, , , tempAddress, , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
+        assertEq(tempAddress, address(underlyingDealToken));
+        (, , , , tempAddress, , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
+        assertEq(tempAddress, address(0xDEAD));
+        (, , , , , tempAddress, , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
+        assertEq(tempAddress, address(0xBEEF));
+        (, , , , , , tempUint, , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
+        assertEq(tempUint, 1e18);
+        // deal config
+        (tempUint, , , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
+        assertEq(tempUint, 1e35);
+        (, tempUint, , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
+        assertEq(tempUint, 3e18);
+        (, , tempUint, , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
+        assertEq(tempUint, 1e28);
+        (, , , tempUint, , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
+        assertEq(tempUint, 10 days);
+        (, , , , tempUint, , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
+        assertEq(tempUint, 365 days);
+        (, , , , , tempUint, ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
+        assertEq(tempUint, 60 days);
+        (, , , , , , tempBool) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
+        assertFalse(tempBool);
+        // test allow list
+        (, , , tempBool) = AelinUpFrontDeal(dealAddressNoDeallocation).getAllowList(address(0));
+        assertFalse(tempBool);
+        // test nft gating
+        (, , tempBool) = AelinUpFrontDeal(dealAddressNoDeallocation).getNftGatingDetails(address(0), address(0), 0);
+        assertFalse(tempBool);
+    }
+
+    function testInitializeAllowDeallocationNoDeposit() public {
+        string memory tempString;
+        address tempAddress;
+        uint256 tempUint;
+        bool tempBool;
+        // balance
+        assertEq(underlyingDealToken.balanceOf(address(dealAddressAllowDeallocationNoDeposit)), 0);
+        // deal contract storage
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealFactory(), address(upFrontDealFactory));
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).name(), "aeUpFrontDeal-DEAL");
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).symbol(), "aeUD-DEAL");
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealStart(), block.timestamp);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).aelinEscrowLogicAddress(), address(testEscrow));
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).aelinTreasuryAddress(), aelinTreasury);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).tokenCount(), 0);
+        // underlying hasn't been deposited yet so deal has't started
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).purchaseExpiry(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).vestingCliffExpiry(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).vestingExpiry(), 0);
+        // deal data
+        (tempString, , , , , , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealData();
+        assertEq(tempString, "DEAL");
+        (, tempString, , , , , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealData();
+        assertEq(tempString, "DEAL");
+        (, , tempAddress, , , , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealData();
+        assertEq(tempAddress, address(purchaseToken));
+        (, , , tempAddress, , , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealData();
+        assertEq(tempAddress, address(underlyingDealToken));
+        (, , , , tempAddress, , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealData();
+        assertEq(tempAddress, address(0xDEAD));
+        (, , , , , tempAddress, , , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealData();
+        assertEq(tempAddress, address(0xBEEF));
+        (, , , , , , tempUint, , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealData();
+        assertEq(tempUint, 1e18);
+        // deal config
+        (tempUint, , , , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealConfig();
+        assertEq(tempUint, 1e35);
+        (, tempUint, , , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealConfig();
+        assertEq(tempUint, 3e18);
+        (, , tempUint, , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealConfig();
+        assertEq(tempUint, 0);
+        (, , , tempUint, , , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealConfig();
+        assertEq(tempUint, 10 days);
+        (, , , , tempUint, , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealConfig();
+        assertEq(tempUint, 365 days);
+        (, , , , , tempUint, ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealConfig();
+        assertEq(tempUint, 60 days);
+        (, , , , , , tempBool) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealConfig();
+        assertTrue(tempBool);
+        // test allow list
+        (, , , tempBool) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).getAllowList(address(0));
+        assertFalse(tempBool);
+        // test nft gating
+        (, , tempBool) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).getNftGatingDetails(
+            address(0),
+            address(0),
+            0
+        );
+        assertFalse(tempBool);
+    }
+
     function testInitializeNoDeallocation() public {
         string memory tempString;
         address tempAddress;
         uint256 tempUint;
         bool tempBool;
         // balance
-        assertEq(underlyingDealToken.balanceOf(address(dealAddress)), 0);
+        assertEq(underlyingDealToken.balanceOf(address(dealAddressNoDeallocation)), 1e35);
         // deal contract storage
-        assertEq(AelinUpFrontDeal(dealAddress).dealFactory(), address(upFrontDealFactory));
-        assertEq(AelinUpFrontDeal(dealAddress).name(), "aeUpFrontDeal-DEAL");
-        assertEq(AelinUpFrontDeal(dealAddress).symbol(), "aeUD-DEAL");
-        assertEq(AelinUpFrontDeal(dealAddress).dealStart(), block.timestamp);
-        assertEq(AelinUpFrontDeal(dealAddress).aelinEscrowLogicAddress(), address(testEscrow));
-        assertEq(AelinUpFrontDeal(dealAddress).aelinTreasuryAddress(), aelinTreasury);
-        assertEq(AelinUpFrontDeal(dealAddress).tokenCount(), 0);
-        // underlying hasn't been deposited yet so deal has't started
-        assertEq(AelinUpFrontDeal(dealAddress).purchaseExpiry(), 0);
-        assertEq(AelinUpFrontDeal(dealAddress).vestingCliffExpiry(), 0);
-        assertEq(AelinUpFrontDeal(dealAddress).vestingExpiry(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).dealFactory(), address(upFrontDealFactory));
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).name(), "aeUpFrontDeal-DEAL");
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).symbol(), "aeUD-DEAL");
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).dealStart(), block.timestamp);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).aelinEscrowLogicAddress(), address(testEscrow));
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).aelinTreasuryAddress(), aelinTreasury);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).tokenCount(), 0);
+        // underlying has deposited so deal has started
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).purchaseExpiry(), block.timestamp + 10 days);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
+        assertEq(
+            AelinUpFrontDeal(dealAddressNoDeallocation).vestingExpiry(),
+            block.timestamp + 10 days + 60 days + 365 days
+        );
         // deal data
-        (tempString, , , , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (tempString, , , , , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealData();
         assertEq(tempString, "DEAL");
-        (, tempString, , , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, tempString, , , , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealData();
         assertEq(tempString, "DEAL");
-        (, , tempAddress, , , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , tempAddress, , , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealData();
         assertEq(tempAddress, address(purchaseToken));
-        (, , , tempAddress, , , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , tempAddress, , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealData();
         assertEq(tempAddress, address(underlyingDealToken));
-        (, , , , tempAddress, , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , tempAddress, , , , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealData();
         assertEq(tempAddress, address(0xDEAD));
-        (, , , , , tempAddress, , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , , tempAddress, , , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealData();
         assertEq(tempAddress, address(0xBEEF));
-        (, , , , , , tempUint, , ) = AelinUpFrontDeal(dealAddress).dealData();
+        (, , , , , , tempUint, , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealData();
         assertEq(tempUint, 1e18);
         // deal config
-        (tempUint, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        (tempUint, , , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
         assertEq(tempUint, 1e35);
-        (, tempUint, , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        (, tempUint, , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
         assertEq(tempUint, 3e18);
-        (, , tempUint, , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        (, , tempUint, , , , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
         assertEq(tempUint, 1e28);
-        (, , , tempUint, , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        (, , , tempUint, , , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
         assertEq(tempUint, 10 days);
-        (, , , , tempUint, , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        (, , , , tempUint, , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
         assertEq(tempUint, 365 days);
-        (, , , , , tempUint, ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        (, , , , , tempUint, ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
         assertEq(tempUint, 60 days);
-        (, , , , , , tempBool) = AelinUpFrontDeal(dealAddress).dealConfig();
+        (, , , , , , tempBool) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
         assertFalse(tempBool);
         // test allow list
-        (, , , tempBool) = AelinUpFrontDeal(dealAddressOverFullDeposit).getAllowList(address(0));
+        (, , , tempBool) = AelinUpFrontDeal(dealAddressNoDeallocation).getAllowList(address(0));
         assertFalse(tempBool);
         // test nft gating
-        (, , tempBool) = AelinUpFrontDeal(dealAddressOverFullDeposit).getNftGatingDetails(address(0), address(0), 0);
+        (, , tempBool) = AelinUpFrontDeal(dealAddressNoDeallocation).getNftGatingDetails(address(0), address(0), 0);
         assertFalse(tempBool);
     }
 
@@ -605,19 +752,22 @@ contract AelinUpFrontDealTest is Test {
         uint256 tempUint;
         bool tempBool;
         // balance
-        assertEq(underlyingDealToken.balanceOf(address(dealAddressAllowDeallocation)), 0);
+        assertEq(underlyingDealToken.balanceOf(address(dealAddressAllowDeallocation)), 1e35);
         // deal contract storage
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).dealFactory(), address(upFrontDealFactory));
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).name(), "aeUpFrontDeal-DEAL");
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).symbol(), "aeUD-DEAL");
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).dealStart(), block.timestamp);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).aelinEscrowLogicAddress(), address(testEscrow));
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).aelinTreasuryAddress(), aelinTreasury);
-        assertEq(AelinUpFrontDeal(dealAddress).tokenCount(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).dealFactory(), address(upFrontDealFactory));
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).name(), "aeUpFrontDeal-DEAL");
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).symbol(), "aeUD-DEAL");
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).dealStart(), block.timestamp);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).aelinEscrowLogicAddress(), address(testEscrow));
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).aelinTreasuryAddress(), aelinTreasury);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).tokenCount(), 0);
         // underlying hasn't been deposited yet so deal has't started
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry(), 0);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).vestingCliffExpiry(), 0);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).vestingExpiry(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).purchaseExpiry(), block.timestamp + 10 days);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
+        assertEq(
+            AelinUpFrontDeal(dealAddressNoDeallocation).vestingExpiry(),
+            block.timestamp + 10 days + 60 days + 365 days
+        );
         // deal data
         (tempString, , , , , , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealData();
         assertEq(tempString, "DEAL");
@@ -656,66 +806,6 @@ contract AelinUpFrontDealTest is Test {
         assertFalse(tempBool);
     }
 
-    function testInitializeOverFullDeposit() public {
-        string memory tempString;
-        address tempAddress;
-        uint256 tempUint;
-        bool tempBool;
-        // balance
-        assertEq(underlyingDealToken.balanceOf(address(dealAddressOverFullDeposit)), 1e36);
-        // deal contract storage
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).dealFactory(), address(upFrontDealFactory));
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).name(), "aeUpFrontDeal-DEAL");
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).symbol(), "aeUD-DEAL");
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).dealStart(), block.timestamp);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).aelinEscrowLogicAddress(), address(testEscrow));
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).aelinTreasuryAddress(), aelinTreasury);
-        assertEq(AelinUpFrontDeal(dealAddress).tokenCount(), 0);
-        // underlying has deposited so deal has started
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry(), block.timestamp + 10 days);
-        assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
-        assertEq(
-            AelinUpFrontDeal(dealAddressOverFullDeposit).vestingExpiry(),
-            block.timestamp + 10 days + 60 days + 365 days
-        );
-        // deal data
-        (tempString, , , , , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
-        assertEq(tempString, "DEAL");
-        (, tempString, , , , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
-        assertEq(tempString, "DEAL");
-        (, , tempAddress, , , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
-        assertEq(tempAddress, address(purchaseToken));
-        (, , , tempAddress, , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
-        assertEq(tempAddress, address(underlyingDealToken));
-        (, , , , tempAddress, , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
-        assertEq(tempAddress, address(0xDEAD));
-        (, , , , , tempAddress, , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
-        assertEq(tempAddress, address(0xBEEF));
-        (, , , , , , tempUint, , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealData();
-        assertEq(tempUint, 1e18);
-        // deal config
-        (tempUint, , , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
-        assertEq(tempUint, 1e35);
-        (, tempUint, , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
-        assertEq(tempUint, 3e18);
-        (, , tempUint, , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
-        assertEq(tempUint, 1e28);
-        (, , , tempUint, , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
-        assertEq(tempUint, 10 days);
-        (, , , , tempUint, , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
-        assertEq(tempUint, 365 days);
-        (, , , , , tempUint, ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
-        assertEq(tempUint, 60 days);
-        (, , , , , , tempBool) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
-        assertFalse(tempBool);
-        // test allow list
-        (, , , tempBool) = AelinUpFrontDeal(dealAddressOverFullDeposit).getAllowList(address(0));
-        assertFalse(tempBool);
-        // test nft gating
-        (, , tempBool) = AelinUpFrontDeal(dealAddressOverFullDeposit).getNftGatingDetails(address(0), address(0), 0);
-        assertFalse(tempBool);
-    }
-
     function testInitializeAllowList() public {
         string memory tempString;
         address tempAddress;
@@ -730,7 +820,7 @@ contract AelinUpFrontDealTest is Test {
         assertEq(AelinUpFrontDeal(dealAddressAllowList).dealStart(), block.timestamp);
         assertEq(AelinUpFrontDeal(dealAddressAllowList).aelinEscrowLogicAddress(), address(testEscrow));
         assertEq(AelinUpFrontDeal(dealAddressAllowList).aelinTreasuryAddress(), aelinTreasury);
-        assertEq(AelinUpFrontDeal(dealAddress).tokenCount(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressAllowList).tokenCount(), 0);
         // underlying has deposited so deal has started
         assertEq(AelinUpFrontDeal(dealAddressAllowList).purchaseExpiry(), block.timestamp + 10 days);
         assertEq(AelinUpFrontDeal(dealAddressAllowList).vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
@@ -739,18 +829,18 @@ contract AelinUpFrontDealTest is Test {
         uint256[] memory tempUintArray;
         address[] memory testAllowListAddresses = new address[](3);
         uint256[] memory testAllowListAmounts = new uint256[](3);
-        testAllowListAddresses[0] = address(0x1337);
-        testAllowListAddresses[1] = address(0xBEEF);
-        testAllowListAddresses[2] = address(0xDEED);
+        testAllowListAddresses[0] = user1;
+        testAllowListAddresses[1] = user2;
+        testAllowListAddresses[2] = user3;
         testAllowListAmounts[0] = 1e18;
         testAllowListAmounts[1] = 2e18;
         testAllowListAmounts[2] = 3e18;
         (tempAddressArray, tempUintArray, , tempBool) = AelinUpFrontDeal(dealAddressAllowList).getAllowList(address(0));
         assertTrue(tempBool);
         assertEq(testAllowListAddresses.length, tempAddressArray.length);
-        assertEq(tempAddressArray[0], address(0x1337));
-        assertEq(tempAddressArray[1], address(0xBEEF));
-        assertEq(tempAddressArray[2], address(0xDEED));
+        assertEq(tempAddressArray[0], user1);
+        assertEq(tempAddressArray[1], user2);
+        assertEq(tempAddressArray[2], user3);
         assertEq(tempUintArray[0], 1e18);
         assertEq(tempUintArray[1], 2e18);
         assertEq(tempUintArray[2], 3e18);
@@ -780,7 +870,7 @@ contract AelinUpFrontDealTest is Test {
         assertEq(AelinUpFrontDeal(dealAddressNftGating721).dealStart(), block.timestamp);
         assertEq(AelinUpFrontDeal(dealAddressNftGating721).aelinEscrowLogicAddress(), address(testEscrow));
         assertEq(AelinUpFrontDeal(dealAddressNftGating721).aelinTreasuryAddress(), aelinTreasury);
-        assertEq(AelinUpFrontDeal(dealAddress).tokenCount(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNftGating721).tokenCount(), 0);
         // underlying has deposited so deal has started
         assertEq(AelinUpFrontDeal(dealAddressNftGating721).purchaseExpiry(), block.timestamp + 10 days);
         assertEq(AelinUpFrontDeal(dealAddressNftGating721).vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
@@ -818,7 +908,7 @@ contract AelinUpFrontDealTest is Test {
         assertEq(AelinUpFrontDeal(dealAddressNftGatingPunks).dealStart(), block.timestamp);
         assertEq(AelinUpFrontDeal(dealAddressNftGatingPunks).aelinEscrowLogicAddress(), address(testEscrow));
         assertEq(AelinUpFrontDeal(dealAddressNftGatingPunks).aelinTreasuryAddress(), aelinTreasury);
-        assertEq(AelinUpFrontDeal(dealAddress).tokenCount(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNftGatingPunks).tokenCount(), 0);
         // underlying has deposited so deal has started
         assertEq(AelinUpFrontDeal(dealAddressNftGatingPunks).purchaseExpiry(), block.timestamp + 10 days);
         assertEq(AelinUpFrontDeal(dealAddressNftGatingPunks).vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
@@ -851,7 +941,7 @@ contract AelinUpFrontDealTest is Test {
         assertEq(AelinUpFrontDeal(dealAddressNftGating1155).dealStart(), block.timestamp);
         assertEq(AelinUpFrontDeal(dealAddressNftGating1155).aelinEscrowLogicAddress(), address(testEscrow));
         assertEq(AelinUpFrontDeal(dealAddressNftGating1155).aelinTreasuryAddress(), aelinTreasury);
-        assertEq(AelinUpFrontDeal(dealAddress).tokenCount(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNftGating1155).tokenCount(), 0);
         // underlying has deposited so deal has started
         assertEq(AelinUpFrontDeal(dealAddressNftGating1155).purchaseExpiry(), block.timestamp + 10 days);
         assertEq(AelinUpFrontDeal(dealAddressNftGating1155).vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
@@ -894,7 +984,7 @@ contract AelinUpFrontDealTest is Test {
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         vm.prank(_testAddress);
         vm.expectRevert("underlying deposit incomplete");
-        AelinUpFrontDeal(dealAddress).acceptDeal(nftPurchaseList, merkleDataEmpty, 1e18);
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, 1e18);
         vm.stopPrank();
     }
 
@@ -902,21 +992,21 @@ contract AelinUpFrontDealTest is Test {
         vm.assume(_testAddress != address(0));
         vm.prank(_testAddress);
         vm.expectRevert("underlying deposit incomplete");
-        AelinUpFrontDeal(dealAddress).purchaserClaim();
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).purchaserClaim();
         vm.stopPrank();
     }
 
     function testRevertSponsorCannotClaimBeforeDeposit() public {
         vm.prank(dealCreatorAddress);
         vm.expectRevert("underlying deposit incomplete");
-        AelinUpFrontDeal(dealAddress).sponsorClaim();
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).sponsorClaim();
         vm.stopPrank();
     }
 
     function testRevertHolderCannotClaimBeforeDeposit() public {
         vm.prank(dealHolderAddress);
         vm.expectRevert("underlying deposit incomplete");
-        AelinUpFrontDeal(dealAddress).holderClaim();
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).holderClaim();
         vm.stopPrank();
     }
 
@@ -924,7 +1014,7 @@ contract AelinUpFrontDealTest is Test {
         vm.assume(_testAddress != address(0));
         vm.prank(_testAddress);
         vm.expectRevert("underlying deposit incomplete");
-        AelinUpFrontDeal(dealAddress).feeEscrowClaim();
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).feeEscrowClaim();
         vm.stopPrank();
     }
 
@@ -932,7 +1022,7 @@ contract AelinUpFrontDealTest is Test {
         vm.assume(_testAddress != address(0));
         vm.prank(_testAddress);
         vm.expectRevert("underlying deposit incomplete");
-        AelinUpFrontDeal(dealAddress).claimUnderlying(_tokenId);
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).claimUnderlying(_tokenId);
         vm.stopPrank();
     }
 
@@ -941,7 +1031,7 @@ contract AelinUpFrontDealTest is Test {
     function testClaimableBeforeDeposit(address _testAddress, uint256 _tokenId) public {
         vm.assume(_testAddress != address(0));
         vm.prank(_testAddress);
-        assertEq(AelinUpFrontDeal(dealAddress).claimableUnderlyingTokens(_tokenId), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).claimableUnderlyingTokens(_tokenId), 0);
         vm.stopPrank();
     }
 
@@ -955,7 +1045,7 @@ contract AelinUpFrontDealTest is Test {
         vm.assume(_testAddress != dealHolderAddress);
         vm.prank(_testAddress);
         vm.expectRevert("must be holder");
-        AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(_depositAmount);
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).depositUnderlyingTokens(_depositAmount);
         vm.stopPrank();
     }
 
@@ -963,18 +1053,18 @@ contract AelinUpFrontDealTest is Test {
         vm.assume(_holderBalance < _depositAmount);
         vm.startPrank(dealHolderAddress);
         deal(address(underlyingDealToken), dealHolderAddress, _holderBalance);
-        underlyingDealToken.approve(address(dealAddress), _holderBalance);
+        underlyingDealToken.approve(address(dealAddressNoDeallocationNoDeposit), _holderBalance);
         vm.expectRevert("not enough balance");
-        AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(_depositAmount);
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).depositUnderlyingTokens(_depositAmount);
         vm.stopPrank();
     }
 
     function testRevertDepositUnderlyingAfterComplete(uint256 _depositAmount) public {
         vm.startPrank(dealHolderAddress);
         deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
-        underlyingDealToken.approve(address(dealAddress), type(uint256).max);
+        underlyingDealToken.approve(address(dealAddressNoDeallocation), type(uint256).max);
         vm.expectRevert("already deposited the total");
-        AelinUpFrontDeal(dealAddressOverFullDeposit).depositUnderlyingTokens(_depositAmount);
+        AelinUpFrontDeal(dealAddressNoDeallocation).depositUnderlyingTokens(_depositAmount);
         vm.stopPrank();
     }
 
@@ -984,34 +1074,40 @@ contract AelinUpFrontDealTest is Test {
         vm.startPrank(dealHolderAddress);
 
         deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
-        underlyingDealToken.approve(address(dealAddress), type(uint256).max);
+        underlyingDealToken.approve(address(dealAddressNoDeallocationNoDeposit), type(uint256).max);
 
         // first deposit
-        (uint256 underlyingDealTokenTotal, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        (uint256 underlyingDealTokenTotal, , , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
         (bool success, uint256 result) = SafeMath.tryAdd(_firstDepositAmount, _secondDepositAmount);
         vm.assume(success);
         vm.assume(result >= underlyingDealTokenTotal);
-        uint256 balanceBeforeDeposit = underlyingDealToken.balanceOf(dealAddress);
+        uint256 balanceBeforeDeposit = underlyingDealToken.balanceOf(dealAddressNoDeallocationNoDeposit);
         vm.assume(_firstDepositAmount < underlyingDealTokenTotal - balanceBeforeDeposit);
         vm.expectEmit(true, true, false, false);
         emit DepositDealToken(address(underlyingDealToken), dealHolderAddress, _firstDepositAmount);
-        AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(_firstDepositAmount);
-        uint256 balanceAfterDeposit = underlyingDealToken.balanceOf(dealAddress);
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).depositUnderlyingTokens(_firstDepositAmount);
+        uint256 balanceAfterDeposit = underlyingDealToken.balanceOf(dealAddressNoDeallocationNoDeposit);
         assertEq(balanceAfterDeposit, balanceBeforeDeposit + _firstDepositAmount);
-        assertEq(AelinUpFrontDeal(dealAddress).purchaseExpiry(), 0);
-        assertEq(AelinUpFrontDeal(dealAddress).vestingCliffExpiry(), 0);
-        assertEq(AelinUpFrontDeal(dealAddress).vestingExpiry(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).purchaseExpiry(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).vestingCliffExpiry(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).vestingExpiry(), 0);
 
         // second deposit
         balanceBeforeDeposit = balanceAfterDeposit;
         vm.expectEmit(true, true, false, false);
         emit DepositDealToken(address(underlyingDealToken), dealHolderAddress, _secondDepositAmount);
-        AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(_secondDepositAmount);
-        balanceAfterDeposit = underlyingDealToken.balanceOf(dealAddress);
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).depositUnderlyingTokens(_secondDepositAmount);
+        balanceAfterDeposit = underlyingDealToken.balanceOf(dealAddressNoDeallocationNoDeposit);
         assertEq(balanceAfterDeposit, balanceBeforeDeposit + _secondDepositAmount);
-        assertEq(AelinUpFrontDeal(dealAddress).purchaseExpiry(), block.timestamp + 10 days);
-        assertEq(AelinUpFrontDeal(dealAddress).vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
-        assertEq(AelinUpFrontDeal(dealAddress).vestingExpiry(), block.timestamp + 10 days + 60 days + 365 days);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).purchaseExpiry(), block.timestamp + 10 days);
+        assertEq(
+            AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).vestingCliffExpiry(),
+            block.timestamp + 10 days + 60 days
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).vestingExpiry(),
+            block.timestamp + 10 days + 60 days + 365 days
+        );
 
         vm.stopPrank();
     }
@@ -1019,27 +1115,33 @@ contract AelinUpFrontDealTest is Test {
     function testDepositUnderlyingFullDeposit(uint256 _depositAmount) public {
         vm.startPrank(dealHolderAddress);
 
-        (uint256 underlyingDealTokenTotal, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
-        uint256 balanceBeforeDeposit = underlyingDealToken.balanceOf(address(dealAddress));
+        (uint256 underlyingDealTokenTotal, , , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
+        uint256 balanceBeforeDeposit = underlyingDealToken.balanceOf(address(dealAddressNoDeallocationNoDeposit));
         vm.assume(_depositAmount >= underlyingDealTokenTotal - balanceBeforeDeposit);
 
         // deposit initiated
         deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
-        underlyingDealToken.approve(address(dealAddress), type(uint256).max);
+        underlyingDealToken.approve(address(dealAddressNoDeallocationNoDeposit), type(uint256).max);
         vm.expectEmit(true, true, false, false);
         emit DepositDealToken(address(underlyingDealToken), dealHolderAddress, _depositAmount);
-        AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(_depositAmount);
-        uint256 balanceAfterDeposit = underlyingDealToken.balanceOf(address(dealAddress));
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).depositUnderlyingTokens(_depositAmount);
+        uint256 balanceAfterDeposit = underlyingDealToken.balanceOf(address(dealAddressNoDeallocationNoDeposit));
         assertEq(balanceAfterDeposit, balanceBeforeDeposit + _depositAmount);
-        assertEq(AelinUpFrontDeal(dealAddress).purchaseExpiry(), block.timestamp + 10 days);
-        assertEq(AelinUpFrontDeal(dealAddress).vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
-        assertEq(AelinUpFrontDeal(dealAddress).vestingExpiry(), block.timestamp + 10 days + 60 days + 365 days);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).purchaseExpiry(), block.timestamp + 10 days);
+        assertEq(
+            AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).vestingCliffExpiry(),
+            block.timestamp + 10 days + 60 days
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).vestingExpiry(),
+            block.timestamp + 10 days + 60 days + 365 days
+        );
 
         // should revert when trying to deposit again
         deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
-        underlyingDealToken.approve(address(dealAddress), type(uint256).max);
+        underlyingDealToken.approve(address(dealAddressNoDeallocationNoDeposit), type(uint256).max);
         vm.expectRevert("already deposited the total");
-        AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(_depositAmount);
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).depositUnderlyingTokens(_depositAmount);
 
         vm.stopPrank();
     }
@@ -1047,33 +1149,42 @@ contract AelinUpFrontDealTest is Test {
     function testDirectUnderlyingDeposit(address _depositor, uint256 _depositAmount) public {
         vm.assume(_depositor != dealHolderAddress);
         vm.assume(_depositor != address(0));
-        (uint256 underlyingDealTokenTotal, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
-        uint256 balanceBeforeDeposit = underlyingDealToken.balanceOf(address(dealAddress));
+        (uint256 underlyingDealTokenTotal, , , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
+        uint256 balanceBeforeDeposit = underlyingDealToken.balanceOf(address(dealAddressNoDeallocationNoDeposit));
         vm.assume(_depositAmount >= underlyingDealTokenTotal - balanceBeforeDeposit);
         vm.startPrank(_depositor);
 
         // random wallet sends the funds
         deal(address(underlyingDealToken), _depositor, type(uint256).max);
-        underlyingDealToken.transfer(dealAddress, _depositAmount);
-        assertEq(underlyingDealToken.balanceOf(address(dealAddress)), _depositAmount + balanceBeforeDeposit);
-        assertGe(underlyingDealToken.balanceOf(address(dealAddress)), underlyingDealTokenTotal);
+        underlyingDealToken.transfer(dealAddressNoDeallocationNoDeposit, _depositAmount);
+        assertEq(
+            underlyingDealToken.balanceOf(address(dealAddressNoDeallocationNoDeposit)),
+            _depositAmount + balanceBeforeDeposit
+        );
+        assertGe(underlyingDealToken.balanceOf(address(dealAddressNoDeallocationNoDeposit)), underlyingDealTokenTotal);
 
         // deposit is still not complete
-        assertEq(AelinUpFrontDeal(dealAddress).purchaseExpiry(), 0);
-        assertEq(AelinUpFrontDeal(dealAddress).vestingCliffExpiry(), 0);
-        assertEq(AelinUpFrontDeal(dealAddress).vestingExpiry(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).purchaseExpiry(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).vestingCliffExpiry(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).vestingExpiry(), 0);
 
         // depositUnderlyingTokens() still needs to be called
         vm.stopPrank();
         vm.startPrank(dealHolderAddress);
         vm.expectEmit(true, true, false, false);
         emit DepositDealToken(address(underlyingDealToken), dealHolderAddress, 0);
-        AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(0);
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).depositUnderlyingTokens(0);
 
         // deposit is now flagged as completed
-        assertEq(AelinUpFrontDeal(dealAddress).purchaseExpiry(), block.timestamp + 10 days);
-        assertEq(AelinUpFrontDeal(dealAddress).vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
-        assertEq(AelinUpFrontDeal(dealAddress).vestingExpiry(), block.timestamp + 10 days + 60 days + 365 days);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).purchaseExpiry(), block.timestamp + 10 days);
+        assertEq(
+            AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).vestingCliffExpiry(),
+            block.timestamp + 10 days + 60 days
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).vestingExpiry(),
+            block.timestamp + 10 days + 60 days + 365 days
+        );
 
         vm.stopPrank();
     }
@@ -1088,8 +1199,8 @@ contract AelinUpFrontDealTest is Test {
         vm.assume(_futureHolder != dealHolderAddress);
         vm.startPrank(_futureHolder);
         vm.expectRevert("must be holder");
-        AelinUpFrontDeal(dealAddress).setHolder(_futureHolder);
-        (, , , , address holderAddress, , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).setHolder(_futureHolder);
+        (, , , , address holderAddress, , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
         assertEq(holderAddress, dealHolderAddress);
         vm.stopPrank();
     }
@@ -1098,11 +1209,11 @@ contract AelinUpFrontDealTest is Test {
         vm.assume(_futureHolder != dealHolderAddress);
         vm.startPrank(dealHolderAddress);
 
-        AelinUpFrontDeal(dealAddress).setHolder(_futureHolder);
-        assertEq(AelinUpFrontDeal(dealAddress).futureHolder(), _futureHolder);
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).setHolder(_futureHolder);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).futureHolder(), _futureHolder);
         vm.expectRevert("only future holder can access");
-        AelinUpFrontDeal(dealAddress).acceptHolder();
-        (, , , , address holderAddress, , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).acceptHolder();
+        (, , , , address holderAddress, , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
         assertEq(holderAddress, dealHolderAddress);
 
         vm.stopPrank();
@@ -1115,17 +1226,17 @@ contract AelinUpFrontDealTest is Test {
         vm.startPrank(dealHolderAddress);
         address temHolderAddress;
 
-        AelinUpFrontDeal(dealAddress).setHolder(_futureHolder);
-        assertEq(AelinUpFrontDeal(dealAddress).futureHolder(), _futureHolder);
-        (, , , , temHolderAddress, , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).setHolder(_futureHolder);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).futureHolder(), _futureHolder);
+        (, , , , temHolderAddress, , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
         assertEq(temHolderAddress, dealHolderAddress);
         vm.stopPrank();
 
         vm.startPrank(_futureHolder);
         vm.expectEmit(false, false, false, false);
         emit SetHolder(_futureHolder);
-        AelinUpFrontDeal(dealAddress).acceptHolder();
-        (, , , , temHolderAddress, , , , ) = AelinUpFrontDeal(dealAddress).dealData();
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).acceptHolder();
+        (, , , , temHolderAddress, , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
         assertEq(temHolderAddress, _futureHolder);
 
         vm.stopPrank();
@@ -1137,9 +1248,9 @@ contract AelinUpFrontDealTest is Test {
 
     function testFuzzVouchForDeal(address _attestant) public {
         vm.startPrank(_attestant);
-        vm.expectEmit(false, false, false, false, address(dealAddress));
+        vm.expectEmit(false, false, false, false, address(dealAddressNoDeallocationNoDeposit));
         emit Vouch(_attestant);
-        AelinUpFrontDeal(dealAddress).vouch();
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).vouch();
         vm.stopPrank();
     }
 
@@ -1149,9 +1260,9 @@ contract AelinUpFrontDealTest is Test {
 
     function testFuzzDisavowForDeal(address _attestant) public {
         vm.startPrank(_attestant);
-        vm.expectEmit(false, false, false, false, address(dealAddress));
+        vm.expectEmit(false, false, false, false, address(dealAddressNoDeallocationNoDeposit));
         emit Disavow(_attestant);
-        AelinUpFrontDeal(dealAddress).disavow();
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).disavow();
         vm.stopPrank();
     }
 
@@ -1165,38 +1276,38 @@ contract AelinUpFrontDealTest is Test {
         vm.assume(_initiator != dealHolderAddress);
         vm.startPrank(_initiator);
         vm.expectRevert("must be holder");
-        AelinUpFrontDeal(dealAddress).withdrawExcess();
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).withdrawExcess();
         vm.stopPrank();
     }
 
     function testRevertNoExcessToWithdraw(uint256 _depositAmount) public {
-        (uint256 underlyingDealTokenTotal, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        (uint256 underlyingDealTokenTotal, , , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
         vm.assume(_depositAmount <= underlyingDealTokenTotal);
         vm.startPrank(dealHolderAddress);
         deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
-        underlyingDealToken.approve(address(dealAddress), type(uint256).max);
-        AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(_depositAmount);
+        underlyingDealToken.approve(address(dealAddressNoDeallocationNoDeposit), type(uint256).max);
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).depositUnderlyingTokens(_depositAmount);
         vm.expectRevert("no excess to withdraw");
-        AelinUpFrontDeal(dealAddress).withdrawExcess();
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).withdrawExcess();
         vm.stopPrank();
     }
 
     // Pass scenarios
 
     function testWithdrawExcess(uint256 _depositAmount) public {
-        (uint256 underlyingDealTokenTotal, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
+        (uint256 underlyingDealTokenTotal, , , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
         vm.assume(_depositAmount > underlyingDealTokenTotal);
         vm.startPrank(dealHolderAddress);
 
         deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
-        underlyingDealToken.approve(address(dealAddress), type(uint256).max);
-        AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(_depositAmount);
-        uint256 balanceAfterTransfer = underlyingDealToken.balanceOf(dealAddress);
+        underlyingDealToken.approve(address(dealAddressNoDeallocationNoDeposit), type(uint256).max);
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).depositUnderlyingTokens(_depositAmount);
+        uint256 balanceAfterTransfer = underlyingDealToken.balanceOf(dealAddressNoDeallocationNoDeposit);
         uint256 expectedWithdraw = balanceAfterTransfer - underlyingDealTokenTotal;
         vm.expectEmit(false, false, false, false);
-        emit WithdrewExcess(address(dealAddress), expectedWithdraw);
-        AelinUpFrontDeal(dealAddress).withdrawExcess();
-        assertEq(underlyingDealToken.balanceOf(dealAddress), underlyingDealTokenTotal);
+        emit WithdrewExcess(address(dealAddressNoDeallocationNoDeposit), expectedWithdraw);
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).withdrawExcess();
+        assertEq(underlyingDealToken.balanceOf(dealAddressNoDeallocationNoDeposit), underlyingDealTokenTotal);
 
         vm.stopPrank();
     }
@@ -1211,7 +1322,7 @@ contract AelinUpFrontDealTest is Test {
         vm.prank(_user);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         vm.expectRevert("underlying deposit incomplete");
-        AelinUpFrontDeal(dealAddress).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         vm.stopPrank();
     }
 
@@ -1221,23 +1332,23 @@ contract AelinUpFrontDealTest is Test {
         // deposit to start purchase period
         vm.startPrank(dealHolderAddress);
         deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
-        underlyingDealToken.approve(address(dealAddress), type(uint256).max);
-        (uint256 underlyingDealTokenTotal, , , , , , ) = AelinUpFrontDeal(dealAddress).dealConfig();
-        AelinUpFrontDeal(dealAddress).depositUnderlyingTokens(underlyingDealTokenTotal);
+        underlyingDealToken.approve(address(dealAddressNoDeallocationNoDeposit), type(uint256).max);
+        (uint256 underlyingDealTokenTotal, , , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).depositUnderlyingTokens(underlyingDealTokenTotal);
         vm.stopPrank();
 
         // warp past purchase period and try to accept deal
-        uint256 purchaseExpiry = AelinUpFrontDeal(dealAddress).purchaseExpiry();
+        uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).purchaseExpiry();
         vm.warp(purchaseExpiry + 1000);
         vm.startPrank(_user);
         vm.expectRevert("not in purchase window");
-        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
 
         // try on a contract that was deposited during intialize
-        purchaseExpiry = AelinUpFrontDeal(dealAddressOverFullDeposit).purchaseExpiry();
+        purchaseExpiry = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).purchaseExpiry();
         vm.warp(purchaseExpiry + 1000);
         vm.expectRevert("not in purchase window");
-        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         vm.stopPrank();
     }
 
@@ -1246,9 +1357,9 @@ contract AelinUpFrontDealTest is Test {
         uint256 tokenAmount = 100;
         vm.prank(user1);
         deal(address(purchaseToken), user1, tokenAmount);
-        purchaseToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
+        purchaseToken.approve(address(dealAddressNoDeallocation), type(uint256).max);
         vm.expectRevert("not enough purchaseToken");
-        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, tokenAmount + 1);
+        AelinUpFrontDeal(dealAddressNoDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, tokenAmount + 1);
         vm.stopPrank();
     }
 
@@ -1278,7 +1389,7 @@ contract AelinUpFrontDealTest is Test {
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
-            dealAddressOverFullDeposit
+            dealAddressNoDeallocation
         ).dealConfig();
 
         uint256 raiseAmount = (underlyingDealTokenTotal * purchaseTokenPerDealToken) / 10 ** underlyingTokenDecimals;
@@ -1286,39 +1397,39 @@ contract AelinUpFrontDealTest is Test {
         // User 1 tries to deposit more than the total purchase amount
         vm.startPrank(user1);
         deal(address(purchaseToken), user1, type(uint256).max);
-        purchaseToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
+        purchaseToken.approve(address(dealAddressNoDeallocation), type(uint256).max);
 
         uint256 expectedPoolShareAmount = ((raiseAmount + 1e18) * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         assertGt(expectedPoolShareAmount, underlyingDealTokenTotal);
         vm.expectRevert("purchased amount > total");
-        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, raiseAmount + 1e18);
+        AelinUpFrontDeal(dealAddressNoDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, raiseAmount + 1e18);
 
         // User 1 now deposits less than the total purchase amount
         uint256 purchaseAmount1 = raiseAmount - 2e18;
         expectedPoolShareAmount = (purchaseAmount1 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.expectEmit(true, false, false, true);
         emit AcceptDeal(user1, purchaseAmount1, purchaseAmount1, expectedPoolShareAmount, expectedPoolShareAmount);
-        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount1);
+        AelinUpFrontDeal(dealAddressNoDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount1);
         vm.stopPrank();
 
         // User 2 now deposits more than the total purchase amount
         vm.startPrank(user2);
         deal(address(purchaseToken), user2, type(uint256).max);
-        purchaseToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
+        purchaseToken.approve(address(dealAddressNoDeallocation), type(uint256).max);
         uint256 purchaseAmount2 = purchaseAmount1 + 3e18;
         uint256 totalPoolShares = ((purchaseAmount2 + purchaseAmount1) * 10 ** underlyingTokenDecimals) /
             purchaseTokenPerDealToken;
         assertGt(totalPoolShares, underlyingDealTokenTotal);
         vm.expectRevert("purchased amount > total");
-        AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount2);
+        AelinUpFrontDeal(dealAddressNoDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount2);
         vm.stopPrank();
     }
 
     function testRevertAcceptDealNotInAllowList(uint256 _purchaseAmount) public {
         vm.assume(_purchaseAmount > 0);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
-        vm.startPrank(user2);
-        deal(address(purchaseToken), user2, type(uint256).max);
+        vm.startPrank(user4);
+        deal(address(purchaseToken), user4, type(uint256).max);
         purchaseToken.approve(address(dealAddressAllowList), type(uint256).max);
         vm.expectRevert("more than allocation");
         AelinUpFrontDeal(dealAddressAllowList).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
@@ -1333,6 +1444,17 @@ contract AelinUpFrontDealTest is Test {
         purchaseToken.approve(address(dealAddressAllowList), type(uint256).max);
         vm.expectRevert("pool does not have an NFT list");
         AelinUpFrontDeal(dealAddressAllowList).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+    }
+
+    function testRevertAcceptDealEmptyNftList(uint256 _purchaseAmount) public {
+        vm.startPrank(user1);
+        vm.assume(_purchaseAmount > 1e18);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](2);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating721), type(uint256).max);
+        vm.expectRevert("collection should not be null");
+        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         vm.stopPrank();
     }
 
@@ -1375,6 +1497,95 @@ contract AelinUpFrontDealTest is Test {
         vm.stopPrank();
     }
 
+    function testRevertAcceptDealERC72NoTokenId(uint256 _purchaseAmount) public {
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating721), type(uint256).max);
+        uint256[] memory tokenIdsArray = new uint256[](2);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress1);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+        // We mint the tokens to another user
+        MockERC721(collectionAddress1).mint(user2, 1);
+        MockERC721(collectionAddress1).mint(user2, 2);
+        vm.expectRevert("ERC721: invalid token ID");
+        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+    }
+
+    function testRevertAcceptDealERC72InvalidTokenId(uint256 _purchaseAmount) public {
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating721), type(uint256).max);
+        uint256[] memory tokenIdsArray = new uint256[](2);
+        tokenIdsArray[0] = 4;
+        tokenIdsArray[1] = 5;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress1);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+        // We mint the tokens to another user
+        MockERC721(collectionAddress1).mint(user2, 1);
+        MockERC721(collectionAddress1).mint(user2, 2);
+        vm.expectRevert("ERC721: invalid token ID");
+        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+    }
+
+    function testRevertAcceptDealERC721WalletAlreadyUsed() public {
+        vm.startPrank(user1);
+
+        uint256 purchaseAmount = 1e18;
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressNftGating721).dealConfig();
+        uint256 poolSharesAmount = (purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating721), type(uint256).max);
+
+        uint256[] memory tokenIdsArray = new uint256[](2);
+        tokenIdsArray[0] = 1;
+        tokenIdsArray[1] = 2;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress2);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+        MockERC721(collectionAddress2).mint(user1, 1);
+        MockERC721(collectionAddress2).mint(user1, 2);
+
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user1, purchaseAmount, purchaseAmount, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, 1e18);
+        vm.expectRevert("wallet already used for nft set");
+        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, 1e18);
+
+        vm.stopPrank();
+    }
+
+    function testRevertAcceptDealERC721OverAllowed(uint256 _purchaseAmount) public {
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
+            dealAddressNoDeallocation
+        ).dealConfig();
+        uint256 raiseAmount = (underlyingDealTokenTotal * purchaseTokenPerDealToken) / 10 ** underlyingTokenDecimals;
+        vm.assume(_purchaseAmount > raiseAmount);
+
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating721), type(uint256).max);
+
+        uint256[] memory tokenIdsArray = new uint256[](2);
+        tokenIdsArray[0] = 1;
+        tokenIdsArray[1] = 2;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress1);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+        MockERC721(collectionAddress1).mint(user1, 1);
+        MockERC721(collectionAddress1).mint(user1, 2);
+
+        vm.startPrank(user1);
+        vm.expectRevert("purchase amount greater than max allocation");
+        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+    }
+
     function testRevertAcceptDealPunksMustBeOwner(uint256 _purchaseAmount) public {
         vm.startPrank(user1);
         deal(address(purchaseToken), user1, type(uint256).max);
@@ -1399,17 +1610,47 @@ contract AelinUpFrontDealTest is Test {
         vm.stopPrank();
     }
 
-    function testRevertAcceptDealERC1155BalanceTooLow(uint256 _purchaseAmount) public {
+    function testRevertAcceptDealPunkAlreadyUsed() public {
         vm.startPrank(user1);
         deal(address(purchaseToken), user1, type(uint256).max);
-        purchaseToken.approve(address(dealAddressNftGating721), type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGatingPunksPerToken), type(uint256).max);
+
+        uint256 purchaseAmount = 1e18;
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressNftGating721).dealConfig();
+        uint256 poolSharesAmount = (purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+
+        // Since punks address is hardcoded we need to cheat and link the Mock contract to the address
+        bytes memory punksContractCode = address(collectionAddressPunks).code;
+        vm.etch(punks, punksContractCode);
+        uint256[] memory tokenIdsArray = new uint256[](2);
+        MockPunks(punks).mint(user1, 1);
+        MockPunks(punks).mint(user1, 2);
+        tokenIdsArray[0] = 1;
+        tokenIdsArray[1] = 2;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(punks);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user1, purchaseAmount, purchaseAmount, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
+        vm.expectRevert("tokenId already used");
+        AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
+        vm.stopPrank();
+    }
+
+    // User has no tokens at all
+    function testRevertAcceptDealERC1155MustBeOwner(uint256 _purchaseAmount) public {
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating1155), type(uint256).max);
         uint256[] memory tokenIdsArray = new uint256[](2);
         tokenIdsArray[0] = 1;
         tokenIdsArray[1] = 2;
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
         nftPurchaseList[0].collectionAddress = address(collectionAddress4);
         nftPurchaseList[0].tokenIds = tokenIdsArray;
-        // We mint the tokens to another user
         MockERC1155(collectionAddress4).mint(user2, 1, 1, "");
         MockERC1155(collectionAddress4).mint(user2, 2, 1, "");
         vm.expectRevert("erc1155 balance too low");
@@ -1417,100 +1658,1027 @@ contract AelinUpFrontDealTest is Test {
         vm.stopPrank();
     }
 
-    function testRevertAcceptDealERC721AlreadyUsed(uint256 _purchaseAmount) public {}
+    // If user has tokens but not enough (balance < minTokensEligible)
+    function testRevertAcceptDealERC1155BalanceTooLow(uint256 _purchaseAmount) public {
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating1155), type(uint256).max);
+        uint256[] memory tokenIdsArray = new uint256[](2);
+        tokenIdsArray[0] = 1;
+        tokenIdsArray[1] = 2;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress4);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+        MockERC1155(collectionAddress4).mint(user1, 1, 1, "");
+        MockERC1155(collectionAddress4).mint(user1, 2, 1, "");
+        vm.expectRevert("erc1155 balance too low");
+        AelinUpFrontDeal(dealAddressNftGating1155).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+    }
 
-    function testRevertAcceptDealERC721WalletAlreadyUsed(uint256 _purchaseAmount) public {}
+    function testRevertAcceptDealERC1155NotInPool(uint256 _purchaseAmount) public {
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating1155), type(uint256).max);
+        uint256[] memory tokenIdsArray = new uint256[](2);
+        tokenIdsArray[0] = 10;
+        tokenIdsArray[1] = 11;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress4);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+        MockERC1155(collectionAddress4).mint(user1, 10, 1, "");
+        MockERC1155(collectionAddress4).mint(user1, 11, 1, "");
+        vm.expectRevert("tokenId not in the pool");
+        AelinUpFrontDeal(dealAddressNftGating1155).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+    }
 
-    function testRevertAcceptDealERC721OverAllowed(uint256 _purchaseAmount) public {}
+    function testRevertAcceptDealERC1155NoTokenIds(uint256 _purchaseAmount) public {
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating1155), type(uint256).max);
+        uint256[] memory tokenIdsArray = new uint256[](2);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress4);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+        MockERC1155(collectionAddress4).mint(user1, 10, 1, "");
+        MockERC1155(collectionAddress4).mint(user1, 11, 1, "");
+        vm.expectRevert("tokenId not in the pool");
+        AelinUpFrontDeal(dealAddressNftGating1155).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+    }
 
     // Pass scenarios
 
-    function testAcceptDealBasic(uint256 _purchaseAmount) public {}
+    function testAcceptDealBasic(uint256 _purchaseAmount) public {
+        vm.assume(_purchaseAmount > 0);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
+            dealAddressNoDeallocation
+        ).dealConfig();
+        uint256 raiseAmount = (underlyingDealTokenTotal * purchaseTokenPerDealToken) / 10 ** underlyingTokenDecimals;
+        vm.assume(_purchaseAmount <= raiseAmount);
+        uint256 firstPurchase = _purchaseAmount / 4;
+        uint256 secondPurchase = firstPurchase;
+        uint256 thirdPurchase = _purchaseAmount - firstPurchase - secondPurchase;
 
-    function testAcceptDealMultiplePurchasers() public {}
+        // we compute the numbers for the first deposit
+        uint256 poolSharesAmount = (firstPurchase * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount > 0);
 
-    function testAcceptDealAllowDeallocation() public {}
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNoDeallocation), type(uint256).max);
 
-    function testAcceptDealAllowList(uint256 _purchaseAmount1, uint256 _purchaseAmount2, uint256 _purchaseAmount3) public {}
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user1, firstPurchase, firstPurchase, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressNoDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, firstPurchase);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).totalPoolShares(), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).poolSharesPerUser(user1), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).totalPurchasingAccepted(), firstPurchase);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).purchaseTokensPerUser(user1), firstPurchase);
 
-    function testAcceptDealERC721(uint256 _purchaseAmount) public {}
+        // we compute the numbers for the second deposit (same user)
+        uint256 poolSharesAmount2 = (secondPurchase * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount2 > 0);
 
-    function testAcceptDealPunks() public {}
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNoDeallocation), type(uint256).max);
 
-    function testAcceptDealERC1155(uint256 _purchaseAmount) public {}
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(
+            user1,
+            secondPurchase,
+            firstPurchase + secondPurchase,
+            poolSharesAmount2,
+            poolSharesAmount + poolSharesAmount2
+        );
+        AelinUpFrontDeal(dealAddressNoDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, secondPurchase);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).totalPoolShares(), poolSharesAmount + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).poolSharesPerUser(user1), poolSharesAmount + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).totalPurchasingAccepted(), firstPurchase + secondPurchase);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).purchaseTokensPerUser(user1), firstPurchase + secondPurchase);
+
+        // now with do the same but for a new user
+        vm.stopPrank();
+        vm.startPrank(user2);
+        uint256 poolSharesAmount3 = (thirdPurchase * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount3 > 0);
+
+        deal(address(purchaseToken), user2, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNoDeallocation), type(uint256).max);
+
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user2, thirdPurchase, thirdPurchase, poolSharesAmount3, poolSharesAmount3);
+        AelinUpFrontDeal(dealAddressNoDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, thirdPurchase);
+        assertEq(
+            AelinUpFrontDeal(dealAddressNoDeallocation).totalPoolShares(),
+            poolSharesAmount + poolSharesAmount2 + poolSharesAmount3
+        );
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).poolSharesPerUser(user2), poolSharesAmount3);
+        assertEq(
+            AelinUpFrontDeal(dealAddressNoDeallocation).totalPurchasingAccepted(),
+            firstPurchase + secondPurchase + thirdPurchase
+        );
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).purchaseTokensPerUser(user2), thirdPurchase);
+
+        vm.stopPrank();
+    }
+
+    function testAcceptDealAllowDeallocation(
+        uint256 _firstPurchase,
+        uint256 _secondPurchase,
+        uint256 _thirdPurchase
+    ) public {
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
+            dealAddressAllowDeallocation
+        ).dealConfig();
+        uint256 raiseAmount = (underlyingDealTokenTotal * purchaseTokenPerDealToken) / 10 ** underlyingTokenDecimals;
+        vm.assume(_firstPurchase > 0);
+        vm.assume(_secondPurchase > 0);
+        vm.assume(_thirdPurchase > 0);
+        vm.assume(_firstPurchase < 1e50);
+        vm.assume(_secondPurchase < 1e50);
+        vm.assume(_thirdPurchase < 1e50);
+
+        vm.assume(_firstPurchase + _secondPurchase + _thirdPurchase > raiseAmount);
+
+        // we compute the numbers for the first deposit
+        uint256 poolSharesAmount = (_firstPurchase * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount > 0);
+
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressAllowDeallocation), type(uint256).max);
+
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user1, _firstPurchase, _firstPurchase, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _firstPurchase);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPoolShares(), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).poolSharesPerUser(user1), poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted(), _firstPurchase);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseTokensPerUser(user1), _firstPurchase);
+
+        // we compute the numbers for the second deposit (same user)
+        uint256 poolSharesAmount2 = (_secondPurchase * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount2 > 0);
+
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressAllowDeallocation), type(uint256).max);
+
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(
+            user1,
+            _secondPurchase,
+            _firstPurchase + _secondPurchase,
+            poolSharesAmount2,
+            poolSharesAmount + poolSharesAmount2
+        );
+        AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _secondPurchase);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPoolShares(), poolSharesAmount + poolSharesAmount2);
+        assertEq(
+            AelinUpFrontDeal(dealAddressAllowDeallocation).poolSharesPerUser(user1),
+            poolSharesAmount + poolSharesAmount2
+        );
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted(), _firstPurchase + _secondPurchase);
+        assertEq(
+            AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseTokensPerUser(user1),
+            _firstPurchase + _secondPurchase
+        );
+
+        // now with do the same but for a new user
+        vm.stopPrank();
+        vm.startPrank(user2);
+        uint256 poolSharesAmount3 = (_thirdPurchase * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount3 > 0);
+
+        deal(address(purchaseToken), user2, type(uint256).max);
+        purchaseToken.approve(address(dealAddressAllowDeallocation), type(uint256).max);
+
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user2, _thirdPurchase, _thirdPurchase, poolSharesAmount3, poolSharesAmount3);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _thirdPurchase);
+        assertEq(
+            AelinUpFrontDeal(dealAddressAllowDeallocation).totalPoolShares(),
+            poolSharesAmount + poolSharesAmount2 + poolSharesAmount3
+        );
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).poolSharesPerUser(user2), poolSharesAmount3);
+        assertEq(
+            AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted(),
+            _firstPurchase + _secondPurchase + _thirdPurchase
+        );
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseTokensPerUser(user2), _thirdPurchase);
+
+        vm.stopPrank();
+    }
+
+    function testAcceptDealAllowList(uint256 _purchaseAmount1, uint256 _purchaseAmount2, uint256 _purchaseAmount3) public {
+        uint256 tempAllocatedAmount;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        (, , tempAllocatedAmount, ) = AelinUpFrontDeal(dealAddressAllowList).getAllowList(user1);
+        vm.assume(_purchaseAmount1 <= tempAllocatedAmount);
+        (, , tempAllocatedAmount, ) = AelinUpFrontDeal(dealAddressAllowList).getAllowList(user2);
+        vm.assume(_purchaseAmount2 <= tempAllocatedAmount);
+        (, , tempAllocatedAmount, ) = AelinUpFrontDeal(dealAddressAllowList).getAllowList(user3);
+        vm.assume(_purchaseAmount3 <= tempAllocatedAmount);
+
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressAllowList).dealConfig();
+        uint256 poolSharesAmount1 = (_purchaseAmount1 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount1 > 0);
+        uint256 poolSharesAmount2 = (_purchaseAmount2 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount2 > 0);
+        uint256 poolSharesAmount3 = (_purchaseAmount3 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount3 > 0);
+
+        // first user deposit
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressAllowList), type(uint256).max);
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user1, _purchaseAmount1, _purchaseAmount1, poolSharesAmount1, poolSharesAmount1);
+        AelinUpFrontDeal(dealAddressAllowList).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressAllowList).totalPoolShares(), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressAllowList).poolSharesPerUser(user1), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressAllowList).totalPurchasingAccepted(), _purchaseAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressAllowList).purchaseTokensPerUser(user1), _purchaseAmount1);
+        vm.stopPrank();
+
+        // second user deposit
+        vm.startPrank(user2);
+        deal(address(purchaseToken), user2, type(uint256).max);
+        purchaseToken.approve(address(dealAddressAllowList), type(uint256).max);
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user2, _purchaseAmount2, _purchaseAmount2, poolSharesAmount2, poolSharesAmount2);
+        AelinUpFrontDeal(dealAddressAllowList).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressAllowList).totalPoolShares(), poolSharesAmount1 + poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressAllowList).poolSharesPerUser(user2), poolSharesAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressAllowList).totalPurchasingAccepted(), _purchaseAmount1 + _purchaseAmount2);
+        assertEq(AelinUpFrontDeal(dealAddressAllowList).purchaseTokensPerUser(user2), _purchaseAmount2);
+        vm.stopPrank();
+
+        // third user deposit
+        vm.startPrank(user3);
+        deal(address(purchaseToken), user3, type(uint256).max);
+        purchaseToken.approve(address(dealAddressAllowList), type(uint256).max);
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user3, _purchaseAmount3, _purchaseAmount3, poolSharesAmount3, poolSharesAmount3);
+        AelinUpFrontDeal(dealAddressAllowList).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount3);
+        assertEq(
+            AelinUpFrontDeal(dealAddressAllowList).totalPoolShares(),
+            poolSharesAmount1 + poolSharesAmount2 + poolSharesAmount3
+        );
+        assertEq(AelinUpFrontDeal(dealAddressAllowList).poolSharesPerUser(user3), poolSharesAmount3);
+        assertEq(
+            AelinUpFrontDeal(dealAddressAllowList).totalPurchasingAccepted(),
+            _purchaseAmount1 + _purchaseAmount2 + _purchaseAmount3
+        );
+        assertEq(AelinUpFrontDeal(dealAddressAllowList).purchaseTokensPerUser(user3), _purchaseAmount3);
+        vm.stopPrank();
+    }
+
+    function testAcceptDealERC721() public {
+        // user setup
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressNftGating721).dealConfig();
+
+        MockERC721(collectionAddress1).mint(user1, 1);
+        MockERC721(collectionAddress1).mint(user1, 2);
+        MockERC721(collectionAddress1).mint(user1, 3);
+        MockERC721(collectionAddress1).mint(user2, 4);
+        MockERC721(collectionAddress1).mint(user2, 5);
+        MockERC721(collectionAddress2).mint(user2, 1);
+        MockERC721(collectionAddress2).mint(user2, 2);
+        MockERC721(collectionAddress2).mint(user2, 3);
+
+        uint256 totalPoolShares;
+        uint256 poolSharesAmount;
+
+        // nft gating setup
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        uint256[] memory tokenIdsArray = new uint256[](2);
+        // we get the allocation for each collection
+        (uint256 purchaseCollection1, , bool purchaseAmountPerToken1, , ) = AelinUpFrontDeal(dealAddressNftGating721)
+            .getNftCollectionDetails(address(collectionAddress1));
+        (uint256 purchaseCollection2, , bool purchaseAmountPerToken2, , ) = AelinUpFrontDeal(dealAddressNftGating721)
+            .getNftCollectionDetails(address(collectionAddress2));
+
+        // checks pre-purchase
+        bool walletClaimed;
+        bool NftIdUsed;
+        bool hasNftList;
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+            address(collectionAddress1),
+            user1,
+            1
+        );
+        assertFalse(walletClaimed);
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+            address(collectionAddress1),
+            user1,
+            2
+        );
+        assertFalse(walletClaimed);
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+            address(collectionAddress1),
+            user1,
+            3
+        );
+        assertFalse(walletClaimed);
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+            address(collectionAddress1),
+            user2,
+            4
+        );
+        assertFalse(walletClaimed);
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+            address(collectionAddress1),
+            user2,
+            5
+        );
+        assertFalse(walletClaimed);
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+            address(collectionAddress2),
+            user2,
+            1
+        );
+        assertFalse(walletClaimed);
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+            address(collectionAddress2),
+            user2,
+            2
+        );
+        assertFalse(walletClaimed);
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+            address(collectionAddress2),
+            user2,
+            3
+        );
+        assertFalse(walletClaimed);
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+
+        // case 1: [collection1] user1 max out their allocation with multiple tokens (purchaseAmountPerToken = true)
+        vm.startPrank(user1);
+
+        // 2 tokens so double the purchaseAmount
+        poolSharesAmount = ((2 * purchaseCollection1) * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        totalPoolShares = poolSharesAmount;
+        vm.assume(poolSharesAmount > 0);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating721), type(uint256).max);
+        tokenIdsArray[0] = 1;
+        tokenIdsArray[1] = 2;
+        nftPurchaseList[0].collectionAddress = address(collectionAddress1);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user1, (2 * purchaseCollection1), (2 * purchaseCollection1), poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, (2 * purchaseCollection1));
+
+        // user1 now purchases again using his last token
+        poolSharesAmount = (purchaseCollection1 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        totalPoolShares += poolSharesAmount;
+        nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        tokenIdsArray = new uint256[](1);
+        tokenIdsArray[0] = 3;
+        nftPurchaseList[0].collectionAddress = address(collectionAddress1);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(
+            user1,
+            purchaseCollection1,
+            (2 * purchaseCollection1) + purchaseCollection1,
+            poolSharesAmount,
+            totalPoolShares
+        );
+        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseCollection1);
+        vm.stopPrank();
+
+        // case 2: [collection2] user2 max out their wallet allocation (purchaseAmountPerToken = false)
+        vm.startPrank(user2);
+        deal(address(purchaseToken), user2, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating721), type(uint256).max);
+        nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        tokenIdsArray = new uint256[](3);
+        tokenIdsArray[0] = 1;
+        tokenIdsArray[1] = 2;
+        tokenIdsArray[2] = 3;
+        nftPurchaseList[0].collectionAddress = address(collectionAddress2);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+
+        // since purchaseAmountPerToken = false, user2 can't buy more than the allocation amount for collection2
+        vm.expectRevert("purchase amount greater than max allocation");
+        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, 2 * purchaseCollection2);
+
+        // we then make user2 buy the exact amount
+        poolSharesAmount = (purchaseCollection2 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        totalPoolShares = poolSharesAmount;
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user2, purchaseCollection2, purchaseCollection2, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseCollection2);
+
+        // user2 is now blacklisted from purchasing again in this collection
+        vm.expectRevert("wallet already used for nft set");
+        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseCollection2);
+
+        // case 3: [collection1] user2 comes back and max out their allocation (purchaseAmountPerToken = true)
+        nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        tokenIdsArray = new uint256[](2);
+        tokenIdsArray[0] = 4;
+        tokenIdsArray[1] = 5;
+        nftPurchaseList[0].collectionAddress = address(collectionAddress1);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+
+        // 2 tokens so double the purchaseAmount
+        poolSharesAmount = ((2 * purchaseCollection1) * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(
+            user2,
+            (2 * purchaseCollection1),
+            (2 * purchaseCollection1 + purchaseCollection2),
+            poolSharesAmount,
+            poolSharesAmount + totalPoolShares
+        );
+        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, (2 * purchaseCollection1));
+
+        // user2 can't reuse the same tokens if they want to purchase again
+        vm.expectRevert("tokenId already used");
+        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, (2 * purchaseCollection1));
+        vm.stopPrank();
+
+        //checks post-purchase
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+            address(collectionAddress1),
+            user1,
+            1
+        );
+        assertFalse(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+            address(collectionAddress1),
+            user1,
+            2
+        );
+        assertFalse(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+            address(collectionAddress1),
+            user1,
+            3
+        );
+        assertFalse(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+            address(collectionAddress1),
+            user2,
+            4
+        );
+        assertFalse(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+            address(collectionAddress1),
+            user2,
+            5
+        );
+        assertFalse(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+            address(collectionAddress2),
+            user2,
+            1
+        );
+        assertTrue(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+            address(collectionAddress2),
+            user2,
+            2
+        );
+        assertTrue(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+            address(collectionAddress2),
+            user2,
+            3
+        );
+        assertTrue(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+    }
+
+    function testAcceptDealPunksPerWallet() public {
+        // since punks address is hardcoded we need to cheat and link the Mock contract to the address
+        bytes memory punksContractCode = address(collectionAddressPunks).code;
+        vm.etch(punks, punksContractCode);
+
+        // nft gating setup
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressNftGatingPunks).dealConfig();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        uint256[] memory tokenIdsArray = new uint256[](2);
+        // we get the allocation for each collection
+        (uint256 purchaseCollection, , bool purchaseAmountPerToken, , ) = AelinUpFrontDeal(dealAddressNftGatingPunks)
+            .getNftCollectionDetails(address(punks));
+
+        // we mint some punks
+        MockPunks(punks).mint(user1, 1);
+        MockPunks(punks).mint(user1, 2);
+        MockPunks(punks).mint(user2, 3);
+        MockPunks(punks).mint(user2, 4);
+
+        // checks pre-purchase
+        bool walletClaimed;
+        bool NftIdUsed;
+        bool hasNftList;
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(
+            address(punks),
+            user1,
+            1
+        );
+        assertFalse(walletClaimed);
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(
+            address(punks),
+            user1,
+            2
+        );
+        assertFalse(walletClaimed);
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(
+            address(punks),
+            user2,
+            3
+        );
+        assertFalse(walletClaimed);
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(
+            address(punks),
+            user2,
+            4
+        );
+        assertFalse(walletClaimed);
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+
+        // user1 tries to invest double the allocated amount because they own 2 punks, but fails
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGatingPunks), type(uint256).max);
+        tokenIdsArray[0] = 1;
+        tokenIdsArray[1] = 2;
+        nftPurchaseList[0].collectionAddress = address(punks);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+        vm.expectRevert("purchase amount greater than max allocation");
+        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, (2 * purchaseCollection));
+
+        // user1 now purchases half of the allocation
+        uint256 purchaseAmount = purchaseCollection / 2;
+        uint256 poolSharesAmount = (purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user1, purchaseAmount, purchaseAmount, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
+
+        // user1 now tries to buy the remaining allocation, but fails
+        vm.expectRevert("wallet already used for nft set");
+        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
+        vm.stopPrank();
+
+        // user2 tries to buy all the allocation
+        vm.startPrank(user2);
+        deal(address(purchaseToken), user2, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGatingPunks), type(uint256).max);
+        tokenIdsArray[0] = 3;
+        tokenIdsArray[1] = 4;
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+        poolSharesAmount = (purchaseCollection * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user2, purchaseCollection, purchaseCollection, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseCollection);
+
+        // user2 now tries to buy some extra tokens, but fails
+        vm.expectRevert("wallet already used for nft set");
+        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseCollection);
+        vm.stopPrank();
+
+        //checks post-purchase
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(
+            address(punks),
+            user1,
+            1
+        );
+        assertTrue(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(
+            address(punks),
+            user1,
+            2
+        );
+        assertTrue(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(
+            address(punks),
+            user2,
+            3
+        );
+        assertTrue(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(
+            address(punks),
+            user2,
+            4
+        );
+        assertTrue(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+    }
+
+    function testAcceptDealPunksPerToken() public {
+        // since punks address is hardcoded we need to cheat and link the Mock contract to the address
+        bytes memory punksContractCode = address(collectionAddressPunks).code;
+        vm.etch(punks, punksContractCode);
+
+        // nft gating setup
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).dealConfig();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        uint256[] memory tokenIdsArray = new uint256[](2);
+        // we get the allocation for each collection
+        (uint256 purchaseCollection, , bool purchaseAmountPerToken, , ) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken)
+            .getNftCollectionDetails(address(punks));
+
+        // we mint some punks
+        MockPunks(punks).mint(user1, 1);
+        MockPunks(punks).mint(user1, 2);
+        MockPunks(punks).mint(user1, 3);
+        MockPunks(punks).mint(user2, 4);
+        MockPunks(punks).mint(user2, 5);
+
+        // checks pre-purchase
+        bool walletClaimed;
+        bool NftIdUsed;
+        bool hasNftList;
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
+            address(punks),
+            user1,
+            1
+        );
+        assertFalse(walletClaimed);
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
+            address(punks),
+            user1,
+            2
+        );
+        assertFalse(walletClaimed);
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
+            address(punks),
+            user2,
+            3
+        );
+        assertFalse(walletClaimed);
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
+            address(punks),
+            user2,
+            4
+        );
+        assertFalse(walletClaimed);
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
+            address(punks),
+            user2,
+            5
+        );
+        assertFalse(walletClaimed);
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+
+        // user1 invests double the allocated amount because they own 2 punks
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGatingPunksPerToken), type(uint256).max);
+        tokenIdsArray[0] = 1;
+        tokenIdsArray[1] = 2;
+        nftPurchaseList[0].collectionAddress = address(punks);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+        uint256 purchaseAmount = purchaseCollection * 2;
+        uint256 poolSharesAmount = (purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user1, purchaseAmount, purchaseAmount, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
+
+        // user1 now tries to purchase another 2x allocation with another punk, but fails
+        tokenIdsArray = new uint256[](1);
+        tokenIdsArray[0] = 3;
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+        vm.expectRevert("purchase amount greater than max allocation");
+        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
+
+        // user1 now buys the entire allocation with the last punk
+        purchaseAmount = purchaseCollection;
+        uint256 totalPoolShares = poolSharesAmount;
+        poolSharesAmount = (purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user1, purchaseAmount, purchaseAmount * 3, poolSharesAmount, totalPoolShares + poolSharesAmount);
+        AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
+        vm.stopPrank();
+
+        // user2 buys the entire allocation
+        vm.startPrank(user2);
+        deal(address(purchaseToken), user2, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGatingPunksPerToken), type(uint256).max);
+        tokenIdsArray = new uint256[](2);
+        tokenIdsArray[0] = 4;
+        tokenIdsArray[1] = 5;
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+        purchaseAmount = purchaseCollection * 2;
+        poolSharesAmount = (purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user2, purchaseAmount, purchaseAmount, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
+
+        // user2 tries to buy again with the same punks, but fails
+        vm.expectRevert("tokenId already used");
+        AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
+        vm.stopPrank();
+
+        // checks post-purchase
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
+            address(punks),
+            user1,
+            1
+        );
+        assertFalse(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
+            address(punks),
+            user1,
+            2
+        );
+        assertFalse(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
+            address(punks),
+            user2,
+            3
+        );
+        assertFalse(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
+            address(punks),
+            user2,
+            4
+        );
+        assertFalse(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
+            address(punks),
+            user2,
+            5
+        );
+        assertFalse(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+    }
+
+    function testAcceptDealERC1155(uint256 _tokenAmount1, uint256 _tokenAmount2) public {
+        // nft gating setup
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressNftGating1155).dealConfig();
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](2);
+        (uint256 purchaseCollection1, , , , uint256[] memory minTokensEligible1) = AelinUpFrontDeal(dealAddressNftGating1155)
+            .getNftCollectionDetails(address(collectionAddress4));
+        (uint256 purchaseCollection2, , , , uint256[] memory minTokensEligible2) = AelinUpFrontDeal(dealAddressNftGating1155)
+            .getNftCollectionDetails(address(collectionAddress5));
+
+        // we mint some tokens
+        MockERC1155(address(collectionAddress4)).mint(user1, 1, 100, "");
+        MockERC1155(address(collectionAddress4)).mint(user1, 2, 100, "");
+        MockERC1155(address(collectionAddress5)).mint(user1, 10, 1000, "");
+        MockERC1155(address(collectionAddress5)).mint(user1, 20, 2000, "");
+
+        // case 1: [collection4] user1 max out their allocation with the 2 collections
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating1155), type(uint256).max);
+
+        nftPurchaseList[0].collectionAddress = address(collectionAddress4);
+        nftPurchaseList[0].tokenIds = new uint256[](2);
+        nftPurchaseList[0].tokenIds[0] = 1;
+        nftPurchaseList[0].tokenIds[1] = 2;
+
+        nftPurchaseList[1].collectionAddress = address(collectionAddress5);
+        nftPurchaseList[1].tokenIds = new uint256[](2);
+        nftPurchaseList[1].tokenIds[0] = 10;
+        nftPurchaseList[1].tokenIds[1] = 20;
+
+        // first collection is per token, second is per wallet
+        // so total allocation = balanceOf(tokens) * allocationCollection1 + allocationCollection2
+        uint256 purchaseAmount = (200 * purchaseCollection1) + purchaseCollection2;
+        uint256 poolSharesAmount = (purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+
+        // user can't buy more than purchase amount
+        vm.expectRevert("purchase amount greater than max allocation");
+        AelinUpFrontDeal(dealAddressNftGating1155).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount + 1);
+
+        // user1 buys the tokens
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user1, purchaseAmount, purchaseAmount, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressNftGating1155).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
+
+        // user1 cannot buy anymore
+        vm.expectRevert("wallet already used for nft set");
+        AelinUpFrontDeal(dealAddressNftGating1155).acceptDeal(nftPurchaseList, merkleDataEmpty, 1);
+
+        // we mint new tokens for both collections
+        MockERC1155(address(collectionAddress4)).mint(user1, 1, 100, "");
+        MockERC1155(address(collectionAddress5)).mint(user1, 20, 2000, "");
+
+        // it still doesn't work because wallet is blacklisted for collection 2
+        vm.expectRevert("wallet already used for nft set");
+        AelinUpFrontDeal(dealAddressNftGating1155).acceptDeal(nftPurchaseList, merkleDataEmpty, 1);
+
+        // if we only use collection 1, it is working because allocation is per new token
+        nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress4);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 1;
+
+        uint256 newPurchaseAmount = 100 * purchaseCollection1;
+        uint256 newPoolShareAmount = (newPurchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(
+            user1,
+            newPurchaseAmount,
+            purchaseAmount + newPurchaseAmount,
+            newPoolShareAmount,
+            newPoolShareAmount + poolSharesAmount
+        );
+        AelinUpFrontDeal(dealAddressNftGating1155).acceptDeal(nftPurchaseList, merkleDataEmpty, newPurchaseAmount);
+
+        // if we only use collection 2, it reverts
+        nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collectionAddress5);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 20;
+
+        vm.expectRevert("wallet already used for nft set");
+        AelinUpFrontDeal(dealAddressNftGating1155).acceptDeal(nftPurchaseList, merkleDataEmpty, 1);
+
+        // checks post-purchase
+        (bool walletClaimed, bool NftIdUsed, bool hasNftList) = AelinUpFrontDeal(dealAddressNftGating1155)
+            .getNftGatingDetails(address(collectionAddress4), user1, 1);
+        assertFalse(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(
+            address(collectionAddress4),
+            user1,
+            2
+        );
+        assertFalse(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(
+            address(collectionAddress5),
+            user1,
+            10
+        );
+        assertTrue(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(
+            address(collectionAddress5),
+            user1,
+            20
+        );
+        assertTrue(walletClaimed);
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+
+        assertEq(AelinUpFrontDeal(dealAddressNftGating1155).totalPoolShares(), newPoolShareAmount + poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressNftGating1155).poolSharesPerUser(user1), newPoolShareAmount + poolSharesAmount);
+        assertEq(AelinUpFrontDeal(dealAddressNftGating1155).totalPurchasingAccepted(), purchaseAmount + newPurchaseAmount);
+        assertEq(
+            AelinUpFrontDeal(dealAddressNftGating1155).purchaseTokensPerUser(user1),
+            purchaseAmount + newPurchaseAmount
+        );
+
+        vm.stopPrank();
+    }
 
     //     /*//////////////////////////////////////////////////////////////
     //                             purchaserClaim()
     //     //////////////////////////////////////////////////////////////*/
 
-    //     // Revert scenarios
+    // Revert scenarios
 
-    //     function testRevertPurchaserClaimNotInWindow() public {}
+    function testRevertPurchaserClaimNotInWindow() public {}
 
-    //     function testRevertPurchaserClaimNoShares(address _user) public {}
+    function testRevertPurchaserClaimNoShares(address _user) public {}
 
-    //     // Pass scenarios
+    // Pass scenarios
 
-    //     // Does not meet purchaseRaiseMinimum
-    //     function testPurchaserClaimRefund(uint256 _purchaseAmount) public {}
+    // Does not meet purchaseRaiseMinimum
+    function testPurchaserClaimRefund(uint256 _purchaseAmount) public {}
 
-    //     function testPurchaserClaimNoDeallocation(uint256 _purchaseAmount) public {}
+    function testPurchaserClaimNoDeallocation(uint256 _purchaseAmount) public {}
 
-    //     function testPurchaserClaimWithDeallocation() public {}
+    function testPurchaserClaimWithDeallocation() public {}
 
     //     /*//////////////////////////////////////////////////////////////
     //                             sponsorClaim()
     //     //////////////////////////////////////////////////////////////*/
 
-    //     // Revert scenarios
+    // Revert scenarios
 
-    //     function testRevertSponsorClaimNotInWindow() public {}
+    function testRevertSponsorClaimNotInWindow() public {}
 
-    //     function testRevertSponsorClaimFailMinimumRaise(uint256 _purchaseAmount) public {}
+    function testRevertSponsorClaimFailMinimumRaise(uint256 _purchaseAmount) public {}
 
-    //     function testRevertSponsorClaimNotSponsor(uint256 _purchaseAmount, address _address) public {}
+    function testRevertSponsorClaimNotSponsor(uint256 _purchaseAmount, address _address) public {}
 
-    //     function testRevertSponsorClaimAlreadyClaimed() public {}
+    function testRevertSponsorClaimAlreadyClaimed() public {}
 
-    //     // Pass scenarios
+    // Pass scenarios
 
-    //     function testSponsorClaimNoDeallocation(uint256 _purchaseAmount) public {}
+    function testSponsorClaimNoDeallocation(uint256 _purchaseAmount) public {}
 
-    //     function testSponsorClaimWithDeallocation() public {}
+    function testSponsorClaimWithDeallocation() public {}
 
     //     /*//////////////////////////////////////////////////////////////
     //                             holderClaim()
     //     //////////////////////////////////////////////////////////////*/
 
-    //     // Revert scenarios
+    // Revert scenarios
 
-    //     function testRevertHolderClaimNotInWindow() public {}
+    function testRevertHolderClaimNotInWindow() public {}
 
-    //     function testRevertHolderClaimNotHolder(address _address, uint256 _purchaseAmount) public {}
+    function testRevertHolderClaimNotHolder(address _address, uint256 _purchaseAmount) public {}
 
-    //     function testRevertHolderClaimAlreadyClaimed() public {}
+    function testRevertHolderClaimAlreadyClaimed() public {}
 
-    //     function testRevertHolderClaimFailMinimumRaise(uint256 _purchaseAmount) public {}
+    function testRevertHolderClaimFailMinimumRaise(uint256 _purchaseAmount) public {}
 
-    //     // Pass scenarios
+    // Pass scenarios
 
-    //     function testHolderClaimNoDeallocation() public {}
+    function testHolderClaimNoDeallocation() public {}
 
-    //     function testHolderClaimWithDeallocation() public {}
+    function testHolderClaimWithDeallocation() public {}
 
     //     /*//////////////////////////////////////////////////////////////
     //                             feeEscrowClaim()
     //     //////////////////////////////////////////////////////////////*/
 
-    //     // Revert scenarios
+    // Revert scenarios
 
-    //     function testRevertEscrowClaimNotInWindow() public {}
+    function testRevertEscrowClaimNotInWindow() public {}
 
-    //     // Pass scenarios
+    // Pass scenarios
 
-    //     function testEscrowClaimNoDeallocation(address _address) public {}
+    function testEscrowClaimNoDeallocation(address _address) public {}
 
-    //     function testEscrowClaimWithDeallocation(address _address) public {}
+    function testEscrowClaimWithDeallocation(address _address) public {}
 
     //     /*//////////////////////////////////////////////////////////////
     //                         claimableUnderlyingTokens()
