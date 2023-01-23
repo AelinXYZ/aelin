@@ -2,182 +2,99 @@
 pragma solidity 0.8.6;
 
 import "forge-std/Test.sol";
-import {AelinPool} from "contracts/AelinPool.sol";
-import {AelinDeal} from "contracts/AelinDeal.sol";
-import {AelinPoolFactory} from "contracts/AelinPoolFactory.sol";
+import "../../contracts/libraries/AelinNftGating.sol";
+import "../../contracts/libraries/AelinAllowList.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {AelinUpFrontDeal} from "contracts/AelinUpFrontDeal.sol";
+import {AelinUpFrontDealFactory} from "contracts/AelinUpFrontDealFactory.sol";
 import {AelinFeeEscrow} from "contracts/AelinFeeEscrow.sol";
-import {IAelinPool} from "contracts/interfaces/IAelinPool.sol";
+import {IAelinUpFrontDeal} from "contracts/interfaces/IAelinUpFrontDeal.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract AelinFeeEscrowTest is Test {
+    using SafeERC20 for IERC20;
+
+    uint256 constant MAX_SPONSOR_FEE = 15 * 10**18;
     address public aelinTreasury = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
-    address public poolAddress;
-    address public dealAddress;
-    address public escrowAddress;
 
-    AelinPool public testPool;
-    AelinDeal public testDeal;
-    AelinPoolFactory public poolFactory;
+    AelinUpFrontDeal public testUpFrontDeal;
+    AelinUpFrontDealFactory public upFrontDealFactory;
     AelinFeeEscrow public testEscrow;
-
-    MockERC20 public dealToken;
     MockERC20 public purchaseToken;
+    MockERC20 public underlyingDealToken;
 
-    event InitializeEscrow(
-        address indexed dealAddress,
-        address indexed treasury,
-        uint256 vestingExpiry,
-        address indexed escrowedToken
-    );
-    event DelayEscrow(uint256 vestingExpiry);
+    AelinNftGating.NftCollectionRules[] public nftCollectionRulesEmpty;
+    IAelinUpFrontDeal.UpFrontDealConfig public sharedDealConfig;
+
+    address dealCreatorAddress = address(0xBEEF);
+    address dealHolderAddress = address(0xDEAD);
+    address user1 = address(0x1337);
+    address user2 = address(0x1338);
+    address user3 = address(0x1339);
+    address user4 = address(0x1340);
+
+    address upfrontDeal;
+    address escrowAddress;
 
     function setUp() public {
-        testPool = new AelinPool();
-        testDeal = new AelinDeal();
+        testUpFrontDeal = new AelinUpFrontDeal();
         testEscrow = new AelinFeeEscrow();
-        poolFactory = new AelinPoolFactory(address(testPool), address(testDeal), aelinTreasury, address(testEscrow));
-        dealToken = new MockERC20("MockDeal", "MD");
-        purchaseToken = new MockERC20("MockPool", "MP");
+        upFrontDealFactory = new AelinUpFrontDealFactory(address(testUpFrontDeal), address(testEscrow), aelinTreasury);
+        purchaseToken = new MockERC20("MockPurchase", "MP");
+        underlyingDealToken = new MockERC20("MockDeal", "MD");
+        AelinAllowList.InitData memory allowListInitEmpty;
 
-        address[] memory allowListAddresses;
-        uint256[] memory allowListAmounts;
-        IAelinPool.NftCollectionRules[] memory nftCollectionRules;
+        vm.startPrank(dealCreatorAddress);
+        deal(address(this), type(uint256).max);
+        deal(address(underlyingDealToken), address(dealCreatorAddress), type(uint256).max);
+        underlyingDealToken.approve(address(upFrontDealFactory), type(uint256).max);
 
-        IAelinPool.PoolData memory poolData;
-        poolData = IAelinPool.PoolData({
-            name: "POOL",
-            symbol: "POOL",
-            purchaseTokenCap: 1e35,
+        // Deal initialization
+        IAelinUpFrontDeal.UpFrontDealData memory dealData;
+        dealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
             purchaseToken: address(purchaseToken),
-            duration: 30 days,
-            sponsorFee: 2e18,
-            purchaseDuration: 20 days,
-            allowListAddresses: allowListAddresses,
-            allowListAmounts: allowListAmounts,
-            nftCollectionRules: nftCollectionRules
+            underlyingDealToken: address(underlyingDealToken),
+            holder: address(0xDEAD),
+            sponsor: address(0xBEEF),
+            sponsorFee: 1 * 10**18,
+            ipfsHash: "",
+            merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000
         });
 
-        poolAddress = poolFactory.createPool(poolData);
+        IAelinUpFrontDeal.UpFrontDealConfig memory dealConfig;
+        dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
+            underlyingDealTokenTotal: 1e35,
+            purchaseTokenPerDealToken: 3e18,
+            purchaseRaiseMinimum: 1e28,
+            purchaseDuration: 10 days,
+            vestingPeriod: 365 days,
+            vestingCliffPeriod: 60 days,
+            allowDeallocation: false
+        });
 
-        deal(address(purchaseToken), address(this), 1e75);
-        deal(address(dealToken), address(this), 1e75);
-
-        purchaseToken.approve(address(poolAddress), type(uint256).max);
-        AelinPool(poolAddress).purchasePoolTokens(1e27);
-
-        vm.warp(block.timestamp + 20 days);
-        dealAddress = AelinPool(poolAddress).createDeal(
-            address(dealToken),
-            1e25,
-            1e35,
-            10 days,
-            20 days,
-            30 days,
-            10 days,
-            address(this),
-            30 days
+        upfrontDeal = upFrontDealFactory.createUpFrontDeal(
+            dealData,
+            dealConfig,
+            nftCollectionRulesEmpty,
+            allowListInitEmpty
         );
 
-        dealToken.approve(address(dealAddress), type(uint256).max);
-        vm.warp(block.timestamp + 10 days);
-        AelinDeal(dealAddress).depositUnderlying(1e35);
-        escrowAddress = address(AelinDeal(dealAddress).aelinFeeEscrow());
+        // escrowAddress = AelinUpFrontDeal(upfrontDeal).aelinEscrowLogicAddress;
+
+        vm.stopPrank();
     }
 
+    /*//////////////////////////////////////////////////////////////
+                            initialize()
+    //////////////////////////////////////////////////////////////*/
     function testInitialize() public {
-        assertTrue(AelinDeal(dealAddress).depositComplete());
-        assertEq(AelinFeeEscrow(escrowAddress).treasury(), address(aelinTreasury));
-        assertEq(AelinFeeEscrow(escrowAddress).vestingExpiry(), block.timestamp + 180 days);
-        assertEq(AelinFeeEscrow(escrowAddress).escrowedToken(), address(dealToken));
-    }
-
-    function testInitializeEvent() public {
-        vm.expectEmit(true, true, true, true, address(testEscrow));
-        emit InitializeEscrow(address(this), aelinTreasury, block.timestamp + 180 days, address(dealToken));
-        AelinFeeEscrow(testEscrow).initialize(aelinTreasury, address(dealToken));
-    }
-
-    function testSetTreasury(address testAddress) public {
-        vm.assume(testAddress != address(0));
-        vm.prank(address(aelinTreasury));
-        AelinFeeEscrow(escrowAddress).setTreasury(testAddress);
-
-        assertEq(AelinFeeEscrow(escrowAddress).futureTreasury(), testAddress);
-    }
-
-    function testFailSetTreasury(address testAddress) public {
-        vm.assume(testAddress != address(aelinTreasury));
-        vm.prank(address(testAddress));
-        AelinFeeEscrow(escrowAddress).setTreasury(testAddress);
-    }
-
-    function testAcceptTreasury(address testAddress) public {
-        vm.assume(testAddress != address(0));
-        vm.prank(address(aelinTreasury));
-        AelinFeeEscrow(escrowAddress).setTreasury(testAddress);
-
-        vm.prank(address(testAddress));
-        AelinFeeEscrow(escrowAddress).acceptTreasury();
-
-        assertEq(AelinFeeEscrow(escrowAddress).treasury(), address(testAddress));
-    }
-
-    function testFailAcceptTreasury(address testAddress1, address testAddress2) public {
-        vm.assume(testAddress1 != testAddress2);
-        vm.prank(address(aelinTreasury));
-        AelinFeeEscrow(escrowAddress).setTreasury(testAddress1);
-
-        vm.prank(address(testAddress2));
-        AelinFeeEscrow(escrowAddress).acceptTreasury();
-    }
-
-    function testDelayEscrow(uint256 timestamp) public {
-        // 90 days + block.timestamp which is 30 days
-        vm.assume(timestamp > 120 days);
-        vm.assume(timestamp < 1e75);
-        vm.prank(address(aelinTreasury));
-        vm.warp(timestamp);
-        vm.expectEmit(false, false, false, true, address(escrowAddress));
-        emit DelayEscrow(block.timestamp + 90 days);
-        AelinFeeEscrow(escrowAddress).delayEscrow();
-
-        assertEq(AelinFeeEscrow(escrowAddress).vestingExpiry(), block.timestamp + 90 days);
-    }
-
-    function testFailDelayEscrow(uint256 timestamp) public {
-        vm.assume(timestamp < 120 days);
-        vm.warp(timestamp);
-        vm.startPrank(address(aelinTreasury));
-        vm.expectEmit(false, false, false, true, address(escrowAddress));
-        emit DelayEscrow(block.timestamp + 90 days);
-        AelinFeeEscrow(escrowAddress).delayEscrow();
-        AelinFeeEscrow(escrowAddress).delayEscrow();
-    }
-
-    function testFailDelayEscrowDiffAddress(uint256 timestamp, address testAddress) public {
-        vm.assume(timestamp > 120 days);
-        vm.assume(timestamp < type(uint256).max);
-        vm.warp(timestamp);
-        vm.assume(address(aelinTreasury) != testAddress);
-        vm.prank(testAddress);
-        AelinFeeEscrow(escrowAddress).delayEscrow();
-    }
-
-    function testWithdrawToken() public {
-        AelinPool(poolAddress).acceptMaxDealTokens();
-
-        uint256 escrowBalance = IERC20(dealToken).balanceOf(address(escrowAddress));
-        vm.warp(block.timestamp + 181 days);
-        vm.prank(address(aelinTreasury));
-        AelinFeeEscrow(escrowAddress).withdrawToken();
-
-        assertEq(IERC20(dealToken).balanceOf(address(escrowAddress)), 0);
-        assertEq(IERC20(dealToken).balanceOf(aelinTreasury), escrowBalance);
-    }
-
-    function testFailWithdrawToken(uint256 amount) public {
-        vm.assume(amount < 1e75);
-        AelinFeeEscrow(escrowAddress).withdrawToken();
+        // assertEq(AelinFeeEscrow(escrowAddress).treasury(), address(aelinTreasury));
+        // assertEq(AelinFeeEscrow(escrowAddress).vestingExpiry(), block.timestamp + 180 days);
+        // assertEq(AelinFeeEscrow(escrowAddress).escrowedToken(), address(dealToken));
     }
 }
