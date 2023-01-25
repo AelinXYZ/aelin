@@ -39,6 +39,15 @@ contract AelinFeeEscrowTest is Test {
     address upfrontDeal;
     address escrowAddress;
 
+    event SetTreasury(address indexed treasury);
+    event InitializeEscrow(
+        address indexed dealAddress,
+        address indexed treasury,
+        uint256 vestingExpiry,
+        address indexed escrowedToken
+    );
+    event DelayEscrow(uint256 vestingExpiry);
+
     function setUp() public {
         testUpFrontDeal = new AelinUpFrontDeal();
         testEscrow = new AelinFeeEscrow();
@@ -128,6 +137,12 @@ contract AelinFeeEscrowTest is Test {
         assertEq(AelinFeeEscrow(escrowAddress).escrowedToken(), address(underlyingDealToken));
     }
 
+    function testInitializeEvent() public {
+        vm.expectEmit(true, true, true, true, address(testEscrow));
+        emit InitializeEscrow(address(this), aelinTreasury, block.timestamp + 180 days, address(underlyingDealToken));
+        AelinFeeEscrow(testEscrow).initialize(aelinTreasury, address(underlyingDealToken));
+    }
+
     /*//////////////////////////////////////////////////////////////
                             setTresury()
     //////////////////////////////////////////////////////////////*/
@@ -185,6 +200,8 @@ contract AelinFeeEscrowTest is Test {
         vm.stopPrank();
 
         vm.startPrank(_futureTreasury);
+        vm.expectEmit(true, false, false, true, escrowAddress);
+        emit SetTreasury(_futureTreasury);
         AelinFeeEscrow(escrowAddress).acceptTreasury();
         assertEq(_futureTreasury, AelinFeeEscrow(escrowAddress).treasury());
         vm.stopPrank();
@@ -221,6 +238,8 @@ contract AelinFeeEscrowTest is Test {
 
         vm.startPrank(aelinTreasury);
         vm.warp(_delay);
+        vm.expectEmit(false, false, false, true, escrowAddress);
+        emit DelayEscrow(block.timestamp + 90 days);
         AelinFeeEscrow(escrowAddress).delayEscrow();
         vm.stopPrank();
 
