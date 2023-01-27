@@ -2862,19 +2862,189 @@ contract AelinUpFrontDealTest is Test {
 
     // Revert scenarios
 
-    function testRevertSponsorClaimNotInWindow() public {}
+    function testRevertSponsorClaimNotInWindow(address _user) public {
+        vm.startPrank(_user);
+        vm.expectRevert("underlying deposit incomplete");
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).sponsorClaim();
+        vm.expectRevert("purchase period not over");
+        AelinUpFrontDeal(dealAddressNoDeallocation).sponsorClaim();
+        vm.stopPrank();
+    }
 
-    function testRevertSponsorClaimFailMinimumRaise(uint256 _purchaseAmount) public {}
+    function testRevertSponsorClaimFailMinimumRaise(uint256 _purchaseAmount, address _user) public {
+        vm.assume(_user != address(0));
+        vm.assume(_user != dealCreatorAddress);
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (, uint256 purchaseTokenPerDealToken, uint256 purchaseRaiseMinimum, , , , ) = AelinUpFrontDeal(
+            dealAddressNoDeallocation
+        ).dealConfig();
+        vm.assume(_purchaseAmount < purchaseRaiseMinimum);
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount > 0);
 
-    function testRevertSponsorClaimNotSponsor(uint256 _purchaseAmount, address _address) public {}
+        // user accepts the deal with purchaseAmount < purchaseMinimum
+        vm.startPrank(_user);
+        deal(address(purchaseToken), _user, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNoDeallocation), type(uint256).max);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        AelinUpFrontDeal(dealAddressNoDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
 
-    function testRevertSponsorClaimAlreadyClaimed() public {}
+        // purchase period is now over
+        vm.warp(AelinUpFrontDeal(dealAddressNoDeallocation).purchaseExpiry() + 1 days);
+
+        // user tries to call sponsorClaim() and it reverts
+        vm.expectRevert("does not pass min raise");
+        AelinUpFrontDeal(dealAddressNoDeallocation).sponsorClaim();
+        vm.stopPrank();
+
+        // sponsor tries to call sponsorClaim() and it reverts
+        vm.startPrank(dealCreatorAddress);
+        vm.expectRevert("does not pass min raise");
+        AelinUpFrontDeal(dealAddressNoDeallocation).sponsorClaim();
+        vm.stopPrank();
+    }
+
+    function testRevertSponsorClaimNotSponsor(address _user, uint256 _purchaseAmount) public {
+        vm.assume(_user != address(0));
+        vm.assume(_user != dealCreatorAddress);
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (, uint256 purchaseTokenPerDealToken, uint256 purchaseRaiseMinimum, , , , ) = AelinUpFrontDeal(
+            dealAddressAllowDeallocation
+        ).dealConfig();
+        vm.assume(_purchaseAmount >= purchaseRaiseMinimum);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
+        vm.assume(success);
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount > 0);
+
+        // user accepts the deal with purchaseAmount >= purchaseMinimum
+        vm.startPrank(_user);
+        deal(address(purchaseToken), _user, type(uint256).max);
+        purchaseToken.approve(address(dealAddressAllowDeallocation), type(uint256).max);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+
+        // purchase period is now over
+        vm.warp(AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry() + 1 days);
+
+        // user tries to call sponsorClaim() and it reverts
+        vm.expectRevert("must be sponsor");
+        AelinUpFrontDeal(dealAddressAllowDeallocation).sponsorClaim();
+        vm.stopPrank();
+    }
+
+    function testRevertSponsorClaimAlreadyClaimed(address _user, uint256 _purchaseAmount) public {
+        vm.assume(_user != address(0));
+        vm.assume(_user != dealCreatorAddress);
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (, uint256 purchaseTokenPerDealToken, uint256 purchaseRaiseMinimum, , , , ) = AelinUpFrontDeal(
+            dealAddressAllowDeallocation
+        ).dealConfig();
+        vm.assume(_purchaseAmount >= purchaseRaiseMinimum);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
+        vm.assume(success);
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount > 0);
+
+        // user accepts the deal with purchaseAmount >= purchaseMinimum
+        vm.startPrank(_user);
+        deal(address(purchaseToken), _user, type(uint256).max);
+        purchaseToken.approve(address(dealAddressAllowDeallocation), type(uint256).max);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+        // purchase period is now over
+        vm.warp(AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry() + 1 days);
+
+        // sponsor now claims
+        vm.startPrank(dealCreatorAddress);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).sponsorClaim();
+
+        // sponsor tries to claim again and it fails
+        vm.expectRevert("sponsor already claimed");
+        AelinUpFrontDeal(dealAddressAllowDeallocation).sponsorClaim();
+        vm.stopPrank();
+    }
 
     // Pass scenarios
 
-    function testSponsorClaimNoDeallocation(uint256 _purchaseAmount) public {}
+    function testSponsorClaimNoDeallocation(uint256 _purchaseAmount) public {
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (
+            uint256 underlyingDealTokenTotal,
+            uint256 purchaseTokenPerDealToken,
+            uint256 purchaseRaiseMinimum,
+            ,
+            ,
+            ,
 
-    function testSponsorClaimWithDeallocation() public {}
+        ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
+        (, , , , , , uint256 sponsorFee, , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealData();
+        uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressNoDeallocation).purchaseExpiry();
+        vm.assume(_purchaseAmount > purchaseRaiseMinimum);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
+        vm.assume(success);
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount < underlyingDealTokenTotal);
+
+        // user1 accepts the deal
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNoDeallocation), type(uint256).max);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        AelinUpFrontDeal(dealAddressNoDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+
+        // purchase period is now over
+        vm.warp(purchaseExpiry + 1 days);
+
+        // sponsor now claims and gets a vesting token
+        vm.startPrank(dealCreatorAddress);
+        uint256 tokenCount = AelinUpFrontDeal(dealAddressNoDeallocation).tokenCount();
+        uint256 totalSold = AelinUpFrontDeal(dealAddressNoDeallocation).totalPoolShares();
+        uint256 shareAmount = (totalSold * sponsorFee) / BASE;
+        vm.expectEmit(true, true, false, true);
+        emit VestingTokenMinted(dealCreatorAddress, tokenCount, shareAmount, purchaseExpiry);
+        vm.expectEmit(true, false, false, true);
+        emit SponsorClaim(dealCreatorAddress, shareAmount);
+        AelinUpFrontDeal(dealAddressNoDeallocation).sponsorClaim();
+        vm.stopPrank();
+    }
+
+    function testSponsorClaimWithDeallocation(uint256 _purchaseAmount) public {
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
+            dealAddressAllowDeallocation
+        ).dealConfig();
+        (, , , , , , uint256 sponsorFee, , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealData();
+        uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry();
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
+        vm.assume(success);
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount > underlyingDealTokenTotal);
+
+        // user1 accepts the deal
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressAllowDeallocation), type(uint256).max);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+
+        // purchase period is now over
+        vm.warp(purchaseExpiry + 1 days);
+
+        // sponsor now claims and gets a vesting token
+        vm.startPrank(dealCreatorAddress);
+        uint256 tokenCount = AelinUpFrontDeal(dealAddressAllowDeallocation).tokenCount();
+        uint256 shareAmount = (underlyingDealTokenTotal * sponsorFee) / BASE;
+        vm.expectEmit(true, true, false, true);
+        emit VestingTokenMinted(dealCreatorAddress, tokenCount, shareAmount, purchaseExpiry);
+        vm.expectEmit(true, false, false, true);
+        emit SponsorClaim(dealCreatorAddress, shareAmount);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).sponsorClaim();
+        vm.stopPrank();
+    }
 
     //     /*//////////////////////////////////////////////////////////////
     //                             holderClaim()
@@ -2882,19 +3052,216 @@ contract AelinUpFrontDealTest is Test {
 
     // Revert scenarios
 
-    function testRevertHolderClaimNotInWindow() public {}
+    function testRevertHolderClaimNotInWindow(address _user) public {
+        vm.startPrank(_user);
+        vm.expectRevert("underlying deposit incomplete");
+        AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).holderClaim();
+        vm.expectRevert("purchase period not over");
+        AelinUpFrontDeal(dealAddressAllowDeallocation).holderClaim();
+        vm.stopPrank();
+    }
 
-    function testRevertHolderClaimNotHolder(address _address, uint256 _purchaseAmount) public {}
+    function testRevertHolderClaimNotHolder(address _user, uint256 _purchaseAmount) public {
+        vm.assume(_user != address(0));
+        vm.assume(_user != dealHolderAddress);
+        vm.assume(_purchaseAmount > 0);
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealConfig();
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
+        vm.assume(success);
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount > 0);
 
-    function testRevertHolderClaimAlreadyClaimed() public {}
+        // user accepts the deal
+        vm.startPrank(_user);
+        deal(address(purchaseToken), _user, type(uint256).max);
+        purchaseToken.approve(address(dealAddressAllowDeallocation), type(uint256).max);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
 
-    function testRevertHolderClaimFailMinimumRaise(uint256 _purchaseAmount) public {}
+        // purchase period is now over
+        vm.warp(AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry() + 1 days);
+
+        // user tries to call sponsorClaim() and it reverts
+        vm.expectRevert("must be holder");
+        AelinUpFrontDeal(dealAddressAllowDeallocation).holderClaim();
+        vm.stopPrank();
+    }
+
+    function testRevertHolderClaimAlreadyClaimed(address _user, uint256 _purchaseAmount) public {
+        vm.assume(_user != address(0));
+        vm.assume(_purchaseAmount > 0);
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealConfig();
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
+        vm.assume(success);
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount > 0);
+
+        // user accepts the deal
+        vm.startPrank(_user);
+        deal(address(purchaseToken), _user, type(uint256).max);
+        purchaseToken.approve(address(dealAddressAllowDeallocation), type(uint256).max);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+
+        // purchase period is now over
+        vm.warp(AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry() + 1 days);
+
+        // holder calls holderClaim()
+        vm.startPrank(dealHolderAddress);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).holderClaim();
+
+        // holder calls holderClaim() again and it reverts
+        vm.expectRevert("holder already claimed");
+        AelinUpFrontDeal(dealAddressAllowDeallocation).holderClaim();
+        vm.stopPrank();
+    }
 
     // Pass scenarios
 
-    function testHolderClaimNoDeallocation() public {}
+    function testHolderClaimFailMinimumRaise(address _user, uint256 _purchaseAmount) public {
+        vm.assume(_user != address(0));
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (, uint256 purchaseTokenPerDealToken, uint256 purchaseRaiseMinimum, , , , ) = AelinUpFrontDeal(
+            dealAddressNoDeallocation
+        ).dealConfig();
+        vm.assume(_purchaseAmount < purchaseRaiseMinimum);
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount > 0);
 
-    function testHolderClaimWithDeallocation() public {}
+        // user accepts the deal with purchaseAmount < purchaseMinimum
+        vm.startPrank(_user);
+        deal(address(purchaseToken), _user, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNoDeallocation), type(uint256).max);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        AelinUpFrontDeal(dealAddressNoDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+
+        // purchase period is now over
+        vm.warp(AelinUpFrontDeal(dealAddressNoDeallocation).purchaseExpiry() + 1 days);
+
+        // holder tries to call sponsorClaim() and gets all their underlying deal tokens back
+        vm.startPrank(dealHolderAddress);
+        uint256 amountRefund = underlyingDealToken.balanceOf(address(dealAddressAllowDeallocation));
+        uint256 amountBeforeClaim = underlyingDealToken.balanceOf(dealHolderAddress);
+        vm.expectEmit(true, false, false, true);
+        emit HolderClaim(
+            dealHolderAddress,
+            address(purchaseToken),
+            0,
+            address(underlyingDealToken),
+            amountRefund,
+            block.timestamp
+        );
+        AelinUpFrontDeal(dealAddressNoDeallocation).holderClaim();
+        uint256 amountAfterClaim = underlyingDealToken.balanceOf(dealHolderAddress);
+        assertEq(amountAfterClaim - amountBeforeClaim, amountRefund);
+        vm.stopPrank();
+    }
+
+    function testHolderClaimNoDeallocation(address _user, uint256 _purchaseAmount) public {
+        vm.assume(_user != address(0));
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (
+            uint256 underlyingDealTokenTotal,
+            uint256 purchaseTokenPerDealToken,
+            uint256 purchaseRaiseMinimum,
+            ,
+            ,
+            ,
+
+        ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
+        vm.assume(_purchaseAmount > purchaseRaiseMinimum);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
+        vm.assume(success);
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount < underlyingDealTokenTotal);
+
+        // user accepts the deal with purchaseMinimum  < purchaseAmount < deal total
+        vm.startPrank(_user);
+        deal(address(purchaseToken), _user, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNoDeallocation), type(uint256).max);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        AelinUpFrontDeal(dealAddressNoDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+
+        // purchase period is now over
+        vm.warp(AelinUpFrontDeal(dealAddressNoDeallocation).purchaseExpiry() + 1 days);
+
+        // holder calls sponsorClaim()
+        vm.startPrank(dealHolderAddress);
+        uint256 amountRaise = purchaseToken.balanceOf(dealAddressNoDeallocation);
+        uint256 amountRefund = underlyingDealTokenTotal - poolSharesAmount;
+        uint256 amountBeforeClaim = underlyingDealToken.balanceOf(dealHolderAddress);
+        uint256 feeAmount = (AelinUpFrontDeal(dealAddressNoDeallocation).totalPoolShares() * AELIN_FEE) / BASE;
+        assertEq(address(AelinUpFrontDeal(dealAddressNoDeallocation).aelinFeeEscrow()), address(0));
+        vm.expectEmit(true, false, false, true);
+        emit HolderClaim(
+            dealHolderAddress,
+            address(purchaseToken),
+            amountRaise,
+            address(underlyingDealToken),
+            underlyingDealTokenTotal - poolSharesAmount,
+            block.timestamp
+        );
+        AelinUpFrontDeal(dealAddressNoDeallocation).holderClaim();
+        assertEq(underlyingDealToken.balanceOf(dealHolderAddress) - amountBeforeClaim, amountRefund);
+        // this function also calls the claim for the protocol fee
+        assertEq(
+            underlyingDealToken.balanceOf(address(AelinUpFrontDeal(dealAddressNoDeallocation).aelinFeeEscrow())),
+            feeAmount
+        );
+        vm.stopPrank();
+    }
+
+    function testHolderClaimWithDeallocation(address _user, uint256 _purchaseAmount) public {
+        vm.assume(_user != address(0));
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
+            dealAddressAllowDeallocation
+        ).dealConfig();
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
+        vm.assume(success);
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount > underlyingDealTokenTotal);
+
+        // user accepts the deal with purchaseAmount > deal total
+        vm.startPrank(_user);
+        deal(address(purchaseToken), _user, type(uint256).max);
+        purchaseToken.approve(address(dealAddressAllowDeallocation), type(uint256).max);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+
+        // purchase period is now over
+        vm.warp(AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry() + 1 days);
+
+        // holder calls sponsorClaim()
+        vm.startPrank(dealHolderAddress);
+        uint256 amountBeforeClaim = underlyingDealToken.balanceOf(dealHolderAddress);
+        uint256 feeAmount = (underlyingDealTokenTotal * AELIN_FEE) / BASE;
+        uint256 totalIntendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10 ** underlyingTokenDecimals;
+        assertEq(address(AelinUpFrontDeal(dealAddressAllowDeallocation).aelinFeeEscrow()), address(0));
+        vm.expectEmit(true, false, false, true);
+        emit HolderClaim(
+            dealHolderAddress,
+            address(purchaseToken),
+            totalIntendedRaise,
+            address(underlyingDealToken),
+            0,
+            block.timestamp
+        );
+        AelinUpFrontDeal(dealAddressAllowDeallocation).holderClaim();
+        assertEq(underlyingDealToken.balanceOf(dealHolderAddress), amountBeforeClaim);
+        // this function also calls the claim for the protocol fee
+        assertEq(
+            underlyingDealToken.balanceOf(address(AelinUpFrontDeal(dealAddressAllowDeallocation).aelinFeeEscrow())),
+            feeAmount
+        );
+        vm.stopPrank();
+    }
 
     //     /*//////////////////////////////////////////////////////////////
     //                             feeEscrowClaim()
@@ -3051,4 +3418,17 @@ contract AelinUpFrontDealTest is Test {
     event VestingTokenMinted(address indexed user, uint256 indexed tokenId, uint256 amount, uint256 lastClaimedAt);
 
     event ClaimDealTokens(address indexed user, uint256 amountMinted, uint256 amountPurchasingReturned);
+
+    event SponsorClaim(address indexed sponsor, uint256 amountMinted);
+
+    event HolderClaim(
+        address indexed holder,
+        address purchaseToken,
+        uint256 amountClaimed,
+        address underlyingToken,
+        uint256 underlyingRefund,
+        uint256 timestamp
+    );
+
+    event FeeEscrowClaim(address indexed aelinFeeEscrow, address indexed underlyingTokenAddress, uint256 amount);
 }
