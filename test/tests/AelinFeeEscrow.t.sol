@@ -2,18 +2,17 @@
 pragma solidity 0.8.6;
 
 import "forge-std/Test.sol";
-import "../../contracts/libraries/AelinNftGating.sol";
-import "../../contracts/libraries/AelinAllowList.sol";
-import "../../contracts/libraries/MerkleTree.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import {MockERC20} from "../mocks/MockERC20.sol";
+import {AelinAllowList} from "contracts/libraries/AelinAllowList.sol";
+import {AelinFeeEscrow} from "contracts/AelinFeeEscrow.sol";
+import {AelinNftGating} from "contracts/libraries/AelinNftGating.sol";
 import {AelinUpFrontDeal} from "contracts/AelinUpFrontDeal.sol";
 import {AelinUpFrontDealFactory} from "contracts/AelinUpFrontDealFactory.sol";
-import {AelinFeeEscrow} from "contracts/AelinFeeEscrow.sol";
 import {IAelinUpFrontDeal} from "contracts/interfaces/IAelinUpFrontDeal.sol";
-import {MockERC20} from "../mocks/MockERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {MerkleTree} from "contracts/libraries/MerkleTree.sol";
 
 contract AelinFeeEscrowTest is Test {
     using SafeERC20 for IERC20;
