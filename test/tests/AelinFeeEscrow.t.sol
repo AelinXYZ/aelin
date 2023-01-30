@@ -120,29 +120,6 @@ contract AelinFeeEscrowTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
-                            initialize()
-    //////////////////////////////////////////////////////////////*/
-
-    // Revert scenarios
-    function testRevertInitializeInitMoreThanOnce() public {
-        vm.expectRevert("can only initialize once");
-        AelinFeeEscrow(escrowAddress).initialize(aelinTreasury, address(underlyingDealToken));
-    }
-
-    // Pass scenario
-    function testInitialize() public {
-        assertEq(AelinFeeEscrow(escrowAddress).treasury(), aelinTreasury);
-        assertEq(AelinFeeEscrow(escrowAddress).vestingExpiry(), block.timestamp + 180 days);
-        assertEq(AelinFeeEscrow(escrowAddress).escrowedToken(), address(underlyingDealToken));
-    }
-
-    function testInitializeEvent() public {
-        vm.expectEmit(true, true, true, true, address(testEscrow));
-        emit InitializeEscrow(address(this), aelinTreasury, block.timestamp + 180 days, address(underlyingDealToken));
-        AelinFeeEscrow(testEscrow).initialize(aelinTreasury, address(underlyingDealToken));
-    }
-
-    /*//////////////////////////////////////////////////////////////
                             setTresury()
     //////////////////////////////////////////////////////////////*/
 
@@ -204,6 +181,29 @@ contract AelinFeeEscrowTest is Test {
         AelinFeeEscrow(escrowAddress).acceptTreasury();
         assertEq(_futureTreasury, AelinFeeEscrow(escrowAddress).treasury());
         vm.stopPrank();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            initialize()
+    //////////////////////////////////////////////////////////////*/
+
+    // Revert scenarios
+    function testRevertInitializeInitMoreThanOnce() public {
+        vm.expectRevert("can only initialize once");
+        AelinFeeEscrow(escrowAddress).initialize(aelinTreasury, address(underlyingDealToken));
+    }
+
+    // Pass scenario
+    function testInitialize() public {
+        assertEq(AelinFeeEscrow(escrowAddress).treasury(), aelinTreasury);
+        assertEq(AelinFeeEscrow(escrowAddress).vestingExpiry(), block.timestamp + 180 days);
+        assertEq(AelinFeeEscrow(escrowAddress).escrowedToken(), address(underlyingDealToken));
+    }
+
+    function testInitializeEvent() public {
+        vm.expectEmit(true, true, true, true, address(testEscrow));
+        emit InitializeEscrow(address(this), aelinTreasury, block.timestamp + 180 days, address(underlyingDealToken));
+        AelinFeeEscrow(testEscrow).initialize(aelinTreasury, address(underlyingDealToken));
     }
 
     /*//////////////////////////////////////////////////////////////
