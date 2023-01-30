@@ -18,38 +18,49 @@ contract DelegateVouchTest is Test {
     /*//////////////////////////////////////////////////////////////
                         addDelegateVouch
     //////////////////////////////////////////////////////////////*/
-
-    function testFuzzAddDelegateVouch(address delegate) public {
-        vm.prank(aelinCouncil);
-        vm.expectEmit(false, false, false, false, address(delegateVouchAddress));
-        emit AddDelegateVouch(delegate);
-        DelegateVouch(delegateVouchAddress).addDelegateVouch(delegate);
-        assertEq(DelegateVouch(delegateVouchAddress).isDelegate(delegate), true);
-    }
-
-    function testFuzzAddDelegateVouchOnlyOwner(address delegate, address caller) public {
+    // Revert scenario
+    function testFuzz_addDelegateVouch_RevertIf_NotOwner(address delegate, address caller) public {
         vm.assume(caller != aelinCouncil);
+
         vm.prank(caller);
         vm.expectRevert("Only the contract owner may perform this action");
         DelegateVouch(delegateVouchAddress).addDelegateVouch(delegate);
+        vm.stopPrank();
+    }
+
+    // Pass scenario
+    function testFuzz_addDelegateVouch(address delegate) public {
+        vm.prank(aelinCouncil);
+
+        vm.expectEmit(true, true, true, true, address(delegateVouchAddress));
+        emit AddDelegateVouch(delegate);
+        DelegateVouch(delegateVouchAddress).addDelegateVouch(delegate);
+
+        assertTrue(DelegateVouch(delegateVouchAddress).isDelegate(delegate), "Should be added to isDelegate");
+        vm.stopPrank();
     }
 
     /*//////////////////////////////////////////////////////////////
                         removeDelegateVouch
     //////////////////////////////////////////////////////////////*/
-
-    function testFuzzRemoveDelegateVouch(address delegate) public {
-        vm.prank(aelinCouncil);
-        vm.expectEmit(false, false, false, false, address(delegateVouchAddress));
-        emit RemoveDelegateVouch(delegate);
-        DelegateVouch(delegateVouchAddress).removeDelegateVouch(delegate);
-        assertEq(DelegateVouch(delegateVouchAddress).isDelegate(delegate), false);
-    }
-
-    function testFuzzRemoveDelegateVouchOnlyOwner(address delegate, address caller) public {
+    // Revert scenario
+    function testFuzz_removeDelegateVouch_RevertIf_NotOwner(address delegate, address caller) public {
         vm.assume(caller != aelinCouncil);
+
         vm.prank(caller);
         vm.expectRevert("Only the contract owner may perform this action");
         DelegateVouch(delegateVouchAddress).removeDelegateVouch(delegate);
+        vm.stopPrank();
+    }
+
+    // Pass scenario
+    function testFuzz_removeDelegateVouch(address delegate) public {
+        vm.prank(aelinCouncil);
+        vm.expectEmit(true, true, true, true, address(delegateVouchAddress));
+        emit RemoveDelegateVouch(delegate);
+        DelegateVouch(delegateVouchAddress).removeDelegateVouch(delegate);
+
+        assertFalse(DelegateVouch(delegateVouchAddress).isDelegate(delegate), "Should be removed from isDelegate");
+        vm.stopPrank();
     }
 }
