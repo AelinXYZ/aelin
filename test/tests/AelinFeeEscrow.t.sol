@@ -124,14 +124,14 @@ contract AelinFeeEscrowTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     // Revert scenarios
-    function testRevertSetTresuryOnlyTreasury(address _wrongAddress, address _newAddress) public {
+    function testFuzz_RevertIf_SetTreasuryWithSenderNotTreasury(address _wrongAddress, address _newAddress) public {
         vm.startPrank(_wrongAddress);
         vm.expectRevert("only treasury can access");
         AelinFeeEscrow(escrowAddress).setTreasury(_newAddress);
         vm.stopPrank();
     }
 
-    function testRevertSetTresuryNoZeroAddress() public {
+    function test_RevertIf_SetTreasuryWithZeroAddress() public {
         vm.startPrank(aelinTreasury);
         vm.expectRevert();
         AelinFeeEscrow(escrowAddress).setTreasury(address(0));
@@ -139,7 +139,7 @@ contract AelinFeeEscrowTest is Test {
     }
 
     // Pass scenario
-    function testSetTresury(address _newAddress) public {
+    function testFuzz_SetTresury(address _newAddress) public {
         vm.assume(_newAddress != address(0));
 
         vm.startPrank(aelinTreasury);
@@ -153,7 +153,7 @@ contract AelinFeeEscrowTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     // Revert scenarios
-    function testRevertAcceptTreasuryOnlyFutureTreasury(address _futureTreasury, address _wrongAddress) public {
+    function testFuzz_RevertIf_AcceptTreasuryWithNotFutureTreasury(address _futureTreasury, address _wrongAddress) public {
         vm.assume(_futureTreasury != address(0));
         vm.assume(_wrongAddress != _futureTreasury);
 
@@ -168,7 +168,7 @@ contract AelinFeeEscrowTest is Test {
     }
 
     // Pass scenario
-    function testAcceptTreasury(address _futureTreasury) public {
+    function testFuzz_AcceptTreasury(address _futureTreasury) public {
         vm.assume(_futureTreasury != address(0));
 
         vm.startPrank(aelinTreasury);
@@ -188,19 +188,19 @@ contract AelinFeeEscrowTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     // Revert scenarios
-    function testRevertInitializeInitMoreThanOnce() public {
+    function test_RevertIf_InitializeMoreThanOnce() public {
         vm.expectRevert("can only initialize once");
         AelinFeeEscrow(escrowAddress).initialize(aelinTreasury, address(underlyingDealToken));
     }
 
     // Pass scenario
-    function testInitialize() public {
+    function test_Initialize() public {
         assertEq(AelinFeeEscrow(escrowAddress).treasury(), aelinTreasury);
         assertEq(AelinFeeEscrow(escrowAddress).vestingExpiry(), block.timestamp + 180 days);
         assertEq(AelinFeeEscrow(escrowAddress).escrowedToken(), address(underlyingDealToken));
     }
 
-    function testInitializeEvent() public {
+    function test_InitializeEvent() public {
         vm.expectEmit(true, true, true, true, address(testEscrow));
         emit InitializeEscrow(address(this), aelinTreasury, block.timestamp + 180 days, address(underlyingDealToken));
         AelinFeeEscrow(testEscrow).initialize(aelinTreasury, address(underlyingDealToken));
@@ -211,7 +211,7 @@ contract AelinFeeEscrowTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     // Revert scenarios
-    function testRevertDelayEscrowOnlyTreasury(address _wrongAddress) public {
+    function testFuzz_RevertIf_DelayEscrowWithSenderNotTreasury(address _wrongAddress) public {
         vm.assume(_wrongAddress != aelinTreasury);
 
         vm.startPrank(_wrongAddress);
@@ -220,7 +220,7 @@ contract AelinFeeEscrowTest is Test {
         vm.stopPrank();
     }
 
-    function testRevertDelayEscrowDelayTooLong(uint256 _delay) public {
+    function testFuzz_RevertIf_DelayEscrowWithDelayTooLong(uint256 _delay) public {
         vm.assume(_delay < 90 days);
 
         vm.startPrank(aelinTreasury);
@@ -231,7 +231,7 @@ contract AelinFeeEscrowTest is Test {
     }
 
     // Pass scenario
-    function testDealyEscrow(uint256 _delay) public {
+    function testFuzz_DealyEscrow(uint256 _delay) public {
         vm.assume(_delay > 100 days);
         vm.assume(_delay < 365 days);
 
@@ -250,7 +250,7 @@ contract AelinFeeEscrowTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     // Revert scenarios
-    function testRevertWithdrawTokenOnlyTreasury(address _wrongAddress) public {
+    function testFuzz_RevertIf_WithdrawTokenWithSenderNotTreasury(address _wrongAddress) public {
         vm.assume(_wrongAddress != aelinTreasury);
 
         vm.startPrank(_wrongAddress);
@@ -259,7 +259,7 @@ contract AelinFeeEscrowTest is Test {
         vm.stopPrank();
     }
 
-    function testRevertWithdrawTokenCannotAccessFunds(uint256 _delay) public {
+    function testFuzz_RevertIf_WithdrawTokenAndCannotAccessFunds(uint256 _delay) public {
         uint256 vestingExpiry = AelinFeeEscrow(escrowAddress).vestingExpiry();
         vm.assume(_delay < vestingExpiry);
         vm.warp(_delay);
@@ -271,7 +271,7 @@ contract AelinFeeEscrowTest is Test {
     }
 
     // Pass scenario
-    function testWithdrawToken(uint256 _delay) public {
+    function testFuzz_WithdrawToken(uint256 _delay) public {
         uint256 vestingExpiry = AelinFeeEscrow(escrowAddress).vestingExpiry();
         uint256 purchaseTokenPerDealToken;
         (, purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(upfrontDeal).dealConfig();
