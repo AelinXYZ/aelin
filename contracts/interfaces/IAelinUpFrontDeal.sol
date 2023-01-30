@@ -74,8 +74,6 @@ interface IAelinUpFrontDeal {
         uint256 totalDealTokens
     );
 
-    event CreateVestingToken(address indexed user, uint256 indexed tokenId, uint256 amount, uint256 lastClaimedAt);
-
     event ClaimDealTokens(address indexed user, uint256 amountMinted, uint256 amountPurchasingReturned);
 
     event SponsorClaim(address indexed sponsor, uint256 amountMinted);
@@ -89,7 +87,7 @@ interface IAelinUpFrontDeal {
         uint256 timestamp
     );
 
-    event FeeEscrowClaim(address indexed aelinFeeEscrow, address indexed underlyingTokenAddress, uint256 amount);
+    event FeeEscrowClaimed(address indexed aelinFeeEscrow, address indexed underlyingTokenAddress, uint256 amount);
 
     event ClaimedUnderlyingDealToken(address indexed user, address underlyingToken, uint256 amountClaimed);
 

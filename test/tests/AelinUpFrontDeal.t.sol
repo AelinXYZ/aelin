@@ -2,10 +2,10 @@
 pragma solidity 0.8.6;
 
 import "forge-std/Test.sol";
-import "../../contracts/libraries/AelinNftGating.sol";
-import "../../contracts/libraries/AelinAllowList.sol";
-import "../../contracts/libraries/MerkleTree.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import {AelinNftGating} from "../../contracts/libraries/AelinNftGating.sol";
+import {AelinAllowList} from "../../contracts/libraries/AelinAllowList.sol";
+import {MerkleTree} from "../../contracts/libraries/MerkleTree.sol";
+import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {AelinUpFrontDeal} from "contracts/AelinUpFrontDeal.sol";
@@ -3269,13 +3269,94 @@ contract AelinUpFrontDealTest is Test {
 
     // Revert scenarios
 
-    function testRevertEscrowClaimNotInWindow() public {}
+    function testRevertFeeEscrowClaimNotInWindow(address _user) public {
+        vm.startPrank(_user);
+        vm.expectRevert("underlying deposit incomplete");
+        AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).feeEscrowClaim();
+        vm.expectRevert("purchase period not over");
+        AelinUpFrontDeal(dealAddressAllowDeallocation).feeEscrowClaim();
+        vm.stopPrank();
+    }
 
     // Pass scenarios
 
-    function testEscrowClaimNoDeallocation(address _address) public {}
+    function testFeeEscrowClaimNoDeallocation(address _user, uint256 _purchaseAmount) public {
+        vm.assume(_user != address(0));
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (
+            uint256 underlyingDealTokenTotal,
+            uint256 purchaseTokenPerDealToken,
+            uint256 purchaseRaiseMinimum,
+            ,
+            ,
+            ,
 
-    function testEscrowClaimWithDeallocation(address _address) public {}
+        ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
+        vm.assume(_purchaseAmount > purchaseRaiseMinimum);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
+        vm.assume(success);
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount < underlyingDealTokenTotal);
+
+        // user accepts the deal with purchaseMinimum  < purchaseAmount < deal total
+        vm.startPrank(_user);
+        deal(address(purchaseToken), _user, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNoDeallocation), type(uint256).max);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        AelinUpFrontDeal(dealAddressNoDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+
+        // purchase period is now over
+        vm.warp(AelinUpFrontDeal(dealAddressNoDeallocation).purchaseExpiry() + 1 days);
+
+        // user calls feeEscrowClaim()
+        uint256 feeAmount = (AelinUpFrontDeal(dealAddressNoDeallocation).totalPoolShares() * AELIN_FEE) / BASE;
+        assertEq(address(AelinUpFrontDeal(dealAddressNoDeallocation).aelinFeeEscrow()), address(0));
+
+        AelinUpFrontDeal(dealAddressNoDeallocation).feeEscrowClaim();
+        assertTrue(address(AelinUpFrontDeal(dealAddressNoDeallocation).aelinFeeEscrow()) != address(0));
+        assertEq(
+            underlyingDealToken.balanceOf(address(AelinUpFrontDeal(dealAddressNoDeallocation).aelinFeeEscrow())),
+            feeAmount
+        );
+
+        vm.stopPrank();
+    }
+
+    function testFeeEscrowClaimWithDeallocation(address _user, uint256 _purchaseAmount) public {
+        vm.assume(_user != address(0));
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
+            dealAddressAllowDeallocation
+        ).dealConfig();
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
+        vm.assume(success);
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        vm.assume(poolSharesAmount > underlyingDealTokenTotal);
+
+        // user accepts the deal with purchaseAmount > deal total
+        vm.startPrank(_user);
+        deal(address(purchaseToken), _user, type(uint256).max);
+        purchaseToken.approve(address(dealAddressAllowDeallocation), type(uint256).max);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        vm.stopPrank();
+
+        // purchase period is now over
+        vm.warp(AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry() + 1 days);
+
+        // user calls feeEscrowClaim()
+        uint256 feeAmount = (AelinUpFrontDeal(dealAddressNoDeallocation).totalPoolShares() * AELIN_FEE) / BASE;
+        assertEq(address(AelinUpFrontDeal(dealAddressNoDeallocation).aelinFeeEscrow()), address(0));
+
+        AelinUpFrontDeal(dealAddressNoDeallocation).feeEscrowClaim();
+        assertTrue(address(AelinUpFrontDeal(dealAddressNoDeallocation).aelinFeeEscrow()) != address(0));
+        assertEq(
+            underlyingDealToken.balanceOf(address(AelinUpFrontDeal(dealAddressNoDeallocation).aelinFeeEscrow())),
+            feeAmount
+        );
+
+        vm.stopPrank();
+    }
 
     //     /*//////////////////////////////////////////////////////////////
     //                         claimableUnderlyingTokens()
@@ -3430,5 +3511,5 @@ contract AelinUpFrontDealTest is Test {
         uint256 timestamp
     );
 
-    event FeeEscrowClaim(address indexed aelinFeeEscrow, address indexed underlyingTokenAddress, uint256 amount);
+    event FeeEscrowClaimed(address indexed aelinFeeEscrow, address indexed underlyingTokenAddress, uint256 amount);
 }
