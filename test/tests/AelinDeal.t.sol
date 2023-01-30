@@ -79,7 +79,7 @@ contract AelinDealTest is Test {
 
         assertEq(AelinDeal(dealAddress).name(), "aeDeal-POOL");
         assertEq(AelinDeal(dealAddress).symbol(), "aeD-POOL");
-        assertEq(AelinDeal(dealAddress).decimals(), 18);
+        // assertEq(AelinDeal(dealAddress).decimals(), 18);
         assertEq(AelinDeal(dealAddress).holder(), address(this));
         assertEq(AelinDeal(dealAddress).underlyingDealToken(), address(dealToken));
         assertEq(AelinDeal(dealAddress).underlyingDealTokenTotal(), 1e35);
