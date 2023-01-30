@@ -176,7 +176,7 @@ contract AelinFeeEscrowTest is Test {
         vm.stopPrank();
 
         vm.startPrank(_futureTreasury);
-        vm.expectEmit(true, false, false, true, escrowAddress);
+        vm.expectEmit(true, true, true, true, escrowAddress);
         emit SetTreasury(_futureTreasury);
         AelinFeeEscrow(escrowAddress).acceptTreasury();
         assertEq(AelinFeeEscrow(escrowAddress).treasury(), _futureTreasury, "futureTreasuryAddress");
@@ -237,7 +237,7 @@ contract AelinFeeEscrowTest is Test {
 
         vm.startPrank(aelinTreasury);
         vm.warp(_delay);
-        vm.expectEmit(false, false, false, true, escrowAddress);
+        vm.expectEmit(true, true, true, true, escrowAddress);
         emit DelayEscrow(block.timestamp + 90 days);
         AelinFeeEscrow(escrowAddress).delayEscrow();
         vm.stopPrank();
