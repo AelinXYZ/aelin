@@ -144,7 +144,7 @@ contract AelinFeeEscrowTest is Test {
 
         vm.startPrank(aelinTreasury);
         AelinFeeEscrow(escrowAddress).setTreasury(_newAddress);
-        assertEq(_newAddress, AelinFeeEscrow(escrowAddress).futureTreasury());
+        assertEq(AelinFeeEscrow(escrowAddress).futureTreasury(), _newAddress, "treasuryAddress");
         vm.stopPrank();
     }
 
@@ -179,7 +179,7 @@ contract AelinFeeEscrowTest is Test {
         vm.expectEmit(true, false, false, true, escrowAddress);
         emit SetTreasury(_futureTreasury);
         AelinFeeEscrow(escrowAddress).acceptTreasury();
-        assertEq(_futureTreasury, AelinFeeEscrow(escrowAddress).treasury());
+        assertEq(AelinFeeEscrow(escrowAddress).treasury(), _futureTreasury, "futureTreasuryAddress");
         vm.stopPrank();
     }
 
@@ -195,9 +195,9 @@ contract AelinFeeEscrowTest is Test {
 
     // Pass scenario
     function test_Initialize() public {
-        assertEq(AelinFeeEscrow(escrowAddress).treasury(), aelinTreasury);
-        assertEq(AelinFeeEscrow(escrowAddress).vestingExpiry(), block.timestamp + 180 days);
-        assertEq(AelinFeeEscrow(escrowAddress).escrowedToken(), address(underlyingDealToken));
+        assertEq(AelinFeeEscrow(escrowAddress).treasury(), aelinTreasury, "aelinTreasuryAddress");
+        assertEq(AelinFeeEscrow(escrowAddress).vestingExpiry(), block.timestamp + 180 days, "vestingExpiry");
+        assertEq(AelinFeeEscrow(escrowAddress).escrowedToken(), address(underlyingDealToken), "escrowedToken");
     }
 
     function test_InitializeEvent() public {
@@ -242,7 +242,7 @@ contract AelinFeeEscrowTest is Test {
         AelinFeeEscrow(escrowAddress).delayEscrow();
         vm.stopPrank();
 
-        assertEq(_delay + 90 days, AelinFeeEscrow(escrowAddress).vestingExpiry());
+        assertEq(AelinFeeEscrow(escrowAddress).vestingExpiry(), _delay + 90 days, "vestingExpiry");
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -285,6 +285,6 @@ contract AelinFeeEscrowTest is Test {
         AelinFeeEscrow(escrowAddress).withdrawToken();
         vm.stopPrank();
 
-        assertEq(aelinFeeAmt, IERC20(underlyingDealToken).balanceOf(aelinTreasury));
+        assertEq(IERC20(underlyingDealToken).balanceOf(aelinTreasury), aelinFeeAmt, "aelinFeeAmt");
     }
 }
