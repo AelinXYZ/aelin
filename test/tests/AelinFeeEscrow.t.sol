@@ -234,8 +234,9 @@ contract AelinFeeEscrowTest is Test {
 
     // Pass scenario
     function testFuzz_delayEscrow(uint256 _delay) public {
+        (bool success, ) = SafeMath.tryAdd(block.timestamp, _delay);
+        vm.assume(success);
         vm.assume(_delay > 100 days);
-        vm.assume(_delay < 365 days);
 
         vm.startPrank(aelinTreasury);
         vm.warp(_delay);
