@@ -274,8 +274,6 @@ contract AelinFeeEscrowTest is Test, AelinTestUtils {
     // Pass scenario
     function testFuzz_withdrawToken(uint256 _delay) public {
         uint256 vestingExpiry = AelinFeeEscrow(escrowAddress).vestingExpiry();
-        uint256 purchaseTokenPerDealToken;
-        (, purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(upfrontDeal).dealConfig();
 
         uint256 feeAmount = (AelinUpFrontDeal(upfrontDeal).totalPoolShares() * AELIN_FEE) / BASE;
         assertEq(feeAmount, IERC20(underlyingDealToken).balanceOf(address(escrowAddress)));
