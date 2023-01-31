@@ -2,6 +2,7 @@
 pragma solidity 0.8.6;
 
 import "forge-std/Test.sol";
+import {AelinTestUtils} from "../utils/AelinTestUtils.sol";
 import {AelinNftGating} from "../../contracts/libraries/AelinNftGating.sol";
 import {AelinAllowList} from "../../contracts/libraries/AelinAllowList.sol";
 import {MerkleTree} from "../../contracts/libraries/MerkleTree.sol";
@@ -18,15 +19,8 @@ import {MockERC721} from "../mocks/MockERC721.sol";
 import {MockERC1155} from "../mocks/MockERC1155.sol";
 import {MockPunks} from "../mocks/MockPunks.sol";
 
-contract AelinUpFrontDealTest is Test {
+contract AelinUpFrontDealTest is Test, AelinTestUtils {
     using SafeERC20 for IERC20;
-
-    address public aelinTreasury = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
-    address public punks = address(0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB);
-
-    uint256 constant BASE = 100 * 10 ** 18;
-    uint256 constant MAX_SPONSOR_FEE = 15 * 10 ** 18;
-    uint256 constant AELIN_FEE = 2 * 10 ** 18;
 
     AelinUpFrontDeal public testUpFrontDeal;
     AelinUpFrontDealFactory public upFrontDealFactory;
@@ -43,13 +37,6 @@ contract AelinUpFrontDealTest is Test {
     AelinNftGating.NftCollectionRules[] public nftCollectionRulesEmpty;
     IAelinUpFrontDeal.UpFrontDealConfig public sharedDealConfig;
     MerkleTree.UpFrontMerkleData public merkleDataEmpty;
-
-    address dealCreatorAddress = address(0xBEEF);
-    address dealHolderAddress = address(0xDEAD);
-    address user1 = address(0x1337);
-    address user2 = address(0x1338);
-    address user3 = address(0x1339);
-    address user4 = address(0x1340);
 
     address dealAddressNoDeallocationNoDeposit;
     address dealAddressAllowDeallocationNoDeposit;
@@ -111,8 +98,8 @@ contract AelinUpFrontDealTest is Test {
             symbol: "DEAL",
             purchaseToken: address(purchaseToken),
             underlyingDealToken: address(underlyingDealToken),
-            holder: address(0xDEAD),
-            sponsor: address(0xBEEF),
+            holder: dealHolderAddress,
+            sponsor: dealCreatorAddress,
             sponsorFee: 1 * 10 ** 18,
             ipfsHash: "",
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000
@@ -205,18 +192,18 @@ contract AelinUpFrontDealTest is Test {
         );
 
         vm.stopPrank();
-        vm.startPrank(address(0xDEAD));
+        vm.startPrank(dealHolderAddress);
 
         // Deposit underlying tokens to save time for next tests
-        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
         underlyingDealToken.approve(address(dealAddressNoDeallocation), type(uint256).max);
         AelinUpFrontDeal(dealAddressNoDeallocation).depositUnderlyingTokens(1e35);
 
-        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
         underlyingDealToken.approve(address(dealAddressAllowDeallocation), type(uint256).max);
         AelinUpFrontDeal(dealAddressAllowDeallocation).depositUnderlyingTokens(1e35);
 
-        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
         underlyingDealToken.approve(address(dealAddressAllowList), type(uint256).max);
         AelinUpFrontDeal(dealAddressAllowList).depositUnderlyingTokens(1e35);
 
@@ -246,8 +233,8 @@ contract AelinUpFrontDealTest is Test {
                 symbol: "DEAL",
                 purchaseToken: address(purchaseToken),
                 underlyingDealToken: address(underlyingDealToken),
-                holder: address(0xDEAD),
-                sponsor: address(0xBEEF),
+                holder: dealHolderAddress,
+                sponsor: dealCreatorAddress,
                 sponsorFee: 1 * 10 ** 18,
                 ipfsHash: "",
                 merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000
@@ -599,9 +586,9 @@ contract AelinUpFrontDealTest is Test {
         (, , , tempAddress, , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
         assertEq(tempAddress, address(underlyingDealToken));
         (, , , , tempAddress, , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
-        assertEq(tempAddress, address(0xDEAD));
+        assertEq(tempAddress, dealHolderAddress);
         (, , , , , tempAddress, , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
-        assertEq(tempAddress, address(0xBEEF));
+        assertEq(tempAddress, dealCreatorAddress);
         (, , , , , , tempUint, , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
         assertEq(tempUint, 1e18);
         // deal config
@@ -656,9 +643,9 @@ contract AelinUpFrontDealTest is Test {
         (, , , tempAddress, , , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealData();
         assertEq(tempAddress, address(underlyingDealToken));
         (, , , , tempAddress, , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealData();
-        assertEq(tempAddress, address(0xDEAD));
+        assertEq(tempAddress, dealHolderAddress);
         (, , , , , tempAddress, , , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealData();
-        assertEq(tempAddress, address(0xBEEF));
+        assertEq(tempAddress, dealCreatorAddress);
         (, , , , , , tempUint, , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealData();
         assertEq(tempUint, 1e18);
         // deal config
@@ -720,9 +707,9 @@ contract AelinUpFrontDealTest is Test {
         (, , , tempAddress, , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealData();
         assertEq(tempAddress, address(underlyingDealToken));
         (, , , , tempAddress, , , , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealData();
-        assertEq(tempAddress, address(0xDEAD));
+        assertEq(tempAddress, dealHolderAddress);
         (, , , , , tempAddress, , , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealData();
-        assertEq(tempAddress, address(0xBEEF));
+        assertEq(tempAddress, dealCreatorAddress);
         (, , , , , , tempUint, , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealData();
         assertEq(tempUint, 1e18);
         // deal config
@@ -780,9 +767,9 @@ contract AelinUpFrontDealTest is Test {
         (, , , tempAddress, , , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealData();
         assertEq(tempAddress, address(underlyingDealToken));
         (, , , , tempAddress, , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealData();
-        assertEq(tempAddress, address(0xDEAD));
+        assertEq(tempAddress, dealHolderAddress);
         (, , , , , tempAddress, , , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealData();
-        assertEq(tempAddress, address(0xBEEF));
+        assertEq(tempAddress, dealCreatorAddress);
         (, , , , , , tempUint, , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealData();
         assertEq(tempUint, 1e18);
         // deal config
