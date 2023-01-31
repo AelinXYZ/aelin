@@ -2,6 +2,7 @@
 pragma solidity 0.8.6;
 
 import "forge-std/Test.sol";
+import {AelinTestUtils} from "../utils/AelinTestUtils.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -14,13 +15,8 @@ import {AelinUpFrontDealFactory} from "contracts/AelinUpFrontDealFactory.sol";
 import {IAelinUpFrontDeal} from "contracts/interfaces/IAelinUpFrontDeal.sol";
 import {MerkleTree} from "contracts/libraries/MerkleTree.sol";
 
-contract AelinFeeEscrowTest is Test {
+contract AelinFeeEscrowTest is Test, AelinTestUtils {
     using SafeERC20 for IERC20;
-
-    uint256 constant MAX_SPONSOR_FEE = 15 * 10**18;
-    uint256 constant AELIN_FEE = 2 * 10**18;
-
-    address public aelinTreasury = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
 
     AelinUpFrontDeal public testUpFrontDeal;
     AelinUpFrontDealFactory public upFrontDealFactory;
@@ -30,10 +26,6 @@ contract AelinFeeEscrowTest is Test {
 
     MerkleTree.UpFrontMerkleData public merkleDataEmpty;
     AelinNftGating.NftCollectionRules[] public nftCollectionRulesEmpty;
-
-    address dealCreatorAddress = address(0xBEEF);
-    address dealHolderAddress = address(0xDEAD);
-    address user1 = address(0x1337);
 
     address upfrontDeal;
     address escrowAddress;
@@ -69,9 +61,9 @@ contract AelinFeeEscrowTest is Test {
             symbol: "DEAL",
             purchaseToken: address(purchaseToken),
             underlyingDealToken: address(underlyingDealToken),
-            holder: address(0xDEAD),
-            sponsor: address(0xBEEF),
-            sponsorFee: 1 * 10**18,
+            holder: dealHolderAddress,
+            sponsor: dealCreatorAddress,
+            sponsorFee: 1 * 10 ** 18,
             ipfsHash: "",
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000
         });
@@ -96,8 +88,8 @@ contract AelinFeeEscrowTest is Test {
         vm.stopPrank();
 
         // Fund the deal
-        vm.startPrank(address(0xDEAD));
-        deal(address(underlyingDealToken), address(0xDEAD), type(uint256).max);
+        vm.startPrank(dealHolderAddress);
+        deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
         underlyingDealToken.approve(address(upfrontDeal), type(uint256).max);
         AelinUpFrontDeal(upfrontDeal).depositUnderlyingTokens(1e35);
         vm.stopPrank();
@@ -117,72 +109,6 @@ contract AelinFeeEscrowTest is Test {
         vm.stopPrank();
 
         escrowAddress = address(AelinUpFrontDeal(upfrontDeal).aelinFeeEscrow());
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                            setTreasury()
-    //////////////////////////////////////////////////////////////*/
-
-    // Revert scenarios
-    function testFuzz_setTreasury_RevertIf_SenderIsNotTreasury(address _wrongAddress, address _newAddress) public {
-        vm.startPrank(_wrongAddress);
-        vm.expectRevert("only treasury can access");
-        AelinFeeEscrow(escrowAddress).setTreasury(_newAddress);
-        vm.stopPrank();
-    }
-
-    function test_setTreasury_RevertIf_SetsTreasuryWithZeroAddress() public {
-        vm.startPrank(aelinTreasury);
-        vm.expectRevert();
-        AelinFeeEscrow(escrowAddress).setTreasury(address(0));
-        vm.stopPrank();
-    }
-
-    // Pass scenario
-    function testFuzz_setTresury(address _newAddress) public {
-        vm.assume(_newAddress != address(0));
-
-        vm.startPrank(aelinTreasury);
-        AelinFeeEscrow(escrowAddress).setTreasury(_newAddress);
-        assertEq(AelinFeeEscrow(escrowAddress).futureTreasury(), _newAddress, "treasuryAddress");
-        vm.stopPrank();
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                            acceptTreasury()
-    //////////////////////////////////////////////////////////////*/
-
-    // Revert scenarios
-    function testFuzz_acceptTreasury_RevertIf_SenderIsNotFutureTreasury(address _futureTreasury, address _wrongAddress)
-        public
-    {
-        vm.assume(_futureTreasury != address(0));
-        vm.assume(_wrongAddress != _futureTreasury);
-
-        vm.startPrank(aelinTreasury);
-        AelinFeeEscrow(escrowAddress).setTreasury(_futureTreasury);
-        vm.stopPrank();
-
-        vm.startPrank(_wrongAddress);
-        vm.expectRevert("only future treasury can access");
-        AelinFeeEscrow(escrowAddress).acceptTreasury();
-        vm.stopPrank();
-    }
-
-    // Pass scenario
-    function testFuzz_acceptTreasury(address _futureTreasury) public {
-        vm.assume(_futureTreasury != address(0));
-
-        vm.startPrank(aelinTreasury);
-        AelinFeeEscrow(escrowAddress).setTreasury(_futureTreasury);
-        vm.stopPrank();
-
-        vm.startPrank(_futureTreasury);
-        vm.expectEmit(true, true, true, true, escrowAddress);
-        emit SetTreasury(_futureTreasury);
-        AelinFeeEscrow(escrowAddress).acceptTreasury();
-        assertEq(AelinFeeEscrow(escrowAddress).treasury(), _futureTreasury, "futureTreasuryAddress");
-        vm.stopPrank();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -209,6 +135,74 @@ contract AelinFeeEscrowTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
+                            setTreasury()
+    //////////////////////////////////////////////////////////////*/
+
+    // Revert scenarios
+    function testFuzz_setTreasury_RevertIf_SenderIsNotTreasury(address _wrongAddress, address _newAddress) public {
+        vm.assume(_wrongAddress != aelinTreasury);
+        vm.startPrank(_wrongAddress);
+        vm.expectRevert("must be treasury");
+        AelinFeeEscrow(escrowAddress).setTreasury(_newAddress);
+        vm.stopPrank();
+    }
+
+    function test_setTreasury_RevertIf_SetsTreasuryWithZeroAddress() public {
+        vm.startPrank(aelinTreasury);
+        vm.expectRevert("cant pass null treasury address");
+        AelinFeeEscrow(escrowAddress).setTreasury(address(0));
+        vm.stopPrank();
+    }
+
+    // Pass scenario
+    function testFuzz_setTresury(address _newAddress) public {
+        vm.assume(_newAddress != address(0));
+
+        vm.startPrank(aelinTreasury);
+        AelinFeeEscrow(escrowAddress).setTreasury(_newAddress);
+        assertEq(AelinFeeEscrow(escrowAddress).futureTreasury(), _newAddress, "futureTreasuryAddress");
+        vm.stopPrank();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            acceptTreasury()
+    //////////////////////////////////////////////////////////////*/
+
+    // Revert scenarios
+    function testFuzz_acceptTreasury_RevertIf_SenderIsNotFutureTreasury(
+        address _futureTreasury,
+        address _wrongAddress
+    ) public {
+        vm.assume(_futureTreasury != address(0));
+        vm.assume(_wrongAddress != _futureTreasury);
+
+        vm.startPrank(aelinTreasury);
+        AelinFeeEscrow(escrowAddress).setTreasury(_futureTreasury);
+        vm.stopPrank();
+
+        vm.startPrank(_wrongAddress);
+        vm.expectRevert("must be future treasury");
+        AelinFeeEscrow(escrowAddress).acceptTreasury();
+        vm.stopPrank();
+    }
+
+    // Pass scenario
+    function testFuzz_acceptTreasury(address _futureTreasury) public {
+        vm.assume(_futureTreasury != address(0));
+
+        vm.startPrank(aelinTreasury);
+        AelinFeeEscrow(escrowAddress).setTreasury(_futureTreasury);
+        vm.stopPrank();
+
+        vm.startPrank(_futureTreasury);
+        vm.expectEmit(true, true, true, true, escrowAddress);
+        emit SetTreasury(_futureTreasury);
+        AelinFeeEscrow(escrowAddress).acceptTreasury();
+        assertEq(AelinFeeEscrow(escrowAddress).treasury(), _futureTreasury, "futureTreasuryAddress");
+        vm.stopPrank();
+    }
+
+    /*//////////////////////////////////////////////////////////////
                             delayEscrow()
     //////////////////////////////////////////////////////////////*/
 
@@ -217,31 +211,35 @@ contract AelinFeeEscrowTest is Test {
         vm.assume(_wrongAddress != aelinTreasury);
 
         vm.startPrank(_wrongAddress);
-        vm.expectRevert("only treasury can access");
+        vm.expectRevert("must be treasury");
         AelinFeeEscrow(escrowAddress).delayEscrow();
         vm.stopPrank();
     }
 
-    function testFuzz_delayEscrow_RevertIf_DelayIsTooLong(uint256 _delay) public {
-        vm.assume(_delay < 90 days);
+    function testFuzz_delayEscrow_RevertIf_CalledTooEarly(uint256 _delay) public {
+        uint256 vestingExpiry = AelinFeeEscrow(escrowAddress).vestingExpiry();
+        (bool success, ) = SafeMath.tryAdd(_delay, 90 days);
+        vm.assume(success);
+        vm.assume(vestingExpiry >= _delay + 90 days);
 
         vm.startPrank(aelinTreasury);
         vm.warp(_delay);
-        vm.expectRevert("can only extend by 90 days");
+        vm.expectRevert("must not shorten vesting period");
         AelinFeeEscrow(escrowAddress).delayEscrow();
         vm.stopPrank();
     }
 
     // Pass scenario
     function testFuzz_delayEscrow(uint256 _delay) public {
-        (bool success, ) = SafeMath.tryAdd(block.timestamp, _delay);
+        uint256 vestingExpiry = AelinFeeEscrow(escrowAddress).vestingExpiry();
+        (bool success, ) = SafeMath.tryAdd(_delay, 90 days);
         vm.assume(success);
-        vm.assume(_delay > 100 days);
+        vm.assume(vestingExpiry < _delay + 90 days);
 
         vm.startPrank(aelinTreasury);
         vm.warp(_delay);
         vm.expectEmit(true, true, true, true, escrowAddress);
-        emit DelayEscrow(block.timestamp + 90 days);
+        emit DelayEscrow(_delay + 90 days);
         AelinFeeEscrow(escrowAddress).delayEscrow();
         vm.stopPrank();
 
@@ -257,14 +255,14 @@ contract AelinFeeEscrowTest is Test {
         vm.assume(_wrongAddress != aelinTreasury);
 
         vm.startPrank(_wrongAddress);
-        vm.expectRevert("only treasury can access");
+        vm.expectRevert("must be treasury");
         AelinFeeEscrow(escrowAddress).withdrawToken();
         vm.stopPrank();
     }
 
-    function testFuzz_withdrawToken_RevertIf_VestingExpiryNotDone(uint256 _delay) public {
+    function testFuzz_withdrawToken_RevertIf_BeforeVestingExpiry(uint256 _delay) public {
         uint256 vestingExpiry = AelinFeeEscrow(escrowAddress).vestingExpiry();
-        vm.assume(_delay < vestingExpiry);
+        vm.assume(_delay <= vestingExpiry);
         vm.warp(_delay);
 
         vm.startPrank(aelinTreasury);
@@ -278,16 +276,18 @@ contract AelinFeeEscrowTest is Test {
         uint256 vestingExpiry = AelinFeeEscrow(escrowAddress).vestingExpiry();
         uint256 purchaseTokenPerDealToken;
         (, purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(upfrontDeal).dealConfig();
-        uint256 aelinFeeAmt = (3e18 * AELIN_FEE) / (purchaseTokenPerDealToken * 100);
+
+        uint256 feeAmount = (AelinUpFrontDeal(upfrontDeal).totalPoolShares() * AELIN_FEE) / BASE;
+        assertEq(feeAmount, IERC20(underlyingDealToken).balanceOf(address(escrowAddress)));
 
         vm.assume(_delay > vestingExpiry);
         vm.warp(_delay);
 
         vm.startPrank(aelinTreasury);
-        vm.warp(_delay);
         AelinFeeEscrow(escrowAddress).withdrawToken();
         vm.stopPrank();
 
-        assertEq(IERC20(underlyingDealToken).balanceOf(aelinTreasury), aelinFeeAmt, "aelinFeeAmt");
+        assertEq(IERC20(underlyingDealToken).balanceOf(address(escrowAddress)), 0);
+        assertEq(IERC20(underlyingDealToken).balanceOf(aelinTreasury), feeAmount, "aelinFeeAmt");
     }
 }

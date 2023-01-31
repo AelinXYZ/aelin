@@ -6,6 +6,10 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 contract AelinFeeEscrow {
     using SafeERC20 for IERC20;
+
+    uint256 constant VESTING_PERIOD = 180 days;
+    uint256 constant DELAY_PERIOD = 90 days;
+
     uint256 public vestingExpiry;
     address public treasury;
     address public futureTreasury;
@@ -20,41 +24,30 @@ contract AelinFeeEscrow {
      */
     constructor() {}
 
-    /**
-     * @dev the treasury may change their address
-     */
-    function setTreasury(address _treasury) external onlyTreasury {
-        require(_treasury != address(0));
-        futureTreasury = _treasury;
-    }
-
-    function acceptTreasury() external {
-        require(msg.sender == futureTreasury, "only future treasury can access");
-        treasury = futureTreasury;
-        emit SetTreasury(futureTreasury);
-    }
-
     function initialize(address _treasury, address _escrowedToken) external initOnce {
         treasury = _treasury;
-        vestingExpiry = block.timestamp + 180 days;
+        vestingExpiry = block.timestamp + VESTING_PERIOD;
         escrowedToken = _escrowedToken;
         emit InitializeEscrow(msg.sender, _treasury, vestingExpiry, escrowedToken);
     }
 
-    modifier initOnce() {
-        require(!calledInitialize, "can only initialize once");
-        calledInitialize = true;
-        _;
+    /**
+     * @dev the treasury may change their address
+     */
+    function setTreasury(address _futureTreasury) external onlyTreasury {
+        require(_futureTreasury != address(0), "cant pass null treasury address");
+        futureTreasury = _futureTreasury;
     }
 
-    modifier onlyTreasury() {
-        require(msg.sender == treasury, "only treasury can access");
-        _;
+    function acceptTreasury() external {
+        require(msg.sender == futureTreasury, "must be future treasury");
+        treasury = futureTreasury;
+        emit SetTreasury(futureTreasury);
     }
 
     function delayEscrow() external onlyTreasury {
-        require(vestingExpiry < block.timestamp + 90 days, "can only extend by 90 days");
-        vestingExpiry = block.timestamp + 90 days;
+        require(vestingExpiry < block.timestamp + DELAY_PERIOD, "must not shorten vesting period");
+        vestingExpiry = block.timestamp + DELAY_PERIOD;
         emit DelayEscrow(vestingExpiry);
     }
 
@@ -65,6 +58,17 @@ contract AelinFeeEscrow {
         require(block.timestamp > vestingExpiry, "cannot access funds yet");
         uint256 balance = IERC20(escrowedToken).balanceOf(address(this));
         IERC20(escrowedToken).safeTransfer(treasury, balance);
+    }
+
+    modifier initOnce() {
+        require(!calledInitialize, "can only initialize once");
+        calledInitialize = true;
+        _;
+    }
+
+    modifier onlyTreasury() {
+        require(msg.sender == treasury, "must be treasury");
+        _;
     }
 
     event SetTreasury(address indexed treasury);

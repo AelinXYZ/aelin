@@ -15,7 +15,6 @@ library AelinNftGating {
         // if true, then `purchaseAmount` is per token
         // else `purchaseAmount` is per account regardless of the NFTs held
         bool purchaseAmountPerToken;
-        // both variables below are only applicable for 1155
         uint256[] tokenIds;
         // min number of tokens required for participating
         uint256[] minTokensEligible;
@@ -116,6 +115,8 @@ library AelinNftGating {
             uint256[] memory _tokenIds = nftPurchaseList.tokenIds;
 
             NftCollectionRules memory nftCollectionRules = _data.nftCollectionDetails[_collectionAddress];
+
+            require(_collectionAddress != address(0), "collection should not be null");
             require(nftCollectionRules.collectionAddress == _collectionAddress, "collection not in the pool");
 
             if (nftCollectionRules.purchaseAmountPerToken && nftCollectionRules.purchaseAmount > 0) {
@@ -215,5 +216,6 @@ library AelinNftGating {
         uint256[] tokenIds,
         uint256[] minTokensEligible
     );
+
     event BlacklistNFT(address indexed collection, uint256 nftID);
 }
