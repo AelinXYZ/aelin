@@ -5,33 +5,39 @@ import "../../libraries/AelinNftGating.sol";
 import "../../libraries/AelinAllowList.sol";
 
 interface IVestAMM {
+    enum Deallocation {
+        None,
+        Proportional
+    }
+
     struct VestingSchedule {
         uint256 vestingPeriod;
         uint256 vestingCliffPeriod;
-    }
-
-    enum Deallocation {
-        None,
-        Proportional,
-        Laminar
+        Deallocation deallocation;
+        uint256 investorShare; // 0 to 100
+        uint256 totalHolderTokens;
     }
 
     // assume 50/50 to deposit ratio to start
-    struct AMMData {
+    struct AmmData {
         address ammContract; // could be null if no liquidity yet
         address quoteAsset;
         address baseAsset;
         uint256 baseAssetAmount;
-        uint256 depositorShare; // 0 to 100. Defaults to 50
-        VestingSchedule vestingData;
     }
 
-    struct LiquidityLaunch {
+    struct FundingLimits {
+        uint256 lower;
+        uint256 upper;
+    }
+
+    struct VAmmInfo {
         bool hasLaunchPhase;
         uint256 initialQuotePerBase;
         uint256 depositWindow;
         uint256 lpFundingWindow;
-        Deallocation deallocation;
+        address mainHolder;
+        FundingLimits fundingLimits;
     }
 
     struct MigrationRules {
@@ -43,12 +49,8 @@ interface IVestAMM {
         address rewardToken;
         uint256 rewardPerQuote;
         VestingSchedule vestingData;
-        MigrationRules migrationRules;
-    }
-
-    struct DepositToken {
-        address depositToken;
-        uint256 amount;
+        MigrationRules migrationRules; // ??
+        address singleHolder;
     }
 
     struct DealAccess {
@@ -58,9 +60,14 @@ interface IVestAMM {
         AelinAllowList.InitData allowListInit;
     }
 
-    event DepositPoolToken(address indexed baseAsset, address indexed depositor, uint256 baseAssetAmount);
+    struct DepositToken {
+        address token;
+        uint256 amount;
+    }
 
-    event NewVestAMM(AMMData ammData, LiquidityLaunch liquidityLaunch, DealAccess dealAccess);
+    event TokenDeposited(address token, uint256 amount);
+
+    event NewVestAMM(AmmData ammData, VAmmInfo vAMMInfo, SingleRewardConfig[] singleRewards, DealAccess dealAccess);
 
     event SetHolder(address indexed holder);
 
