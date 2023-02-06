@@ -37,6 +37,7 @@ interface IVestAMM {
         uint256 depositWindow;
         uint256 lpFundingWindow;
         address mainHolder;
+        VestingSchedule[] vestingSchedules;
         FundingLimits fundingLimits;
     }
 

@@ -57,15 +57,14 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         vestAMMFeeModule = _vestAMMFeeModule;
         vestDAO = _vestDAO;
 
-        // uint256 highestPrice;
-        // for (uint256 i; i < _dealConfig.vestingSchedule.length; ++i) {
-        //     require(1825 days >= _dealConfig.vestingSchedule[i].vestingCliffPeriod, "max 5 year cliff");
-        //     require(1825 days >= _dealConfig.vestingSchedule[i].vestingPeriod, "max 5 year vesting");
-        //     require(_dealConfig.vestingSchedule[i].purchaseTokenPerDealToken > 0, "invalid deal price");
-        //     if (_dealConfig.vestingSchedule[i].purchaseTokenPerDealToken > highestPrice) {
-        //         highestPrice = _dealConfig.vestingSchedule[i].purchaseTokenPerDealToken;
-        //     }
-        // }
+        for (uint256 i; i < _vAmmInfo.vestingSchedule.length; ++i) {
+            require(1825 days >= _vAmmInfo.vestingSchedule[i].vestingCliffPeriod, "max 5 year cliff");
+            require(1825 days >= _vAmmInfo.vestingSchedule[i].vestingPeriod, "max 5 year vesting");
+            require(100e18 >= _vAmmInfo.vestingSchedule[i].investorShare, "max 100% to investor");
+            require(0 <= _vAmmInfo.vestingSchedule[i].investorShare, "min 0% to investor");
+            require(0 < _vAmmInfo.vestingSchedule[i].totalHolderTokens, "allocate tokens to schedule");
+            require(_vAmmInfo.vestingSchedule[i].purchaseTokenPerDealToken > 0, "invalid deal price");
+        }
 
         // Allow list logic
         // check if there's allowlist and amounts,
@@ -163,7 +162,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     // to create the pool and deposit assets after phase 0 ends
     function createInitialLiquidity() external {
-        require(vAMMInfo.hasLiquidityLaunch == true, "only for new liquidity");
+        require(vAMMInfo.hasLiquidityLaunch, "only for new liquidity");
+        // ammData.ammContract based on the contract call the right libary deposit method
     }
 
     // to create the pool and deposit assets after phase 0 ends
