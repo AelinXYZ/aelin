@@ -21,10 +21,7 @@ contract AelinFeeEscrowTest is Test, AelinTestUtils {
     AelinUpFrontDeal public testUpFrontDeal;
     AelinUpFrontDealFactory public upFrontDealFactory;
     AelinFeeEscrow public testEscrow;
-    MockERC20 public purchaseToken;
-    MockERC20 public underlyingDealToken;
 
-    MerkleTree.UpFrontMerkleData public merkleDataEmpty;
     AelinNftGating.NftCollectionRules[] public nftCollectionRulesEmpty;
 
     address upfrontDeal;
@@ -44,7 +41,6 @@ contract AelinFeeEscrowTest is Test, AelinTestUtils {
         testEscrow = new AelinFeeEscrow();
         upFrontDealFactory = new AelinUpFrontDealFactory(address(testUpFrontDeal), address(testEscrow), aelinTreasury);
         purchaseToken = new MockERC20("MockPurchase", "MP");
-        underlyingDealToken = new MockERC20("MockDeal", "MD");
 
         AelinAllowList.InitData memory allowListInitEmpty;
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;

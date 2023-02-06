@@ -381,7 +381,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     /**
      * @dev transfers protocol fee of underlying deal tokens to the treasury escrow contract
      */
-    function feeEscrowClaim() public purchasingOver {
+    function feeEscrowClaim() public purchasingOver passMinimumRaise {
         if (!feeEscrowClaimed) {
             feeEscrowClaimed = true;
             address _underlyingDealToken = dealData.underlyingDealToken;
@@ -418,7 +418,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
         _claimUnderlying(msg.sender, _tokenId);
     }
 
-    function _claimUnderlying(address _owner, uint256 _tokenId) internal purchasingOver passMinimumRaise {
+    function _claimUnderlying(address _owner, uint256 _tokenId) internal {
         require(ownerOf(_tokenId) == _owner, "must be owner to claim");
         uint256 claimableAmount = claimableUnderlyingTokens(_tokenId);
         require(claimableAmount > 0, "no underlying ready to claim");
