@@ -4,6 +4,22 @@ pragma solidity 0.8.6;
 import "../../libraries/AelinNftGating.sol";
 import "../../libraries/AelinAllowList.sol";
 
+// Integration notes
+// we will deposit capital into AMMs all at once using deployPool
+// or just addLiquidity if a pool already exists. Inside of these methods
+// we will get back a specific amount of LP tokens. This will be the case
+// even for Uniswap v3 since we will work with projects that wrap the NFT and return ERC20
+// we will need to take the wrapped tokens and send them to a contract where they will be
+// owned by NFTs held by each of the participants in the pool and maybe the protocol if
+// they are keeping LP units. then we will need to call remove liquidity one user at a time
+// when people call claim to vest their tokens. Each integration will need to have its own
+// set of arguments passed depending on the AMM and how it works. For AMMs that automatically
+// reinvest trading fees we will need to figure out a way to determine how much has been
+// earned in fees and capture 10% of this amount as protocol fees. For AMMs that do not
+// automatically reinvest trading fees we will need to collect the fees, distribute 10%
+// to the AELIN protocol as fees and 90% back to the user
+// this is all we need from an integration side with any AMM
+
 interface IVestAMMLibrary {
     function deployPool() external view returns (bool);
 

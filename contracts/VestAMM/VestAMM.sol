@@ -18,7 +18,10 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     using SafeERC20 for IERC20;
 
     uint256 constant BASE = 100 * 10**18;
-    uint256 constant AELIN_FEE = 1 * 10**18;
+    uint256 constant VEST_ASSET_FEE = 1 * 10**18;
+    uint256 constant VEST_SWAP_FEE = 10 * 10**18;
+    uint256 public depositExpiry;
+    uint256 public lpFundingExpiry;
 
     MerkleTree.TrackClaimed private trackClaimed;
     AelinAllowList.AllowList public allowList;
@@ -57,15 +60,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         vestAMMFeeModule = _vestAMMFeeModule;
         vestDAO = _vestDAO;
 
-        for (uint256 i; i < _vAmmInfo.vestingSchedule.length; ++i) {
-            require(1825 days >= _vAmmInfo.vestingSchedule[i].vestingCliffPeriod, "max 5 year cliff");
-            require(1825 days >= _vAmmInfo.vestingSchedule[i].vestingPeriod, "max 5 year vesting");
-            require(100e18 >= _vAmmInfo.vestingSchedule[i].investorShare, "max 100% to investor");
-            require(0 <= _vAmmInfo.vestingSchedule[i].investorShare, "min 0% to investor");
-            require(0 < _vAmmInfo.vestingSchedule[i].totalHolderTokens, "allocate tokens to schedule");
-            require(_vAmmInfo.vestingSchedule[i].purchaseTokenPerDealToken > 0, "invalid deal price");
-        }
-
         // Allow list logic
         // check if there's allowlist and amounts,
         // if yes, store it to `allowList` and emit a single event with the addresses and amounts
@@ -82,20 +76,10 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         require(!(bytes(_dealAccess.ipfsHash).length == 0 && _dealAccess.merkleRoot != 0), "merkle needs ipfs hash");
     }
 
-    // checks if all assets deposited and sets deposit complete and starts deposit period if true
     function setDepositComplete() internal {
         depositComplete = true;
-    }
-
-    function _startDepositPeriod(
-        uint256 _depositDuration,
-        uint256 _vestingCliffPeriod,
-        uint256 _vestingPeriod
-    ) internal {
-        purchaseExpiry = block.timestamp + _purchaseDuration;
-        vestingCliffExpiry = purchaseExpiry + _vestingCliffPeriod;
-        vestingExpiry = vestingCliffExpiry + _vestingPeriod;
-        emit FullyFunded(address(this), block.timestamp, purchaseExpiry, vestingCliffExpiry, vestingExpiry);
+        depositExpiry = block.timestamp + vAmmInfo.depositWindow;
+        // TODO emit some event that the deposit is complete for the subgraph
     }
 
     // add a check to start deposit window
@@ -141,14 +125,56 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     // tracks % ownership of total LP assets for the Fee Module to track for claiming fees
     // note we may want to have a separate method for accepting in phase 0. tbd
     // note check access for NFT gated pools, merkle deal pools and private pools
-    function acceptDeal(uint256 quoteAmount) external {}
+    function acceptDeal(
+        AelinNftGating.NftPurchaseList[] calldata _nftPurchaseList,
+        MerkleTree.UpFrontMerkleData calldata _merkleData,
+        uint256 _investmentTokenAmount
+    ) external lock {
+        require(depositComplete, "deposit reward tokens first");
+        require(block.timestamp < investmentExpiry, "not in purchase window");
+        address investmentToken = ammContract.quoteAsset;
+        require(IERC20(investmentToken).balanceOf(msg.sender) >= _investmentTokenAmount, "not enough purchaseToken");
+        if (nftGating.hasNftList || _nftPurchaseList.length > 0) {
+            AelinNftGating.purchaseDealTokensWithNft(_nftPurchaseList, nftGating, _investmentTokenAmount);
+        } else if (allowList.hasAllowList) {
+            require(_investmentTokenAmount <= allowList.amountPerAddress[msg.sender], "more than allocation");
+            allowList.amountPerAddress[msg.sender] -= _investmentTokenAmount;
+        } else if (dealData.merkleRoot != 0) {
+            MerkleTree.purchaseMerkleAmount(_merkleData, trackClaimed, _investmentTokenAmount, dealData.merkleRoot);
+        }
+        uint256 balanceBeforeTransfer = IERC20(investmentToken).balanceOf(address(this));
+        IERC20(investmentToken).safeTransferFrom(msg.sender, address(this), _investmentTokenAmount);
+        uint256 balanceAfterTransfer = IERC20(investmentToken).balanceOf(address(this));
+        uint256 purchaseTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
+        totalPurchasingAccepted += purchaseTokenAmount;
+        purchaseTokensPerUser[msg.sender] += purchaseTokenAmount;
+        // TODO mint NFT for the user with their id tied to an object with their purchase amount
+
+        // uint8 underlyingTokenDecimals = IERC20Decimals(dealData.underlyingDealToken).decimals();
+        // uint256 poolSharesAmount;
+        // // this takes into account the decimal conversion between purchasing token and underlying deal token
+        // // pool shares having the same amount of decimals as underlying deal tokens
+        // poolSharesAmount = (purchaseTokenAmount * 10**underlyingTokenDecimals) / _purchaseTokenPerDealToken;
+        // require(poolSharesAmount > 0, "purchase amount too small");
+        // // pool shares directly correspond to the amount of deal tokens that can be minted
+        // // pool shares held = deal tokens minted as long as no deallocation takes place
+        // totalPoolShares += poolSharesAmount;
+        // poolSharesPerUser[msg.sender] += poolSharesAmount;
+        // if (!dealConfig.allowDeallocation) {
+        //     require(totalPoolShares <= _underlyingDealTokenTotal, "purchased amount > total");
+        // }
+        // emit AcceptDeal(
+        //     msg.sender,
+        //     purchaseTokenAmount,
+        //     purchaseTokensPerUser[msg.sender],
+        //     poolSharesAmount,
+        //     poolSharesPerUser[msg.sender]
+        // );
+    }
 
     // collect the fees from AMMs that dont auto reinvest them
+    // and we also need to collect fees that have been reinvested and take a % of those LP shares as protocol fees
     function collectAllFees(uint256 tokenId) external returns (uint256 amount0, uint256 amount1) {}
-
-    // for investors to send in LP tokens (could be part of acceptDeal)
-    // is there a case where protocols dont want to let people lock their existing liquidity
-    function migrate() external {}
 
     // for investors at the end of phase 0 but only if they can deallocate,
     // otherwise it should not be necessary but we might use it anyways for v1 in both cases
