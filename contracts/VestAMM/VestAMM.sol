@@ -245,11 +245,18 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     /**
-     * @dev allows the purchaser to mint deal tokens. this method is also used
-     * to send deal tokens to the sponsor. It may only be called from the pool
-     * contract that created this deal
+     * @dev allows the purchaser to mint a NFT representing their share of the LP tokens
+     * the NFT will be tied to storage data in this contract. We need 4 numbers for the
+     * vesting system to work. 1) the investors amount contributed. 2) the total target raise.
+     * 3) the total amount contributed and 4) the number of LP tokens they earn.
+     * After the LP funding window is done whenever a user calls transfer or claim for the
+     * first time we can update all the NFT object data to show their exact vesting amounts.
+     * we can use a bitmap to efficiently calculate if they have claimed or transferred their NFT yet.
+     * the bitmap will use the ID of the NFT we issued them as the index. if they have claimed
+     * their index will be set to 1. This system gets rid of the need to have a settle step where the
+     * deallocation is managed like we do in the regular Aelin pools.
      */
-    function mintVestingToken(address _to, uint256 _amount) external depositCompleted onlyPool {
+    function mintVestingToken(address _to, uint256 _amount) internal {
         _mintVestingToken(_to, _amount, vestingCliffExpiry);
     }
 
