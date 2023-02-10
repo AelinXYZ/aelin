@@ -94,7 +94,16 @@ contract AelinTestUtils is Test {
         vm.warp(AelinUpFrontDeal(_dealAddress).purchaseExpiry() + 1 days);
     }
 
+    function reachVestingCliffExpiry(address _dealAddress) public {
+        vm.warp(AelinUpFrontDeal(_dealAddress).vestingCliffExpiry() + 1 days);
+    }
+
     function reachVestingPeriod(address _dealAddress) public {
         vm.warp(AelinUpFrontDeal(_dealAddress).vestingCliffExpiry() + 1 days);
+    }
+
+    function makeAddr(uint256 num) internal returns (address addr) {
+        uint256 privateKey = uint256(keccak256(abi.encodePacked(num)));
+        addr = vm.addr(privateKey);
     }
 }

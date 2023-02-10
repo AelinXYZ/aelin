@@ -7,6 +7,7 @@ import {AelinNftGating} from "../../contracts/libraries/AelinNftGating.sol";
 import {AelinAllowList} from "../../contracts/libraries/AelinAllowList.sol";
 import {MerkleTree} from "../../contracts/libraries/MerkleTree.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {AelinUpFrontDeal} from "contracts/AelinUpFrontDeal.sol";
@@ -2857,8 +2858,10 @@ contract AelinUpFrontDealTest is Test, AelinTestUtils {
         (, uint256 purchaseTokenPerDealToken, uint256 purchaseRaiseMinimum, , , , ) = AelinUpFrontDeal(
             dealAddressNoDeallocation
         ).dealConfig();
+        vm.assume(_purchaseAmount > 0);
         vm.assume(_purchaseAmount < purchaseRaiseMinimum);
         uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        console.logUint(poolSharesAmount);
         vm.assume(poolSharesAmount > 0);
 
         // user accepts the deal with purchaseAmount < purchaseMinimum
@@ -2867,7 +2870,7 @@ contract AelinUpFrontDealTest is Test, AelinTestUtils {
         purchaseToken.approve(address(dealAddressNoDeallocation), type(uint256).max);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         AelinUpFrontDeal(dealAddressNoDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
-
+        console.logUint(_purchaseAmount);
         // purchase period is now over
         vm.warp(AelinUpFrontDeal(dealAddressNoDeallocation).purchaseExpiry() + 1 days);
 
@@ -3693,7 +3696,7 @@ contract AelinUpFrontDealTest is Test, AelinTestUtils {
 
     function testClaimUnderlyingAfterVestingEndDeallocation(address _user, uint256 _purchaseAmount) public {
         vm.assume(_user != address(0));
-
+        vm.assume(_user != dealCreatorAddress);
         uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry();
         uint256 vestingCliffExpiry = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingCliffExpiry();
         uint256 vestingExpiry = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingExpiry();
@@ -3747,7 +3750,7 @@ contract AelinUpFrontDealTest is Test, AelinTestUtils {
 
         vm.warp(vestingExpiry + 4 days);
         assertEq(underlyingDealToken.balanceOf(dealAddressAllowDeallocation), 0, "underlyingBalance");
-        assertEq(underlyingDealToken.balanceOf(dealCreatorAddress), sponsorShareAmount, "underlyingBalance");
+        assertEq(underlyingDealToken.balanceOf(dealCreatorAddress), sponsorShareAmount, "underlyingBalanceSponsor");
         assertEq(
             AelinUpFrontDeal(dealAddressAllowDeallocation).claimableUnderlyingTokens(vestingTokenId + 1),
             0,
@@ -3867,71 +3870,926 @@ contract AelinUpFrontDealTest is Test, AelinTestUtils {
         vm.stopPrank();
     }
 
-    //     /*//////////////////////////////////////////////////////////////
-    //                         transfer()
-    //     //////////////////////////////////////////////////////////////*/
+    /*//////////////////////////////////////////////////////////////
+                            transfer()
+        //////////////////////////////////////////////////////////////*/
 
-    //     // Revert scenarios
+    // Revert scenarios
 
-    //     function revertTransferNotOwner() public {}
+    function testTransferRevertNotOwner(uint256 _purchaseAmount) public {
+        // user1 accepts deal and claim their vesting token
+        vm.startPrank(user1);
+        setupAndAcceptDealWithDeallocation(dealAddressAllowDeallocation, _purchaseAmount, user1, true);
+        purchaserClaim(dealAddressAllowDeallocation);
+        assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user1), 1, "vestingTokenBalance");
+        assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(0), user1, "vestingTokenOwnerOf");
+        vm.stopPrank();
 
-    //     // Pass scenarios
+        // user2 tries to transfer the token
+        vm.startPrank(user2);
+        vm.expectRevert("ERC721: transfer from incorrect owner");
+        MockERC721(dealAddressAllowDeallocation).transfer(user3, 0, "0x0");
+        vm.stopPrank();
+    }
 
-    //     function testTransfer() public {}
+    function testTransferRevertWrongTokenId() public {
+        // user2 tries to transfer the token
+        vm.startPrank(user1);
+        vm.expectRevert("ERC721: invalid token ID");
+        MockERC721(dealAddressAllowDeallocation).transfer(user2, 0, "0x0");
+        vm.stopPrank();
+    }
 
-    //     /*//////////////////////////////////////////////////////////////
-    //                         transferVestingShare()
-    //     //////////////////////////////////////////////////////////////*/
+    // Pass scenarios
 
-    //     // Revert scenarios
+    function testTransferTest(uint256 _purchaseAmount) public {
+        // user1 accepts deal and claim their vesting token
+        vm.startPrank(user1);
+        setupAndAcceptDealWithDeallocation(dealAddressAllowDeallocation, _purchaseAmount, user1, true);
+        purchaserClaim(dealAddressAllowDeallocation);
+        assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user1), 1, "vestingTokenBalance");
+        assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(0), user1, "vestingTokenOwnerOf");
 
-    //     function testTransferVestingShareWrongTokenId(uint256 _shareAmount) public {}
+        // user1 transfers their token to user2
+        (uint256 share, uint256 lastClaimedAt) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(0);
+        vm.expectEmit(true, true, true, false);
+        emit Transfer(user1, user2, 0);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).transfer(user2, 0, "0x0");
+        assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user1), 0, "vestingTokenBalance");
+        assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user2), 1, "vestingTokenBalance");
+        assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(0), user2, "vestingTokenOwnerOf");
+        (uint256 shareTemp, uint256 lastClaimedAtTemp) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(0);
+        assertEq(share, shareTemp, "shareAmount");
+        assertEq(lastClaimedAt, lastClaimedAtTemp, "lastClaimedAt");
 
-    //     function testTransferShareZero() public {}
+        // user1 can't transfer the token as they don't own it anymore
+        vm.expectRevert("ERC721: transfer from incorrect owner");
+        MockERC721(dealAddressAllowDeallocation).transfer(user3, 0, "0x0");
+        vm.stopPrank();
 
-    //     function testTransferShareTooHigh(uint256 _shareAmount) public {}
+        // user2 transfers the token to user3
+        vm.startPrank(user2);
+        vm.expectEmit(true, true, true, false);
+        emit Transfer(user2, user3, 0);
+        MockERC721(dealAddressAllowDeallocation).transfer(user3, 0, "0x0");
+        assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user2), 0, "vestingTokenBalance");
+        assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user3), 1, "vestingTokenBalance");
+        assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(0), user3, "vestingTokenOwnerOf");
+        (shareTemp, lastClaimedAtTemp) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(0);
+        assertEq(share, shareTemp, "shareAmount");
+        assertEq(lastClaimedAt, lastClaimedAtTemp, "lastClaimedAt");
+        vm.stopPrank();
+    }
 
-    //     // Pass scenarios
+    /*//////////////////////////////////////////////////////////////
+                            transferVestingShare()
+        //////////////////////////////////////////////////////////////*/
 
-    //     function testTransferShare(uint256 _shareAmount) public {}
+    // Revert scenarios
 
-    //     // /*//////////////////////////////////////////////////////////////
-    //     //                  Scenarios with precision error
-    //     // //////////////////////////////////////////////////////////////*/
+    function testTransferVestingShareRevertNotOwner(uint256 _purchaseAmount) public {
+        // user1 accepts deal and claim their vesting token
+        vm.startPrank(user1);
+        setupAndAcceptDealWithDeallocation(dealAddressAllowDeallocation, _purchaseAmount, user1, true);
+        purchaserClaim(dealAddressAllowDeallocation);
+        assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user1), 1, "vestingTokenBalance");
+        assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(0), user1, "vestingTokenOwnerOf");
+        vm.stopPrank();
 
-    //     function testScenarioWithPrecisionErrorPurchaserSide() public {}
+        // user2 tries to transfer the token
+        vm.startPrank(user2);
+        (uint256 share, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(0);
+        vm.expectRevert("must be owner to transfer");
+        AelinUpFrontDeal(dealAddressAllowDeallocation).transferVestingShare(user3, 0, share - 1);
+        vm.stopPrank();
+    }
 
-    //     function testScenarioWithPrecisionErrorHolderSide() public {}
+    function testTransferVestingShareWrongTokenId() public {
+        // user1 tries to transfer a part of a vesting token share
+        vm.startPrank(user1);
+        vm.expectRevert("ERC721: invalid token ID");
+        AelinUpFrontDeal(dealAddressAllowDeallocation).transferVestingShare(user2, 0, 0);
+        vm.stopPrank();
+    }
 
-    //     // /*//////////////////////////////////////////////////////////////
-    //     //                           largePool
-    //     // //////////////////////////////////////////////////////////////*/
+    function testTransferShareZero(uint256 _purchaseAmount) public {
+        // user1 accepts deal and claim their vesting token
+        vm.startPrank(user1);
+        setupAndAcceptDealWithDeallocation(dealAddressAllowDeallocation, _purchaseAmount, user1, true);
+        purchaserClaim(dealAddressAllowDeallocation);
+        assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user1), 1, "vestingTokenBalance");
+        assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(0), user1, "vestingTokenOwnerOf");
 
-    //     function testTenThousandUserPool() public {}
+        // user1 tries to transfer a part of a vesting token share
+        vm.expectRevert("share amount should be > 0");
+        AelinUpFrontDeal(dealAddressAllowDeallocation).transferVestingShare(user2, 0, 0);
+        vm.stopPrank();
+    }
 
-    //     // /*//////////////////////////////////////////////////////////////
-    //     //                           merkleTree
-    //     // //////////////////////////////////////////////////////////////*/
+    function testTransferShareTooHigh(uint256 _purchaseAmount) public {
+        // user1 accepts deal and claim their vesting token
+        vm.startPrank(user1);
+        setupAndAcceptDealWithDeallocation(dealAddressAllowDeallocation, _purchaseAmount, user1, true);
+        purchaserClaim(dealAddressAllowDeallocation);
+        assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user1), 1, "vestingTokenBalance");
+        assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(0), user1, "vestingTokenOwnerOf");
 
-    //     // Revert scenarios
+        // user1 tries to transfer an amount greather than the total value of their vesting
+        (uint256 share, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(0);
+        vm.expectRevert("cant transfer more than current share");
+        AelinUpFrontDeal(dealAddressAllowDeallocation).transferVestingShare(user2, 0, share + 1);
+    }
 
-    //     function tesReverttNoIpfsHashFailure() public {}
+    // Pass scenarios
 
-    //     function testRevertNoNftListFailure() public {}
+    function testTransferShare(uint256 _purchaseAmount, uint256 _shareAmount) public {
+        // user1 accepts deal and claim their vesting token
+        vm.startPrank(user1);
+        setupAndAcceptDealWithDeallocation(dealAddressAllowDeallocation, _purchaseAmount, user1, true);
+        uint256 tokenCount = AelinUpFrontDeal(dealAddressAllowDeallocation).tokenCount();
+        purchaserClaim(dealAddressAllowDeallocation);
+        assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user1), 1, "vestingTokenBalance");
+        assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(tokenCount), user1, "vestingTokenOwnerOf");
+        (uint256 share, uint256 lastClaimedAt) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(tokenCount);
+        vm.assume(_shareAmount > 0);
+        vm.assume(_shareAmount < share);
 
-    //     function testRevertNoAllowListFailure() public {}
+        // user1 transfers a part of their share to user2
+        vm.expectEmit(true, true, false, true);
+        emit VestingTokenMinted(user2, tokenCount + 1, _shareAmount, lastClaimedAt);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).transferVestingShare(user2, tokenCount, _shareAmount);
 
-    //     function testRevertPurchaseAmountTooHighFailure() public {}
+        // user1 still has the same token but with a smaller share
+        assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user1), 1, "vestingTokenBalance");
+        assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(tokenCount), user1, "vestingTokenOwnerOf");
+        (uint256 newShare, uint256 newLastClaimedAt) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(
+            tokenCount
+        );
+        assertEq(newShare, share - _shareAmount);
+        assertEq(newLastClaimedAt, lastClaimedAt);
 
-    //     function testRevertInvalidProofFailure() public {}
+        // user2 has a new vesting token with a share of user1
+        assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user2), 1, "vestingTokenBalance");
+        assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(tokenCount + 1), user2, "vestingTokenOwnerOf");
+        (newShare, newLastClaimedAt) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(tokenCount + 1);
+        assertEq(newShare, _shareAmount);
+        assertEq(newLastClaimedAt, lastClaimedAt);
+        vm.stopPrank();
 
-    //     function testRevertNotMessageSenderFailure(address _investor) public {}
+        // vesting is now over
+        vm.warp(AelinUpFrontDeal(dealAddressAllowDeallocation).vestingExpiry() + 1 days);
 
-    //     function testRevertAlreadyPurchasedTokensFailure() public {}
+        // user1 claims all and transfer to user3
+        vm.startPrank(user1);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(user1, address(underlyingDealToken), share - _shareAmount);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount);
+        vm.warp(block.timestamp + 1 days);
+        vm.expectRevert("no underlying ready to claim");
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).transferVestingShare(user3, tokenCount, (share - _shareAmount) / 2);
+        vm.stopPrank();
 
-    //     // Pass scenarios
+        // user3 can't claim because user1 claimed everything already
+        vm.startPrank(user3);
+        assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user3), 1, "vestingTokenBalance");
+        assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(tokenCount + 2), user3, "vestingTokenOwnerOf");
+        vm.warp(block.timestamp + 1 days);
+        vm.expectRevert("no underlying ready to claim");
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount + 2);
+        vm.stopPrank();
 
-    //     function testMerklePurchase() public {}
+        // user 2 claims and cannot claim more later
+        vm.startPrank(user2);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(user2, address(underlyingDealToken), _shareAmount);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount + 1);
+        vm.warp(block.timestamp + 1 days);
+        vm.expectRevert("no underlying ready to claim");
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount + 1);
+
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalUnderlyingClaimed(), share, "totalUnderlyingClaimed");
+
+        vm.stopPrank();
+    }
+
+    // /*//////////////////////////////////////////////////////////////
+    //                  Scenarios with precision error
+    // //////////////////////////////////////////////////////////////*/
+
+    function testScenarioWithPrecisionErrorPurchaserSide(uint256) public {
+        // Deal config
+        vm.startPrank(dealCreatorAddress);
+        AelinAllowList.InitData memory allowListInitEmpty;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+
+        IAelinUpFrontDeal.UpFrontDealData memory dealData;
+        dealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: dealHolderAddress,
+            sponsor: dealCreatorAddress,
+            sponsorFee: 0,
+            ipfsHash: "",
+            merkleRoot: 0
+        });
+
+        IAelinUpFrontDeal.UpFrontDealConfig memory dealConfig;
+        dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
+            underlyingDealTokenTotal: 1.5e18,
+            purchaseTokenPerDealToken: 2e18,
+            purchaseRaiseMinimum: 0,
+            purchaseDuration: 1 days,
+            vestingPeriod: 10 days,
+            vestingCliffPeriod: 1 days,
+            allowDeallocation: true
+        });
+
+        address upfrontDealAddress = upFrontDealFactory.createUpFrontDeal(
+            dealData,
+            dealConfig,
+            nftCollectionRulesEmpty,
+            allowListInitEmpty
+        );
+
+        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
+            upfrontDealAddress
+        ).dealConfig();
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        uint256 totalIntendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10 ** underlyingTokenDecimals;
+
+        // Deal funding
+        vm.stopPrank();
+        vm.startPrank(dealHolderAddress);
+        deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
+        underlyingDealToken.approve(address(upfrontDealAddress), type(uint256).max);
+        AelinUpFrontDeal(upfrontDealAddress).depositUnderlyingTokens(1.5e18);
+
+        // Deal acceptance: 31 purchaseTokens in total between 3 wallets for a 3 purchaseTokens deal in total.
+        // Deallocation could lead to precision errors
+        vm.stopPrank();
+        vm.startPrank(user1);
+        uint256 purchaseAmount1 = 1e18;
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(upfrontDealAddress), type(uint256).max);
+        AelinUpFrontDeal(upfrontDealAddress).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount1);
+
+        vm.stopPrank();
+        vm.startPrank(user2);
+        uint256 purchaseAmount2 = 10e18;
+        deal(address(purchaseToken), user2, type(uint256).max);
+        purchaseToken.approve(address(upfrontDealAddress), type(uint256).max);
+        AelinUpFrontDeal(upfrontDealAddress).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount2);
+
+        vm.stopPrank();
+        vm.startPrank(user3);
+        uint256 purchaseAmount3 = 20e18;
+        deal(address(purchaseToken), user3, type(uint256).max);
+        purchaseToken.approve(address(upfrontDealAddress), type(uint256).max);
+        AelinUpFrontDeal(upfrontDealAddress).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount3);
+
+        //HolderClaim
+        vm.stopPrank();
+        vm.startPrank(dealHolderAddress);
+        vm.warp(AelinUpFrontDeal(upfrontDealAddress).purchaseExpiry() + 1 days);
+        assertEq(purchaseToken.balanceOf(dealHolderAddress), 0);
+        AelinUpFrontDeal(upfrontDealAddress).holderClaim();
+
+        //Holder is likely to have accepted more than what the wallets will invest once the deallocation occurs
+        assertEq(
+            purchaseToken.balanceOf(dealHolderAddress),
+            (underlyingDealTokenTotal * purchaseTokenPerDealToken) / 10 ** underlyingTokenDecimals
+        );
+
+        // PurchaserClaim 1
+        vm.stopPrank();
+        vm.startPrank(user1);
+
+        uint256 adjustedShareAmountForUser = (((AelinUpFrontDeal(upfrontDealAddress).poolSharesPerUser(user1) *
+            underlyingDealTokenTotal) / AelinUpFrontDeal(upfrontDealAddress).totalPoolShares()) * (BASE - AELIN_FEE)) / BASE;
+
+        uint256 purchasingRefund = AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(user1) -
+            ((AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(user1) * totalIntendedRaise) /
+                AelinUpFrontDeal(upfrontDealAddress).totalPurchasingAccepted());
+
+        assertEq(purchaseToken.balanceOf(user1), type(uint256).max - purchaseAmount1);
+        vm.expectEmit(true, false, false, true);
+        uint256 tokenCount = AelinUpFrontDeal(upfrontDealAddress).tokenCount();
+        assertEq(tokenCount, 0);
+        emit ClaimDealTokens(user1, adjustedShareAmountForUser, purchasingRefund);
+        AelinUpFrontDeal(upfrontDealAddress).purchaserClaim();
+
+        // First purchaser gets refunded
+        assertEq(purchaseToken.balanceOf(user1), type(uint256).max - purchaseAmount1 + purchasingRefund);
+
+        // PurchaserClaim 2
+        vm.stopPrank();
+        vm.startPrank(user2);
+
+        adjustedShareAmountForUser =
+            (((AelinUpFrontDeal(upfrontDealAddress).poolSharesPerUser(user2) * underlyingDealTokenTotal) /
+                AelinUpFrontDeal(upfrontDealAddress).totalPoolShares()) * (BASE - AELIN_FEE)) /
+            BASE;
+
+        purchasingRefund =
+            AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(user2) -
+            ((AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(user2) * totalIntendedRaise) /
+                AelinUpFrontDeal(upfrontDealAddress).totalPurchasingAccepted());
+
+        assertEq(purchaseToken.balanceOf(user2), type(uint256).max - purchaseAmount2);
+        vm.expectEmit(true, false, false, true);
+        tokenCount = AelinUpFrontDeal(upfrontDealAddress).tokenCount();
+        assertEq(tokenCount, 1);
+        emit ClaimDealTokens(user2, adjustedShareAmountForUser, purchasingRefund);
+        AelinUpFrontDeal(upfrontDealAddress).purchaserClaim();
+
+        // Second purchaser gets refunded entirely
+        assertEq(purchaseToken.balanceOf(user2), type(uint256).max - purchaseAmount2 + purchasingRefund);
+
+        // PurchaserClaim 3
+        vm.stopPrank();
+        vm.startPrank(user3);
+
+        adjustedShareAmountForUser =
+            (((AelinUpFrontDeal(upfrontDealAddress).poolSharesPerUser(user3) * underlyingDealTokenTotal) /
+                AelinUpFrontDeal(upfrontDealAddress).totalPoolShares()) * (BASE - AELIN_FEE)) /
+            BASE;
+
+        purchasingRefund =
+            AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(user3) -
+            ((AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(user3) * totalIntendedRaise) /
+                AelinUpFrontDeal(upfrontDealAddress).totalPurchasingAccepted());
+
+        assertEq(purchaseToken.balanceOf(user3), type(uint256).max - purchaseAmount3);
+
+        // Due to precision error, there is not enough purchaseTokens in the contract to refund the last wallet
+        // So the refund amount for the last wallet equals the contract's balance
+        uint256 contractRemainingBalance = purchaseToken.balanceOf(upfrontDealAddress);
+        assertGt(purchasingRefund, contractRemainingBalance);
+        vm.expectEmit(true, false, false, true);
+        tokenCount = AelinUpFrontDeal(upfrontDealAddress).tokenCount();
+        assertEq(tokenCount, 2);
+        emit ClaimDealTokens(user3, adjustedShareAmountForUser, contractRemainingBalance);
+        assertEq(purchaseToken.balanceOf(user3), type(uint256).max - purchaseAmount3);
+        AelinUpFrontDeal(upfrontDealAddress).purchaserClaim();
+        assertEq(purchaseToken.balanceOf(user3), type(uint256).max - purchaseAmount3 + contractRemainingBalance);
+    }
+
+    function testScenarioWithPrecisionErrorHolderSide() public {
+        // Deal config
+        vm.startPrank(dealCreatorAddress);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        AelinAllowList.InitData memory allowListInitEmpty;
+
+        IAelinUpFrontDeal.UpFrontDealData memory dealData;
+        dealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: dealHolderAddress,
+            sponsor: dealCreatorAddress,
+            sponsorFee: 0,
+            ipfsHash: "",
+            merkleRoot: 0
+        });
+
+        IAelinUpFrontDeal.UpFrontDealConfig memory dealConfig;
+        dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
+            underlyingDealTokenTotal: 1.5e18,
+            purchaseTokenPerDealToken: 2e18,
+            purchaseRaiseMinimum: 0,
+            purchaseDuration: 1 days,
+            vestingPeriod: 10 days,
+            vestingCliffPeriod: 1 days,
+            allowDeallocation: true
+        });
+
+        address upfrontDealAddress = upFrontDealFactory.createUpFrontDeal(
+            dealData,
+            dealConfig,
+            nftCollectionRulesEmpty,
+            allowListInitEmpty
+        );
+
+        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
+            upfrontDealAddress
+        ).dealConfig();
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        uint256 totalIntendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10 ** underlyingTokenDecimals;
+        // Deal funding
+        vm.stopPrank();
+        vm.startPrank(dealHolderAddress);
+        deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
+        underlyingDealToken.approve(address(upfrontDealAddress), type(uint256).max);
+        AelinUpFrontDeal(upfrontDealAddress).depositUnderlyingTokens(1.5e18);
+
+        // Deal acceptance: 31 purchaseTokens in total between 3 wallets for a 3 purchaseTokens deal in total.
+        // Deallocation could lead to precision errors
+        vm.stopPrank();
+        vm.startPrank(user1);
+        uint256 purchaseAmount1 = 1e18;
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(upfrontDealAddress), type(uint256).max);
+        AelinUpFrontDeal(upfrontDealAddress).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount1);
+
+        vm.stopPrank();
+        vm.startPrank(user2);
+        uint256 purchaseAmount2 = 10e18;
+        deal(address(purchaseToken), user2, type(uint256).max);
+        purchaseToken.approve(address(upfrontDealAddress), type(uint256).max);
+        AelinUpFrontDeal(upfrontDealAddress).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount2);
+
+        vm.stopPrank();
+        vm.startPrank(user3);
+        uint256 purchaseAmount3 = 20e18;
+        deal(address(purchaseToken), user3, type(uint256).max);
+        purchaseToken.approve(address(upfrontDealAddress), type(uint256).max);
+        AelinUpFrontDeal(upfrontDealAddress).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount3);
+
+        vm.warp(AelinUpFrontDeal(upfrontDealAddress).purchaseExpiry() + 1 days);
+
+        // PurchaserClaim 1
+        vm.stopPrank();
+        vm.startPrank(user1);
+
+        uint256 adjustedShareAmountForUser = (((AelinUpFrontDeal(upfrontDealAddress).poolSharesPerUser(user1) *
+            underlyingDealTokenTotal) / AelinUpFrontDeal(upfrontDealAddress).totalPoolShares()) * (BASE - AELIN_FEE)) / BASE;
+
+        uint256 purchasingRefund = AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(user1) -
+            ((AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(user1) * totalIntendedRaise) /
+                AelinUpFrontDeal(upfrontDealAddress).totalPurchasingAccepted());
+
+        assertEq(purchaseToken.balanceOf(user1), type(uint256).max - purchaseAmount1);
+        uint256 tokenCount = AelinUpFrontDeal(upfrontDealAddress).tokenCount();
+        assertEq(tokenCount, 0);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimDealTokens(user1, adjustedShareAmountForUser, purchasingRefund);
+        AelinUpFrontDeal(upfrontDealAddress).purchaserClaim();
+
+        // First purchaser gets refunded entirely
+        assertEq(purchaseToken.balanceOf(user1), type(uint256).max - purchaseAmount1 + purchasingRefund);
+
+        // PurchaserClaim 2
+        vm.stopPrank();
+        vm.startPrank(user2);
+
+        adjustedShareAmountForUser =
+            (((AelinUpFrontDeal(upfrontDealAddress).poolSharesPerUser(user2) * underlyingDealTokenTotal) /
+                AelinUpFrontDeal(upfrontDealAddress).totalPoolShares()) * (BASE - AELIN_FEE)) /
+            BASE;
+
+        purchasingRefund =
+            AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(user2) -
+            ((AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(user2) * totalIntendedRaise) /
+                AelinUpFrontDeal(upfrontDealAddress).totalPurchasingAccepted());
+
+        assertEq(purchaseToken.balanceOf(user2), type(uint256).max - purchaseAmount2);
+        tokenCount = AelinUpFrontDeal(upfrontDealAddress).tokenCount();
+        assertEq(tokenCount, 1);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimDealTokens(user2, adjustedShareAmountForUser, purchasingRefund);
+        AelinUpFrontDeal(upfrontDealAddress).purchaserClaim();
+
+        // Second purchaser gets refunded entirely
+        assertEq(purchaseToken.balanceOf(user2), type(uint256).max - purchaseAmount2 + purchasingRefund);
+
+        // PurchaserClaim 3
+        vm.stopPrank();
+        vm.startPrank(user3);
+
+        adjustedShareAmountForUser =
+            (((AelinUpFrontDeal(upfrontDealAddress).poolSharesPerUser(user3) * underlyingDealTokenTotal) /
+                AelinUpFrontDeal(upfrontDealAddress).totalPoolShares()) * (BASE - AELIN_FEE)) /
+            BASE;
+
+        purchasingRefund =
+            AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(user3) -
+            ((AelinUpFrontDeal(upfrontDealAddress).purchaseTokensPerUser(user3) * totalIntendedRaise) /
+                AelinUpFrontDeal(upfrontDealAddress).totalPurchasingAccepted());
+
+        assertEq(purchaseToken.balanceOf(user3), type(uint256).max - purchaseAmount3);
+        tokenCount = AelinUpFrontDeal(upfrontDealAddress).tokenCount();
+        assertEq(tokenCount, 2);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimDealTokens(user3, adjustedShareAmountForUser, purchasingRefund);
+        assertEq(purchaseToken.balanceOf(user3), type(uint256).max - purchaseAmount3);
+        AelinUpFrontDeal(upfrontDealAddress).purchaserClaim();
+        assertEq(purchaseToken.balanceOf(user3), type(uint256).max - purchaseAmount3 + purchasingRefund);
+
+        // Holder claim.
+        // Since all the purchaser wallets have claimed, the holder
+        // will claim the contract's balance instead of the intended raise amount
+        vm.stopPrank();
+        vm.startPrank(dealHolderAddress);
+        assertEq(purchaseToken.balanceOf(dealHolderAddress), 0);
+        uint256 contractRemainingBalance = purchaseToken.balanceOf(upfrontDealAddress);
+        uint256 intendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10 ** underlyingTokenDecimals;
+        console.log("intendedRaise test 1", intendedRaise);
+        console.log("contractRemainingBalance test 1", contractRemainingBalance);
+        assertGt(intendedRaise, contractRemainingBalance);
+        vm.expectEmit(true, false, false, true);
+        emit HolderClaim(
+            dealHolderAddress,
+            address(purchaseToken),
+            contractRemainingBalance,
+            address(underlyingDealToken),
+            0,
+            block.timestamp
+        );
+        AelinUpFrontDeal(upfrontDealAddress).holderClaim();
+        assertEq(purchaseToken.balanceOf(dealHolderAddress), contractRemainingBalance);
+    }
+
+    // /*//////////////////////////////////////////////////////////////
+    //                           largePool
+    // //////////////////////////////////////////////////////////////*/
+
+    function testTenThousandUserPool() public {
+        // purchasing
+        uint256 totalPurchaseAccepted;
+        uint256 totalPoolShares;
+        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
+            dealAddressAllowDeallocation
+        ).dealConfig();
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        vm.fee(1 gwei);
+        for (uint256 i = 1; i < 10000; ++i) {
+            uint256 _purchaseAmount = 1e34 + i;
+            uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+            require(poolSharesAmount > 0, "purchase amount too small");
+            vm.assume(poolSharesAmount > 0);
+            if (i % 200 == 0) {
+                vm.roll(block.number + 1);
+            }
+            AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+            address user = makeAddr(i);
+            deal(address(purchaseToken), user, _purchaseAmount);
+            vm.startPrank(user);
+            purchaseToken.approve(address(dealAddressAllowDeallocation), _purchaseAmount);
+            totalPurchaseAccepted += _purchaseAmount;
+            totalPoolShares += poolSharesAmount;
+            vm.expectEmit(true, false, false, true);
+            emit AcceptDeal(user, _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
+            AelinUpFrontDeal(dealAddressAllowDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+            assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPoolShares(), totalPoolShares);
+            assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).poolSharesPerUser(user), poolSharesAmount);
+            assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted(), totalPurchaseAccepted);
+            assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseTokensPerUser(user), _purchaseAmount);
+            vm.stopPrank();
+        }
+        uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry();
+        vm.warp(purchaseExpiry + 1000);
+        for (uint256 i = 1; i < 10000; ++i) {
+            if (i % 200 == 0) {
+                vm.roll(block.number + 1);
+            }
+            address user = makeAddr(i);
+            vm.startPrank(user);
+            AelinUpFrontDeal(dealAddressAllowDeallocation).purchaserClaim();
+            assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user), 1, "vestingTokenBalance");
+            assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(i - 1), user, "vestingTokenOwnerOf");
+            vm.stopPrank();
+        }
+        vm.startPrank(dealHolderAddress);
+        assertEq(purchaseToken.balanceOf(dealHolderAddress), 0);
+        uint256 contractRemainingBalance = purchaseToken.balanceOf(dealAddressAllowDeallocation);
+        uint256 intendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10 ** underlyingTokenDecimals;
+        assertGt(intendedRaise, contractRemainingBalance);
+        vm.expectEmit(true, false, false, true);
+        emit HolderClaim(
+            dealHolderAddress,
+            address(purchaseToken),
+            contractRemainingBalance,
+            address(underlyingDealToken),
+            0,
+            block.timestamp
+        );
+        AelinUpFrontDeal(dealAddressAllowDeallocation).holderClaim();
+        assertEq(purchaseToken.balanceOf(dealHolderAddress), contractRemainingBalance);
+    }
+
+    // /*//////////////////////////////////////////////////////////////
+    //                           merkleTree
+    // //////////////////////////////////////////////////////////////*/
+
+    // Revert scenarios
+
+    function tesReverttNoIpfsHashFailure() public {
+        IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
+        AelinAllowList.InitData memory allowListInitEmpty;
+        merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: dealHolderAddress,
+            sponsor: dealCreatorAddress,
+            sponsorFee: 1 * 10 ** 18,
+            merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7,
+            ipfsHash: ""
+        });
+        vm.prank(dealCreatorAddress);
+        vm.expectRevert("merkle needs ipfs hash");
+        upFrontDealFactory.createUpFrontDeal(merkleDealData, sharedDealConfig, nftCollectionRulesEmpty, allowListInitEmpty);
+        vm.stopPrank();
+    }
+
+    function testRevertNoNftListFailure() public {
+        IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
+        AelinAllowList.InitData memory allowListInitEmpty;
+
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRules721 = new AelinNftGating.NftCollectionRules[](1);
+
+        nftCollectionRules721[0].collectionAddress = address(collectionAddress1);
+        nftCollectionRules721[0].purchaseAmount = 1e20;
+        nftCollectionRules721[0].purchaseAmountPerToken = true;
+
+        merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: dealHolderAddress,
+            sponsor: dealCreatorAddress,
+            sponsorFee: 1 * 10 ** 18,
+            merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7,
+            ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
+        });
+        vm.prank(dealCreatorAddress);
+        vm.expectRevert("cant have nft & merkle");
+        upFrontDealFactory.createUpFrontDeal(merkleDealData, sharedDealConfig, nftCollectionRules721, allowListInitEmpty);
+        vm.stopPrank();
+    }
+
+    function testRevertNoAllowListFailure() public {
+        IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
+        AelinAllowList.InitData memory allowListInit;
+
+        merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: dealHolderAddress,
+            sponsor: dealCreatorAddress,
+            sponsorFee: 1 * 10 ** 18,
+            merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7,
+            ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
+        });
+        address[] memory testAllowListAddresses = new address[](1);
+        uint256[] memory testAllowListAmounts = new uint256[](1);
+        testAllowListAddresses[0] = user1;
+        testAllowListAmounts[0] = 1e18;
+        allowListInit.allowListAddresses = testAllowListAddresses;
+        allowListInit.allowListAmounts = testAllowListAmounts;
+        vm.prank(dealCreatorAddress);
+        vm.expectRevert("cant have allow list & merkle");
+        upFrontDealFactory.createUpFrontDeal(merkleDealData, sharedDealConfig, nftCollectionRulesEmpty, allowListInit);
+        vm.stopPrank();
+    }
+
+    function testRevertPurchaseAmountTooHighFailure() public {
+        AelinAllowList.InitData memory allowListInitEmpty;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        MerkleTree.UpFrontMerkleData memory merkleData;
+
+        merkleData.account = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+        merkleData.index = 0;
+        merkleData.amount = 100;
+        // Merkle tree created from ../mocks/merkletree.json
+        merkleData.merkleProof = new bytes32[](2);
+        merkleData.merkleProof[0] = 0xfa0a69af54d730226f27b04a7fd8ac77312321e142342afe85789c470d98af8b;
+        merkleData.merkleProof[1] = 0x08dc84848cfc1b922ae607cc2af96186b9ebad7dbacdac0e1e16498d4d668968;
+        bytes32 root = 0x3e6f463625369879b7583baf245a0ac065bd8a9bcb180ecc0ac126d5d71c94bb;
+        bytes32 leaf = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
+        assertEq(MerkleProof.verify(merkleData.merkleProof, root, leaf), true);
+        IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
+        merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: dealHolderAddress,
+            sponsor: dealCreatorAddress,
+            sponsorFee: 1 * 10 ** 18,
+            merkleRoot: root,
+            ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
+        });
+        vm.prank(dealCreatorAddress);
+        address merkleDealAddress = upFrontDealFactory.createUpFrontDeal(
+            merkleDealData,
+            sharedDealConfig,
+            nftCollectionRulesEmpty,
+            allowListInitEmpty
+        );
+        vm.startPrank(dealHolderAddress);
+        deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
+        underlyingDealToken.approve(address(merkleDealAddress), type(uint256).max);
+        AelinUpFrontDeal(merkleDealAddress).depositUnderlyingTokens(1e35);
+        vm.stopPrank();
+        address user = address(merkleData.account);
+        vm.startPrank(user);
+        deal(address(purchaseToken), user, type(uint256).max);
+        purchaseToken.approve(address(merkleDealAddress), type(uint256).max);
+        vm.expectRevert("purchasing more than allowance");
+        AelinUpFrontDeal(merkleDealAddress).acceptDeal(nftPurchaseList, merkleData, 101);
+        vm.stopPrank();
+    }
+
+    function testInvalidProofFailure() public {
+        AelinAllowList.InitData memory allowListInitEmpty;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        MerkleTree.UpFrontMerkleData memory merkleData;
+        merkleData.account = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+        merkleData.index = 0;
+        merkleData.amount = 100;
+        // Merkle tree created from ../mocks/merkletree.json
+        merkleData.merkleProof = new bytes32[](2);
+        merkleData.merkleProof[0] = 0xfa0a69af54d730226f27b04a7fd8ac77312321e142342afe85789c470d98af8b;
+        merkleData.merkleProof[1] = 0x08dc84848cfc1b922ae607cc2af96186b9ebad7dbacdac0e1e16498d4d668988;
+        bytes32 root = 0x3e6f463625369879b7583baf245a0ac065bd8a9bcb180ecc0ac126d5d71c94bb;
+        bytes32 leaf = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
+        assertEq(MerkleProof.verify(merkleData.merkleProof, root, leaf), false);
+        IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
+        merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: dealHolderAddress,
+            sponsor: dealCreatorAddress,
+            sponsorFee: 1 * 10 ** 18,
+            merkleRoot: root,
+            ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
+        });
+        vm.prank(dealCreatorAddress);
+        address merkleDealAddress = upFrontDealFactory.createUpFrontDeal(
+            merkleDealData,
+            sharedDealConfig,
+            nftCollectionRulesEmpty,
+            allowListInitEmpty
+        );
+        vm.startPrank(dealHolderAddress);
+        deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
+        underlyingDealToken.approve(address(merkleDealAddress), type(uint256).max);
+        AelinUpFrontDeal(merkleDealAddress).depositUnderlyingTokens(1e35);
+        vm.stopPrank();
+        address user = address(merkleData.account);
+        vm.startPrank(user);
+        deal(address(purchaseToken), user, type(uint256).max);
+        purchaseToken.approve(address(merkleDealAddress), type(uint256).max);
+        vm.expectRevert("MerkleTree.sol: Invalid proof.");
+        AelinUpFrontDeal(merkleDealAddress).acceptDeal(nftPurchaseList, merkleData, 100);
+        vm.stopPrank();
+    }
+
+    function testNotMessageSenderFailure(address _user) public {
+        vm.assume(_user != address(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f));
+        vm.assume(_user != address(0));
+        AelinAllowList.InitData memory allowListInitEmpty;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        MerkleTree.UpFrontMerkleData memory merkleData;
+
+        merkleData.account = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+        merkleData.index = 0;
+        merkleData.amount = 100;
+        // Merkle tree created from ../mocks/merkletree.json
+        merkleData.merkleProof = new bytes32[](2);
+        merkleData.merkleProof[0] = 0xfa0a69af54d730226f27b04a7fd8ac77312321e142342afe85789c470d98af8b;
+        merkleData.merkleProof[1] = 0x08dc84848cfc1b922ae607cc2af96186b9ebad7dbacdac0e1e16498d4d668968;
+        bytes32 root = 0x3e6f463625369879b7583baf245a0ac065bd8a9bcb180ecc0ac126d5d71c94bb;
+        bytes32 leaf = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
+        assertEq(MerkleProof.verify(merkleData.merkleProof, root, leaf), true);
+        IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
+        merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: dealHolderAddress,
+            sponsor: dealCreatorAddress,
+            sponsorFee: 1 * 10 ** 18,
+            merkleRoot: root,
+            ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
+        });
+        vm.prank(dealCreatorAddress);
+        address merkleDealAddress = upFrontDealFactory.createUpFrontDeal(
+            merkleDealData,
+            sharedDealConfig,
+            nftCollectionRulesEmpty,
+            allowListInitEmpty
+        );
+        vm.startPrank(dealHolderAddress);
+        deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
+        underlyingDealToken.approve(address(merkleDealAddress), type(uint256).max);
+        AelinUpFrontDeal(merkleDealAddress).depositUnderlyingTokens(1e35);
+        vm.stopPrank();
+        vm.startPrank(_user);
+        deal(address(purchaseToken), _user, type(uint256).max);
+        purchaseToken.approve(address(merkleDealAddress), type(uint256).max);
+        vm.expectRevert("cant purchase others tokens");
+        AelinUpFrontDeal(merkleDealAddress).acceptDeal(nftPurchaseList, merkleData, 101);
+        vm.stopPrank();
+    }
+
+    function testAlreadyPurchasedTokensFailure() public {
+        AelinAllowList.InitData memory allowListInitEmpty;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        MerkleTree.UpFrontMerkleData memory merkleData;
+        merkleData.account = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+        merkleData.index = 0;
+        merkleData.amount = 100;
+        // Merkle tree created from ../mocks/merkletree.json
+        merkleData.merkleProof = new bytes32[](2);
+        merkleData.merkleProof[0] = 0xfa0a69af54d730226f27b04a7fd8ac77312321e142342afe85789c470d98af8b;
+        merkleData.merkleProof[1] = 0x08dc84848cfc1b922ae607cc2af96186b9ebad7dbacdac0e1e16498d4d668968;
+        bytes32 root = 0x3e6f463625369879b7583baf245a0ac065bd8a9bcb180ecc0ac126d5d71c94bb;
+        bytes32 leaf = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
+        assertEq(MerkleProof.verify(merkleData.merkleProof, root, leaf), true);
+        IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
+        merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: dealHolderAddress,
+            sponsor: dealCreatorAddress,
+            sponsorFee: 1 * 10 ** 18,
+            merkleRoot: root,
+            ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
+        });
+        vm.prank(dealCreatorAddress);
+        address merkleDealAddress = upFrontDealFactory.createUpFrontDeal(
+            merkleDealData,
+            sharedDealConfig,
+            nftCollectionRulesEmpty,
+            allowListInitEmpty
+        );
+        vm.startPrank(dealHolderAddress);
+        deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
+        underlyingDealToken.approve(address(merkleDealAddress), type(uint256).max);
+        AelinUpFrontDeal(merkleDealAddress).depositUnderlyingTokens(1e35);
+        vm.stopPrank();
+        address user = address(merkleData.account);
+        vm.startPrank(user);
+        deal(address(purchaseToken), user, type(uint256).max);
+        purchaseToken.approve(address(merkleDealAddress), type(uint256).max);
+        AelinUpFrontDeal(merkleDealAddress).acceptDeal(nftPurchaseList, merkleData, 100);
+        vm.expectRevert("Already purchased tokens");
+        AelinUpFrontDeal(merkleDealAddress).acceptDeal(nftPurchaseList, merkleData, 100);
+        vm.stopPrank();
+    }
+
+    // Pass scenarios
+
+    function testMerklePurchase() public {
+        AelinAllowList.InitData memory allowListInitEmpty;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        MerkleTree.UpFrontMerkleData memory merkleData;
+        merkleData.account = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+        merkleData.index = 0;
+        merkleData.amount = 100;
+        // Merkle tree created from ../mocks/merkletree.json
+        merkleData.merkleProof = new bytes32[](2);
+        merkleData.merkleProof[0] = 0xfa0a69af54d730226f27b04a7fd8ac77312321e142342afe85789c470d98af8b;
+        merkleData.merkleProof[1] = 0x08dc84848cfc1b922ae607cc2af96186b9ebad7dbacdac0e1e16498d4d668968;
+        bytes32 root = 0x3e6f463625369879b7583baf245a0ac065bd8a9bcb180ecc0ac126d5d71c94bb;
+        bytes32 leaf = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
+        assertEq(MerkleProof.verify(merkleData.merkleProof, root, leaf), true);
+        IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
+        merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
+            name: "DEAL",
+            symbol: "DEAL",
+            purchaseToken: address(purchaseToken),
+            underlyingDealToken: address(underlyingDealToken),
+            holder: dealHolderAddress,
+            sponsor: dealCreatorAddress,
+            sponsorFee: 1 * 10 ** 18,
+            merkleRoot: root,
+            ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
+        });
+        vm.prank(dealCreatorAddress);
+        address merkleDealAddress = upFrontDealFactory.createUpFrontDeal(
+            merkleDealData,
+            sharedDealConfig,
+            nftCollectionRulesEmpty,
+            allowListInitEmpty
+        );
+        vm.startPrank(dealHolderAddress);
+        deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
+        underlyingDealToken.approve(address(merkleDealAddress), type(uint256).max);
+        AelinUpFrontDeal(merkleDealAddress).depositUnderlyingTokens(1e35);
+        vm.stopPrank();
+        address user = address(merkleData.account);
+        vm.startPrank(user);
+        deal(address(purchaseToken), user, type(uint256).max);
+        purchaseToken.approve(address(merkleDealAddress), type(uint256).max);
+        AelinUpFrontDeal(merkleDealAddress).acceptDeal(nftPurchaseList, merkleData, 100);
+        vm.stopPrank();
+    }
 
     /*//////////////////////////////////////////////////////////////
                                 events
@@ -3977,4 +4835,6 @@ contract AelinUpFrontDealTest is Test, AelinTestUtils {
     event FeeEscrowClaimed(address indexed aelinFeeEscrow, address indexed underlyingTokenAddress, uint256 amount);
 
     event ClaimedUnderlyingDealToken(address indexed user, address underlyingToken, uint256 amountClaimed);
+
+    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
 }
