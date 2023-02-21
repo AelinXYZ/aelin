@@ -50,4 +50,10 @@ contract VestAMMDealFactory is IVestAMM {
 
         emit NewVestAMM(_ammData, _vAmmInfo, _singleRewards, _dealAccess);
     }
+
+    // TODO a function that locks existing LP tokens
+    // or takes single sided tokens and LPs them, selling a % in the process
+    // to the other asset before LP'ing in exchange for single sided rewards
+    // which may be locked on a vesting schedule
+    function lockLiquidity() {}
 }

@@ -22,6 +22,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     uint256 constant VEST_SWAP_FEE = 10 * 10**18;
     uint256 public depositExpiry;
     uint256 public lpFundingExpiry;
+    uint8 private singleRewardsComplete;
 
     MerkleTree.TrackClaimed private trackClaimed;
     AelinAllowList.AllowList public allowList;
@@ -34,7 +35,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     bool private calledInitialize;
     bool private baseComplete;
-    bool private singleCompleteLength;
 
     address public vestAMMFeeModule;
     address public vestDAO;
@@ -55,6 +55,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // _setNameAndSymbol(string(abi.encodePacked("vAMM-", TBD)), string(abi.encodePacked("v-", TBD)));
         ammData = _ammData;
         vAmmInfo = _vAmmInfo;
+        // NOTE we may need to emit all the single rewards holders for the subgraph to know they need to make a deposit
         singleRewards = _singleRewards;
         dealAccess = _dealAccess;
         vestAMMFeeModule = _vestAMMFeeModule;
@@ -77,28 +78,44 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     function setDepositComplete() internal {
-        depositComplete = true;
-        depositExpiry = block.timestamp + vAmmInfo.depositWindow;
-        // TODO emit some event that the deposit is complete for the subgraph
+        if (baseComplete == true && singleRewardsComplete == singleRewards.length) {
+            depositComplete = true;
+            depositExpiry = block.timestamp + vAmmInfo.depositWindow;
+            emit DepositComplete(depositExpiry);
+        }
     }
 
     // add a check to start deposit window
     // need to do a lot of checks. check right token. check right amount. set a flag when fully deposited
     function depositSingle(DepositToken[] calldata _depositTokens) external {
-        // require single holder is the one calling it for the token needed
-        // check if all are deposited and set deposit complete maybe which will start the deposit period
         for (uint i = 0; i < _depositTokens.length; i++) {
-            IERC20(_depositTokens[i].token).transferFrom(msg.sender, address(this), _depositTokens[i].amount);
-            emit TokenDeposited(_depositTokens[i].token, _depositTokens[i].amount);
+            require(singleRewards[_depositTokens[i].singleRewardIndex].holder == msg.sender, "not the right holder");
+            uint256 balanceBeforeTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
+            IERC20(_depositTokens[i].token).safeTransferFrom(msg.sender, address(this), _depositTokens[i].amount);
+            uint256 balanceAfterTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
+            uint256 amountPostTransfer = balanceAfterTransfer - balanceBeforeTransfer;
+            emit TokenDeposited(_depositTokens[i].token, amountPostTransfer);
+            if (amountPostTransfer >= singleRewards[_depositTokens[i].singleRewardIndex].rewardTokenTotal) {
+                singleRewardsComplete += 1;
+                emit TokenDepositComplete(_depositTokens[i].token);
+            }
+        }
+        setDepositComplete();
+    }
+
+    // TODO cancel deal button callable before the deposit is complete. can we also cancel in the middle? hmm
+    function cancelVestAMM() onlyHolder depositIncomlete {}
+
+    function addSingle(SingleRewardConfig[] calldata _newSingleRewards) external onlyHolder depositIncomplete {
+        for (uint i = 0; i < _newSingleRewards.length; i++) {
+            singleRewards.push(_newSingleRewards[i]);
         }
     }
 
-    // can only be called before the deposit window begins
-    function addSingle(DepositToken[] calldata _depositTokens) external onlyHolder {}
-
-    // add a check to start deposit window
-    // can only be called before the deposit window begins
-    function removeSingle(DepositToken[] calldata _depositTokens) external onlyHolder depositIncomplete {}
+    // TODO implement for removing planned rewards - can only be called before the deposit window begins
+    // NOTE it is not only the holder who can remove single. it is also the single rewards holder themselves
+    // If deal is funded you can remove those funds maybe here too
+    function removeSingle(uint256[] calldata _removeIndexList) external depositIncomplete {}
 
     // add a check to start deposit window
     function depositBase() external {
@@ -113,9 +130,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         if (IERC20(baseAsset).balanceOf(address(this)) >= ammData.baseAssetAmount) {
             baseComplete = true;
         }
-
-        // TODO add checks function for single depsoits complete as well to set deposit
-        // complete and start the purchasing period
+        setDepositComplete();
     }
 
     // takes out fees from LP side and single sided rewards and sends to official AELIN Fee Module
@@ -172,8 +187,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // );
     }
 
-    // collect the fees from AMMs that dont auto reinvest them
-    // and we also need to collect fees that have been reinvested and take a % of those LP shares as protocol fees
+    // collect the fees from AMMs and send them to the Fee Module
     function collectAllFees(uint256 tokenId) external returns (uint256 amount0, uint256 amount1) {}
 
     // for investors at the end of phase 0 but only if they can deallocate,
@@ -268,6 +282,11 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     modifier onlyHolder() {
         require(msg.sender == vAmmInfo.mainHolder, "only holder can access");
+        _;
+    }
+
+    modifier depositIncomplete() {
+        require(!depositComplete, "too late: deposit complete");
         _;
     }
 }

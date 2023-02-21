@@ -33,6 +33,7 @@ interface IVestAMM {
 
     struct VAmmInfo {
         bool hasLaunchPhase;
+        bool isPriceFixed;
         uint256 initialQuotePerBase;
         uint256 depositWindow;
         uint256 lpFundingWindow;
@@ -49,6 +50,7 @@ interface IVestAMM {
     struct SingleRewardConfig {
         address rewardToken;
         uint256 rewardPerQuote;
+        uint256 rewardTokenTotal;
         VestingSchedule vestingData;
         MigrationRules migrationRules; // ??
         address singleHolder;
@@ -64,6 +66,7 @@ interface IVestAMM {
     struct DepositToken {
         address token;
         uint256 amount;
+        uint8 singleRewardIndex;
     }
 
     event TokenDeposited(address token, uint256 amount);
@@ -75,4 +78,8 @@ interface IVestAMM {
     event Vouch(address indexed voucher);
 
     event Disavow(address indexed voucher);
+
+    event TokenDepositComplete(address indexed token);
+
+    event DepositComplete(uint256 depositExpiry);
 }
