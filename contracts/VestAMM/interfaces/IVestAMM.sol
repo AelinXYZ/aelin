@@ -69,6 +69,8 @@ interface IVestAMM {
         uint8 singleRewardIndex;
     }
 
+    event AcceptVestDeal(address indexed depositor, uint256 depositTokenAmount);
+
     event TokenDeposited(address token, uint256 amount);
 
     event NewVestAMM(AmmData ammData, VAmmInfo vAMMInfo, SingleRewardConfig[] singleRewards, DealAccess dealAccess);

@@ -23,10 +23,14 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     uint256 public depositExpiry;
     uint256 public lpFundingExpiry;
     uint8 private singleRewardsComplete;
+    uint8 constant MAX_SINGLE_REWARDS = 10;
 
     MerkleTree.TrackClaimed private trackClaimed;
     AelinAllowList.AllowList public allowList;
     AelinNftGating.NftGatingData public nftGating;
+
+    uint256 public totalDeposited;
+    mapping(address => uint256) public depositTokensPerUser;
 
     AmmData public ammData;
     VAmmInfo public vAmmInfo;
@@ -50,6 +54,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         address _vestAMMFeeModule,
         address _vestDAO
     ) external initOnce {
+        require(_singleRewards.length <= MAX_SINGLE_REWARDS, "max 10 single-sided rewards");
         // pool initialization checks
         // TODO how to name these
         // _setNameAndSymbol(string(abi.encodePacked("vAMM-", TBD)), string(abi.encodePacked("v-", TBD)));
@@ -89,7 +94,10 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     // need to do a lot of checks. check right token. check right amount. set a flag when fully deposited
     function depositSingle(DepositToken[] calldata _depositTokens) external {
         for (uint i = 0; i < _depositTokens.length; i++) {
-            require(singleRewards[_depositTokens[i].singleRewardIndex].holder == msg.sender, "not the right holder");
+            require(
+                msg.sender == vAmmInfo.mainHolder || singleRewards[_depositTokens[i].singleRewardIndex].holder == msg.sender,
+                "not the right holder"
+            );
             uint256 balanceBeforeTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
             IERC20(_depositTokens[i].token).safeTransferFrom(msg.sender, address(this), _depositTokens[i].amount);
             uint256 balanceAfterTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
@@ -107,15 +115,25 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     function cancelVestAMM() onlyHolder depositIncomlete {}
 
     function addSingle(SingleRewardConfig[] calldata _newSingleRewards) external onlyHolder depositIncomplete {
+        require(_singleRewards.length + _newSingleRewards.length <= MAX_SINGLE_REWARDS, "max 10 single-sided rewards");
         for (uint i = 0; i < _newSingleRewards.length; i++) {
             singleRewards.push(_newSingleRewards[i]);
         }
     }
 
-    // TODO implement for removing planned rewards - can only be called before the deposit window begins
-    // NOTE it is not only the holder who can remove single. it is also the single rewards holder themselves
-    // If deal is funded you can remove those funds maybe here too
-    function removeSingle(uint256[] calldata _removeIndexList) external depositIncomplete {}
+    function removeSingle(uint256[] calldata _removeIndexList) external depositIncomplete {
+        // TODO implement a check to make sure that the single reward index has not been funded yet here
+        // we could also add the logic that if its been funded they can just take the funds back here maybe
+        // but if we do that we should make sure only the one who funded it gets the tokens back.
+        for (uint i = 0; i < _removeIndexList.length; i++) {
+            require(
+                msg.sender == vAmmInfo.mainHolder || singleRewards[_removeIndexList[i]].holder == msg.sender,
+                "not the right holder"
+            );
+            singleRewards[_removeIndexList[i]] = singleRewards[singleRewards.length - 1];
+            singleRewards.pop();
+        }
+    }
 
     // add a check to start deposit window
     function depositBase() external {
@@ -143,48 +161,43 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     function acceptDeal(
         AelinNftGating.NftPurchaseList[] calldata _nftPurchaseList,
         MerkleTree.UpFrontMerkleData calldata _merkleData,
-        uint256 _investmentTokenAmount
-    ) external lock {
-        require(depositComplete, "deposit reward tokens first");
-        require(block.timestamp < investmentExpiry, "not in purchase window");
+        uint256 _investmentTokenAmount,
+        uint8 _vestingScheduleIndex
+    ) external lock acceptDealOpen {
+        // TODO how to check if an array item is empty in solidity.
+        // it says access to a non-existing index will throw an exception. lets test this.
+        require(vAmmInfo.vestingSchedule[_vestingScheduleIndex], "vesting schedule doesnt exist");
         address investmentToken = ammContract.quoteAsset;
-        require(IERC20(investmentToken).balanceOf(msg.sender) >= _investmentTokenAmount, "not enough purchaseToken");
+        require(IERC20(investmentToken).balanceOf(msg.sender) >= _investmentTokenAmount, "balance too low");
         if (nftGating.hasNftList || _nftPurchaseList.length > 0) {
             AelinNftGating.purchaseDealTokensWithNft(_nftPurchaseList, nftGating, _investmentTokenAmount);
         } else if (allowList.hasAllowList) {
             require(_investmentTokenAmount <= allowList.amountPerAddress[msg.sender], "more than allocation");
             allowList.amountPerAddress[msg.sender] -= _investmentTokenAmount;
-        } else if (dealData.merkleRoot != 0) {
-            MerkleTree.purchaseMerkleAmount(_merkleData, trackClaimed, _investmentTokenAmount, dealData.merkleRoot);
+        } else if (dealAccess.merkleRoot != 0) {
+            MerkleTree.purchaseMerkleAmount(_merkleData, trackClaimed, _investmentTokenAmount, dealAccess.merkleRoot);
         }
         uint256 balanceBeforeTransfer = IERC20(investmentToken).balanceOf(address(this));
         IERC20(investmentToken).safeTransferFrom(msg.sender, address(this), _investmentTokenAmount);
         uint256 balanceAfterTransfer = IERC20(investmentToken).balanceOf(address(this));
-        uint256 purchaseTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
-        totalPurchasingAccepted += purchaseTokenAmount;
-        purchaseTokensPerUser[msg.sender] += purchaseTokenAmount;
-        // TODO mint NFT for the user with their id tied to an object with their purchase amount
+        uint256 depositTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
+        totalDeposited += depositTokenAmount;
+        depositTokensPerUser[msg.sender] += depositTokenAmount;
+        // NOTE is there a problem with issuing multiple NFTs.
+        // we should just add to their existing one if it exists
+        mintVestingToken(msg.sender, depositTokenAmount);
+        // mint a NFT which will use a formula to calculate amounts and all single rewards
+        // will be tied to this NFT
 
-        // uint8 underlyingTokenDecimals = IERC20Decimals(dealData.underlyingDealToken).decimals();
-        // uint256 poolSharesAmount;
-        // // this takes into account the decimal conversion between purchasing token and underlying deal token
-        // // pool shares having the same amount of decimals as underlying deal tokens
-        // poolSharesAmount = (purchaseTokenAmount * 10**underlyingTokenDecimals) / _purchaseTokenPerDealToken;
-        // require(poolSharesAmount > 0, "purchase amount too small");
-        // // pool shares directly correspond to the amount of deal tokens that can be minted
-        // // pool shares held = deal tokens minted as long as no deallocation takes place
-        // totalPoolShares += poolSharesAmount;
-        // poolSharesPerUser[msg.sender] += poolSharesAmount;
-        // if (!dealConfig.allowDeallocation) {
-        //     require(totalPoolShares <= _underlyingDealTokenTotal, "purchased amount > total");
-        // }
-        // emit AcceptDeal(
-        //     msg.sender,
-        //     purchaseTokenAmount,
-        //     purchaseTokensPerUser[msg.sender],
-        //     poolSharesAmount,
-        //     poolSharesPerUser[msg.sender]
-        // );
+        if (vAmmInfo.vestingSchedule[_vestingScheduleIndex].deallocation == Deallocation.None) {
+            // NOTE this math is not right but just a placeholder for now
+            require(
+                totalDeposited <=
+                    vAmmInfo.vestingSchedule[_vestingScheduleIndex].totalHolderTokens * vAMMInfo.initialQuotePerBase,
+                "purchased amount > total"
+            );
+        }
+        emit AcceptVestDeal(msg.sender, depositTokenAmount);
     }
 
     // collect the fees from AMMs and send them to the Fee Module
@@ -192,6 +205,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     // for investors at the end of phase 0 but only if they can deallocate,
     // otherwise it should not be necessary but we might use it anyways for v1 in both cases
+    // this method will be important as it will set a global total value that will be used in the claim function
     function settle() external {}
 
     // claim vested LP rewards
@@ -287,6 +301,12 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     modifier depositIncomplete() {
         require(!depositComplete, "too late: deposit complete");
+        _;
+    }
+
+    modifier acceptDealOpen() {
+        // TODO double check < vs <= matches everywhere
+        require(depositComplete && block.timestamp <= depositExpiry, "not in deposit window");
         _;
     }
 }
