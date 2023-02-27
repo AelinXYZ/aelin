@@ -251,12 +251,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         _claimVestedRewards(msg.sender, _tokenId);
     }
 
-    // struct VestVestingToken {
-    //     uint256 amountDeposited;
-    //     uint256 lastClaimedAt;
-    //     uint256[] lastClaimedAtRewardList;
-    // }
-
     function claimableTokens(
         uint256 _tokenId,
         ClaimType _claimType,
@@ -296,18 +290,25 @@ contract VestAMM is AelinVestingToken, IVestAMM {
      * created by the protocol
      */
     function claimLPTokens(uint256 _tokenId) external {
-        _claimLPTokens(msg.sender, _tokenId);
+        _claimTokens(msg.sender, _tokenId, ClaimType.Base, 0);
     }
 
-    function _claimLPTokens(address _owner, uint256 _tokenId) internal {
+    function _claimTokens(
+        address _owner,
+        uint256 _tokenId,
+        ClaimType _claimType,
+        uint256 _claimIndex
+    ) internal {
         require(ownerOf(_tokenId) == _owner, "must be owner to claim");
         // TODO double check this doesn't error if there are no single sided rewards
-        uint256 claimableAmount = claimableTokens(_tokenId, ClaimType.Base, 0);
+        uint256 claimableAmount = claimableTokens(_tokenId, _claimType, _claimIndex);
         require(claimableAmount > 0, "no lp tokens ready to claim");
         vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
         totalLPClaimed += claimableAmount;
-        IERC20(lpToken).safeTransfer(_owner, claimableAmount);
-        emit ClaimedLPToken(lpToken, _owner, claimableAmount);
+        address claimToken = _claimType == ClaimType.Base ? lpToken : singleRewards[_claimIndex].token;
+        IERC20(claimToken).safeTransfer(_owner, claimableAmount);
+        // maybe should indicate whether it is the base or the claim index here somehow. tbd
+        emit ClaimedToken(claimToken, _owner, claimableAmount);
     }
 
     function sendFeesToVestDAO(address[] tokens) external {
