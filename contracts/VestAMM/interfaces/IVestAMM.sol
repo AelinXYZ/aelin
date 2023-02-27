@@ -10,6 +10,11 @@ interface IVestAMM {
         Proportional
     }
 
+    enum ClaimType {
+        Single,
+        Base
+    }
+
     struct VestingSchedule {
         uint256 vestingPeriod;
         uint256 vestingCliffPeriod;
@@ -67,6 +72,12 @@ interface IVestAMM {
         address token;
         uint256 amount;
         uint8 singleRewardIndex;
+    }
+
+    struct VestVestingToken {
+        uint256 amountDeposited;
+        uint256 lastClaimedAt;
+        uint256[] lastClaimedAtRewardList;
     }
 
     event AcceptVestDeal(address indexed depositor, uint256 depositTokenAmount);

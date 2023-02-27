@@ -251,27 +251,43 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         _claimVestedRewards(msg.sender, _tokenId);
     }
 
-    function claimableLPTokens(uint256 _tokenId) public view returns (uint256) {
-        VestingDetails memory schedule = vestingDetails[_tokenId];
-        uint256 precisionAdjustedLPClaimable;
+    // struct VestVestingToken {
+    //     uint256 amountDeposited;
+    //     uint256 lastClaimedAt;
+    //     uint256[] lastClaimedAtRewardList;
+    // }
 
-        if (schedule.lastClaimedAt > 0) {
+    function claimableTokens(
+        uint256 _tokenId,
+        ClaimType _claimType,
+        uint256 _claimIndex
+    ) public view returns (uint256) {
+        VestVestingToken memory schedule = vestingDetails[_tokenId];
+        uint256 precisionAdjustedClaimable;
+        uint256 lastClaimedAt = _claimType == ClaimType.Single
+            ? schedule.lastClaimedAtRewardList[_claimIndex]
+            : schedule.lastClaimedAt;
+
+        if (lastClaimedAt > 0) {
             uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
-            uint256 minTime = schedule.lastClaimedAt > vestingCliffExpiry ? schedule.lastClaimedAt : vestingCliffExpiry;
+            uint256 minTime = lastClaimedAt > vestingCliffExpiry ? lastClaimedAt : vestingCliffExpiry;
 
             if (maxTime > vestingCliffExpiry && minTime <= vestingExpiry) {
                 // NOTE that schedule.share needs to be updated
                 // to be the total deposited / global total somehow without requiring a settle method
-                uint256 lpClaimable = (schedule.share * (maxTime - minTime)) / vestingPeriod;
+                // NOTE this math is wrong probably. need to figure out what to do with Math here to avoid issues
+                // TODO check how share is used on the other contracts
+                uint256 lpClaimable = (((schedule.amountDeposited * 10**depositTokenDecimals) / totalDeposited) *
+                    (maxTime - minTime)) / vestingPeriod;
 
                 // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
                 // although it will generally never happen as solidity rounds down so there should always be a little bit left
-                precisionAdjustedLPClaimable = lpClaimable > IERC20(lpToken).balanceOf(address(this))
+                precisionAdjustedClaimable = lpClaimable > IERC20(lpToken).balanceOf(address(this))
                     ? IERC20(lpToken).balanceOf(address(this))
                     : lpClaimable;
             }
         }
-        return precisionAdjustedLPClaimable;
+        return precisionAdjustedClaimable;
     }
 
     /**
@@ -285,7 +301,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     function _claimLPTokens(address _owner, uint256 _tokenId) internal {
         require(ownerOf(_tokenId) == _owner, "must be owner to claim");
-        uint256 claimableAmount = claimableLPTokens(_tokenId);
+        // TODO double check this doesn't error if there are no single sided rewards
+        uint256 claimableAmount = claimableTokens(_tokenId, ClaimType.Base, 0);
         require(claimableAmount > 0, "no lp tokens ready to claim");
         vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
         totalLPClaimed += claimableAmount;
