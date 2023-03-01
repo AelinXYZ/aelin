@@ -1,4 +1,4 @@
-name: Docker Build and Push
+name: Docker Build and Push Contracts Deployer
 
 on:
   push:
@@ -30,7 +30,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
-          dockerfile: ci/Dockerfile
+          file: ci/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: aelinprotocol/contracts-deployer:latest
