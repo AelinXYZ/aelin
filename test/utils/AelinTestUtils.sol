@@ -2,12 +2,16 @@
 pragma solidity 0.8.6;
 
 import "forge-std/Test.sol";
-import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import {AelinAllowList} from "contracts/libraries/AelinAllowList.sol";
+import {AelinUpFrontDeal} from "contracts/AelinUpFrontDeal.sol";
+import {AelinNftGating} from "../../contracts/libraries/AelinNftGating.sol";
 import {IAelinUpFrontDeal} from "contracts/interfaces/IAelinUpFrontDeal.sol";
 import {MerkleTree} from "../../contracts/libraries/MerkleTree.sol";
-import {AelinNftGating} from "../../contracts/libraries/AelinNftGating.sol";
-import {AelinUpFrontDeal} from "contracts/AelinUpFrontDeal.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
+import {MockERC721} from "../mocks/MockERC721.sol";
+import {MockERC1155} from "../mocks/MockERC1155.sol";
+import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import {MockPunks} from "../mocks/MockPunks.sol";
 
 contract AelinTestUtils is Test {
     address public aelinTreasury = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
@@ -27,7 +31,121 @@ contract AelinTestUtils is Test {
     MockERC20 public underlyingDealToken = new MockERC20("MockDeal", "MD");
     MockERC20 public purchaseToken = new MockERC20("MockPurchase", "MP");
 
+    MockERC721 public collection721_1 = new MockERC721("TestCollection", "TC");
+    MockERC721 public collection721_2 = new MockERC721("TestCollection", "TC");
+    MockERC721 public collection721_3 = new MockERC721("TestCollection", "TC");
+    MockERC1155 public collection1155_1 = new MockERC1155("");
+    MockERC1155 public collection1155_2 = new MockERC1155("");
+    MockPunks public collectionPunks = new MockPunks();
+
+    AelinNftGating.NftCollectionRules[] public nftCollectionRulesEmpty;
+
     MerkleTree.UpFrontMerkleData public merkleDataEmpty;
+
+    function getDealData() public view returns (IAelinUpFrontDeal.UpFrontDealData memory) {
+        return
+            IAelinUpFrontDeal.UpFrontDealData({
+                name: "DEAL",
+                symbol: "DEAL",
+                purchaseToken: address(purchaseToken),
+                underlyingDealToken: address(underlyingDealToken),
+                holder: dealHolderAddress,
+                sponsor: dealCreatorAddress,
+                sponsorFee: 1 * 10 ** 18,
+                ipfsHash: "",
+                merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000
+            });
+    }
+
+    function getDealConfigAllowDeallocation() public pure returns (IAelinUpFrontDeal.UpFrontDealConfig memory) {
+        return
+            IAelinUpFrontDeal.UpFrontDealConfig({
+                underlyingDealTokenTotal: 1e35,
+                purchaseTokenPerDealToken: 3e18,
+                purchaseRaiseMinimum: 0,
+                purchaseDuration: 10 days,
+                vestingPeriod: 365 days,
+                vestingCliffPeriod: 60 days,
+                allowDeallocation: true
+            });
+    }
+
+    function getDealConfig() public pure returns (IAelinUpFrontDeal.UpFrontDealConfig memory) {
+        return
+            IAelinUpFrontDeal.UpFrontDealConfig({
+                underlyingDealTokenTotal: 1e35,
+                purchaseTokenPerDealToken: 3e18,
+                purchaseRaiseMinimum: 1e28,
+                purchaseDuration: 10 days,
+                vestingPeriod: 365 days,
+                vestingCliffPeriod: 60 days,
+                allowDeallocation: false
+            });
+    }
+
+    function getAllowList() public view returns (AelinAllowList.InitData memory) {
+        AelinAllowList.InitData memory allowList;
+
+        address[] memory testAllowListAddresses = new address[](3);
+        uint256[] memory testAllowListAmounts = new uint256[](3);
+        testAllowListAddresses[0] = user1;
+        testAllowListAddresses[1] = user2;
+        testAllowListAddresses[2] = user3;
+        testAllowListAmounts[0] = 1e18;
+        testAllowListAmounts[1] = 2e18;
+        testAllowListAmounts[2] = 3e18;
+        allowList.allowListAddresses = testAllowListAddresses;
+        allowList.allowListAmounts = testAllowListAmounts;
+        return allowList;
+    }
+
+    function getERC721Collection() public view returns (AelinNftGating.NftCollectionRules[] memory) {
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRules721 = new AelinNftGating.NftCollectionRules[](2);
+
+        nftCollectionRules721[0].collectionAddress = address(collection721_1);
+        nftCollectionRules721[0].purchaseAmount = 1e20;
+        nftCollectionRules721[0].purchaseAmountPerToken = true;
+        nftCollectionRules721[1].collectionAddress = address(collection721_2);
+        nftCollectionRules721[1].purchaseAmount = 1e22;
+        nftCollectionRules721[1].purchaseAmountPerToken = false;
+
+        return nftCollectionRules721;
+    }
+
+    function getERC1155Collection() public view returns (AelinNftGating.NftCollectionRules[] memory) {
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRules1155 = new AelinNftGating.NftCollectionRules[](2);
+
+        nftCollectionRules1155[0].collectionAddress = address(collection1155_1);
+        nftCollectionRules1155[0].purchaseAmount = 1e20;
+        nftCollectionRules1155[0].purchaseAmountPerToken = true;
+        nftCollectionRules1155[0].tokenIds = new uint256[](2);
+        nftCollectionRules1155[0].minTokensEligible = new uint256[](2);
+        nftCollectionRules1155[0].tokenIds[0] = 1;
+        nftCollectionRules1155[0].tokenIds[1] = 2;
+        nftCollectionRules1155[0].minTokensEligible[0] = 10;
+        nftCollectionRules1155[0].minTokensEligible[1] = 20;
+        nftCollectionRules1155[1].collectionAddress = address(collection1155_2);
+        nftCollectionRules1155[1].purchaseAmount = 1e22;
+        nftCollectionRules1155[1].purchaseAmountPerToken = false;
+        nftCollectionRules1155[1].tokenIds = new uint256[](2);
+        nftCollectionRules1155[1].minTokensEligible = new uint256[](2);
+        nftCollectionRules1155[1].tokenIds[0] = 10;
+        nftCollectionRules1155[1].tokenIds[1] = 20;
+        nftCollectionRules1155[1].minTokensEligible[0] = 1000;
+        nftCollectionRules1155[1].minTokensEligible[1] = 2000;
+
+        return nftCollectionRules1155;
+    }
+
+    function getPunksCollection(bool _purchaseIsPerToken) public view returns (AelinNftGating.NftCollectionRules[] memory) {
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = new AelinNftGating.NftCollectionRules[](1);
+
+        nftCollectionRulesPunks[0].collectionAddress = address(punks);
+        nftCollectionRulesPunks[0].purchaseAmount = 1e22;
+        nftCollectionRulesPunks[0].purchaseAmountPerToken = _purchaseIsPerToken;
+
+        return nftCollectionRulesPunks;
+    }
 
     function setupAndAcceptDealNoDeallocation(address _dealAddress, uint256 _purchaseAmount, address _user) public {
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
@@ -59,7 +177,7 @@ contract AelinTestUtils is Test {
         uint256 _purchaseAmount,
         address _user,
         bool isOverSubscribed
-    ) public returns (uint256 underlyingDealTokenTotal) {
+    ) public returns (uint256) {
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(_dealAddress)
             .dealConfig();
@@ -106,4 +224,51 @@ contract AelinTestUtils is Test {
         uint256 privateKey = uint256(keccak256(abi.encodePacked(num)));
         addr = vm.addr(privateKey);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                                events
+    //////////////////////////////////////////////////////////////*/
+
+    event DepositDealToken(
+        address indexed underlyingDealTokenAddress,
+        address indexed depositor,
+        uint256 underlyingDealTokenAmount
+    );
+
+    event SetHolder(address indexed holder);
+
+    event Vouch(address indexed voucher);
+
+    event Disavow(address indexed voucher);
+
+    event WithdrewExcess(address UpFrontDealAddress, uint256 amountWithdrawn);
+
+    event AcceptDeal(
+        address indexed user,
+        uint256 amountPurchased,
+        uint256 totalPurchased,
+        uint256 amountDealTokens,
+        uint256 totalDealTokens
+    );
+
+    event VestingTokenMinted(address indexed user, uint256 indexed tokenId, uint256 amount, uint256 lastClaimedAt);
+
+    event ClaimDealTokens(address indexed user, uint256 amountMinted, uint256 amountPurchasingReturned);
+
+    event SponsorClaim(address indexed sponsor, uint256 amountMinted);
+
+    event HolderClaim(
+        address indexed holder,
+        address purchaseToken,
+        uint256 amountClaimed,
+        address underlyingToken,
+        uint256 underlyingRefund,
+        uint256 timestamp
+    );
+
+    event FeeEscrowClaimed(address indexed aelinFeeEscrow, address indexed underlyingTokenAddress, uint256 amount);
+
+    event ClaimedUnderlyingDealToken(address indexed user, address underlyingToken, uint256 amountClaimed);
+
+    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
 }

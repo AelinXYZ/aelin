@@ -22,8 +22,6 @@ contract AelinFeeEscrowTest is Test, AelinTestUtils {
     AelinUpFrontDealFactory public upFrontDealFactory;
     AelinFeeEscrow public testEscrow;
 
-    AelinNftGating.NftCollectionRules[] public nftCollectionRulesEmpty;
-
     address upfrontDeal;
     address escrowAddress;
 
