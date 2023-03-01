@@ -10,13 +10,6 @@ contract_files=(
     "contracts/AelinPool.sol:AelinPool"
 )
 
-aelinUpFrontDealContract="contracts/AelinUpFrontDeal.sol:AelinUpFrontDeal"
-aelinPoolFactoryContract="contracts/AelinPoolFactory.sol:AelinPoolFactory"
-aelinUpFrontDealFactoryContract="contracts/AelinUpFrontDealFactory.sol:AelinUpFrontDealFactory"
-uniContract="contracts/UNI.sol:UNI"
-usdcContract="contracts/USDC.sol:USDC"
-wethContract="contracts/WETH.sol:WETH"
-
 envs_names=(
     "AelinFeeEscrow_address"
     "MerkleTree_address"
@@ -54,37 +47,35 @@ libraries = [
 ]" >> ../foundry.toml
 
 # 3. Deploying AelinUpFrontDeal
-output_aelinUpFrontDeal=$(forge create --rpc-url http://anvil:8545 --private-key $private_key $aelinUpFrontDealContract)
+output_aelinUpFrontDeal=$(forge create --rpc-url http://anvil:8545 --private-key $private_key contracts/AelinUpFrontDeal.sol:AelinUpFrontDeal)
 address_aelinUpFrontDeal=$(echo "$output_aelinUpFrontDeal" | grep "Deployed to: " | awk '{print $3}')
 echo "AelinUpFrontDeal_address=$address_aelinUpFrontDeal" >> .env.linuz
 echo "AelinUpFrontDeal_address=$address_aelinUpFrontDeal"
 
 # 4. Deploying AelinUpFrontDealFactory
-output_aelinUpFrontDealFactory=$(forge create --rpc-url http://anvil:8545 --private-key $private_key $aelinUpFrontDealFactoryContract --constructor-args $address_aelinUpFrontDeal ${addresses[0]} $tresury)
+output_aelinUpFrontDealFactory=$(forge create --rpc-url http://anvil:8545 --private-key $private_key contracts/AelinUpFrontDealFactory.sol:AelinUpFrontDealFactory --constructor-args $address_aelinUpFrontDeal ${addresses[0]} $tresury)
 address_aelinUpFrontDealFactory=$(echo "$output_aelinUpFrontDealFactory" | grep "Deployed to: " | awk '{print $3}')
 echo "AelinUpFrontDealFactory_address=$address_aelinUpFrontDealFactory" >> .env.linuz
 echo "AelinUpFrontDealFactory_address=$address_aelinUpFrontDealFactory"
 
 # 5. Deploying AelinPoolFactory
-output_aelinFactory=$(forge create --rpc-url http://anvil:8545 --private-key $private_key $aelinPoolFactoryContract --constructor-args ${addresses[6]} ${addresses[5]} $tresury ${addresses[0]})
+output_aelinFactory=$(forge create --rpc-url http://anvil:8545 --private-key $private_key contracts/AelinPoolFactory.sol:AelinPoolFactory --constructor-args ${addresses[6]} ${addresses[5]} $tresury ${addresses[0]})
 address_aelinFactory=$(echo "$output_aelinFactory" | grep "Deployed to: " | awk '{print $3}')
 echo "AelinPoolFactory_address=$address_aelinFactory" >> .env.linuz
 echo "AelinPoolFactory_address=$address_aelinFactory"
 
 # 6. Deploying dummy tokens
-output_uniToken=$(forge create --rpc-url http://anvil:8545 --private-key $private_key $uniContract)
+output_uniToken=$(forge create --rpc-url http://anvil:8545 --private-key $private_key contracts/UNI.sol:UNI)
 address_uniToken=$(echo "$output_uniToken" | grep "Deployed to: " | awk '{print $3}')
 echo "UNI_address=$address_uniToken" >> .env.linuz
 echo "UNI_address=$address_uniToken"
-output_usdcToken=$(forge create --rpc-url http://anvil:8545 --private-key $private_key $usdcContract)
+output_usdcToken=$(forge create --rpc-url http://anvil:8545 --private-key $private_key contracts/USDC.sol:USDC)
 address_usdcToken=$(echo "$output_usdcToken" | grep "Deployed to: " | awk '{print $3}')
 echo "USDC_address=$address_usdcToken" >> .env.linuz
 echo "USDC_address=$address_usdcToken"
-output_wethToken=$(forge create --rpc-url http://anvil:8545 --private-key $private_key $wethContract)
+output_wethToken=$(forge create --rpc-url http://anvil:8545 --private-key $private_key contracts/WETH.sol:WETH)
 address_wethToken=$(echo "$output_wethToken" | grep "Deployed to: " | awk '{print $3}')
 echo "WETH_address=$address_wethToken" >> .env.linuz
 echo "WETH_address=$address_wethToken"
-
-mv .env.linuz /usr/share/envs/.env.linuz
 
 echo "******* DONE! *******"

@@ -5,7 +5,7 @@ RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 
 # Clone the repository
-RUN apk update && apk add git
+RUN apk update && apk add git python3 g++ make
 RUN git clone https://github.com/AelinXYZ/aelin.git .
 RUN git checkout e2e-devops
 
@@ -23,7 +23,7 @@ RUN mv ./node_modules/openzeppelin-solidity-2.3.0 ./remappings/openzeppelin-soli
 # no need to keep this
 RUN rm -rf ./node_modules
 
-FROM linuzeth/aelin-anvil as builder
+FROM aelinprotocol/anvil as builder
 
 RUN apk update && apk add bash
 
