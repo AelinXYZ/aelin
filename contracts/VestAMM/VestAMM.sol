@@ -116,7 +116,10 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     // TODO cancel deal button callable before the deposit is complete. can we also cancel in the middle? hmm
-    function cancelVestAMM() onlyHolder depositIncomlete {}
+    function cancelVestAMM() onlyHolder depositIncomlete {
+        // returns all funds deposited so far
+        // destroys contract
+    }
 
     function addSingle(SingleRewardConfig[] calldata _newSingleRewards) external onlyHolder depositIncomplete {
         require(_singleRewards.length + _newSingleRewards.length <= MAX_SINGLE_REWARDS, "max 10 single-sided rewards");
@@ -125,6 +128,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         }
     }
 
+    // We do use the index a lot throughout the code. lets make sure we dont screw anything up
+    // by rearranging the indexes. It shoul be fine as this is only an option before the deposit
+    // is complete
     function removeSingle(uint256[] calldata _removeIndexList) external depositIncomplete {
         // TODO maybe let them take the funds back to the holder if it was already funded. hmmm
         for (uint i = 0; i < _removeIndexList.length; i++) {

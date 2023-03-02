@@ -74,12 +74,6 @@ interface IVestAMM {
         uint8 singleRewardIndex;
     }
 
-    struct VestVestingToken {
-        uint256 amountDeposited;
-        uint256 lastClaimedAt;
-        uint256[] lastClaimedAtRewardList;
-    }
-
     event AcceptVestDeal(address indexed depositor, uint256 depositTokenAmount);
 
     event TokenDeposited(address token, uint256 amount);
