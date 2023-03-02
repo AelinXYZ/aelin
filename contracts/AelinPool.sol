@@ -10,9 +10,9 @@ import "./libraries/NftCheck.sol";
 contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     using SafeERC20 for IERC20;
     address constant CRYPTO_PUNKS = address(0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB);
-    uint256 constant BASE = 100 * 10**18;
-    uint256 constant MAX_SPONSOR_FEE = 15 * 10**18;
-    uint256 constant AELIN_FEE = 2 * 10**18;
+    uint256 constant BASE = 100 * 10 ** 18;
+    uint256 constant MAX_SPONSOR_FEE = 15 * 10 ** 18;
+    uint256 constant AELIN_FEE = 2 * 10 ** 18;
     uint8 constant MAX_DEALS = 5;
 
     uint8 public numberOfDeals;
@@ -176,253 +176,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         emit SetSponsor(_sponsor);
     }
 
-    modifier dealReady() {
-        if (holderFundingExpiry > 0) {
-            require(!aelinDeal.depositComplete() && block.timestamp >= holderFundingExpiry, "cant create new deal");
-        }
-        _;
-    }
-
-    modifier initOnce() {
-        require(!calledInitialize, "can only initialize once");
-        calledInitialize = true;
-        _;
-    }
-
-    modifier onlySponsor() {
-        require(msg.sender == sponsor, "only sponsor can access");
-        _;
-    }
-
-    modifier dealFunded() {
-        require(holderFundingExpiry > 0 && aelinDeal.depositComplete(), "deal not yet funded");
-        _;
-    }
-
-    /**
-     * @dev the sponsor may change addresses
-     */
-    function setSponsor(address _sponsor) external onlySponsor {
-        require(_sponsor != address(0));
-        futureSponsor = _sponsor;
-    }
-
-    function acceptSponsor() external {
-        require(msg.sender == futureSponsor, "only future sponsor can access");
-        sponsor = futureSponsor;
-        emit SetSponsor(futureSponsor);
-    }
-
-    /**
-     * @dev only the sponsor can create a deal. The deal must be funded by the holder
-     * of the underlying deal token before a purchaser may accept the deal. If the
-     * holder does not fund the deal before the expiry period is over then the sponsor
-     * can create a new deal for the pool of capital by calling this method again.
-     *
-     * Requirements:
-     * - The purchase expiry period must be over
-     * - the holder funding expiry period must be from 30 minutes to 30 days
-     * - the pro rata redemption period must be from 30 minutes to 30 days
-     * - the purchase token total for the deal that may be accepted must be <= the funds in the pool
-     * - if the pro rata conversion ratio (purchase token total for the deal:funds in pool)
-     *   is 1:1 then the open redemption period must be 0,
-     *   otherwise the open period is from 30 minutes to 30 days
-     */
-    function createDeal(
-        address _underlyingDealToken,
-        uint256 _purchaseTokenTotalForDeal,
-        uint256 _underlyingDealTokenTotal,
-        uint256 _vestingPeriod,
-        uint256 _vestingCliffPeriod,
-        uint256 _proRataRedemptionPeriod,
-        uint256 _openRedemptionPeriod,
-        address _holder,
-        uint256 _holderFundingDuration
-    ) external onlySponsor dealReady returns (address) {
-        require(numberOfDeals < MAX_DEALS, "too many deals");
-        require(_holder != address(0), "cant pass null holder address");
-        require(_underlyingDealToken != address(0), "cant pass null token address");
-        require(block.timestamp >= purchaseExpiry, "pool still in purchase mode");
-        require(
-            30 minutes <= _proRataRedemptionPeriod && 30 days >= _proRataRedemptionPeriod,
-            "30 mins - 30 days for prorata"
-        );
-        require(1825 days >= _vestingCliffPeriod, "max 5 year cliff");
-        require(1825 days >= _vestingPeriod, "max 5 year vesting");
-        require(30 minutes <= _holderFundingDuration && 30 days >= _holderFundingDuration, "30 mins - 30 days for holder");
-        require(_purchaseTokenTotalForDeal <= totalSupply(), "not enough funds available");
-        proRataConversion = (_purchaseTokenTotalForDeal * 1e18) / totalSupply();
-        if (proRataConversion == 1e18) {
-            require(0 minutes == _openRedemptionPeriod, "deal is 1:1, set open to 0");
-        } else {
-            require(30 minutes <= _openRedemptionPeriod && 30 days >= _openRedemptionPeriod, "30 mins - 30 days for open");
-        }
-
-        numberOfDeals += 1;
-        poolExpiry = block.timestamp;
-        holder = _holder;
-        holderFundingExpiry = block.timestamp + _holderFundingDuration;
-        purchaseTokenTotalForDeal = _purchaseTokenTotalForDeal;
-        uint256 maxDealTotalSupply = _convertPoolToDeal(_purchaseTokenTotalForDeal, purchaseTokenDecimals);
-
-        address aelinDealStorageProxy = _cloneAsMinimalProxy(aelinDealLogicAddress, "Could not create new deal");
-        aelinDeal = AelinDeal(aelinDealStorageProxy);
-        IAelinDeal.DealData memory dealData = IAelinDeal.DealData(
-            _underlyingDealToken,
-            _underlyingDealTokenTotal,
-            _vestingPeriod,
-            _vestingCliffPeriod,
-            _proRataRedemptionPeriod,
-            _openRedemptionPeriod,
-            _holder,
-            maxDealTotalSupply,
-            holderFundingExpiry
-        );
-
-        aelinDeal.initialize(storedName, storedSymbol, dealData, aelinTreasuryAddress, aelinEscrowLogicAddress);
-
-        emit CreateDeal(
-            string(abi.encodePacked("aeDeal-", storedName)),
-            string(abi.encodePacked("aeD-", storedSymbol)),
-            sponsor,
-            aelinDealStorageProxy
-        );
-
-        emit DealDetail(
-            aelinDealStorageProxy,
-            _underlyingDealToken,
-            _purchaseTokenTotalForDeal,
-            _underlyingDealTokenTotal,
-            _vestingPeriod,
-            _vestingCliffPeriod,
-            _proRataRedemptionPeriod,
-            _openRedemptionPeriod,
-            _holder,
-            _holderFundingDuration
-        );
-
-        return aelinDealStorageProxy;
-    }
-
-    /**
-     * @dev the 2 methods allow a purchaser to exchange accept all or a
-     * portion of their pool tokens for deal tokens
-     *
-     * Requirements:
-     * - the redemption period is either in the pro rata or open windows
-     * - the purchaser cannot accept more than their share for a period
-     * - if participating in the open period, a purchaser must have maxxed their
-     *   contribution in the pro rata phase
-     */
-    function acceptMaxDealTokens() external {
-        _acceptDealTokens(msg.sender, 0, true);
-    }
-
-    function acceptDealTokens(uint256 _poolTokenAmount) external {
-        _acceptDealTokens(msg.sender, _poolTokenAmount, false);
-    }
-
-    /**
-     * @dev the if statement says if you have no balance or if the deal is not funded
-     * or if the pro rata period is not active, then you have 0 available for this period
-     */
-    function maxProRataAmount(address _purchaser) public view returns (uint256) {
-        (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
-
-        if (
-            (balanceOf(_purchaser) == 0 && amountAccepted[_purchaser] == 0 && amountWithdrawn[_purchaser] == 0) ||
-            holderFundingExpiry == 0 ||
-            proRataRedemptionStart == 0 ||
-            block.timestamp >= proRataRedemptionExpiry
-        ) {
-            return 0;
-        }
-        return
-            (proRataConversion * (balanceOf(_purchaser) + amountAccepted[_purchaser] + amountWithdrawn[_purchaser])) /
-            1e18 -
-            amountAccepted[_purchaser];
-    }
-
-    function _maxOpenAvail(address _purchaser) internal view returns (uint256) {
-        return
-            balanceOf(_purchaser) + totalAmountAccepted <= purchaseTokenTotalForDeal
-                ? balanceOf(_purchaser)
-                : purchaseTokenTotalForDeal - totalAmountAccepted;
-    }
-
-    function _acceptDealTokens(
-        address _recipient,
-        uint256 _poolTokenAmount,
-        bool _useMax
-    ) internal dealFunded lock {
-        (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
-        (, uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
-
-        if (block.timestamp >= proRataRedemptionStart && block.timestamp < proRataRedemptionExpiry) {
-            _acceptDealTokensProRata(_recipient, _poolTokenAmount, _useMax);
-        } else if (openRedemptionStart > 0 && block.timestamp < openRedemptionExpiry) {
-            _acceptDealTokensOpen(_recipient, _poolTokenAmount, _useMax);
-        } else {
-            revert("outside of redeem window");
-        }
-    }
-
-    function _acceptDealTokensProRata(
-        address _recipient,
-        uint256 _poolTokenAmount,
-        bool _useMax
-    ) internal {
-        uint256 maxProRata = maxProRataAmount(_recipient);
-        uint256 maxAccept = maxProRata > balanceOf(_recipient) ? balanceOf(_recipient) : maxProRata;
-        if (!_useMax) {
-            require(
-                _poolTokenAmount <= maxProRata && balanceOf(_recipient) >= _poolTokenAmount,
-                "accepting more than share"
-            );
-        }
-        uint256 acceptAmount = _useMax ? maxAccept : _poolTokenAmount;
-        amountAccepted[_recipient] += acceptAmount;
-        totalAmountAccepted += acceptAmount;
-        _mintDealTokens(_recipient, acceptAmount);
-        if (proRataConversion != 1e18 && maxProRataAmount(_recipient) == 0) {
-            openPeriodEligible[_recipient] = true;
-        }
-    }
-
-    function _acceptDealTokensOpen(
-        address _recipient,
-        uint256 _poolTokenAmount,
-        bool _useMax
-    ) internal {
-        require(openPeriodEligible[_recipient], "ineligible: didn't max pro rata");
-        uint256 maxOpen = _maxOpenAvail(_recipient);
-        require(maxOpen > 0, "nothing left to accept");
-        uint256 acceptAmount = _useMax ? maxOpen : _poolTokenAmount;
-        if (!_useMax) {
-            require(acceptAmount <= maxOpen, "accepting more than share");
-        }
-        totalAmountAccepted += acceptAmount;
-        amountAccepted[_recipient] += acceptAmount;
-        _mintDealTokens(_recipient, acceptAmount);
-    }
-
-    /**
-     * @dev the holder will receive less purchase tokens than the amount
-     * transferred if the purchase token burns or takes a fee during transfer
-     */
-    function _mintDealTokens(address _recipient, uint256 _poolTokenAmount) internal {
-        _burn(_recipient, _poolTokenAmount);
-        uint256 poolTokenDealFormatted = _convertPoolToDeal(_poolTokenAmount, purchaseTokenDecimals);
-        uint256 aelinFeeAmt = (poolTokenDealFormatted * AELIN_FEE) / BASE;
-        uint256 sponsorFeeAmt = (poolTokenDealFormatted * sponsorFee) / BASE;
-
-        aelinDeal.mintVestingToken(sponsor, sponsorFeeAmt);
-        aelinDeal.transferProtocolFee(aelinFeeAmt);
-        aelinDeal.mintVestingToken(_recipient, poolTokenDealFormatted - (sponsorFeeAmt + aelinFeeAmt));
-        IERC20(purchaseToken).safeTransfer(holder, _poolTokenAmount);
-        emit AcceptDeal(_recipient, address(aelinDeal), _poolTokenAmount, sponsorFeeAmt, aelinFeeAmt);
-    }
-
     /**
      * @dev allows anyone to become a purchaser by sending purchase tokens
      * in exchange for pool tokens
@@ -464,10 +217,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
      * 3. certain amount of Investment tokens per qualified NFT held
      */
 
-    function purchasePoolTokensWithNft(NftPurchaseList[] calldata _nftPurchaseList, uint256 _purchaseTokenAmount)
-        external
-        lock
-    {
+    function purchasePoolTokensWithNft(
+        NftPurchaseList[] calldata _nftPurchaseList,
+        uint256 _purchaseTokenAmount
+    ) external lock {
         require(hasNftList, "pool does not have an NFT list");
         require(block.timestamp < purchaseExpiry, "not in purchase window");
 
@@ -591,6 +344,204 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     }
 
     /**
+     * @dev only the sponsor can create a deal. The deal must be funded by the holder
+     * of the underlying deal token before a purchaser may accept the deal. If the
+     * holder does not fund the deal before the expiry period is over then the sponsor
+     * can create a new deal for the pool of capital by calling this method again.
+     *
+     * Requirements:
+     * - The purchase expiry period must be over
+     * - the holder funding expiry period must be from 30 minutes to 30 days
+     * - the pro rata redemption period must be from 30 minutes to 30 days
+     * - the purchase token total for the deal that may be accepted must be <= the funds in the pool
+     * - if the pro rata conversion ratio (purchase token total for the deal:funds in pool)
+     *   is 1:1 then the open redemption period must be 0,
+     *   otherwise the open period is from 30 minutes to 30 days
+     */
+    function createDeal(
+        address _underlyingDealToken,
+        uint256 _purchaseTokenTotalForDeal,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint256 _proRataRedemptionPeriod,
+        uint256 _openRedemptionPeriod,
+        address _holder,
+        uint256 _holderFundingDuration
+    ) external onlySponsor dealReady returns (address) {
+        require(numberOfDeals < MAX_DEALS, "too many deals");
+        require(_holder != address(0), "cant pass null holder address");
+        require(_underlyingDealToken != address(0), "cant pass null token address");
+        require(block.timestamp >= purchaseExpiry, "pool still in purchase mode");
+        require(
+            30 minutes <= _proRataRedemptionPeriod && 30 days >= _proRataRedemptionPeriod,
+            "30 mins - 30 days for prorata"
+        );
+        require(1825 days >= _vestingCliffPeriod, "max 5 year cliff");
+        require(1825 days >= _vestingPeriod, "max 5 year vesting");
+        require(30 minutes <= _holderFundingDuration && 30 days >= _holderFundingDuration, "30 mins - 30 days for holder");
+        require(_purchaseTokenTotalForDeal <= totalSupply(), "not enough funds available");
+        proRataConversion = (_purchaseTokenTotalForDeal * 1e18) / totalSupply();
+        if (proRataConversion == 1e18) {
+            require(0 minutes == _openRedemptionPeriod, "deal is 1:1, set open to 0");
+        } else {
+            require(30 minutes <= _openRedemptionPeriod && 30 days >= _openRedemptionPeriod, "30 mins - 30 days for open");
+        }
+
+        numberOfDeals += 1;
+        poolExpiry = block.timestamp;
+        holder = _holder;
+        holderFundingExpiry = block.timestamp + _holderFundingDuration;
+        purchaseTokenTotalForDeal = _purchaseTokenTotalForDeal;
+        uint256 maxDealTotalSupply = _convertPoolToDeal(_purchaseTokenTotalForDeal, purchaseTokenDecimals);
+
+        address aelinDealStorageProxy = _cloneAsMinimalProxy(aelinDealLogicAddress, "Could not create new deal");
+        aelinDeal = AelinDeal(aelinDealStorageProxy);
+        IAelinDeal.DealData memory dealData = IAelinDeal.DealData(
+            _underlyingDealToken,
+            _underlyingDealTokenTotal,
+            _vestingPeriod,
+            _vestingCliffPeriod,
+            _proRataRedemptionPeriod,
+            _openRedemptionPeriod,
+            _holder,
+            maxDealTotalSupply,
+            holderFundingExpiry
+        );
+
+        aelinDeal.initialize(storedName, storedSymbol, dealData, aelinTreasuryAddress, aelinEscrowLogicAddress);
+
+        emit CreateDeal(
+            string(abi.encodePacked("aeDeal-", storedName)),
+            string(abi.encodePacked("aeD-", storedSymbol)),
+            sponsor,
+            aelinDealStorageProxy
+        );
+
+        emit DealDetail(
+            aelinDealStorageProxy,
+            _underlyingDealToken,
+            _purchaseTokenTotalForDeal,
+            _underlyingDealTokenTotal,
+            _vestingPeriod,
+            _vestingCliffPeriod,
+            _proRataRedemptionPeriod,
+            _openRedemptionPeriod,
+            _holder,
+            _holderFundingDuration
+        );
+
+        return aelinDealStorageProxy;
+    }
+
+    /**
+     * @dev the 2 methods allow a purchaser to exchange accept all or a
+     * portion of their pool tokens for deal tokens
+     *
+     * Requirements:
+     * - the redemption period is either in the pro rata or open windows
+     * - the purchaser cannot accept more than their share for a period
+     * - if participating in the open period, a purchaser must have maxxed their
+     *   contribution in the pro rata phase
+     */
+    function acceptMaxDealTokens() external {
+        _acceptDealTokens(msg.sender, 0, true);
+    }
+
+    function acceptDealTokens(uint256 _poolTokenAmount) external {
+        _acceptDealTokens(msg.sender, _poolTokenAmount, false);
+    }
+
+    function _acceptDealTokens(address _recipient, uint256 _poolTokenAmount, bool _useMax) internal dealFunded lock {
+        (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
+        (, uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
+
+        if (block.timestamp >= proRataRedemptionStart && block.timestamp < proRataRedemptionExpiry) {
+            _acceptDealTokensProRata(_recipient, _poolTokenAmount, _useMax);
+        } else if (openRedemptionStart > 0 && block.timestamp < openRedemptionExpiry) {
+            _acceptDealTokensOpen(_recipient, _poolTokenAmount, _useMax);
+        } else {
+            revert("outside of redeem window");
+        }
+    }
+
+    function _acceptDealTokensProRata(address _recipient, uint256 _poolTokenAmount, bool _useMax) internal {
+        uint256 maxProRata = maxProRataAmount(_recipient);
+        uint256 maxAccept = maxProRata > balanceOf(_recipient) ? balanceOf(_recipient) : maxProRata;
+        if (!_useMax) {
+            require(
+                _poolTokenAmount <= maxProRata && balanceOf(_recipient) >= _poolTokenAmount,
+                "accepting more than share"
+            );
+        }
+        uint256 acceptAmount = _useMax ? maxAccept : _poolTokenAmount;
+        amountAccepted[_recipient] += acceptAmount;
+        totalAmountAccepted += acceptAmount;
+        _mintDealTokens(_recipient, acceptAmount);
+        if (proRataConversion != 1e18 && maxProRataAmount(_recipient) == 0) {
+            openPeriodEligible[_recipient] = true;
+        }
+    }
+
+    function _acceptDealTokensOpen(address _recipient, uint256 _poolTokenAmount, bool _useMax) internal {
+        require(openPeriodEligible[_recipient], "ineligible: didn't max pro rata");
+        uint256 maxOpen = _maxOpenAvail(_recipient);
+        require(maxOpen > 0, "nothing left to accept");
+        uint256 acceptAmount = _useMax ? maxOpen : _poolTokenAmount;
+        if (!_useMax) {
+            require(acceptAmount <= maxOpen, "accepting more than share");
+        }
+        totalAmountAccepted += acceptAmount;
+        amountAccepted[_recipient] += acceptAmount;
+        _mintDealTokens(_recipient, acceptAmount);
+    }
+
+    /**
+     * @dev the if statement says if you have no balance or if the deal is not funded
+     * or if the pro rata period is not active, then you have 0 available for this period
+     */
+    function maxProRataAmount(address _purchaser) public view returns (uint256) {
+        (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
+
+        if (
+            (balanceOf(_purchaser) == 0 && amountAccepted[_purchaser] == 0 && amountWithdrawn[_purchaser] == 0) ||
+            holderFundingExpiry == 0 ||
+            proRataRedemptionStart == 0 ||
+            block.timestamp >= proRataRedemptionExpiry
+        ) {
+            return 0;
+        }
+        return
+            (proRataConversion * (balanceOf(_purchaser) + amountAccepted[_purchaser] + amountWithdrawn[_purchaser])) /
+            1e18 -
+            amountAccepted[_purchaser];
+    }
+
+    function _maxOpenAvail(address _purchaser) internal view returns (uint256) {
+        return
+            balanceOf(_purchaser) + totalAmountAccepted <= purchaseTokenTotalForDeal
+                ? balanceOf(_purchaser)
+                : purchaseTokenTotalForDeal - totalAmountAccepted;
+    }
+
+    /**
+     * @dev the holder will receive less purchase tokens than the amount
+     * transferred if the purchase token burns or takes a fee during transfer
+     */
+    function _mintDealTokens(address _recipient, uint256 _poolTokenAmount) internal {
+        _burn(_recipient, _poolTokenAmount);
+        uint256 poolTokenDealFormatted = _convertPoolToDeal(_poolTokenAmount, purchaseTokenDecimals);
+        uint256 aelinFeeAmt = (poolTokenDealFormatted * AELIN_FEE) / BASE;
+        uint256 sponsorFeeAmt = (poolTokenDealFormatted * sponsorFee) / BASE;
+
+        aelinDeal.mintVestingToken(sponsor, sponsorFeeAmt);
+        aelinDeal.transferProtocolFee(aelinFeeAmt);
+        aelinDeal.mintVestingToken(_recipient, poolTokenDealFormatted - (sponsorFeeAmt + aelinFeeAmt));
+        IERC20(purchaseToken).safeTransfer(holder, _poolTokenAmount);
+        emit AcceptDeal(_recipient, address(aelinDeal), _poolTokenAmount, sponsorFeeAmt, aelinFeeAmt);
+    }
+
+    /**
      * @dev view to see how much of the deal a purchaser can accept.
      */
     function maxDealAccept(address _purchaser) external view returns (uint256) {
@@ -620,19 +571,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         }
     }
 
-    modifier transferWindow() {
-        (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
-        (, uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
-
-        require(
-            proRataRedemptionStart == 0 ||
-                (block.timestamp >= proRataRedemptionExpiry && openRedemptionStart == 0) ||
-                (block.timestamp >= openRedemptionExpiry && openRedemptionStart != 0),
-            "no transfers in redeem window"
-        );
-        _;
-    }
-
     function transfer(address _dst, uint256 _amount) public virtual override transferWindow returns (bool) {
         return super.transfer(_dst, _amount);
     }
@@ -650,7 +588,21 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
      * NOTE that a purchase token must not be greater than 18 decimals
      */
     function _convertPoolToDeal(uint256 _poolTokenAmount, uint256 _poolTokenDecimals) internal pure returns (uint256) {
-        return _poolTokenAmount * 10**(18 - _poolTokenDecimals);
+        return _poolTokenAmount * 10 ** (18 - _poolTokenDecimals);
+    }
+
+    /**
+     * @dev the sponsor may change addresses
+     */
+    function setSponsor(address _sponsor) external onlySponsor {
+        require(_sponsor != address(0));
+        futureSponsor = _sponsor;
+    }
+
+    function acceptSponsor() external {
+        require(msg.sender == futureSponsor, "only future sponsor can access");
+        sponsor = futureSponsor;
+        emit SetSponsor(futureSponsor);
     }
 
     /**
@@ -665,6 +617,38 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
      */
     function disavow() external {
         emit Disavow(msg.sender);
+    }
+
+    modifier initOnce() {
+        require(!calledInitialize, "can only initialize once");
+        calledInitialize = true;
+        _;
+    }
+    modifier onlySponsor() {
+        require(msg.sender == sponsor, "only sponsor can access");
+        _;
+    }
+    modifier dealReady() {
+        if (holderFundingExpiry > 0) {
+            require(!aelinDeal.depositComplete() && block.timestamp >= holderFundingExpiry, "cant create new deal");
+        }
+        _;
+    }
+    modifier dealFunded() {
+        require(holderFundingExpiry > 0 && aelinDeal.depositComplete(), "deal not yet funded");
+        _;
+    }
+    modifier transferWindow() {
+        (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
+        (, uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
+
+        require(
+            proRataRedemptionStart == 0 ||
+                (block.timestamp >= proRataRedemptionExpiry && openRedemptionStart == 0) ||
+                (block.timestamp >= openRedemptionExpiry && openRedemptionStart != 0),
+            "no transfers in redeem window"
+        );
+        _;
     }
 
     event SetSponsor(address indexed sponsor);
