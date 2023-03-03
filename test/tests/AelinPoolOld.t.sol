@@ -45,6 +45,7 @@ contract AelinPoolTest is Test, AelinTestUtils {
         uint256[] tokenIds,
         uint256[] minTokensEligible
     );
+    event PurchasePoolToken(address indexed purchaser, uint256 purchaseTokenAmount);
 
     enum NftCollectionType {
         ERC1155,
@@ -68,8 +69,9 @@ contract AelinPoolTest is Test, AelinTestUtils {
         collectionAddressERC1155_2 = new MockERC1155("testURI");
         collectionAddressERC1155_3 = new MockERC1155("testURI");
 
-        deal(address(purchaseToken), address(this), 1e75);
-        deal(address(dealToken), address(this), 1e75);
+        deal(address(purchaseToken), address(this), type(uint256).max);
+        deal(address(dealToken), address(this), type(uint256).max);
+        deal(address(purchaseToken), address(user1), type(uint256).max);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -719,5 +721,191 @@ contract AelinPoolTest is Test, AelinTestUtils {
         }
 
         assertTrue(pool.hasNftList());
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            purchasePoolTokens
+    //////////////////////////////////////////////////////////////*/
+
+    function testFuzz_PurchasePoolTokens_RevertWhen_NotInPurchaseWindow(
+        uint256 _purchaseTokenCap,
+        uint256 _poolDuration,
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration
+    ) public {
+        vm.assume(_sponsorFee <= MAX_SPONSOR_FEE);
+        vm.assume(_purchaseDuration >= 30 minutes && _purchaseDuration <= 30 days);
+        vm.assume(_poolDuration <= 365 days);
+
+        address[] memory allowListAddressesEmpty;
+        uint256[] memory allowListAmountsEmpty;
+
+        IAelinPool.NftCollectionRules[] memory nftCollectionRulesEmpty;
+
+        IAelinPool.PoolData memory poolData = getPoolData({
+            purchaseTokenCap: _purchaseTokenCap,
+            duration: _poolDuration,
+            sponsorFee: _sponsorFee,
+            purchaseDuration: _purchaseDuration,
+            allowListAddresses: allowListAddressesEmpty,
+            allowListAmounts: allowListAmountsEmpty,
+            nftCollectionRules: nftCollectionRulesEmpty
+        });
+
+        AelinPool pool = new AelinPool();
+        AelinFeeEscrow escrow = new AelinFeeEscrow();
+        pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
+
+        // Assert
+        vm.warp(block.timestamp + _purchaseDuration);
+        vm.expectRevert("not in purchase window");
+        pool.purchasePoolTokens(10);
+    }
+
+    function testFuzz_PurchasePoolTokens_RevertWhen_HasNftList(
+        uint256 _purchaseTokenCap,
+        uint256 _poolDuration,
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration
+    ) public {
+        vm.assume(_sponsorFee <= MAX_SPONSOR_FEE);
+        vm.assume(_purchaseDuration >= 30 minutes && _purchaseDuration <= 30 days);
+        vm.assume(_poolDuration <= 365 days);
+
+        address[] memory allowListAddressesEmpty;
+        uint256[] memory allowListAmountsEmpty;
+
+        IAelinPool.NftCollectionRules[] memory nftCollectionRules = getNft721CollectionRules();
+
+        IAelinPool.PoolData memory poolData = getPoolData({
+            purchaseTokenCap: _purchaseTokenCap,
+            duration: _poolDuration,
+            sponsorFee: _sponsorFee,
+            purchaseDuration: _purchaseDuration,
+            allowListAddresses: allowListAddressesEmpty,
+            allowListAmounts: allowListAmountsEmpty,
+            nftCollectionRules: nftCollectionRules
+        });
+
+        AelinPool pool = new AelinPool();
+        AelinFeeEscrow escrow = new AelinFeeEscrow();
+        pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
+
+        // Assert
+        vm.expectRevert("has NFT list");
+        pool.purchasePoolTokens(10);
+    }
+
+    function testFuzz_PurchasePoolTokens_RevertWhen_PurchaseMoreThanAllocation(
+        uint256 _allowListAmount,
+        uint256 _purchaseTokenAmount
+    ) public {
+        vm.assume(_purchaseTokenAmount > _allowListAmount);
+
+        address[] memory allowListAddresses = new address[](1);
+        uint256[] memory allowListAmounts = new uint256[](1);
+
+        allowListAddresses[0] = address(user1);
+        allowListAmounts[0] = _allowListAmount;
+
+        IAelinPool.NftCollectionRules[] memory nftCollectionRulesEmpty;
+
+        IAelinPool.PoolData memory poolData = getPoolData({
+            purchaseTokenCap: 1e35,
+            duration: 10 days,
+            sponsorFee: 2e18,
+            purchaseDuration: 1 days,
+            allowListAddresses: allowListAddresses,
+            allowListAmounts: allowListAmounts,
+            nftCollectionRules: nftCollectionRulesEmpty
+        });
+
+        AelinPool pool = new AelinPool();
+        AelinFeeEscrow escrow = new AelinFeeEscrow();
+        pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
+
+        // Assert
+        vm.expectRevert("more than allocation");
+        pool.purchasePoolTokens(_purchaseTokenAmount);
+    }
+
+    function testFuzz_PurchasePoolTokens_RevertWhen_CapExceeded(
+        uint256 _purchaseTokenCap,
+        uint256 _poolDuration,
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _purchaseTokenAmount
+    ) public {
+        vm.assume(_sponsorFee <= MAX_SPONSOR_FEE);
+        vm.assume(_purchaseDuration >= 30 minutes && _purchaseDuration <= 30 days);
+        vm.assume(_poolDuration <= 365 days);
+        vm.assume(_purchaseTokenCap > 0);
+
+        address[] memory allowListAddressesEmpty;
+        uint256[] memory allowListAmountsEmpty;
+
+        IAelinPool.NftCollectionRules[] memory nftCollectionRulesEmpty;
+
+        IAelinPool.PoolData memory poolData = getPoolData({
+            purchaseTokenCap: _purchaseTokenCap,
+            duration: _poolDuration,
+            sponsorFee: _sponsorFee,
+            purchaseDuration: _purchaseDuration,
+            allowListAddresses: allowListAddressesEmpty,
+            allowListAmounts: allowListAmountsEmpty,
+            nftCollectionRules: nftCollectionRulesEmpty
+        });
+
+        AelinPool pool = new AelinPool();
+        AelinFeeEscrow escrow = new AelinFeeEscrow();
+        pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
+        vm.assume(_purchaseTokenAmount > _purchaseTokenCap - pool.totalSupply());
+
+        // Assert
+        vm.startPrank(user1);
+        purchaseToken.approve(address(pool), type(uint256).max);
+        vm.expectRevert("cap has been exceeded");
+        pool.purchasePoolTokens(_purchaseTokenAmount);
+        vm.stopPrank();
+    }
+
+    function testFuzz_PurchasePoolTokens_Pool(
+        uint256 _purchaseTokenCap,
+        uint256 _poolDuration,
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _purchaseTokenAmount
+    ) public {
+        vm.assume(_sponsorFee <= MAX_SPONSOR_FEE);
+        vm.assume(_purchaseDuration >= 30 minutes && _purchaseDuration <= 30 days);
+        vm.assume(_poolDuration <= 365 days);
+
+        address[] memory allowListAddressesEmpty;
+        uint256[] memory allowListAmountsEmpty;
+
+        IAelinPool.NftCollectionRules[] memory nftCollectionRulesEmpty;
+
+        IAelinPool.PoolData memory poolData = getPoolData({
+            purchaseTokenCap: _purchaseTokenCap,
+            duration: _poolDuration,
+            sponsorFee: _sponsorFee,
+            purchaseDuration: _purchaseDuration,
+            allowListAddresses: allowListAddressesEmpty,
+            allowListAmounts: allowListAmountsEmpty,
+            nftCollectionRules: nftCollectionRulesEmpty
+        });
+
+        AelinPool pool = new AelinPool();
+        AelinFeeEscrow escrow = new AelinFeeEscrow();
+        pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
+        vm.assume(_purchaseTokenAmount <= _purchaseTokenCap - pool.totalSupply());
+
+        // Assert
+        vm.startPrank(user1);
+        purchaseToken.approve(address(pool), type(uint256).max);
+        vm.expectEmit(true, true, true, true, address(pool));
+        emit PurchasePoolToken(user1, _purchaseTokenAmount);
+        pool.purchasePoolTokens(_purchaseTokenAmount);
+        vm.stopPrank();
     }
 }
