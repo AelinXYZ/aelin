@@ -17,9 +17,9 @@ contract AelinTestUtils is Test {
     address public aelinTreasury = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
     address public punks = address(0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB);
 
-    uint256 constant BASE = 100 * 10 ** 18;
-    uint256 constant MAX_SPONSOR_FEE = 15 * 10 ** 18;
-    uint256 public constant AELIN_FEE = 2 * 10 ** 18;
+    uint256 constant BASE = 100 * 10**18;
+    uint256 constant MAX_SPONSOR_FEE = 15 * 10**18;
+    uint256 public constant AELIN_FEE = 2 * 10**18;
 
     address dealCreatorAddress = address(0xBEEF);
     address dealHolderAddress = address(0xDEAD);
@@ -51,7 +51,7 @@ contract AelinTestUtils is Test {
                 underlyingDealToken: address(underlyingDealToken),
                 holder: dealHolderAddress,
                 sponsor: dealCreatorAddress,
-                sponsorFee: 1 * 10 ** 18,
+                sponsorFee: 1 * 10**18,
                 ipfsHash: "",
                 merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000
             });
@@ -147,7 +147,11 @@ contract AelinTestUtils is Test {
         return nftCollectionRulesPunks;
     }
 
-    function setupAndAcceptDealNoDeallocation(address _dealAddress, uint256 _purchaseAmount, address _user) public {
+    function setupAndAcceptDealNoDeallocation(
+        address _dealAddress,
+        uint256 _purchaseAmount,
+        address _user
+    ) public {
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (
             uint256 underlyingDealTokenTotal,
@@ -159,9 +163,9 @@ contract AelinTestUtils is Test {
 
         ) = AelinUpFrontDeal(_dealAddress).dealConfig();
         vm.assume(_purchaseAmount > purchaseRaiseMinimum);
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount < underlyingDealTokenTotal);
 
@@ -181,12 +185,12 @@ contract AelinTestUtils is Test {
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(_dealAddress)
             .dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
         vm.assume(success);
         (success, ) = SafeMath.tryMul(_purchaseAmount, underlyingDealTokenTotal);
         vm.assume(success);
 
-        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         if (isOverSubscribed == true) {
             vm.assume(poolSharesAmount > underlyingDealTokenTotal);
