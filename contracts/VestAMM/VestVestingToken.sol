@@ -6,7 +6,6 @@ import "./interfaces/IVestVestingToken.sol";
 
 contract VestVestingToken is VestERC721, IVestVestingToken {
     mapping(uint256 => VestVestingToken) public vestVestingToken;
-    mapping(address => uint256) public addressToNFT;
     uint256 public tokenCount;
 
     function _burnVestingToken(uint256 _tokenId) internal {
@@ -17,23 +16,13 @@ contract VestVestingToken is VestERC721, IVestVestingToken {
     function _mintVestingToken(
         address _to,
         uint256 _amount,
-        uint256 _timestamp
+        uint256 _timestamp,
+        uint256[] _singleRewardTimestamps
     ) internal {
-        // TODO confirm how to check if exists. this is probably wrong.
-        if (addressToNFT[_to]) {
-            VestVestingToken memory schedule = vestVestingToken[addressToNFT[_to]];
-            vestVestingToken[addressToNFT[_to]] = VestVestingToken(
-                schedule.amountDeposited + _amount,
-                schedule.lastClaimedAt,
-                schedule.lastClaimedAtRewardList
-            );
-            emit VestingTokenAdded(_to, addressToNFT[_to], _amount, _timestamp);
-        } else {
-            _mint(_to, tokenCount);
-            vestVestingToken[tokenCount] = VestVestingToken(_amount, _timestamp);
-            emit VestingTokenMinted(_to, tokenCount, _amount, _timestamp);
-            tokenCount += 1;
-        }
+        _mint(_to, tokenCount);
+        vestVestingToken[tokenCount] = VestVestingToken(_amount, _timestamp, _singleRewardTimestamps);
+        emit VestingTokenMinted(_to, tokenCount, _amount, _timestamp, _singleRewardTimestamps);
+        tokenCount += 1;
     }
 
     function transferVestingShare(
@@ -51,9 +40,10 @@ contract VestVestingToken is VestERC721, IVestVestingToken {
             schedule.lastClaimedAt,
             schedule.lastClaimedAtRewardList
         );
-        _mintVestingToken(_to, _shareAmount, schedule.lastClaimedAt);
+        _mintVestingToken(_to, _shareAmount, schedule.lastClaimedAt, schedule.lastClaimedAtRewardList);
     }
 
+    // NOTE I am not sure we can just leave transfer like this. Circle back later when have time
     function transfer(
         address _to,
         uint256 _tokenId,

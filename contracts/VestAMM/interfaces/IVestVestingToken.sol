@@ -8,5 +8,11 @@ interface IVestVestingToken {
         uint256[] lastClaimedAtRewardList;
     }
 
-    event VestingTokenMinted(address indexed user, uint256 indexed tokenId, uint256 amount, uint256 lastClaimedAt);
+    event VestingTokenMinted(
+        address indexed user,
+        uint256 indexed tokenId,
+        uint256 amount,
+        uint256 lastClaimedAt,
+        uint256[] lastClaimedAtRewardList
+    );
 }

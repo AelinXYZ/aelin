@@ -2,7 +2,7 @@
 pragma solidity 0.8.6;
 
 // NEED pausing and management features
-import "../AelinVestingToken.sol";
+import "./VestVestingToken.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
@@ -14,6 +14,7 @@ import "../libraries/AelinAllowList.sol";
 import "../libraries/MerkleTree.sol";
 import "./interfaces/IVestAMM.sol";
 
+// TODO triple check all arguments start with _, casing is correct. well commented, etc
 contract VestAMM is AelinVestingToken, IVestAMM {
     using SafeERC20 for IERC20;
 
@@ -31,7 +32,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     AelinNftGating.NftGatingData public nftGating;
 
     uint256 public totalDeposited;
-    mapping(address => uint256) public depositTokensPerUser;
     mapping(uint256 => bool) private finalizedDeposit;
 
     AmmData public ammData;
@@ -192,22 +192,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         uint256 balanceAfterTransfer = IERC20(investmentToken).balanceOf(address(this));
         uint256 depositTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
         totalDeposited += depositTokenAmount;
-        depositTokensPerUser[msg.sender] += depositTokenAmount;
-        // NOTE is there a problem with issuing multiple NFTs per user
-        // we should find a way to add to their existing one if it exists
-        // we do not want to reuse the AelinVestToken contract exactly here. what we want
-        // is a NFT that is tied to a mapping that has a few fields.
-        // 1. Total deposited by an address (one NFT per address)
-        // this amount will be tied to the total deposited overall
-        // as an indicator of % ownership of the pool and rewards. In addition to a claim on LP tokens
-        // there should be a single sided rewards claim function that looks at the % overall held by a NFT
-        // the owner must be the one to claim who is holding the NFT which is transferrable
-        // the mint function itself should just update their existing NFT if it already exists for their wallet
-        // the NFT also has to separately track for each single sided reward whether it has been claimed and what the
-        // vesting schedule is. keep in mind for this design there are a max of 10 single sided rewards
         mintVestingToken(msg.sender, depositTokenAmount);
-        // mint a NFT which will use a formula to calculate amounts and all single rewards
-        // will be tied to this NFT
 
         if (vAmmInfo.vestingSchedule[_vestingScheduleIndex].deallocation == Deallocation.None) {
             // NOTE this math is not right but just a placeholder for now
@@ -240,23 +225,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         require(vAMMInfo.hasLiquidityLaunch == false, "only for existing liquidity");
     }
 
-    // claim vested LP rewards
-    function claimVestedLP() external {}
-
-    // claim vested single sided rewards
-    function claimVestedReward() external {}
-
-    /**
-     * @dev allows a user to claim their LP tokens or a partial amount
-     * of their LP tokens once they have vested according to the schedule
-     * created by the protocol
-     */
-    function claimRewardTokens(uint256 _tokenId) external {
-        _claimLPTokens(msg.sender, _tokenId);
-        // TODO change this as needed to claim all single at once after writing the single claim
-        _claimVestedRewards(msg.sender, _tokenId);
-    }
-
     function claimableTokens(
         uint256 _tokenId,
         ClaimType _claimType,
@@ -270,9 +238,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
         if (lastClaimedAt > 0) {
             uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
-            uint256 minTime = lastClaimedAt > vestingCliffExpiry ? lastClaimedAt : vestingCliffExpiry;
+            uint256 minTime = lastClaimedAt > depositExpiry ? lastClaimedAt : depositExpiry;
 
-            if (maxTime > vestingCliffExpiry && minTime <= vestingExpiry) {
+            if (maxTime > depositExpiry && minTime <= vestingExpiry) {
                 // NOTE that schedule.share needs to be updated
                 // to be the total deposited / global total somehow without requiring a settle method
                 // NOTE this math is wrong probably. need to figure out what to do with Math here to avoid issues
@@ -299,6 +267,15 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         _claimTokens(msg.sender, _tokenId, ClaimType.Base, 0);
     }
 
+    /**
+     * @dev allows a user to claim their LP tokens or a partial amount
+     * of their LP tokens once they have vested according to the schedule
+     * created by the protocol
+     */
+    function claimRewardToken(uint256 _tokenId, uint256 _claimIndex) external {
+        _claimTokens(msg.sender, _tokenId, ClaimType.Single, _claimIndex);
+    }
+
     function _claimTokens(
         address _owner,
         uint256 _tokenId,
@@ -309,12 +286,17 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // TODO double check this doesn't error if there are no single sided rewards
         uint256 claimableAmount = claimableTokens(_tokenId, _claimType, _claimIndex);
         require(claimableAmount > 0, "no lp tokens ready to claim");
-        vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
-        totalLPClaimed += claimableAmount;
+        if (_claimType == ClaimType.Base) {
+            vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
+            totalLPClaimed += claimableAmount;
+        } else {
+            vestingDetails[_tokenId].lastClaimedAtRewardList[_claimIndex] = block.timestamp;
+            // TODO like we do for the LP positions, track totals for each single reward type claimed
+            // in a mapping we can query from UI
+        }
         address claimToken = _claimType == ClaimType.Base ? lpToken : singleRewards[_claimIndex].token;
         IERC20(claimToken).safeTransfer(_owner, claimableAmount);
-        // maybe should indicate whether it is the base or the claim index here somehow. tbd
-        emit ClaimedToken(claimToken, _owner, claimableAmount);
+        emit ClaimedToken(claimToken, _owner, claimableAmount, _claimType);
     }
 
     function sendFeesToVestDAO(address[] tokens) external {
@@ -336,7 +318,12 @@ contract VestAMM is AelinVestingToken, IVestAMM {
      * deallocation is managed like we do in the regular Aelin pools.
      */
     function mintVestingToken(address _to, uint256 _amount) internal {
-        _mintVestingToken(_to, _amount, vestingCliffExpiry);
+        // NOTE there is maybe a better way to do this
+        uint256[] singleDepositExpiry;
+        for (uint i = 0; i < singleRewards.length; i++) {
+            singleDepositExpiry[i] = depositExpiry;
+        }
+        _mintVestingToken(_to, _amount, depositExpiry, singleDepositExpiry);
     }
 
     modifier initOnce() {

@@ -90,5 +90,5 @@ interface IVestAMM {
 
     event DepositComplete(uint256 depositExpiry);
 
-    event ClaimedToken(address indexed lpToken, address indexed owner, uint256 claimableAmount);
+    event ClaimedToken(address indexed lpToken, address indexed owner, uint256 claimableAmount, ClaimType claimType);
 }
