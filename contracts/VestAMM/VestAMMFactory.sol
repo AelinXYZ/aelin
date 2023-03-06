@@ -14,10 +14,12 @@ contract VestAMMDealFactory is IVestAMM {
     address public immutable VEST_AMM_LOGIC;
     address public immutable VEST_AMM_FEE_MODULE;
     address public immutable VEST_DAO_FEES = 0x0000000000000000000000000000000000000000;
+    address public immutable AELIN_LIBRARY_LIST;
 
-    constructor() {
+    constructor(address _aelinLibraryList) {
         VEST_AMM_LOGIC = address(new VestAMM());
         VEST_AMM_FEE_MODULE = address(new VestAMMFeeModule());
+        AELIN_LIBRARY_LIST = _aelinLibraryList;
     }
 
     function createVestAMM(
@@ -26,6 +28,9 @@ contract VestAMMDealFactory is IVestAMM {
         SingleRewardConfig[] calldata _singleRewards,
         DealAccess calldata _dealAccess
     ) external returns (address vestAddress) {
+        // NOTE this will be the library instead of the amm contract.
+        // maybe we have both the library and the contract to exchange from managed by the council .tbd
+        require(AELIN_LIBRARY_LIST.libraryList[_ammData.ammContract] == true, "invalid AMM library");
         for (uint256 i; i < _vAmmInfo.vestingSchedule.length; ++i) {
             require(1825 days >= _vAmmInfo.vestingSchedule[i].vestingCliffPeriod, "max 5 year cliff");
             require(1825 days >= _vAmmInfo.vestingSchedule[i].vestingPeriod, "max 5 year vesting");
