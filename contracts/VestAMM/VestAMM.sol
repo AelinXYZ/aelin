@@ -259,6 +259,25 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     /**
+     * @dev allows a user to claim their all their vested tokens across a single NFT
+     */
+    function claimAllTokens(uint256 _tokenId) external {
+        claimLPTokens(_tokenId);
+        for (uint256 i; i < singleRewards.length; i++) {
+            claimRewardToken(_tokenId, i);
+        }
+    }
+
+    /**
+     * @dev allows a user to claim their all their vested tokens across many NFTs
+     */
+    function claimManyNFTs(uint256[] _tokenIds) external {
+        for (uint256 i; i < _tokenIds.length; i++) {
+            claimAllTokens(_tokenIds[i]);
+        }
+    }
+
+    /**
      * @dev allows a user to claim their LP tokens or a partial amount
      * of their LP tokens once they have vested according to the schedule
      * created by the protocol
@@ -268,9 +287,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     /**
-     * @dev allows a user to claim their LP tokens or a partial amount
-     * of their LP tokens once they have vested according to the schedule
-     * created by the protocol
+     * @dev allows a user to claim their single sided reward tokens or a partial amount
+     * of their single sided reward tokens once they have vested according to the schedule
      */
     function claimRewardToken(uint256 _tokenId, uint256 _claimIndex) external {
         _claimTokens(msg.sender, _tokenId, ClaimType.Single, _claimIndex);
