@@ -6,6 +6,8 @@ import {AelinAllowList} from "contracts/libraries/AelinAllowList.sol";
 import {AelinUpFrontDeal} from "contracts/AelinUpFrontDeal.sol";
 import {AelinUpFrontDealFactory} from "contracts/AelinUpFrontDealFactory.sol";
 import {AelinNftGating} from "../../contracts/libraries/AelinNftGating.sol";
+import {AelinUpFrontDeal} from "contracts/AelinUpFrontDeal.sol";
+import {IAelinPool} from "contracts/interfaces/IAelinPool.sol";
 import {IAelinUpFrontDeal} from "contracts/interfaces/IAelinUpFrontDeal.sol";
 import {MerkleTree} from "../../contracts/libraries/MerkleTree.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
@@ -37,8 +39,10 @@ contract AelinTestUtils is Test {
     MockERC721 public collection721_1 = new MockERC721("TestCollection", "TC");
     MockERC721 public collection721_2 = new MockERC721("TestCollection", "TC");
     MockERC721 public collection721_3 = new MockERC721("TestCollection", "TC");
+    MockERC721 public collection721_4 = new MockERC721("TestCollection", "TC");
     MockERC1155 public collection1155_1 = new MockERC1155("");
     MockERC1155 public collection1155_2 = new MockERC1155("");
+    MockERC1155 public collection1155_3 = new MockERC1155("");
     MockPunks public collectionPunks = new MockPunks();
 
     AelinNftGating.NftCollectionRules[] public nftCollectionRulesEmpty;
