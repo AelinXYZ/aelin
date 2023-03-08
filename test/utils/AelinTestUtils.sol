@@ -3,7 +3,6 @@ pragma solidity 0.8.6;
 
 import "forge-std/Test.sol";
 import {AelinAllowList} from "contracts/libraries/AelinAllowList.sol";
-import {AelinUpFrontDealFactory} from "contracts/AelinUpFrontDealFactory.sol";
 import {AelinNftGating} from "../../contracts/libraries/AelinNftGating.sol";
 import {AelinUpFrontDeal} from "contracts/AelinUpFrontDeal.sol";
 import {IAelinPool} from "contracts/interfaces/IAelinPool.sol";

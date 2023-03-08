@@ -10,7 +10,7 @@ import {AelinPoolFactory} from "contracts/AelinPoolFactory.sol";
 import {IAelinPool} from "contracts/interfaces/IAelinPool.sol";
 import {MockERC20CustomDecimals} from "../mocks/MockERC20CustomDecimals.sol";
 
-contract AelinPoolTest is Test, AelinTestUtils {
+contract AelinPoolInitTest is Test, AelinTestUtils {
     address public poolAddress;
     address public poolAddressWith721;
     address public poolAddressWithAllowList;
