@@ -17,28 +17,21 @@ library BalancerVestAMM is IVestAMMLibrary, BasePoolSplitCodeFactory, FactoryWid
         string memory name,
         string memory symbol,
         IERC20[] memory tokens,
-        uint256[] memory weights,
-        address[] memory assetManagers,
+        uint256[] memory normalizedWeights,
+        IRateProvider[] memory rateProviders,
         uint256 swapFeePercentage,
         address owner
-    ) external returns (address) {
-        (uint256 pauseWindowDuration, uint256 bufferPeriodDuration) = getPauseConfiguration();
-
-        return
-            _create(
-                abi.encode(
-                    getVault(),
-                    name,
-                    symbol,
-                    tokens,
-                    weights,
-                    assetManagers,
-                    swapFeePercentage,
-                    pauseWindowDuration,
-                    bufferPeriodDuration,
-                    owner
-                )
-            );
+    ) external {
+        WeightedPool.create(
+            name,
+            symbol,
+            tokens,
+            normalizedWeights,
+            rateProviders,
+            swapFeePercentage,
+            owner
+        );
+        // TODO implement a single pool creation and add liquidity
     }
 
     function addLiquidity() external {
