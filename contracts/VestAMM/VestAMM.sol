@@ -249,7 +249,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         require(vAMMInfo.hasLiquidityLaunch, "only for new liquidity");
         // TODO do some math to check the right ratio of assets to create liquidity here
         // ammData.ammLibrary based on the contract call the right libary deposit method
-        ammData.ammLibrary.deployPool()
+        // ammData.ammLibrary.deployPool(...);
     }
 
     // to create the pool and deposit assets after phase 0 ends
