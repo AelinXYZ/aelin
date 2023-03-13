@@ -14,6 +14,7 @@ import "../libraries/AelinAllowList.sol";
 import "../libraries/MerkleTree.sol";
 import "./interfaces/IVestAMM.sol";
 
+// TODO make sure the logic works with 80/20 balancer pools and not just when its 50/50
 // TODO triple check all arguments start with _, casing is correct. well commented, etc
 contract VestAMM is AelinVestingToken, IVestAMM {
     using SafeERC20 for IERC20;
@@ -32,6 +33,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     AelinNftGating.NftGatingData public nftGating;
 
     uint256 public totalDeposited;
+    uint256 investmentTokenPerBase;
     mapping(uint256 => bool) private finalizedDeposit;
 
     AmmData public ammData;
@@ -42,7 +44,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     bool private calledInitialize;
     bool private baseComplete;
 
-    address public vestAMMFeeModule;
+    address public vestAmmFeeModule;
     address public vestDAO;
     address public lpToken;
 
@@ -54,7 +56,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         VAmmInfo calldata _vAmmInfo,
         SingleRewardConfig[] calldata _singleRewards,
         DealAccess calldata _dealAccess,
-        address _vestAMMFeeModule,
+        address _vestAmmFeeModule,
         address _vestDAO
     ) external initOnce {
         require(_singleRewards.length <= MAX_SINGLE_REWARDS, "max 10 single-sided rewards");
@@ -66,8 +68,14 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // NOTE we may need to emit all the single rewards holders for the subgraph to know they need to make a deposit
         singleRewards = _singleRewards;
         dealAccess = _dealAccess;
-        vestAMMFeeModule = _vestAMMFeeModule;
+        vestAmmFeeModule = _vestAmmFeeModule;
         vestDAO = _vestDAO;
+
+        // TODO if we are doing a liquidity growth round we need to read the prices of the assets
+        // from onchain here and set the current price as the median price
+        if (!_vAmmInfo.hasLaunchPhase) {
+            investmentTokenPerBase = _ammData.ammLibrary.getPriceRatio(_ammData.investmentToken, _ammData.baseAsset);
+        }
 
         // Allow list logic
         // check if there's allowlist and amounts,
@@ -89,24 +97,32 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         if (baseComplete == true && singleRewardsComplete == singleRewards.length) {
             depositComplete = true;
             depositExpiry = block.timestamp + vAmmInfo.depositWindow;
-            emit DepositComplete(depositExpiry);
+            lpFundingExpiry = depositExpiry + vAmmInfo.lpFundingWindow;
+            emit DepositComplete(depositExpiry, lpFundingExpiry);
         }
     }
 
-    // add a check to start deposit window
-    // need to do a lot of checks. check right token. check right amount. set a flag when fully deposited
+    // TODO what happens if there is a partial deposit which is later rejected. need to handle
+    // this logic a bit differently
     function depositSingle(DepositToken[] calldata _depositTokens) external {
         for (uint i = 0; i < _depositTokens.length; i++) {
             require(
                 msg.sender == vAmmInfo.mainHolder || singleRewards[_depositTokens[i].singleRewardIndex].holder == msg.sender,
                 "not the right holder"
             );
+            require(
+                _depositTokens[i].token == singleRewards[_depositTokens[i].singleRewardIndex].token,
+                "not the right token"
+            );
             uint256 balanceBeforeTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
             IERC20(_depositTokens[i].token).safeTransferFrom(msg.sender, address(this), _depositTokens[i].amount);
             uint256 balanceAfterTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
             uint256 amountPostTransfer = balanceAfterTransfer - balanceBeforeTransfer;
             emit TokenDeposited(_depositTokens[i].token, amountPostTransfer);
-            if (amountPostTransfer >= singleRewards[_depositTokens[i].singleRewardIndex].rewardTokenTotal) {
+            if (
+                amountPostTransfer >= singleRewards[_depositTokens[i].singleRewardIndex].rewardTokenTotal &&
+                finalizedDeposit[_depositTokens[i].singleRewardIndex] == false
+            ) {
                 singleRewardsComplete += 1;
                 finalizedDeposit[_depositTokens[i].singleRewardIndex] = true;
                 emit TokenDepositComplete(_depositTokens[i].token);
@@ -138,10 +154,17 @@ contract VestAMM is AelinVestingToken, IVestAMM {
                 msg.sender == vAmmInfo.mainHolder || singleRewards[_removeIndexList[i]].holder == msg.sender,
                 "not the right holder"
             );
-            // require(finalizedDeposit[_removeIndexList[i]] == false, "deposit has been finalized");
-            // if (finalizedDeposit[_removeIndexList[i]] == true) { return funds to holder here }
+            // TODO this logic is not great. we can do better around tracking amounts deposited and to be returned
+            if (finalizedDeposit[_removeIndexList[i]] == true) {
+                IERC20(singleRewards[_removeIndexList[i]].token).safeTransferFrom(
+                    address(this),
+                    singleRewards[_removeIndexList[i]].holder,
+                    singleRewards[_removeIndexList[i]].rewardTokenTotal
+                );
+            }
             singleRewards[_removeIndexList[i]] = singleRewards[singleRewards.length - 1];
             singleRewards.pop();
+            // TODO emit event for the subgraph tracking
         }
     }
 
@@ -161,6 +184,12 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         setDepositComplete();
     }
 
+    // TODO ability to withdraw excess funding deposited
+    function withdrawBase() {}
+
+    // TODO ability to cancel deal early and withdraw all funds
+    function withdrawBase() {}
+
     // takes out fees from LP side and single sided rewards and sends to official AELIN Fee Module
     // pairs against protocol tokens and deposits into AMM
     // sets LP tokens into vesting scheule for the investor
@@ -177,7 +206,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // TODO how to check if an array item is empty in solidity.
         // it says access to a non-existing index will throw an exception. lets test this.
         require(vAmmInfo.vestingSchedule[_vestingScheduleIndex], "vesting schedule doesnt exist");
-        address investmentToken = ammContract.quoteAsset;
+        address investmentToken = ammContract.investmentToken;
         require(IERC20(investmentToken).balanceOf(msg.sender) >= _investmentTokenAmount, "balance too low");
         if (nftGating.hasNftList || _nftPurchaseList.length > 0) {
             AelinNftGating.purchaseDealTokensWithNft(_nftPurchaseList, nftGating, _investmentTokenAmount);
@@ -195,10 +224,11 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         mintVestingToken(msg.sender, depositTokenAmount);
 
         if (vAmmInfo.vestingSchedule[_vestingScheduleIndex].deallocation == Deallocation.None) {
-            // NOTE this math is not right but just a placeholder for now
+            uint256 priceRatio = vAmmInfo.hasLaunchPhase ? vAmmInfo.investmentPerBase : investmentTokenPerBase;
             require(
                 totalDeposited <=
-                    vAmmInfo.vestingSchedule[_vestingScheduleIndex].totalHolderTokens * vAMMInfo.initialQuotePerBase,
+                    (vAmmInfo.vestingSchedule[_vestingScheduleIndex].totalHolderTokens * priceRatio) /
+                        IERC20(ammData.baseAsset).decimals(),
                 "purchased amount > total"
             );
         }
@@ -215,14 +245,16 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     function settle() external {}
 
     // to create the pool and deposit assets after phase 0 ends
-    function createInitialLiquidity() external {
+    function createInitialLiquidity() external onlyHolder {
         require(vAMMInfo.hasLiquidityLaunch, "only for new liquidity");
-        // ammData.ammContract based on the contract call the right libary deposit method
+        // TODO do some math to check the right ratio of assets to create liquidity here
+        // ammData.ammLibrary based on the contract call the right libary deposit method
+        ammData.ammLibrary.deployPool()
     }
 
     // to create the pool and deposit assets after phase 0 ends
-    function createLiquidity() external {
-        require(vAMMInfo.hasLiquidityLaunch == false, "only for existing liquidity");
+    function createLiquidity() external onlyHolder {
+        require(!vAMMInfo.hasLiquidityLaunche, "only for existing liquidity");
     }
 
     function claimableTokens(

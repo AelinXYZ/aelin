@@ -28,9 +28,7 @@ contract VestAMMDealFactory is IVestAMM {
         SingleRewardConfig[] calldata _singleRewards,
         DealAccess calldata _dealAccess
     ) external returns (address vestAddress) {
-        // NOTE this will be the library instead of the amm contract.
-        // maybe we have both the library and the contract to exchange from managed by the council .tbd
-        require(AELIN_LIBRARY_LIST.libraryList[_ammData.ammContract] == true, "invalid AMM library");
+        require(!!AELIN_LIBRARY_LIST.libraryList[_ammData.ammLibrary] == true, "invalid AMM library");
         for (uint256 i; i < _vAmmInfo.vestingSchedule.length; ++i) {
             require(1825 days >= _vAmmInfo.vestingSchedule[i].vestingCliffPeriod, "max 5 year cliff");
             require(1825 days >= _vAmmInfo.vestingSchedule[i].vestingPeriod, "max 5 year vesting");

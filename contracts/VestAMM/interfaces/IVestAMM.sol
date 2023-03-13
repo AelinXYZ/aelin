@@ -25,8 +25,8 @@ interface IVestAMM {
 
     // assume 50/50 to deposit ratio to start
     struct AmmData {
-        address ammContract; // could be null if no liquidity yet
-        address quoteAsset;
+        address ammLibrary; // could be null if no liquidity yet
+        address investmentToken;
         address baseAsset;
         uint256 baseAssetAmount;
     }
@@ -39,7 +39,7 @@ interface IVestAMM {
     struct VAmmInfo {
         bool hasLaunchPhase;
         bool isPriceFixed;
-        uint256 initialQuotePerBase;
+        uint256 investmentPerBase;
         uint256 depositWindow;
         uint256 lpFundingWindow;
         address mainHolder;
@@ -88,7 +88,7 @@ interface IVestAMM {
 
     event TokenDepositComplete(address indexed token);
 
-    event DepositComplete(uint256 depositExpiry);
+    event DepositComplete(uint256 depositExpiry, uint256 lpFundingExpiry);
 
     event ClaimedToken(address indexed lpToken, address indexed owner, uint256 claimableAmount, ClaimType claimType);
 }

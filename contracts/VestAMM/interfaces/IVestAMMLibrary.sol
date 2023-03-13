@@ -21,6 +21,7 @@ import "../../libraries/AelinAllowList.sol";
 // this is all we need from an integration side with any AMM
 
 interface IVestAMMLibrary {
+    // deploy pool also adds liquidity?
     function deployPool() external returns (bool);
 
     function addLiquidity(uint256, uint256) external returns (bool);
@@ -31,5 +32,7 @@ interface IVestAMMLibrary {
 
     // TODO figure out which views we might want.
     // maybe a view for APY and fees earned or something
+    function getPriceRatio(address, address) external view returns (uint256);
+
     function feesEarned() external view returns (uint256, uint256);
 }
