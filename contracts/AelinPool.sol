@@ -32,8 +32,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     uint256 public totalAmountAccepted;
     uint256 public totalAmountWithdrawn;
     uint256 public purchaseTokenTotalForDeal;
+    uint256 public totalSponsorFeeAmount;
 
     bool private calledInitialize;
+    bool private sponsorClaimed;
 
     address public aelinTreasuryAddress;
     address public aelinDealLogicAddress;
@@ -496,6 +498,15 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         _mintDealTokens(_recipient, acceptAmount);
     }
 
+    function sponsorClaim() public {
+        require(block.timestamp >= purchaseExpiry, "still in purchase window");
+        require(sponsorClaimed != true, "sponsor already claimed");
+        require(totalSponsorFeeAmount > 0, "no sponsor fees");
+
+        sponsorClaimed = true;
+        aelinDeal.mintVestingToken(sponsor, totalSponsorFeeAmount);
+    }
+
     /**
      * @dev the if statement says if you have no balance or if the deal is not funded
      * or if the pro rata period is not active, then you have 0 available for this period
@@ -534,9 +545,11 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256 aelinFeeAmt = (poolTokenDealFormatted * AELIN_FEE) / BASE;
         uint256 sponsorFeeAmt = (poolTokenDealFormatted * sponsorFee) / BASE;
 
-        aelinDeal.mintVestingToken(sponsor, sponsorFeeAmt);
+        totalSponsorFeeAmount += sponsorFeeAmt;
+
         aelinDeal.transferProtocolFee(aelinFeeAmt);
         aelinDeal.mintVestingToken(_recipient, poolTokenDealFormatted - (sponsorFeeAmt + aelinFeeAmt));
+
         IERC20(purchaseToken).safeTransfer(holder, _poolTokenAmount);
         emit AcceptDeal(_recipient, address(aelinDeal), _poolTokenAmount, sponsorFeeAmt, aelinFeeAmt);
     }

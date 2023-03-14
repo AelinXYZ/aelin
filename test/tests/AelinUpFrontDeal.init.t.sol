@@ -13,7 +13,7 @@ import {MerkleTree} from "contracts/libraries/MerkleTree.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockERC20CustomDecimals} from "../mocks/MockERC20CustomDecimals.sol";
 
-contract AelinUpFrontDealInitTest is Test, AelinTestUtils {
+contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
     AelinUpFrontDeal public testUpFrontDeal;
     AelinFeeEscrow public testEscrow;
     AelinUpFrontDealFactory public upFrontDealFactory;

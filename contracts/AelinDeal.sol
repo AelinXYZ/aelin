@@ -81,20 +81,6 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
     }
 
     /**
-     * @dev the holder may change their address
-     */
-    function setHolder(address _holder) external onlyHolder {
-        require(_holder != address(0));
-        futureHolder = _holder;
-    }
-
-    function acceptHolder() external {
-        require(msg.sender == futureHolder, "only future holder can access");
-        holder = futureHolder;
-        emit SetHolder(futureHolder);
-    }
-
-    /**
      * @dev the holder finalizes the deal for the pool created by the
      * sponsor by depositing funds using this method.
      *
@@ -229,6 +215,7 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
      * contract that created this deal
      */
     function mintVestingToken(address _to, uint256 _amount) external depositCompleted onlyPool {
+        totalUnderlyingAccepted += _amount;
         _mintVestingToken(_to, _amount, vestingCliffExpiry);
     }
 
@@ -239,6 +226,20 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
     function transferProtocolFee(uint256 dealTokenAmount) external depositCompleted onlyPool {
         uint256 underlyingProtocolFees = (underlyingPerDealExchangeRate * dealTokenAmount) / 1e18;
         IERC20(underlyingDealToken).safeTransfer(address(aelinFeeEscrow), underlyingProtocolFees);
+    }
+
+    /**
+     * @dev the holder may change their address
+     */
+    function setHolder(address _holder) external onlyHolder {
+        require(_holder != address(0), "holder cant be null");
+        futureHolder = _holder;
+    }
+
+    function acceptHolder() external {
+        require(msg.sender == futureHolder, "only future holder can access");
+        holder = futureHolder;
+        emit SetHolder(futureHolder);
     }
 
     modifier initOnce() {

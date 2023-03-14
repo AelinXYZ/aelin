@@ -19,7 +19,7 @@ contract AelinTestUtils is Test {
 
     uint256 constant BASE = 100 * 10 ** 18;
     uint256 constant MAX_SPONSOR_FEE = 15 * 10 ** 18;
-    uint256 constant AELIN_FEE = 2 * 10 ** 18;
+    uint256 public constant AELIN_FEE = 2 * 10 ** 18;
 
     address dealCreatorAddress = address(0xBEEF);
     address dealHolderAddress = address(0xDEAD);
@@ -224,51 +224,4 @@ contract AelinTestUtils is Test {
         uint256 privateKey = uint256(keccak256(abi.encodePacked(num)));
         addr = vm.addr(privateKey);
     }
-
-    /*//////////////////////////////////////////////////////////////
-                                events
-    //////////////////////////////////////////////////////////////*/
-
-    event DepositDealToken(
-        address indexed underlyingDealTokenAddress,
-        address indexed depositor,
-        uint256 underlyingDealTokenAmount
-    );
-
-    event SetHolder(address indexed holder);
-
-    event Vouch(address indexed voucher);
-
-    event Disavow(address indexed voucher);
-
-    event WithdrewExcess(address UpFrontDealAddress, uint256 amountWithdrawn);
-
-    event AcceptDeal(
-        address indexed user,
-        uint256 amountPurchased,
-        uint256 totalPurchased,
-        uint256 amountDealTokens,
-        uint256 totalDealTokens
-    );
-
-    event VestingTokenMinted(address indexed user, uint256 indexed tokenId, uint256 amount, uint256 lastClaimedAt);
-
-    event ClaimDealTokens(address indexed user, uint256 amountMinted, uint256 amountPurchasingReturned);
-
-    event SponsorClaim(address indexed sponsor, uint256 amountMinted);
-
-    event HolderClaim(
-        address indexed holder,
-        address purchaseToken,
-        uint256 amountClaimed,
-        address underlyingToken,
-        uint256 underlyingRefund,
-        uint256 timestamp
-    );
-
-    event FeeEscrowClaimed(address indexed aelinFeeEscrow, address indexed underlyingTokenAddress, uint256 amount);
-
-    event ClaimedUnderlyingDealToken(address indexed user, address underlyingToken, uint256 amountClaimed);
-
-    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
 }

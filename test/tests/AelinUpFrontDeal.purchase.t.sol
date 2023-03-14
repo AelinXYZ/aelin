@@ -18,7 +18,7 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 import {MerkleTree} from "contracts/libraries/MerkleTree.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils {
+contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal {
     AelinUpFrontDeal public testUpFrontDeal;
     AelinFeeEscrow public testEscrow;
     AelinUpFrontDealFactory public upFrontDealFactory;

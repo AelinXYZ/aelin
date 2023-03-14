@@ -9,6 +9,7 @@ import {AelinUpFrontDeal} from "contracts/AelinUpFrontDeal.sol";
 import {AelinUpFrontDealFactory} from "contracts/AelinUpFrontDealFactory.sol";
 import {AelinFeeEscrow} from "contracts/AelinFeeEscrow.sol";
 import {IAelinUpFrontDeal} from "contracts/interfaces/IAelinUpFrontDeal.sol";
+import {IAelinVestingToken} from "contracts/interfaces/IAelinVestingToken.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {MockERC1155} from "../mocks/MockERC1155.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
@@ -19,7 +20,7 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 import {MerkleTree} from "contracts/libraries/MerkleTree.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract AelinUpFrontDealClaimTest is Test, AelinTestUtils {
+contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, IAelinVestingToken {
     AelinUpFrontDeal public testUpFrontDeal;
     AelinFeeEscrow public testEscrow;
     AelinUpFrontDealFactory public upFrontDealFactory;
@@ -1839,4 +1840,6 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils {
         AelinUpFrontDeal(dealAddressAllowDeallocation).holderClaim();
         assertEq(purchaseToken.balanceOf(dealHolderAddress), contractRemainingBalance);
     }
+
+    event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
 }
