@@ -1018,9 +1018,25 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
                             transfer
     //////////////////////////////////////////////////////////////*/
 
+    function testFuzz_Transfer_RevertWhen_NotOwner(uint256 _purchaseAmount) public {}
+
+    function testFuzz_Transfer_RevertWhen_WrongTokenId() public {}
+
+    function testFuzz_Transfer(uint256 _purchaseAmount) public {}
+
     /*//////////////////////////////////////////////////////////////
                             transferVestingShare
     //////////////////////////////////////////////////////////////*/
+
+    function testFuzz_TransferVestingShare_RevertWhen_NotOwner(uint256 _purchaseAmount) public {}
+
+    function testFuzz_TransferVestingShare_RevertWhen_WrongTokenId() public {}
+
+    function testFuzz_TransferVestingShare_RevertWhen_ShareAmountIsZero(uint256 _purchaseAmount) public {}
+
+    function testFuzz_TransferVestingShare_RevertWhen_ShareAmountTooHigh(uint256 _purchaseAmount) public {}
+
+    function testFuzz_TransferVestingShare(uint256 _purchaseAmount, uint256 _shareAmount) public {}
 
     event AcceptDeal(
         address indexed purchaser,
