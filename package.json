@@ -70,6 +70,7 @@
 		"ethereumjs-abi": "0.6.8"
 	},
 	"devDependencies": {
+		"@balancer-labs/v2-interfaces": "^0.3.0",
 		"@eth-optimism/contracts": "0.3.4",
 		"@ethersproject/address": "5.0.4",
 		"@microsoft/eslint-formatter-sarif": "2.1.7",

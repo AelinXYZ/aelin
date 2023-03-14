@@ -21,6 +21,29 @@ import "../../libraries/AelinAllowList.sol";
 // this is all we need from an integration side with any AMM
 
 interface IVestAMMLibrary {
+    struct CreateNewPool {
+        // name of the pool
+        string name;
+        // symbol of the pool
+        string symbol;
+        // NOTE these are the 2 tokens we are using
+        IERC20[] tokens;
+        // this is where you put the ratio between the 2 tokens
+        uint256[] normalizedWeights;
+        // not sure what this is
+        IRateProvider[] rateProviders;
+        // this is the fees for trading. probably 1% but TBD
+        uint256 swapFeePercentage;
+        // this is the LP owner which is the vAMM contract
+        address owner;
+    }
+
+    struct AddLiquidity {
+        IERC20[] tokens;
+        uint256[] amounts;
+        uint256 poolAmountOut;
+    }
+
     // deploy pool also adds liquidity?
     function deployPool() external returns (bool);
 

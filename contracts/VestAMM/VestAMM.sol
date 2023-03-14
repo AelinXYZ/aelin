@@ -13,6 +13,7 @@ import "../libraries/AelinNftGating.sol";
 import "../libraries/AelinAllowList.sol";
 import "../libraries/MerkleTree.sol";
 import "./interfaces/IVestAMM.sol";
+import "./interfaces/IVestAMMLibrary.sol";
 
 // TODO make sure the logic works with 80/20 balancer pools and not just when its 50/50
 // TODO triple check all arguments start with _, casing is correct. well commented, etc
@@ -118,6 +119,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             IERC20(_depositTokens[i].token).safeTransferFrom(msg.sender, address(this), _depositTokens[i].amount);
             uint256 balanceAfterTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
             uint256 amountPostTransfer = balanceAfterTransfer - balanceBeforeTransfer;
+            // TODO I think we need to save the exact amount sent by anyone calling this method
+            // so we can send it back to them if they cancel the single sided rewards after
             emit TokenDeposited(_depositTokens[i].token, amountPostTransfer);
             if (
                 amountPostTransfer >= singleRewards[_depositTokens[i].singleRewardIndex].rewardTokenTotal &&
@@ -188,7 +191,10 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     function withdrawBase() {}
 
     // TODO ability to cancel deal early and withdraw all funds
-    function withdrawBase() {}
+    function cancelDeal() depositIncomplete {}
+
+    // TBD if we actually want to use this and why. maybe not
+    function pauseDeal() onlyHolder {}
 
     // takes out fees from LP side and single sided rewards and sends to official AELIN Fee Module
     // pairs against protocol tokens and deposits into AMM
@@ -245,16 +251,18 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     function settle() external {}
 
     // to create the pool and deposit assets after phase 0 ends
-    function createInitialLiquidity() external onlyHolder {
+    // TODO create a struct here that should cover every AMM. If needed to support more add a second struct
+    function createInitialLiquidity(CreateNewPool _createPool) external onlyHolder {
         require(vAMMInfo.hasLiquidityLaunch, "only for new liquidity");
         // TODO do some math to check the right ratio of assets to create liquidity here
         // ammData.ammLibrary based on the contract call the right libary deposit method
-        // ammData.ammLibrary.deployPool(...);
+        IVestAMMLibrary(ammData.ammLibrary).deployPool(_createPool);
     }
 
     // to create the pool and deposit assets after phase 0 ends
-    function createLiquidity() external onlyHolder {
+    function createLiquidity(AddLiquidity _addLiquidity) external onlyHolder {
         require(!vAMMInfo.hasLiquidityLaunche, "only for existing liquidity");
+        IVestAMMLibrary(ammData.ammLibrary).addLiquidity(_addLiquidity);
     }
 
     function claimableTokens(
