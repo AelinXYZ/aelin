@@ -63,8 +63,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         address _vestAmmFeeModule,
         address _vestDAO
     ) external initOnce {
-        // TODO validate single rewards entries
-        require(_singleRewards.length <= MAX_SINGLE_REWARDS, "max 10 single-sided rewards");
+        validateSingleRewards(singleRewards);
+        validateVestingSchedules(_vAmmInfo.vestingSchedules);
         // pool initialization checks
         // TODO how to name these
         // _setNameAndSymbol(string(abi.encodePacked("vAMM-", TBD)), string(abi.encodePacked("v-", TBD)));
@@ -145,9 +145,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         isCancelled = true;
     }
 
-    // TODO validate single rewards entries
     function addSingle(SingleRewardConfig[] calldata _newSingleRewards) external onlyHolder depositIncomplete {
         require(_singleRewards.length + _newSingleRewards.length <= MAX_SINGLE_REWARDS, "max 10 single-sided rewards");
+        validateSingleRewards(_newSingleRewards);
         for (uint i = 0; i < _newSingleRewards.length; i++) {
             singleRewards.push(_newSingleRewards[i]);
         }
@@ -266,11 +266,26 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         dealFunded = true;
     }
 
+    // for when the deal is cancelled
     function depositorWithdraw(uint256[] _tokenIds) external dealCancelled {
         for (uint256 i; i < _tokenIds.length; i++) {
             VestVestingToken memory schedule = vestingDetails[_tokenId];
             IERC20(investmentToken).safeTransferFrom(address(this), msg.sender, schedule.amountDeposited);
             emit Withdraw(msg.sender, schedule.amountDeposited);
+        }
+    }
+
+    // withdraw deallocated
+    function depositorDeallocWithdraw(uint256[] _tokenIds) external {
+        require(depositComplete && block.timestamp > lpFundingExpiry, "not time to withdraw");
+        for (uint256 i; i < _tokenIds.length; i++) {
+            VestVestingToken memory schedule = vestingDetails[_tokenId];
+            // TODO need to calculate and save this number during LP submission
+            // and store it as an 18 decimals percentage 5e17 is 50%
+            uint256 deallocationPercent;
+            uint256 excessWithdrawAmount = (schedule.amountDeposited * 1e18) / deallocationPercent;
+            IERC20(investmentToken).safeTransferFrom(address(this), msg.sender, excessWithdrawAmount);
+            emit Withdraw(msg.sender, excessWithdrawAmount);
         }
     }
 
@@ -372,6 +387,33 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     function sendFeesToVestDAO(address[] tokens) external {
         for (uint256 i; i < tokens.length; i++) {
             IERC20(tokens[i]).safeTransfer(vestDAO, IERC20(tokens[i]).balanceOf(address(this)));
+        }
+    }
+
+    function validateSingleRewards(SingleRewardConfig[] _singleRewards) internal {
+        require(_singleRewards.length <= MAX_SINGLE_REWARDS, "max 10 single-sided rewards");
+        for (uint256 i; i < _singleRewards.length; i++) {
+            // NOTE can the single holder be null? the main holder can do this when they are
+            // the single as well maybe.
+            // Also we need to potentially validate more of the fields like migration rules
+            // if we use the migration stuff at all for v1
+            require(rewardToken != address(0), "cannot pass null address");
+            // DO we need this field
+            require(rewardPerQuote > 0, "rpq: must pass an amount");
+            require(rewardTokenTotal > 0, "rtt: must pass an amount");
+            VestingSchedule[] vestingSchedule = [_singleRewards.vestingData];
+            validateVestingSchedules(vestingSchedule);
+        }
+    }
+
+    function validateVestingSchedules(VestingSchedule[] _vestingSchedules) internal {
+        for (uint256 i; i < _vestingSchedules.length; ++i) {
+            require(1825 days >= _vestingSchedules[i].vestingCliffPeriod, "max 5 year cliff");
+            require(1825 days >= _vestingSchedules[i].vestingPeriod, "max 5 year vesting");
+            require(100 * 10**18 >= _vestingSchedules[i].investorShare, "max 100% to investor");
+            require(0 <= _vestingSchedules[i].investorShare, "min 0% to investor");
+            require(0 < _vestingSchedules[i].totalHolderTokens, "allocate tokens to schedule");
+            require(_vestingSchedules[i].purchaseTokenPerDealToken > 0, "invalid deal price");
         }
     }
 

@@ -28,15 +28,7 @@ contract VestAMMDealFactory is IVestAMM {
         SingleRewardConfig[] calldata _singleRewards,
         DealAccess calldata _dealAccess
     ) external returns (address vestAddress) {
-        require(!!AELIN_LIBRARY_LIST.libraryList[_ammData.ammLibrary] == true, "invalid AMM library");
-        for (uint256 i; i < _vAmmInfo.vestingSchedule.length; ++i) {
-            require(1825 days >= _vAmmInfo.vestingSchedule[i].vestingCliffPeriod, "max 5 year cliff");
-            require(1825 days >= _vAmmInfo.vestingSchedule[i].vestingPeriod, "max 5 year vesting");
-            require(100 * 10**18 >= _vAmmInfo.vestingSchedule[i].investorShare, "max 100% to investor");
-            require(0 <= _vAmmInfo.vestingSchedule[i].investorShare, "min 0% to investor");
-            require(0 < _vAmmInfo.vestingSchedule[i].totalHolderTokens, "allocate tokens to schedule");
-            require(_vAmmInfo.vestingSchedule[i].purchaseTokenPerDealToken > 0, "invalid deal price");
-        }
+        require(!!AELIN_LIBRARY_LIST.libraryList[_ammData.ammLibrary], "invalid AMM library");
 
         vestAddress = Clones.clone(VEST_AMM_LOGIC);
 
