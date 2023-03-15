@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import "./Owned.sol";
+import "../Owned.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -16,11 +16,7 @@ contract VAelinConverter is Owned {
     address public immutable AELIN;
     uint256 public startTime;
 
-    constructor(
-        address _owner,
-        address _vAelin,
-        address _aelin
-    ) Owned(_owner) {
+    constructor(address _owner, address _vAelin, address _aelin) Owned(_owner) {
         vAELIN = _vAelin;
         AELIN = _aelin;
         startTime = block.timestamp;

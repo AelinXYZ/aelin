@@ -9,6 +9,6 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract VirtualAelinToken is ERC20 {
     constructor(address preDistributionAddress) ERC20("Virtual Aelin Token", "vAELIN") {
-        _mint(preDistributionAddress, (((750 * 10**decimals()) * 100) / 98)); //
+        _mint(preDistributionAddress, (((750 * 10 ** decimals()) * 100) / 98)); //
     }
 }
