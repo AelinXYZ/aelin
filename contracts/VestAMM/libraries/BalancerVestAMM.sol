@@ -6,8 +6,6 @@ import "../interfaces/IVestAMMLibrary.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 import "@balancer-labs/v2-interfaces/contracts/pool-weighted/WeightedPoolUserData.sol";
 
-// TODO import the IWeightedPoolFactory interface
-
 library BalancerVestAMM is IVestAMMLibrary {
     IWeightedPoolFactory immutable weightedPoolFactory;
     address public vault;
@@ -17,25 +15,9 @@ library BalancerVestAMM is IVestAMMLibrary {
         weightedPoolFactory = IWeightedPoolFactory(_weightedPoolFactory);
     }
 
-    // NOTE that we need to create a single set of arguments from a single struct that
-    // will work for creating and deploying a pool on any AMM. If we need to create
-    // a second struct for this we can do that as well
-    function deployPool(
-        // name of the pool
-        string memory name,
-        // symbol of the pool
-        string memory symbol,
-        // NOTE these are the 2 tokens we are using
-        IERC20[] memory tokens,
-        // this is where you put the ratio between the 2 tokens
-        uint256[] memory normalizedWeights,
-        // not sure what this is
-        IRateProvider[] memory rateProviders,
-        // this is the fees for trading. probably 1% but TBD
-        uint256 swapFeePercentage,
-        // this is the LP owner which is the vAMM contract
-        address owner
-    ) external {
+    function deployPool(CreateNewPool _createPool, AddLiquidity _addLiquidity) external {
+        // arguments might need: name, symbol, tokens, normalizedWeights, rateProviders, swapFeePercentage, owner
+
         // TODO make sure we are calling the latest pool factory with the right arguments
         // TODO save the vault here
         // save the pool id
@@ -48,19 +30,16 @@ library BalancerVestAMM is IVestAMMLibrary {
         // 0.04e16,
         // address(this)
         // TODO implement adding liquidity after pool creation if you can't do it when creating the pool itself
-        addLiquidity();
+        addLiquidity(_addLiquidity, true);
     }
 
-    /// @notice add liquidity to a v2 weighted pool
-    /// @dev Calls into AMM contract
-    /// @param tokens ERC20 tokens to be added as liquidity to pool
-    /// @param amounts amount of tokens to add to the pool
-    /// @param poolAmountOut number of LP tokens received from the pool
-    function addLiquidity(
-        IERC20[] calldata tokens,
-        uint256[] calldata amounts,
-        uint256 poolAmountOut
-    ) external {
+    function addLiquidity(AddLiquidity _addLiquidity, bool _isLaunch) external {
+        // arguments might need: tokens, amounts, poolAmountOut
+        // TODO do some math to check the right ratio of assets based on the
+        // amount deposited in the contract to create liquidity here
+        // NOTE it looks like we want to use this function to calculate the proportional amount
+        // const { tokens, amounts } = pool.calcProportionalAmounts(token, amount);
+
         // TODO add modifiers here to restrict access
         uint256 numTokens = tokens.length;
         require(numTokens == amounts.length, "TOKEN_AMOUNTS_COUNT_MISMATCH");
@@ -128,15 +107,9 @@ library BalancerVestAMM is IVestAMMLibrary {
         }
     }
 
-    /// @notice Withdraw liquidity from Balancer V2 pool (specifying exact asset token amounts to get)
-    /// @dev Calls into AMM contract
-    /// @param maxBurnAmount Max amount of LP tokens to burn in the withdrawal
-    /// @param exactAmountsOut Array of exact amounts of tokens to be withdrawn from pool
-    function removeLiquidity(
-        uint256 maxBurnAmount,
-        IERC20[] calldata tokens,
-        uint256[] calldata exactAmountsOut
-    ) external {
+    function removeLiquidity(RemoveLiquidity _removeLiquidity) external {
+        // arguments might need: uint256 maxBurnAmount, IERC20[] calldata tokens, uint256[] calldata exactAmountsOut
+        // arguments might need: uint256 poolAmountIn, IERC20[] calldata tokens, uint256[] calldata minAmountsOut
         // TODO add modifiers here to restrict access
         // encode withdraw request
         bytes memory userData = abi.encode(
@@ -146,23 +119,8 @@ library BalancerVestAMM is IVestAMMLibrary {
         );
 
         _withdraw(poolId, maxBurnAmount, tokens, exactAmountsOut, userData);
-    }
-
-    // TODO figure out which withdraw methods we need to use
-    /// @notice Withdraw liquidity from Balancer V2 pool (specifying exact LP tokens to burn)
-    /// @dev Calls into AMM contract
-    /// @param poolAmountIn Amount of LP tokens to burn in the withdrawal
-    /// @param minAmountsOut Array of minimum amounts of tokens to be withdrawn from pool
-    function removeLiquidityImbalance(
-        uint256 poolAmountIn,
-        IERC20[] calldata tokens,
-        uint256[] calldata minAmountsOut
-    ) external {
-        // TODO add modifiers to restrict access
-        // encode withdraw request
-        bytes memory userData = abi.encode(WeightedPoolUserData.ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT, poolAmountIn);
-
-        _withdraw(poolId, poolAmountIn, tokens, minAmountsOut, userData);
+        // bytes memory userData = abi.encode(WeightedPoolUserData.ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT, poolAmountIn);
+        // _withdraw(poolId, poolAmountIn, tokens, minAmountsOut, userData);
     }
 
     function _withdraw(

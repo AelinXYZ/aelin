@@ -36,6 +36,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     uint256 public totalDeposited;
     uint256 investmentTokenPerBase;
     mapping(uint256 => bool) private finalizedDeposit;
+    mapping(address => mapping(address => uint256)) holderDeposits;
 
     AmmData public ammData;
     VAmmInfo public vAmmInfo;
@@ -44,6 +45,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     bool private calledInitialize;
     bool private baseComplete;
+    bool public isCancelled;
 
     address public vestAmmFeeModule;
     address public vestDAO;
@@ -60,6 +62,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         address _vestAmmFeeModule,
         address _vestDAO
     ) external initOnce {
+        // TODO validate single rewards entries
         require(_singleRewards.length <= MAX_SINGLE_REWARDS, "max 10 single-sided rewards");
         // pool initialization checks
         // TODO how to name these
@@ -103,8 +106,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         }
     }
 
-    // TODO what happens if there is a partial deposit which is later rejected. need to handle
-    // this logic a bit differently
     function depositSingle(DepositToken[] calldata _depositTokens) external {
         for (uint i = 0; i < _depositTokens.length; i++) {
             require(
@@ -119,8 +120,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             IERC20(_depositTokens[i].token).safeTransferFrom(msg.sender, address(this), _depositTokens[i].amount);
             uint256 balanceAfterTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
             uint256 amountPostTransfer = balanceAfterTransfer - balanceBeforeTransfer;
-            // TODO I think we need to save the exact amount sent by anyone calling this method
-            // so we can send it back to them if they cancel the single sided rewards after
+            holderDeposits[msg.sender][_depositTokens[i].token] += amountPostTransfer;
             emit TokenDeposited(_depositTokens[i].token, amountPostTransfer);
             if (
                 amountPostTransfer >= singleRewards[_depositTokens[i].singleRewardIndex].rewardTokenTotal &&
@@ -134,12 +134,17 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         setDepositComplete();
     }
 
-    // TODO cancel deal button callable before the deposit is complete. can we also cancel in the middle? hmm
     function cancelVestAMM() onlyHolder depositIncomlete {
-        // returns all funds deposited so far
-        // destroys contract
+        for (uint i = 0; i < singleRewards.length; i++) {
+            removeSingle(i);
+        }
+        if (holderDeposits[msg.sender][baseAsset] > 0) {
+            IERC20(baseAsset).safeTransferFrom(address(this), vAmmInfo.mainHolder, holderDeposits[msg.sender][baseAsset]);
+        }
+        isCancelled = true;
     }
 
+    // TODO validate single rewards entries
     function addSingle(SingleRewardConfig[] calldata _newSingleRewards) external onlyHolder depositIncomplete {
         require(_singleRewards.length + _newSingleRewards.length <= MAX_SINGLE_REWARDS, "max 10 single-sided rewards");
         for (uint i = 0; i < _newSingleRewards.length; i++) {
@@ -147,32 +152,43 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         }
     }
 
-    // We do use the index a lot throughout the code. lets make sure we dont screw anything up
-    // by rearranging the indexes. It shoul be fine as this is only an option before the deposit
-    // is complete
     function removeSingle(uint256[] calldata _removeIndexList) external depositIncomplete {
-        // TODO maybe let them take the funds back to the holder if it was already funded. hmmm
         for (uint i = 0; i < _removeIndexList.length; i++) {
             require(
                 msg.sender == vAmmInfo.mainHolder || singleRewards[_removeIndexList[i]].holder == msg.sender,
                 "not the right holder"
             );
-            // TODO this logic is not great. we can do better around tracking amounts deposited and to be returned
-            if (finalizedDeposit[_removeIndexList[i]] == true) {
+            if (finalizedDeposit[_removeIndexList[i]]) {
+                finalizedDeposit[_removeIndexList[i]] = false;
+                singleRewardsComplete -= 1;
+            }
+            uint256 mainHolderAmount = holderDeposits[vAmmInfo.mainHolder][singleRewards[_removeIndexList[i]].token];
+            uint256 singleHolderAmount = holderDeposits[singleRewards[_removeIndexList[i]].holder][
+                singleRewards[_removeIndexList[i]].token
+            ];
+            if (mainHolderAmount > 0) {
+                IERC20(singleRewards[_removeIndexList[i]].token).safeTransferFrom(
+                    address(this),
+                    vAmmInfo.mainHolder,
+                    mainHolderAmount
+                );
+            }
+            if (singleHolderAmount > 0) {
                 IERC20(singleRewards[_removeIndexList[i]].token).safeTransferFrom(
                     address(this),
                     singleRewards[_removeIndexList[i]].holder,
-                    singleRewards[_removeIndexList[i]].rewardTokenTotal
+                    singleHolderAmount
                 );
             }
+            finalizedDeposit[_removeIndexList[i]] = finalizedDeposit[singleRewards.length - 1];
             singleRewards[_removeIndexList[i]] = singleRewards[singleRewards.length - 1];
+            delete finalizedDeposit[singleRewards.length - 1];
             singleRewards.pop();
             // TODO emit event for the subgraph tracking
         }
     }
 
-    // add a check to start deposit window
-    function depositBase() external {
+    function depositBase() external onlyHolder {
         require(!baseComplete, "already deposited base asset");
         address baseAsset = ammData.baseAsset;
 
@@ -180,29 +196,18 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         IERC20(baseAsset).safeTransferFrom(msg.sender, address(this), baseAssetAmount);
         uint256 balanceAfterTransfer = IERC20(baseAsset).balanceOf(address(this));
         uint256 amountPostTransfer = balanceAfterTransfer - balanceBeforeTransfer;
+        holderDeposits[msg.sender][baseAsset] += amountPostTransfer;
         emit DepositPoolToken(baseAsset, msg.sender, amountPostTransfer);
         if (IERC20(baseAsset).balanceOf(address(this)) >= ammData.baseAssetAmount) {
             baseComplete = true;
         }
+
         setDepositComplete();
     }
 
-    // TODO ability to withdraw excess funding deposited
-    function withdrawBase() {}
+    // TODO ability for main or single holders to withdraw excess funding deposited
+    function withdrawExcessFunding() {}
 
-    // TODO ability to cancel deal early and withdraw all funds
-    function cancelDeal() depositIncomplete {}
-
-    // TBD if we actually want to use this and why. maybe not
-    function pauseDeal() onlyHolder {}
-
-    // takes out fees from LP side and single sided rewards and sends to official AELIN Fee Module
-    // pairs against protocol tokens and deposits into AMM
-    // sets LP tokens into vesting scheule for the investor
-    // gives single sided rewards to user (with vesting schedule attached or not)
-    // tracks % ownership of total LP assets for the Fee Module to track for claiming fees
-    // note we may want to have a separate method for accepting in phase 0. tbd
-    // note check access for NFT gated pools, merkle deal pools and private pools
     function acceptDeal(
         AelinNftGating.NftPurchaseList[] calldata _nftPurchaseList,
         MerkleTree.UpFrontMerkleData calldata _merkleData,
@@ -241,29 +246,21 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         emit AcceptVestDeal(msg.sender, depositTokenAmount);
     }
 
-    // collect the fees from AMMs and send them to the Fee Module
-    function collectAllFees(uint256 tokenId) external returns (uint256 amount0, uint256 amount1) {}
-
-    // for investors at the end of phase 0 but only if they can deallocate,
-    // otherwise it should not be necessary but we might use it anyways for v1 in both cases
-    // this method will be important as it will set a global total value that will be used in the claim function
-    // NOTE maybe we dont need settle at all. tbd
-    function settle() external {}
-
     // to create the pool and deposit assets after phase 0 ends
     // TODO create a struct here that should cover every AMM. If needed to support more add a second struct
-    function createInitialLiquidity(CreateNewPool _createPool) external onlyHolder {
+    function createInitialLiquidity(CreateNewPool _createPool, AddLiquidity _addLiquidity) external onlyHolder {
         require(vAMMInfo.hasLiquidityLaunch, "only for new liquidity");
-        // TODO do some math to check the right ratio of assets to create liquidity here
-        // ammData.ammLibrary based on the contract call the right libary deposit method
-        IVestAMMLibrary(ammData.ammLibrary).deployPool(_createPool);
+        IVestAMMLibrary(ammData.ammLibrary).deployPool(_createPool, _addLiquidity);
     }
 
     // to create the pool and deposit assets after phase 0 ends
     function createLiquidity(AddLiquidity _addLiquidity) external onlyHolder {
         require(!vAMMInfo.hasLiquidityLaunche, "only for existing liquidity");
-        IVestAMMLibrary(ammData.ammLibrary).addLiquidity(_addLiquidity);
+        IVestAMMLibrary(ammData.ammLibrary).addLiquidity(_addLiquidity, false);
     }
+
+    // collect the fees from AMMs and send them to the Fee Module
+    function collectAllFees(uint256 tokenId) external returns (uint256 amount0, uint256 amount1) {}
 
     function claimableTokens(
         uint256 _tokenId,
@@ -401,6 +398,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     modifier acceptDealOpen() {
+        require(!isCancelled, "deal is cancelled");
         // TODO double check < vs <= matches everywhere
         require(depositComplete && block.timestamp <= depositExpiry, "not in deposit window");
         _;
