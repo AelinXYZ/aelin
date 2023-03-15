@@ -457,27 +457,27 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
             allowListAmounts: allowListAmounts,
             nftCollectionRules: nftCollectionRules
         });
-        address poolAddress = poolFactory.createPool(poolData);
+        address poolAddr = poolFactory.createPool(poolData);
         vm.stopPrank();
         // user 1 invests in the pool
         vm.startPrank(user1);
-        purchaseToken.approve(poolAddress, type(uint256).max);
+        purchaseToken.approve(poolAddr, type(uint256).max);
         deal(address(purchaseToken), user1, type(uint256).max);
-        AelinPool(poolAddress).purchasePoolTokens(depositAmount);
+        AelinPool(poolAddr).purchasePoolTokens(depositAmount);
         vm.stopPrank();
 
         // user 2 invests in the pool
         vm.startPrank(user2);
-        purchaseToken.approve(poolAddress, type(uint256).max);
+        purchaseToken.approve(poolAddr, type(uint256).max);
         deal(address(purchaseToken), user2, type(uint256).max);
-        AelinPool(poolAddress).purchasePoolTokens(depositAmount);
+        AelinPool(poolAddr).purchasePoolTokens(depositAmount);
         vm.stopPrank();
 
         // purchase window is now expired
-        vm.warp(AelinPool(poolAddress).purchaseExpiry());
+        vm.warp(AelinPool(poolAddr).purchaseExpiry());
         // creation of deal
         vm.startPrank(dealCreatorAddress);
-        address dealAddress = AelinPool(poolAddress).createDeal(
+        address dealAddr = AelinPool(poolAddr).createDeal(
             address(underlyingDealToken), // _underlyingDealToken
             1e25, // _purchaseTokenTotalForDeal
             1e25, // _underlyingDealTokenTotal
@@ -492,41 +492,40 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
 
         // holder funds the deal
         vm.startPrank(dealHolderAddress);
-        underlyingDealToken.approve(address(dealAddress), type(uint256).max);
-        AelinDeal(dealAddress).depositUnderlying(1e25);
+        underlyingDealToken.approve(address(dealAddr), type(uint256).max);
+        AelinDeal(dealAddr).depositUnderlying(1e25);
         vm.stopPrank();
 
         // we divide depositAmount / 2 because both investors deposited the same amount
         uint256 sponsorFee = ((depositAmount / 2) *
-            10 ** (18 - AelinPool(poolAddress).purchaseTokenDecimals()) *
-            AelinPool(poolAddress).sponsorFee()) / BASE;
-        uint256 aelinFee = ((depositAmount / 2) * 10 ** (18 - AelinPool(poolAddress).purchaseTokenDecimals()) * AELIN_FEE) /
+            10 ** (18 - AelinPool(poolAddr).purchaseTokenDecimals()) *
+            AelinPool(poolAddr).sponsorFee()) / BASE;
+        uint256 aelinFee = ((depositAmount / 2) * 10 ** (18 - AelinPool(poolAddr).purchaseTokenDecimals()) * AELIN_FEE) /
             BASE;
 
         // user 1 accepts max and user 2 doesn't accept anything
         vm.startPrank(user1);
         vm.expectEmit(true, true, false, true);
-        emit AcceptDeal(user1, dealAddress, depositAmount / 2, sponsorFee, aelinFee);
-        AelinPool(poolAddress).acceptMaxDealTokens();
+        emit AcceptDeal(user1, dealAddr, depositAmount / 2, sponsorFee, aelinFee);
+        AelinPool(poolAddr).acceptMaxDealTokens();
 
         // we are now in the open redemption period
-        (, uint256 openRedemptionStart, uint256 openRedemptionEnd) = AelinDeal(dealAddress).openRedemption();
+        (, uint256 openRedemptionStart, uint256 openRedemptionEnd) = AelinDeal(dealAddr).openRedemption();
         vm.warp(openRedemptionStart);
 
         // user 1 accepts a part of the openRedemption
-        uint256 maxOpenAmount = AelinPool(poolAddress).purchaseTokenTotalForDeal() -
-            AelinPool(poolAddress).totalAmountAccepted();
+        uint256 maxOpenAmount = AelinPool(poolAddr).purchaseTokenTotalForDeal() - AelinPool(poolAddr).totalAmountAccepted();
         uint openAmountAccepted = maxOpenAmount / 2;
         sponsorFee =
             (openAmountAccepted *
-                10 ** (18 - AelinPool(poolAddress).purchaseTokenDecimals()) *
-                AelinPool(poolAddress).sponsorFee()) /
+                10 ** (18 - AelinPool(poolAddr).purchaseTokenDecimals()) *
+                AelinPool(poolAddr).sponsorFee()) /
             BASE;
-        aelinFee = (openAmountAccepted * 10 ** (18 - AelinPool(poolAddress).purchaseTokenDecimals()) * AELIN_FEE) / BASE;
+        aelinFee = (openAmountAccepted * 10 ** (18 - AelinPool(poolAddr).purchaseTokenDecimals()) * AELIN_FEE) / BASE;
 
         vm.expectEmit(true, true, false, true);
-        emit AcceptDeal(user1, dealAddress, openAmountAccepted, sponsorFee, aelinFee);
-        AelinPool(poolAddress).acceptDealTokens(openAmountAccepted);
+        emit AcceptDeal(user1, dealAddr, openAmountAccepted, sponsorFee, aelinFee);
+        AelinPool(poolAddr).acceptDealTokens(openAmountAccepted);
         vm.stopPrank();
 
         // we are now at the end of the proRata period
@@ -535,13 +534,12 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         // holder can withdraw the rest
         vm.startPrank(dealHolderAddress);
         uint256 dealHolderBalance = underlyingDealToken.balanceOf(dealHolderAddress);
-        uint256 withdrawAmount = underlyingDealToken.balanceOf(dealAddress) -
-            ((AelinDeal(dealAddress).underlyingPerDealExchangeRate() * AelinDeal(dealAddress).totalUnderlyingAccepted()) /
-                1e18);
+        uint256 withdrawAmount = underlyingDealToken.balanceOf(dealAddr) -
+            ((AelinDeal(dealAddr).underlyingPerDealExchangeRate() * AelinDeal(dealAddr).totalUnderlyingAccepted()) / 1e18);
         // holder can withdraw the remaining underlying deal tokens
         vm.expectEmit(true, true, false, true);
         emit WithdrawUnderlyingDealToken(address(underlyingDealToken), dealHolderAddress, withdrawAmount);
-        AelinDeal(dealAddress).withdrawExpiry();
+        AelinDeal(dealAddr).withdrawExpiry();
         assertEq(underlyingDealToken.balanceOf(dealHolderAddress), dealHolderBalance + withdrawAmount, "dealHolderBalance");
         vm.stopPrank();
     }
@@ -566,27 +564,27 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
             allowListAmounts: allowListAmounts,
             nftCollectionRules: nftCollectionRules
         });
-        address poolAddress = poolFactory.createPool(poolData);
+        address poolAddr = poolFactory.createPool(poolData);
         vm.stopPrank();
         // user 1 invests in the pool
         vm.startPrank(user1);
-        purchaseToken.approve(poolAddress, type(uint256).max);
+        purchaseToken.approve(poolAddr, type(uint256).max);
         deal(address(purchaseToken), user1, type(uint256).max);
-        AelinPool(poolAddress).purchasePoolTokens(depositAmount);
+        AelinPool(poolAddr).purchasePoolTokens(depositAmount);
         vm.stopPrank();
 
         // user 2 invests in the pool
         vm.startPrank(user2);
-        purchaseToken.approve(poolAddress, type(uint256).max);
+        purchaseToken.approve(poolAddr, type(uint256).max);
         deal(address(purchaseToken), user2, type(uint256).max);
-        AelinPool(poolAddress).purchasePoolTokens(depositAmount);
+        AelinPool(poolAddr).purchasePoolTokens(depositAmount);
         vm.stopPrank();
 
         // purchase window is now expired
-        vm.warp(AelinPool(poolAddress).purchaseExpiry());
+        vm.warp(AelinPool(poolAddr).purchaseExpiry());
         // creation of deal
         vm.startPrank(dealCreatorAddress);
-        address dealAddress = AelinPool(poolAddress).createDeal(
+        address dealAddr = AelinPool(poolAddr).createDeal(
             address(underlyingDealToken), // _underlyingDealToken
             1e25, // _purchaseTokenTotalForDeal
             1e25, // _underlyingDealTokenTotal
@@ -601,40 +599,37 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
 
         // holder funds the deal
         vm.startPrank(dealHolderAddress);
-        underlyingDealToken.approve(address(dealAddress), type(uint256).max);
-        AelinDeal(dealAddress).depositUnderlying(1e25);
+        underlyingDealToken.approve(address(dealAddr), type(uint256).max);
+        AelinDeal(dealAddr).depositUnderlying(1e25);
         vm.stopPrank();
 
         // we divide depositAmount / 2 because both investors deposited the same amount
         uint256 sponsorFee = ((depositAmount / 2) *
-            10 ** (18 - AelinPool(poolAddress).purchaseTokenDecimals()) *
-            AelinPool(poolAddress).sponsorFee()) / BASE;
-        uint256 aelinFee = ((depositAmount / 2) * 10 ** (18 - AelinPool(poolAddress).purchaseTokenDecimals()) * AELIN_FEE) /
+            10 ** (18 - AelinPool(poolAddr).purchaseTokenDecimals()) *
+            AelinPool(poolAddr).sponsorFee()) / BASE;
+        uint256 aelinFee = ((depositAmount / 2) * 10 ** (18 - AelinPool(poolAddr).purchaseTokenDecimals()) * AELIN_FEE) /
             BASE;
 
         // user 1 accepts max and user 2 doesn't accept anything
         vm.startPrank(user1);
         vm.expectEmit(true, true, false, true);
-        emit AcceptDeal(user1, dealAddress, depositAmount / 2, sponsorFee, aelinFee);
-        AelinPool(poolAddress).acceptMaxDealTokens();
+        emit AcceptDeal(user1, dealAddr, depositAmount / 2, sponsorFee, aelinFee);
+        AelinPool(poolAddr).acceptMaxDealTokens();
 
         // we are now in the open redemption period
-        (, uint256 openRedemptionStart, uint256 openRedemptionEnd) = AelinDeal(dealAddress).openRedemption();
+        (, uint256 openRedemptionStart, uint256 openRedemptionEnd) = AelinDeal(dealAddr).openRedemption();
         vm.warp(openRedemptionStart);
 
         // user 1 accepts everything
-        uint256 maxOpenAmount = AelinPool(poolAddress).purchaseTokenTotalForDeal() -
-            AelinPool(poolAddress).totalAmountAccepted();
+        uint256 maxOpenAmount = AelinPool(poolAddr).purchaseTokenTotalForDeal() - AelinPool(poolAddr).totalAmountAccepted();
         sponsorFee =
-            (maxOpenAmount *
-                10 ** (18 - AelinPool(poolAddress).purchaseTokenDecimals()) *
-                AelinPool(poolAddress).sponsorFee()) /
+            (maxOpenAmount * 10 ** (18 - AelinPool(poolAddr).purchaseTokenDecimals()) * AelinPool(poolAddr).sponsorFee()) /
             BASE;
-        aelinFee = (maxOpenAmount * 10 ** (18 - AelinPool(poolAddress).purchaseTokenDecimals()) * AELIN_FEE) / BASE;
+        aelinFee = (maxOpenAmount * 10 ** (18 - AelinPool(poolAddr).purchaseTokenDecimals()) * AELIN_FEE) / BASE;
 
         vm.expectEmit(true, true, false, true);
-        emit AcceptDeal(user1, dealAddress, maxOpenAmount, sponsorFee, aelinFee);
-        AelinPool(poolAddress).acceptMaxDealTokens();
+        emit AcceptDeal(user1, dealAddr, maxOpenAmount, sponsorFee, aelinFee);
+        AelinPool(poolAddr).acceptMaxDealTokens();
         vm.stopPrank();
 
         // we are now at the end of the proRata period
@@ -643,13 +638,12 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         // holder has nothing to withdraw
         vm.startPrank(dealHolderAddress);
         uint256 dealHolderBalance = underlyingDealToken.balanceOf(dealHolderAddress);
-        uint256 withdrawAmount = underlyingDealToken.balanceOf(dealAddress) -
-            ((AelinDeal(dealAddress).underlyingPerDealExchangeRate() * AelinDeal(dealAddress).totalUnderlyingAccepted()) /
-                1e18);
+        uint256 withdrawAmount = underlyingDealToken.balanceOf(dealAddr) -
+            ((AelinDeal(dealAddr).underlyingPerDealExchangeRate() * AelinDeal(dealAddr).totalUnderlyingAccepted()) / 1e18);
         // holder can withdraw the remaining underlying deal tokens
         vm.expectEmit(true, true, false, true);
         emit WithdrawUnderlyingDealToken(address(underlyingDealToken), dealHolderAddress, withdrawAmount);
-        AelinDeal(dealAddress).withdrawExpiry();
+        AelinDeal(dealAddr).withdrawExpiry();
         assertEq(underlyingDealToken.balanceOf(dealHolderAddress), dealHolderBalance + withdrawAmount, "dealHolderBalance");
         vm.stopPrank();
     }
@@ -779,7 +773,6 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         AelinPool(poolNoOpenRedemptionDealAddress).acceptMaxDealTokens();
         // we assume user is the first claimer so owns deal token ID = 0;
         uint256 vestingExpiry = AelinDeal(dealNoOpenRedemptionAddress).vestingExpiry();
-        uint256 vestingPeriod = AelinDeal(dealNoOpenRedemptionAddress).vestingPeriod();
         (uint256 share, uint256 lastClaimedAt) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
         assertEq(lastClaimedAt, AelinDeal(dealNoOpenRedemptionAddress).vestingCliffExpiry());
 
@@ -847,27 +840,27 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
             allowListAmounts: allowListAmounts,
             nftCollectionRules: nftCollectionRules
         });
-        address poolAddress = poolFactory.createPool(poolData);
+        address poolAddr = poolFactory.createPool(poolData);
         vm.stopPrank();
         // user 1 invests in the pool
         vm.startPrank(user1);
-        purchaseToken.approve(poolAddress, type(uint256).max);
+        purchaseToken.approve(poolAddr, type(uint256).max);
         deal(address(purchaseToken), user1, type(uint256).max);
-        AelinPool(poolAddress).purchasePoolTokens(depositAmount);
+        AelinPool(poolAddr).purchasePoolTokens(depositAmount);
         vm.stopPrank();
 
         // user 2 invests in the pool
         vm.startPrank(user2);
-        purchaseToken.approve(poolAddress, type(uint256).max);
+        purchaseToken.approve(poolAddr, type(uint256).max);
         deal(address(purchaseToken), user2, type(uint256).max);
-        AelinPool(poolAddress).purchasePoolTokens(depositAmount);
+        AelinPool(poolAddr).purchasePoolTokens(depositAmount);
         vm.stopPrank();
 
         // purchase window is now expired
-        vm.warp(AelinPool(poolAddress).purchaseExpiry());
+        vm.warp(AelinPool(poolAddr).purchaseExpiry());
         // creation of deal
         vm.startPrank(dealCreatorAddress);
-        address dealAddress = AelinPool(poolAddress).createDeal(
+        address dealAddr = AelinPool(poolAddr).createDeal(
             address(underlyingDealToken), // _underlyingDealToken
             1e25, // _purchaseTokenTotalForDeal
             1e25, // _underlyingDealTokenTotal
@@ -882,48 +875,48 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
 
         // holder funds the deal
         vm.startPrank(dealHolderAddress);
-        underlyingDealToken.approve(address(dealAddress), type(uint256).max);
-        AelinDeal(dealAddress).depositUnderlying(1e25);
+        underlyingDealToken.approve(address(dealAddr), type(uint256).max);
+        AelinDeal(dealAddr).depositUnderlying(1e25);
         vm.stopPrank();
 
         // we divide depositAmount / 2 because both investors deposited the same amount
-        uint256 depositAmountFormatted = (depositAmount / 2) * 10 ** (18 - AelinPool(poolAddress).purchaseTokenDecimals());
-        uint256 sponsorFee = (depositAmountFormatted * AelinPool(poolAddress).sponsorFee()) / BASE;
+        uint256 depositAmountFormatted = (depositAmount / 2) * 10 ** (18 - AelinPool(poolAddr).purchaseTokenDecimals());
+        uint256 sponsorFee = (depositAmountFormatted * AelinPool(poolAddr).sponsorFee()) / BASE;
         uint256 aelinFee = (depositAmountFormatted * AELIN_FEE) / BASE;
         uint256 computedShareAmount = depositAmountFormatted - sponsorFee - aelinFee;
 
         // user 1 accepts max
         vm.startPrank(user1);
-        assertEq(AelinDeal(dealAddress).tokenCount(), 0);
+        assertEq(AelinDeal(dealAddr).tokenCount(), 0);
         vm.expectEmit(true, true, false, true);
-        emit AcceptDeal(user1, dealAddress, depositAmount / 2, sponsorFee, aelinFee);
-        emit VestingTokenMinted(user1, 0, computedShareAmount, AelinDeal(dealAddress).vestingCliffExpiry());
-        AelinPool(poolAddress).acceptMaxDealTokens();
+        emit AcceptDeal(user1, dealAddr, depositAmount / 2, sponsorFee, aelinFee);
+        emit VestingTokenMinted(user1, 0, computedShareAmount, AelinDeal(dealAddr).vestingCliffExpiry());
+        AelinPool(poolAddr).acceptMaxDealTokens();
 
         // user1 now owns  a vesting token
-        assertEq(AelinDeal(dealAddress).tokenCount(), 1, "tokenCount");
-        assertEq(AelinDeal(dealAddress).ownerOf(0), user1, "ownerOf");
-        assertEq(AelinDeal(dealAddress).balanceOf(user1), 1);
-        (uint256 share, uint256 lastClaimedAt) = AelinDeal(dealAddress).vestingDetails(0);
+        assertEq(AelinDeal(dealAddr).tokenCount(), 1, "tokenCount");
+        assertEq(AelinDeal(dealAddr).ownerOf(0), user1, "ownerOf");
+        assertEq(AelinDeal(dealAddr).balanceOf(user1), 1);
+        (uint256 share, uint256 lastClaimedAt) = AelinDeal(dealAddr).vestingDetails(0);
         assertEq(share, computedShareAmount, "shareAmount");
-        assertEq(lastClaimedAt, AelinDeal(dealAddress).vestingCliffExpiry());
+        assertEq(lastClaimedAt, AelinDeal(dealAddr).vestingCliffExpiry());
 
         vm.stopPrank();
 
         // user 2 accepts max
         vm.startPrank(user2);
         vm.expectEmit(true, true, false, true);
-        emit AcceptDeal(user2, dealAddress, depositAmount / 2, sponsorFee, aelinFee);
-        emit VestingTokenMinted(user2, 1, computedShareAmount, AelinDeal(dealAddress).vestingCliffExpiry());
-        AelinPool(poolAddress).acceptMaxDealTokens();
+        emit AcceptDeal(user2, dealAddr, depositAmount / 2, sponsorFee, aelinFee);
+        emit VestingTokenMinted(user2, 1, computedShareAmount, AelinDeal(dealAddr).vestingCliffExpiry());
+        AelinPool(poolAddr).acceptMaxDealTokens();
 
         // user2 now owns  a vesting token
-        assertEq(AelinDeal(dealAddress).tokenCount(), 2, "tokenCount");
-        assertEq(AelinDeal(dealAddress).ownerOf(1), user2, "ownerOf");
-        assertEq(AelinDeal(dealAddress).balanceOf(user2), 1);
-        (share, lastClaimedAt) = AelinDeal(dealAddress).vestingDetails(1);
+        assertEq(AelinDeal(dealAddr).tokenCount(), 2, "tokenCount");
+        assertEq(AelinDeal(dealAddr).ownerOf(1), user2, "ownerOf");
+        assertEq(AelinDeal(dealAddr).balanceOf(user2), 1);
+        (share, lastClaimedAt) = AelinDeal(dealAddr).vestingDetails(1);
         assertEq(share, computedShareAmount, "shareAmount");
-        assertEq(lastClaimedAt, AelinDeal(dealAddress).vestingCliffExpiry());
+        assertEq(lastClaimedAt, AelinDeal(dealAddr).vestingCliffExpiry());
 
         vm.stopPrank();
     }
@@ -1018,25 +1011,188 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
                             transfer
     //////////////////////////////////////////////////////////////*/
 
-    function testFuzz_Transfer_RevertWhen_NotOwner(uint256 _purchaseAmount) public {}
+    function test_Transfer_RevertWhen_NotOwner() public {
+        // dealCreator user accepts the deal and mint their vesting token
+        vm.startPrank(dealCreatorAddress);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(dealCreatorAddress), 0);
+        AelinPool(poolNoOpenRedemptionDealAddress).acceptMaxDealTokens();
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(dealCreatorAddress), 1);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).ownerOf(0), dealCreatorAddress);
+        vm.stopPrank();
 
-    function testFuzz_Transfer_RevertWhen_WrongTokenId() public {}
+        // another user tries to transfer this exact
+        vm.startPrank(user1);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(user1), 0);
+        vm.expectRevert("ERC721: transfer from incorrect owner");
+        AelinDeal(dealNoOpenRedemptionAddress).transfer(user2, 0, "0x0");
+        vm.stopPrank();
+    }
 
-    function testFuzz_Transfer(uint256 _purchaseAmount) public {}
+    function testFuzz_Transfer_RevertWhen_WrongTokenId() public {
+        // token ID = 0 hasn't been minted yet
+        vm.startPrank(user1);
+        vm.expectRevert("ERC721: invalid token ID");
+        AelinDeal(dealNoOpenRedemptionAddress).transfer(user2, 0, "0x0");
+        vm.stopPrank();
+    }
+
+    function test_Transfer() public {
+        // dealCreator user accepts the deal and mint their vesting token
+        vm.startPrank(dealCreatorAddress);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(dealCreatorAddress), 0);
+        AelinPool(poolNoOpenRedemptionDealAddress).acceptMaxDealTokens();
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(dealCreatorAddress), 1);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).ownerOf(0), dealCreatorAddress);
+        (uint256 shareInitial, uint256 lastClaimedAtInitial) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
+
+        // dealCreator user transfers their token to user1
+        AelinDeal(dealNoOpenRedemptionAddress).transfer(user1, 0, "0x0");
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(dealCreatorAddress), 0);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(user1), 1);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).ownerOf(0), user1);
+        vm.stopPrank();
+
+        // user1 transfers their token to user2
+        vm.startPrank(user1);
+        AelinDeal(dealNoOpenRedemptionAddress).transfer(user2, 0, "0x0");
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(user1), 0);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(user2), 1);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).ownerOf(0), user2);
+        (uint256 share, uint256 lastClaimedAt) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
+
+        // we check that vesting schedule is identical
+        assertEq(share, shareInitial);
+        assertEq(lastClaimedAt, lastClaimedAtInitial);
+
+        // nobody except user2 can claim
+        vm.warp(AelinDeal(dealNoOpenRedemptionAddress).vestingExpiry() + 1 days);
+        vm.stopPrank();
+        vm.startPrank(dealCreatorAddress);
+        vm.expectRevert("must be owner to claim");
+        AelinDeal(dealNoOpenRedemptionAddress).claimUnderlyingTokens(0);
+        vm.stopPrank();
+        vm.startPrank(user1);
+        vm.expectRevert("must be owner to claim");
+        AelinDeal(dealNoOpenRedemptionAddress).claimUnderlyingTokens(0);
+        vm.stopPrank();
+        vm.startPrank(user2);
+        assertEq(underlyingDealToken.balanceOf(user2), 0);
+        vm.expectEmit(true, true, false, true);
+        emit ClaimedUnderlyingDealToken(address(underlyingDealToken), user2, share);
+        AelinDeal(dealNoOpenRedemptionAddress).claimUnderlyingTokens(0);
+        assertEq(underlyingDealToken.balanceOf(user2), share);
+        vm.stopPrank();
+    }
 
     /*//////////////////////////////////////////////////////////////
                             transferVestingShare
     //////////////////////////////////////////////////////////////*/
 
-    function testFuzz_TransferVestingShare_RevertWhen_NotOwner(uint256 _purchaseAmount) public {}
+    function test_TransferVestingShare_RevertWhen_NotOwner() public {
+        // dealCreator user accepts the deal and mint their vesting token
+        vm.startPrank(dealCreatorAddress);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(dealCreatorAddress), 0);
+        AelinPool(poolNoOpenRedemptionDealAddress).acceptMaxDealTokens();
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(dealCreatorAddress), 1);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).ownerOf(0), dealCreatorAddress);
 
-    function testFuzz_TransferVestingShare_RevertWhen_WrongTokenId() public {}
+        vm.stopPrank();
+        vm.startPrank(user1);
+        vm.expectRevert("must be owner to transfer");
+        AelinDeal(dealNoOpenRedemptionAddress).transferVestingShare(user2, 0, 1);
+        vm.stopPrank();
+    }
 
-    function testFuzz_TransferVestingShare_RevertWhen_ShareAmountIsZero(uint256 _purchaseAmount) public {}
+    function test_TransferVestingShare_RevertWhen_WrongTokenId() public {
+        vm.startPrank(user1);
+        vm.expectRevert("ERC721: invalid token ID");
+        AelinDeal(dealNoOpenRedemptionAddress).transferVestingShare(user2, 0, 1);
+        vm.stopPrank();
+    }
 
-    function testFuzz_TransferVestingShare_RevertWhen_ShareAmountTooHigh(uint256 _purchaseAmount) public {}
+    function test_TransferVestingShare_RevertWhen_ShareAmountIsZero() public {
+        // dealCreator user accepts the deal and mint their vesting token
+        vm.startPrank(dealCreatorAddress);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(dealCreatorAddress), 0);
+        AelinPool(poolNoOpenRedemptionDealAddress).acceptMaxDealTokens();
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(dealCreatorAddress), 1);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).ownerOf(0), dealCreatorAddress);
 
-    function testFuzz_TransferVestingShare(uint256 _purchaseAmount, uint256 _shareAmount) public {}
+        vm.expectRevert("share amount should be > 0");
+        AelinDeal(dealNoOpenRedemptionAddress).transferVestingShare(user2, 0, 0);
+        vm.stopPrank();
+    }
+
+    function test_TransferVestingShare_RevertWhen_ShareAmountTooHigh() public {
+        // dealCreator user accepts the deal and mint their vesting token
+        vm.startPrank(dealCreatorAddress);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(dealCreatorAddress), 0);
+        AelinPool(poolNoOpenRedemptionDealAddress).acceptMaxDealTokens();
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(dealCreatorAddress), 1);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).ownerOf(0), dealCreatorAddress);
+
+        (uint256 share, ) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
+        // dealCreator user sends more than their share
+        vm.expectRevert("cant transfer more than current share");
+        AelinDeal(dealNoOpenRedemptionAddress).transferVestingShare(user2, 0, share + 1);
+        vm.stopPrank();
+    }
+
+    function testFuzz_TransferVestingShare(uint256 _shareAmount) public {
+        // dealCreator user accepts the deal and mint their vesting token
+        vm.startPrank(dealCreatorAddress);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(dealCreatorAddress), 0);
+        AelinPool(poolNoOpenRedemptionDealAddress).acceptMaxDealTokens();
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(dealCreatorAddress), 1);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).ownerOf(0), dealCreatorAddress);
+
+        (uint256 share, uint256 lastClaimedAt) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
+        vm.assume(_shareAmount > 0);
+        vm.assume(_shareAmount < share);
+
+        // dealCreator user transfers a part of their share to user1
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(user1), 0);
+        vm.expectEmit(true, true, false, true);
+        emit VestingTokenMinted(user1, 1, _shareAmount, lastClaimedAt);
+        AelinDeal(dealNoOpenRedemptionAddress).transferVestingShare(user1, 0, _shareAmount);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(dealCreatorAddress), 1);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(user1), 1);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).ownerOf(0), dealCreatorAddress);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).ownerOf(1), user1);
+
+        // dealCreator has their share reduced
+        (uint256 newShare, uint256 newLastClaimedAt) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
+        assertEq(newShare, share - _shareAmount);
+        assertEq(newLastClaimedAt, lastClaimedAt);
+
+        // user1 now has their share
+        (newShare, newLastClaimedAt) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(1);
+        assertEq(newShare, _shareAmount);
+        assertEq(newLastClaimedAt, lastClaimedAt);
+
+        vm.warp(AelinDeal(dealNoOpenRedemptionAddress).vestingExpiry() + 1 days);
+
+        // dealCreator user can claim their share
+        vm.expectEmit(true, true, false, true);
+        emit ClaimedUnderlyingDealToken(address(underlyingDealToken), dealCreatorAddress, share - _shareAmount);
+        AelinDeal(dealNoOpenRedemptionAddress).claimUnderlyingTokens(0);
+        assertEq(underlyingDealToken.balanceOf(dealCreatorAddress), share - _shareAmount);
+        vm.stopPrank();
+
+        // user1 can claim their share
+        vm.startPrank(user1);
+        vm.expectEmit(true, true, false, true);
+        emit ClaimedUnderlyingDealToken(address(underlyingDealToken), user1, _shareAmount);
+        AelinDeal(dealNoOpenRedemptionAddress).claimUnderlyingTokens(1);
+        assertEq(underlyingDealToken.balanceOf(user1), _shareAmount);
+
+        // we make sure that nobody can claim after this
+        vm.warp(AelinDeal(dealNoOpenRedemptionAddress).vestingExpiry() + 10 days);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).claimableUnderlyingTokens(0), 0);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).claimableUnderlyingTokens(1), 0);
+
+        vm.stopPrank();
+    }
 
     event AcceptDeal(
         address indexed purchaser,
