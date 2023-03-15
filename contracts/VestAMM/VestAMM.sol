@@ -46,6 +46,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     bool private calledInitialize;
     bool private baseComplete;
     bool public isCancelled;
+    bool public dealFunded;
 
     address public vestAmmFeeModule;
     address public vestDAO;
@@ -106,7 +107,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         }
     }
 
-    function depositSingle(DepositToken[] calldata _depositTokens) external {
+    function depositSingle(DepositToken[] calldata _depositTokens) external depositIncomplete {
         for (uint i = 0; i < _depositTokens.length; i++) {
             require(
                 msg.sender == vAmmInfo.mainHolder || singleRewards[_depositTokens[i].singleRewardIndex].holder == msg.sender,
@@ -188,7 +189,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         }
     }
 
-    function depositBase() external onlyHolder {
+    function depositBase() external onlyHolder depositIncomplete {
         require(!baseComplete, "already deposited base asset");
         address baseAsset = ammData.baseAsset;
 
@@ -248,15 +249,29 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     // to create the pool and deposit assets after phase 0 ends
     // TODO create a struct here that should cover every AMM. If needed to support more add a second struct
-    function createInitialLiquidity(CreateNewPool _createPool, AddLiquidity _addLiquidity) external onlyHolder {
+    function createInitialLiquidity(CreateNewPool _createPool, AddLiquidity _addLiquidity)
+        external
+        onlyHolder
+        lpFundingWindow
+    {
         require(vAMMInfo.hasLiquidityLaunch, "only for new liquidity");
         IVestAMMLibrary(ammData.ammLibrary).deployPool(_createPool, _addLiquidity);
+        dealFunded = true;
     }
 
     // to create the pool and deposit assets after phase 0 ends
-    function createLiquidity(AddLiquidity _addLiquidity) external onlyHolder {
+    function createLiquidity(AddLiquidity _addLiquidity) external onlyHolder lpFundingWindow {
         require(!vAMMInfo.hasLiquidityLaunche, "only for existing liquidity");
         IVestAMMLibrary(ammData.ammLibrary).addLiquidity(_addLiquidity, false);
+        dealFunded = true;
+    }
+
+    function depositorWithdraw(uint256[] _tokenIds) external dealCancelled {
+        for (uint256 i; i < _tokenIds.length; i++) {
+            VestVestingToken memory schedule = vestingDetails[_tokenId];
+            IERC20(investmentToken).safeTransferFrom(address(this), msg.sender, schedule.amountDeposited);
+            emit Withdraw(msg.sender, schedule.amountDeposited);
+        }
     }
 
     // collect the fees from AMMs and send them to the Fee Module
@@ -394,6 +409,26 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     modifier depositIncomplete() {
         require(!depositComplete, "too late: deposit complete");
+        _;
+    }
+
+    modifier dealCancelled() {
+        require(
+            isCancelled ||
+                (!depositComplete && block.timestamp > depositExpiry) ||
+                (!dealFunded && block.timestamp > lpFundingExpiry),
+            "deal not cancelled"
+        );
+        _;
+    }
+
+    modifier lpFundingWindow() {
+        require(!isCancelled, "deal is cancelled");
+        // TODO double check < vs <= matches everywhere
+        require(
+            depositComplete && block.timestamp > depositExpiry && block.timestamp <= lpFundingExpiry,
+            "not in funding window"
+        );
         _;
     }
 

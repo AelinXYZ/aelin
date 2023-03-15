@@ -82,6 +82,8 @@ interface IVestAMM {
 
     event SetHolder(address indexed holder);
 
+    event Withdraw(address indexed depositor, uint256 amountDeposited);
+
     event Vouch(address indexed voucher);
 
     event Disavow(address indexed voucher);
