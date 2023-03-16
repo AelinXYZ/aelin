@@ -85,6 +85,8 @@ contract AelinPoolTest is Test, AelinTestUtils {
         uint256 aelinFee
     );
 
+    event WithdrawFromPool(address indexed purchaser, uint256 purchaseTokenAmount);
+
     /*//////////////////////////////////////////////////////////////
                             helpers
     //////////////////////////////////////////////////////////////*/
