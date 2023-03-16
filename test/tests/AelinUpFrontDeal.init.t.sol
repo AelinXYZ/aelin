@@ -683,8 +683,6 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
     }
 
     function test_CreateUpFrontDeal_AllowList() public {
-        string memory tempString;
-        address tempAddress;
         uint256 tempUint;
         bool tempBool;
         // balance
@@ -733,7 +731,6 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
     }
 
     function test_CreateUpFrontDeal_NftGating721() public {
-        string memory tempString;
         address tempAddress;
         uint256 tempUint;
         bool tempBool;
@@ -771,7 +768,6 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
     }
 
     function test_CreateUpFrontDeal_NftGatingPunks() public {
-        string memory tempString;
         address tempAddress;
         uint256 tempUint;
         bool tempBool;
@@ -804,7 +800,6 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
     }
 
     function test_CreateUpFrontDeal_NftGating1155() public {
-        string memory tempString;
         address tempAddress;
         uint256 tempUint;
         bool tempBool;

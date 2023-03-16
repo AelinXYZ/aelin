@@ -149,7 +149,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
      * if tokens were deposited directly, this method must still be called to start the purchasing period
      * @param _depositUnderlyingAmount how many underlying tokens the holder will transfer to the contract
      */
-    function depositUnderlyingTokens(uint256 _depositUnderlyingAmount) public onlyHolder {
+    function depositUnderlyingTokens(uint256 _depositUnderlyingAmount) external onlyHolder {
         address _underlyingDealToken = dealData.underlyingDealToken;
 
         require(IERC20(_underlyingDealToken).balanceOf(msg.sender) >= _depositUnderlyingAmount, "not enough balance");
@@ -247,7 +247,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     /**
      * @dev purchaser calls to claim their deal tokens or refund if the minimum raise does not pass
      */
-    function purchaserClaim() public nonReentrant purchasingOver {
+    function purchaserClaim() external nonReentrant purchasingOver {
         require(poolSharesPerUser[msg.sender] > 0, "no pool shares to claim with");
 
         address _purchaseToken = dealData.purchaseToken;
@@ -304,7 +304,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
      * their share of deal tokens
      * NOTE also calls the claim for the protocol fee
      */
-    function sponsorClaim() public nonReentrant purchasingOver passMinimumRaise onlySponsor {
+    function sponsorClaim() external nonReentrant purchasingOver passMinimumRaise onlySponsor {
         require(!sponsorClaimed, "sponsor already claimed");
         sponsorClaimed = true;
 
@@ -328,7 +328,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
      * underlying deal tokens if the minimum raise has not passed
      * NOTE also calls the claim for the protocol fee
      */
-    function holderClaim() public nonReentrant purchasingOver onlyHolder {
+    function holderClaim() external nonReentrant purchasingOver onlyHolder {
         require(!holderClaimed, "holder already claimed");
         holderClaimed = true;
 

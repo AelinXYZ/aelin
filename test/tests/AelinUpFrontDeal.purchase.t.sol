@@ -463,7 +463,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         vm.stopPrank();
     }
 
-    function testFuzz_AcceptDeal_RevertWhen_AmountOverAllocation(uint256 _purchaseAmount) public {
+    function test_AcceptDeal_RevertWhen_AmountOverAllocation() public {
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         vm.startPrank(user1);
         deal(address(purchaseToken), user1, type(uint256).max);
@@ -474,12 +474,11 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         vm.stopPrank();
     }
 
-    function testFuzz_AcceptDeal_RevertWhen_AmountTooSmall(uint256 _purchaseAmount) public {
+    function test_AcceptDeal_RevertWhen_AmountTooSmall() public {
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         vm.startPrank(user1);
         deal(address(purchaseToken), user1, type(uint256).max);
         purchaseToken.approve(address(dealAddressAllowList), type(uint256).max);
-        (, , uint256 allocatedAmount, ) = AelinUpFrontDeal(dealAddressAllowList).getAllowList(user1);
         vm.expectRevert("purchase amount too small");
         AelinUpFrontDeal(dealAddressAllowList).acceptDeal(nftPurchaseList, merkleDataEmpty, 0);
         vm.stopPrank();
@@ -1255,10 +1254,12 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
         uint256[] memory tokenIdsArray = new uint256[](2);
         // we get the allocation for each collection
-        (uint256 purchaseCollection1, , bool purchaseAmountPerToken1, , ) = AelinUpFrontDeal(dealAddressNftGating721)
-            .getNftCollectionDetails(address(collection721_1));
-        (uint256 purchaseCollection2, , bool purchaseAmountPerToken2, , ) = AelinUpFrontDeal(dealAddressNftGating721)
-            .getNftCollectionDetails(address(collection721_2));
+        (uint256 purchaseCollection1, , , , ) = AelinUpFrontDeal(dealAddressNftGating721).getNftCollectionDetails(
+            address(collection721_1)
+        );
+        (uint256 purchaseCollection2, , , , ) = AelinUpFrontDeal(dealAddressNftGating721).getNftCollectionDetails(
+            address(collection721_2)
+        );
 
         // checks pre-purchase
         bool walletClaimed;
@@ -1495,8 +1496,9 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
         uint256[] memory tokenIdsArray = new uint256[](2);
         // we get the allocation for each collection
-        (uint256 purchaseCollection, , bool purchaseAmountPerToken, , ) = AelinUpFrontDeal(dealAddressNftGatingPunks)
-            .getNftCollectionDetails(address(punks));
+        (uint256 purchaseCollection, , , , ) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftCollectionDetails(
+            address(punks)
+        );
 
         // we mint some punks
         MockPunks(punks).mint(user1, 1);
@@ -1627,8 +1629,9 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
         uint256[] memory tokenIdsArray = new uint256[](2);
         // we get the allocation for each collection
-        (uint256 purchaseCollection, , bool purchaseAmountPerToken, , ) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken)
-            .getNftCollectionDetails(address(punks));
+        (uint256 purchaseCollection, , , , ) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftCollectionDetails(
+            address(punks)
+        );
 
         // we mint some punks
         MockPunks(punks).mint(user1, 1);
@@ -1779,10 +1782,12 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressNftGating1155).dealConfig();
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](2);
-        (uint256 purchaseCollection1, , , , uint256[] memory minTokensEligible1) = AelinUpFrontDeal(dealAddressNftGating1155)
-            .getNftCollectionDetails(address(collection1155_1));
-        (uint256 purchaseCollection2, , , , uint256[] memory minTokensEligible2) = AelinUpFrontDeal(dealAddressNftGating1155)
-            .getNftCollectionDetails(address(collection1155_2));
+        (uint256 purchaseCollection1, , , , ) = AelinUpFrontDeal(dealAddressNftGating1155).getNftCollectionDetails(
+            address(collection1155_1)
+        );
+        (uint256 purchaseCollection2, , , , ) = AelinUpFrontDeal(dealAddressNftGating1155).getNftCollectionDetails(
+            address(collection1155_2)
+        );
 
         // we mint some tokens
         MockERC1155(address(collection1155_1)).mint(user1, 1, 100, "");
