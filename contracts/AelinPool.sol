@@ -186,7 +186,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
      * - the deal is in the purchase expiry window
      * - the cap has not been exceeded
      */
-    function purchasePoolTokens(uint256 _purchaseTokenAmount) external lock {
+    function purchasePoolTokens(uint256 _purchaseTokenAmount) external nonReentrant {
         require(block.timestamp < purchaseExpiry, "not in purchase window");
         require(!hasNftList, "has NFT list");
         if (hasAllowList) {
@@ -222,7 +222,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     function purchasePoolTokensWithNft(
         NftPurchaseList[] calldata _nftPurchaseList,
         uint256 _purchaseTokenAmount
-    ) external lock {
+    ) external nonReentrant {
         require(hasNftList, "pool does not have an NFT list");
         require(block.timestamp < purchaseExpiry, "not in purchase window");
 
@@ -454,7 +454,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         _acceptDealTokens(msg.sender, _poolTokenAmount, false);
     }
 
-    function _acceptDealTokens(address _recipient, uint256 _poolTokenAmount, bool _useMax) internal dealFunded lock {
+    function _acceptDealTokens(address _recipient, uint256 _poolTokenAmount, bool _useMax) internal dealFunded nonReentrant {
         (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
         (, uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
 
