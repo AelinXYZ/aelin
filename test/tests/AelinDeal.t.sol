@@ -396,10 +396,10 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         vm.assume(_tokenAmount > 0);
         vm.assume(_tokenAmount < poolTokenBalance);
         uint256 sponsorFee = (_tokenAmount *
-            10 ** (18 - AelinPool(poolNoOpenRedemptionDealAddress).purchaseTokenDecimals()) *
+            10**(18 - AelinPool(poolNoOpenRedemptionDealAddress).purchaseTokenDecimals()) *
             AelinPool(poolNoOpenRedemptionDealAddress).sponsorFee()) / BASE;
         uint256 aelinFee = (_tokenAmount *
-            10 ** (18 - AelinPool(poolNoOpenRedemptionDealAddress).purchaseTokenDecimals()) *
+            10**(18 - AelinPool(poolNoOpenRedemptionDealAddress).purchaseTokenDecimals()) *
             AELIN_FEE) / BASE;
 
         vm.startPrank(dealCreatorAddress);
@@ -428,10 +428,10 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         (, , uint256 openRedemptionEnd) = AelinDeal(dealNoOpenRedemptionAddress).proRataRedemption();
         uint256 poolTokenBalance = AelinPool(poolNoOpenRedemptionDealAddress).balanceOf(dealCreatorAddress);
         uint256 sponsorFee = (poolTokenBalance *
-            10 ** (18 - AelinPool(poolNoOpenRedemptionDealAddress).purchaseTokenDecimals()) *
+            10**(18 - AelinPool(poolNoOpenRedemptionDealAddress).purchaseTokenDecimals()) *
             AelinPool(poolNoOpenRedemptionDealAddress).sponsorFee()) / BASE;
         uint256 aelinFee = (poolTokenBalance *
-            10 ** (18 - AelinPool(poolNoOpenRedemptionDealAddress).purchaseTokenDecimals()) *
+            10**(18 - AelinPool(poolNoOpenRedemptionDealAddress).purchaseTokenDecimals()) *
             AELIN_FEE) / BASE;
 
         vm.startPrank(dealCreatorAddress);
