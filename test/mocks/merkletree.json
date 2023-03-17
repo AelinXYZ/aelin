@@ -1,38 +1,47 @@
 {
-	"merkleRoot": "0x3e6f463625369879b7583baf245a0ac065bd8a9bcb180ecc0ac126d5d71c94bb",
-	"tokenTotal": "0x03e8",
-	"claims": {
-		"0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f": {
-			"index": 0,
-			"amount": "0x64",
-			"proof": [
-				"0xfa0a69af54d730226f27b04a7fd8ac77312321e142342afe85789c470d98af8b",
-				"0x08dc84848cfc1b922ae607cc2af96186b9ebad7dbacdac0e1e16498d4d668968"
-			]
+	"format": "standard-v1",
+	"tree": [
+		"0x248ca4fec63d52d29430f99e5c769955dfb2a3ec509cc1593401187d3487e370",
+		"0x0a63a7efd99b0a48c1f4fa236bac555e316cff73519eeb0aee99a2787338385a",
+		"0xc4f80bb918ef5e099536eccc61682977f69bf93bae318ccee9106494b29cbe79",
+		"0xf8eca5b74c7de2055c42c0b1e97899698926417126af5f27ee7632e778ec82c6",
+		"0x81be000bb7ed07a2c13402cf256a2d1e6b2961edba12560b24789aa434fd0511",
+		"0x4d56183792276acd6b880733777be91e3476ed1c68e36c8a8355b61e64b49331",
+		"0x138553c9e25918e18502e13cf0a8886827188bf9f8ca07d864cb5e9ed0e5d86a"
+	],
+	"values": [
+		{
+			"value": [
+				"0",
+				"0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
+				"100000000000000000000"
+			],
+			"treeIndex": 3
 		},
-		"0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45": {
-			"index": 1,
-			"amount": "0x012c",
-			"proof": [
-				"0x01d9b9a8f81d36fcdc7b42f6d046e80322c76e4bfc2e7268bc5836daefcb0e1b",
-				"0x6e6e69baebe1517d01b2e091a9846d1e804deb013799817cbb2eae34fd588b8d"
-			]
+		{
+			"value": [
+				"1",
+				"0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
+				"300000000000000000000"
+			],
+			"treeIndex": 4
 		},
-		"0xE9bD9f77b864F658F3D1b807157B994fCd52B50B": {
-			"index": 2,
-			"amount": "0x0190",
-			"proof": [
-				"0xdefa96435aec82d201dbd2e5f050fb4e1fef5edac90ce1e03953f916a5e1132d",
-				"0x08dc84848cfc1b922ae607cc2af96186b9ebad7dbacdac0e1e16498d4d668968"
-			]
+		{
+			"value": [
+				"2",
+				"0xE9bD9f77b864F658F3D1b807157B994fCd52B50B",
+				"400000000000000000000"
+			],
+			"treeIndex": 5
 		},
-		"0xFF3f759B7ae44Cd75f6A9F714c9E1F4c6950D2aC": {
-			"index": 3,
-			"amount": "0xc8",
-			"proof": [
-				"0x680b4fbe83d755a7d55a7ba9545b74b3c7d88965ca09d21d2a7693f34fd1363c",
-				"0x6e6e69baebe1517d01b2e091a9846d1e804deb013799817cbb2eae34fd588b8d"
-			]
+		{
+			"value": [
+				"3",
+				"0xFF3f759B7ae44Cd75f6A9F714c9E1F4c6950D2aC",
+				"200000000000000000000"
+			],
+			"treeIndex": 6
 		}
-	}
+	],
+	"leafEncoding": ["uint256", "address", "uint256"]
 }

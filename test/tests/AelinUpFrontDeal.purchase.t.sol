@@ -812,15 +812,17 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         MerkleTree.UpFrontMerkleData memory merkleData;
 
-        merkleData.account = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
-        merkleData.index = 0;
-        merkleData.amount = 100;
+        merkleData.account = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
+        merkleData.index = 1;
+        merkleData.amount = 300000000000000000000;
         // Merkle tree created from ../mocks/merkletree.json
         merkleData.merkleProof = new bytes32[](2);
-        merkleData.merkleProof[0] = 0xfa0a69af54d730226f27b04a7fd8ac77312321e142342afe85789c470d98af8b;
-        merkleData.merkleProof[1] = 0x08dc84848cfc1b922ae607cc2af96186b9ebad7dbacdac0e1e16498d4d668968;
-        bytes32 root = 0x3e6f463625369879b7583baf245a0ac065bd8a9bcb180ecc0ac126d5d71c94bb;
-        bytes32 leaf = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
+        merkleData.merkleProof[0] = 0xf8eca5b74c7de2055c42c0b1e97899698926417126af5f27ee7632e778ec82c6;
+        merkleData.merkleProof[1] = 0xc4f80bb918ef5e099536eccc61682977f69bf93bae318ccee9106494b29cbe79;
+        bytes32 root = 0x248ca4fec63d52d29430f99e5c769955dfb2a3ec509cc1593401187d3487e370;
+        bytes32 leaf = keccak256(
+            bytes.concat(keccak256(abi.encode(merkleData.index, merkleData.account, merkleData.amount)))
+        );
         assertEq(MerkleProof.verify(merkleData.merkleProof, root, leaf), true);
         IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
         merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
@@ -851,7 +853,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         deal(address(purchaseToken), user, type(uint256).max);
         purchaseToken.approve(address(merkleDealAddress), type(uint256).max);
         vm.expectRevert("purchasing more than allowance");
-        AelinUpFrontDeal(merkleDealAddress).acceptDeal(nftPurchaseList, merkleData, 101);
+        AelinUpFrontDeal(merkleDealAddress).acceptDeal(nftPurchaseList, merkleData, 300000000000000000001);
         vm.stopPrank();
     }
 
@@ -861,13 +863,15 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         MerkleTree.UpFrontMerkleData memory merkleData;
         merkleData.account = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
         merkleData.index = 0;
-        merkleData.amount = 100;
+        merkleData.amount = 1900000000000000000000;
         // Merkle tree created from ../mocks/merkletree.json
         merkleData.merkleProof = new bytes32[](2);
-        merkleData.merkleProof[0] = 0xfa0a69af54d730226f27b04a7fd8ac77312321e142342afe85789c470d98af8b;
-        merkleData.merkleProof[1] = 0x08dc84848cfc1b922ae607cc2af96186b9ebad7dbacdac0e1e16498d4d668988;
-        bytes32 root = 0x3e6f463625369879b7583baf245a0ac065bd8a9bcb180ecc0ac126d5d71c94bb;
-        bytes32 leaf = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
+        merkleData.merkleProof[0] = 0x81be000bb7ed07a2c13402cf256a2d1e6b2961edba12560b24789aa434fd0511;
+        merkleData.merkleProof[1] = 0xc4f80bb918ef5e099536eccc61682977f69bf93bae318ccee9106494b29cbe79;
+        bytes32 root = 0x248ca4fec63d52d29430f99e5c769955dfb2a3ec509cc1593401187d3487e370;
+        bytes32 leaf = keccak256(
+            bytes.concat(keccak256(abi.encode(merkleData.index, merkleData.account, merkleData.amount)))
+        );
         assertEq(MerkleProof.verify(merkleData.merkleProof, root, leaf), false);
         IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
         merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
@@ -903,21 +907,23 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
     }
 
     function testFuzz_AcceptDeal_RevertWhen_UseOtherWalletMerkleAllowance(address _user) public {
-        vm.assume(_user != address(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f));
+        vm.assume(_user != address(0xE9bD9f77b864F658F3D1b807157B994fCd52B50B));
         vm.assume(_user != address(0));
         AelinAllowList.InitData memory allowListInitEmpty;
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         MerkleTree.UpFrontMerkleData memory merkleData;
 
-        merkleData.account = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
-        merkleData.index = 0;
-        merkleData.amount = 100;
+        merkleData.account = 0xE9bD9f77b864F658F3D1b807157B994fCd52B50B;
+        merkleData.index = 2;
+        merkleData.amount = 400000000000000000000;
         // Merkle tree created from ../mocks/merkletree.json
         merkleData.merkleProof = new bytes32[](2);
-        merkleData.merkleProof[0] = 0xfa0a69af54d730226f27b04a7fd8ac77312321e142342afe85789c470d98af8b;
-        merkleData.merkleProof[1] = 0x08dc84848cfc1b922ae607cc2af96186b9ebad7dbacdac0e1e16498d4d668968;
-        bytes32 root = 0x3e6f463625369879b7583baf245a0ac065bd8a9bcb180ecc0ac126d5d71c94bb;
-        bytes32 leaf = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
+        merkleData.merkleProof[0] = 0x138553c9e25918e18502e13cf0a8886827188bf9f8ca07d864cb5e9ed0e5d86a;
+        merkleData.merkleProof[1] = 0x0a63a7efd99b0a48c1f4fa236bac555e316cff73519eeb0aee99a2787338385a;
+        bytes32 root = 0x248ca4fec63d52d29430f99e5c769955dfb2a3ec509cc1593401187d3487e370;
+        bytes32 leaf = keccak256(
+            bytes.concat(keccak256(abi.encode(merkleData.index, merkleData.account, merkleData.amount)))
+        );
         assertEq(MerkleProof.verify(merkleData.merkleProof, root, leaf), true);
         IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
         merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
@@ -955,15 +961,17 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         AelinAllowList.InitData memory allowListInitEmpty;
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         MerkleTree.UpFrontMerkleData memory merkleData;
-        merkleData.account = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
-        merkleData.index = 0;
-        merkleData.amount = 100;
+        merkleData.account = 0xFF3f759B7ae44Cd75f6A9F714c9E1F4c6950D2aC;
+        merkleData.index = 3;
+        merkleData.amount = 200000000000000000000;
         // Merkle tree created from ../mocks/merkletree.json
         merkleData.merkleProof = new bytes32[](2);
-        merkleData.merkleProof[0] = 0xfa0a69af54d730226f27b04a7fd8ac77312321e142342afe85789c470d98af8b;
-        merkleData.merkleProof[1] = 0x08dc84848cfc1b922ae607cc2af96186b9ebad7dbacdac0e1e16498d4d668968;
-        bytes32 root = 0x3e6f463625369879b7583baf245a0ac065bd8a9bcb180ecc0ac126d5d71c94bb;
-        bytes32 leaf = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
+        merkleData.merkleProof[0] = 0x4d56183792276acd6b880733777be91e3476ed1c68e36c8a8355b61e64b49331;
+        merkleData.merkleProof[1] = 0x0a63a7efd99b0a48c1f4fa236bac555e316cff73519eeb0aee99a2787338385a;
+        bytes32 root = 0x248ca4fec63d52d29430f99e5c769955dfb2a3ec509cc1593401187d3487e370;
+        bytes32 leaf = keccak256(
+            bytes.concat(keccak256(abi.encode(merkleData.index, merkleData.account, merkleData.amount)))
+        );
         assertEq(MerkleProof.verify(merkleData.merkleProof, root, leaf), true);
         IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
         merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
@@ -1912,13 +1920,15 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         MerkleTree.UpFrontMerkleData memory merkleData;
         merkleData.account = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
         merkleData.index = 0;
-        merkleData.amount = 100;
+        merkleData.amount = 100000000000000000000;
         // Merkle tree created from ../mocks/merkletree.json
         merkleData.merkleProof = new bytes32[](2);
-        merkleData.merkleProof[0] = 0xfa0a69af54d730226f27b04a7fd8ac77312321e142342afe85789c470d98af8b;
-        merkleData.merkleProof[1] = 0x08dc84848cfc1b922ae607cc2af96186b9ebad7dbacdac0e1e16498d4d668968;
-        bytes32 root = 0x3e6f463625369879b7583baf245a0ac065bd8a9bcb180ecc0ac126d5d71c94bb;
-        bytes32 leaf = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
+        merkleData.merkleProof[0] = 0x81be000bb7ed07a2c13402cf256a2d1e6b2961edba12560b24789aa434fd0511;
+        merkleData.merkleProof[1] = 0xc4f80bb918ef5e099536eccc61682977f69bf93bae318ccee9106494b29cbe79;
+        bytes32 root = 0x248ca4fec63d52d29430f99e5c769955dfb2a3ec509cc1593401187d3487e370;
+        bytes32 leaf = keccak256(
+            bytes.concat(keccak256(abi.encode(merkleData.index, merkleData.account, merkleData.amount)))
+        );
         assertEq(MerkleProof.verify(merkleData.merkleProof, root, leaf), true);
         IAelinUpFrontDeal.UpFrontDealData memory merkleDealData;
         merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
