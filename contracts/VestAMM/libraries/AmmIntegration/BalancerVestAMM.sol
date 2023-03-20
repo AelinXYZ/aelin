@@ -2,7 +2,7 @@
 pragma solidity 0.8.6;
 pragma experimental ABIEncoderV2;
 
-import "../interfaces/IVestAMMLibrary.sol";
+import "../../interfaces/IVestAMMLibrary.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 import "@balancer-labs/v2-interfaces/contracts/pool-weighted/WeightedPoolUserData.sol";
 
@@ -15,13 +15,45 @@ library BalancerVestAMM is IVestAMMLibrary {
         weightedPoolFactory = IWeightedPoolFactory(_weightedPoolFactory);
     }
 
-    function deployPool(CreateNewPool _createPool, AddLiquidity _addLiquidity) external {
-        // arguments might need: name, symbol, tokens, normalizedWeights, rateProviders, swapFeePercentage, owner
+    struct DeployPoolBalancer {
+        uint256 testNum;
+    }
 
+    struct AddLiquidityBalancer {
+        uint256 testNum;
+    }
+
+    function parseDeployPoolArgs(CreateNewPool _createPool) internal {
+        // get each field you need
+        // return the fields you need
+    }
+
+    function parseAddLiquidityArgs(AddLiquidity _addLiquidity) internal {
+        // get each field you need
+        // return the fields you need
+    }
+
+    // 0. deployPool (with the right assets & weightings) only when its a new liquidity launch
+    // 1. add liquidity. for every pool (5M ABC, 1M sUSD) (1M ABC, 1M sUSD) (5M ABC, 500K sUSD)
+    // - check the ratio of assets in the pool
+    // - deposit according to the ratio
+    // - track the amount of LP tokens that we receive
+    // 2. remove liquidity
+    // - pass in the number of LP tokens to remove based on the users ownership of the LP tokens + the users vesting schedule
+    // - determine how many LP tokens were removed and track accordingly
+    // 3. fee calculation view + the ability to capture fees from LP tokens
+    // - imagine we have 5M ABC/ 1M sUSD locked for 6 months. this yields 20% in swap fees
+    // - calculate the amount of swap fees earned. Send 20% to the AelinFeeModule
+    // - not for Balancer: if the fees are not reinvested into the LP tokens, write a method to reinvest them
+
+    function deployPool(CreateNewPool _createPool, AddLiquidity _addLiquidity) external {
+        // 50/50 pool KWENTA/sUSD on Balancer
+        // arguments might need: name, symbol, tokens, normalizedWeights, rateProviders, swapFeePercentage, owner
+        DeployPoolBalancer deployArgs = parseDeployPoolArgs(_createPool);
         // TODO make sure we are calling the latest pool factory with the right arguments
         // TODO save the vault here
         // save the pool id
-        balancerPool = weightedPoolFactory.create();
+        balancerPool = weightedPoolFactory.create(deployArgs);
         poolId = balancerPool.id;
         // name,
         // symbol,
@@ -111,16 +143,17 @@ library BalancerVestAMM is IVestAMMLibrary {
         // arguments might need: uint256 maxBurnAmount, IERC20[] calldata tokens, uint256[] calldata exactAmountsOut
         // arguments might need: uint256 poolAmountIn, IERC20[] calldata tokens, uint256[] calldata minAmountsOut
         // TODO add modifiers here to restrict access
+        // TODO add parsing function here
         // encode withdraw request
-        bytes memory userData = abi.encode(
-            WeightedPoolUserData.ExitKind.BPT_IN_FOR_EXACT_TOKENS_OUT,
-            exactAmountsOut,
-            maxBurnAmount
-        );
+        // bytes memory userData = abi.encode(
+        //     WeightedPoolUserData.ExitKind.BPT_IN_FOR_EXACT_TOKENS_OUT,
+        //     exactAmountsOut,
+        //     maxBurnAmount
+        // );
 
-        _withdraw(poolId, maxBurnAmount, tokens, exactAmountsOut, userData);
-        // bytes memory userData = abi.encode(WeightedPoolUserData.ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT, poolAmountIn);
-        // _withdraw(poolId, poolAmountIn, tokens, minAmountsOut, userData);
+        // _withdraw(poolId, maxBurnAmount, tokens, exactAmountsOut, userData);
+        bytes memory userData = abi.encode(WeightedPoolUserData.ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT, poolAmountIn);
+        _withdraw(poolId, poolAmountIn, tokens, minAmountsOut, userData);
     }
 
     function _withdraw(

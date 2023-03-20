@@ -59,6 +59,7 @@ interface IVestAMM {
         VestingSchedule vestingData;
         MigrationRules migrationRules; // ??
         address singleHolder;
+        uint256 amountClaimed;
     }
 
     struct DealAccess {
@@ -83,6 +84,8 @@ interface IVestAMM {
     event SetHolder(address indexed holder);
 
     event Withdraw(address indexed depositor, uint256 amountDeposited);
+
+    event SentFees(address indexed token, uint256 amount);
 
     event Vouch(address indexed voucher);
 

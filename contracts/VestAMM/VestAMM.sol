@@ -22,7 +22,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     uint256 constant BASE = 100 * 10**18;
     uint256 constant VEST_ASSET_FEE = 1 * 10**18;
-    uint256 constant VEST_SWAP_FEE = 10 * 10**18;
+    uint256 constant VEST_SWAP_FEE = 20 * 10**18;
     uint256 public depositExpiry;
     uint256 public lpFundingExpiry;
     uint256 public totalLPClaimed;
@@ -32,6 +32,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     MerkleTree.TrackClaimed private trackClaimed;
     AelinAllowList.AllowList public allowList;
     AelinNftGating.NftGatingData public nftGating;
+    AelinFeeModule public aelinFeeModule;
 
     uint256 public totalDeposited;
     uint256 investmentTokenPerBase;
@@ -48,8 +49,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     bool public isCancelled;
     bool public dealFunded;
 
-    address public vestAmmFeeModule;
-    address public vestDAO;
     address public lpToken;
 
     /**
@@ -60,8 +59,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         VAmmInfo calldata _vAmmInfo,
         SingleRewardConfig[] calldata _singleRewards,
         DealAccess calldata _dealAccess,
-        address _vestAmmFeeModule,
-        address _vestDAO
+        address _aelinFeeModule
     ) external initOnce {
         validateSingleRewards(singleRewards);
         validateVestingSchedules(_vAmmInfo.vestingSchedules);
@@ -73,8 +71,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // NOTE we may need to emit all the single rewards holders for the subgraph to know they need to make a deposit
         singleRewards = _singleRewards;
         dealAccess = _dealAccess;
-        vestAmmFeeModule = _vestAmmFeeModule;
-        vestDAO = _vestDAO;
+        aelinFeeModule = _aelinFeeModule;
 
         // TODO if we are doing a liquidity growth round we need to read the prices of the assets
         // from onchain here and set the current price as the median price
@@ -206,8 +203,23 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         setDepositComplete();
     }
 
-    // TODO ability for main or single holders to withdraw excess funding deposited
-    function withdrawExcessFunding() {}
+    function withdrawExcessFunding(bool _isBase, uint256 _singleIndex) {
+        // TODO emit any events?
+        // TODO store baseAccepted under acceptDeal probably
+        if (_isBase && holderDeposits[msg.sender][baseAsset] > (ammData.baseAssetAmount - baseAccepted)) {
+            require(msg.sender == vAmmInfo.mainHolder, "not the right holder");
+            uint256 excessAmount = holderDeposits[msg.sender][baseAsset] - (ammData.baseAssetAmount - baseAccepted);
+            IERC20(ammData.baseAsset).safeTransferFrom(address(this), msg.sender, excessAmount);
+        } else {
+            require(
+                msg.sender == vAmmInfo.mainHolder || singleRewards[_singleIndex].holder == msg.sender,
+                "not the right holder"
+            );
+            uint256 excessAmount = holderDeposits[msg.sender][singleRewards[_singleIndex].token] -
+                (singleRewards[_singleIndex].rewardTokenTotal - singleRewards[_singleIndex].amountClaimed);
+            IERC20(singleRewards[_singleIndex].token).safeTransferFrom(address(this), msg.sender, excessAmount);
+        }
+    }
 
     function acceptDeal(
         AelinNftGating.NftPurchaseList[] calldata _nftPurchaseList,
@@ -256,14 +268,22 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     {
         require(vAMMInfo.hasLiquidityLaunch, "only for new liquidity");
         IVestAMMLibrary(ammData.ammLibrary).deployPool(_createPool, _addLiquidity);
-        dealFunded = true;
+        finalizeVesting();
     }
 
     // to create the pool and deposit assets after phase 0 ends
     function createLiquidity(AddLiquidity _addLiquidity) external onlyHolder lpFundingWindow {
         require(!vAMMInfo.hasLiquidityLaunche, "only for existing liquidity");
         IVestAMMLibrary(ammData.ammLibrary).addLiquidity(_addLiquidity, false);
+        finalizeVesting();
+    }
+
+    function finalizeVesting() internal {
         dealFunded = true;
+        for (uint256 i; i < _singleRewards.length; i++) {
+            uint256 feeAmount = _singleRewards[i].reward (1e18 - deallocationPercent) / 1e18;
+            sendFeesToAelin(, feeAmount);
+        }
     }
 
     // for when the deal is cancelled
@@ -384,10 +404,10 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         emit ClaimedToken(claimToken, _owner, claimableAmount, _claimType);
     }
 
-    function sendFeesToVestDAO(address[] tokens) external {
-        for (uint256 i; i < tokens.length; i++) {
-            IERC20(tokens[i]).safeTransfer(vestDAO, IERC20(tokens[i]).balanceOf(address(this)));
-        }
+    function sendFeesToAelin(address _token, uint256 _amount) external {
+        IERC20(_token).approve(aelinFeeModule, _amount);
+        AelinFeeModule(aelinFeeModule).sendFees(_token, _amount);
+        emit SentFees(_token, _amount);
     }
 
     function validateSingleRewards(SingleRewardConfig[] _singleRewards) internal {
@@ -400,6 +420,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             require(rewardToken != address(0), "cannot pass null address");
             // DO we need this field
             require(rewardPerQuote > 0, "rpq: must pass an amount");
+            require(amountClaimed == 0, "amount claimed must be 0");
             require(rewardTokenTotal > 0, "rtt: must pass an amount");
             VestingSchedule[] vestingSchedule = [_singleRewards.vestingData];
             validateVestingSchedules(vestingSchedule);
