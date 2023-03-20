@@ -86,6 +86,7 @@ contract AelinPoolTest is Test, AelinTestUtils {
     );
 
     event WithdrawFromPool(address indexed purchaser, uint256 purchaseTokenAmount);
+    event Transfer(address indexed from, address indexed to, uint256 value);
 
     /*//////////////////////////////////////////////////////////////
                             helpers
@@ -2167,39 +2168,508 @@ contract AelinPoolTest is Test, AelinTestUtils {
 
         vm.startPrank(user1);
         uint256 acceptedAmount = poolVars.pool.maxProRataAmount(user1);
-        uint256 aelinFeeAmount = (acceptedAmount * 10**(18 - MockERC20(purchaseToken).decimals()) * AELIN_FEE) / BASE;
-        uint256 sponsorFeeAmount = (acceptedAmount *
-            10**(18 - MockERC20(purchaseToken).decimals()) *
-            boundedVars.sponsorFee) / BASE;
+
+        uint256 poolTokenDealFormatted = acceptedAmount * 10**(18 - MockERC20(purchaseToken).decimals());
+        uint256 aelinFeeAmount = (poolTokenDealFormatted * AELIN_FEE) / BASE;
+        uint256 sponsorFeeAmount = (poolTokenDealFormatted * boundedVars.sponsorFee) / BASE;
+        uint256 underlyingPerDealExchangeRate = (boundedVars.underlyingDealTokenTotal * 1e18) /
+            (boundedVars.purchaseTokenTotalForDeal * 10**(18 - MockERC20(purchaseToken).decimals()));
+
+        uint256 underlyingProtocolFees = (underlyingPerDealExchangeRate * aelinFeeAmount) / 1e18;
+
+        // Assert
         vm.expectEmit(true, true, true, true, address(poolVars.pool));
         emit AcceptDeal(user1, poolVars.dealAddress, acceptedAmount, sponsorFeeAmount, aelinFeeAmount);
         poolVars.pool.acceptDealTokens(acceptedAmount);
 
         assertEq(poolVars.pool.amountAccepted(user1), acceptedAmount);
         assertEq(poolVars.pool.totalAmountAccepted(), acceptedAmount);
+        assertEq(poolVars.pool.totalSponsorFeeAmount(), sponsorFeeAmount);
+        assertEq(
+            MockERC20(underlyingDealToken).balanceOf(address(AelinDeal(poolVars.dealAddress).aelinFeeEscrow())),
+            underlyingProtocolFees
+        );
+        assertEq(
+            AelinDeal(poolVars.dealAddress).totalUnderlyingAccepted(),
+            poolTokenDealFormatted - (sponsorFeeAmount + aelinFeeAmount)
+        );
         assertEq(MockERC20(purchaseToken).balanceOf(user2), acceptedAmount);
         vm.stopPrank();
     }
 
-    function testFuzz_AcceptDealTokens_PoolERC721() public {}
+    function testFuzz_AcceptDealTokens_PoolERC721(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenAmount,
+        uint256 _purchaseTokenCap,
+        uint256 _proRataRedemptionPeriod,
+        uint256 _openRedemptionPeriod,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _holderFundingExpiry,
+        uint256 _purchaseTokenTotalForDeal
+    ) public {
+        BoundedVars memory boundedVars = boundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _proRataRedemptionPeriod,
+            _openRedemptionPeriod,
+            _vestingPeriod,
+            _vestingCliffPeriod,
+            _underlyingDealTokenTotal,
+            _holderFundingExpiry,
+            _purchaseTokenTotalForDeal
+        );
 
-    function testFuzz_AcceptDealTokens_PoolERC1155() public {}
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.ERC721
+        );
+
+        // Assert
+        vm.startPrank(user1);
+        MockERC20(purchaseToken).approve(address(poolVars.pool), boundedVars.purchaseTokenAmount);
+        MockERC721(collection721_1).mint(user1, 1);
+        poolVars.pool.purchasePoolTokensWithNft(poolVars.nftPurchaseList, boundedVars.purchaseTokenAmount);
+
+        vm.warp(boundedVars.purchaseDuration + 1);
+
+        poolVars.dealAddress = poolVars.pool.createDeal(
+            address(underlyingDealToken),
+            boundedVars.purchaseTokenTotalForDeal,
+            boundedVars.underlyingDealTokenTotal,
+            boundedVars.vestingPeriod,
+            boundedVars.vestingCliffPeriod,
+            boundedVars.proRataRedemptionPeriod,
+            boundedVars.openRedemptionPeriod,
+            user2,
+            boundedVars.holderFundingExpiry
+        );
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        deal(address(underlyingDealToken), address(user2), type(uint256).max);
+        MockERC20(address(underlyingDealToken)).approve(address(poolVars.dealAddress), boundedVars.underlyingDealTokenTotal);
+        AelinDeal(poolVars.dealAddress).depositUnderlying(boundedVars.underlyingDealTokenTotal);
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        uint256 acceptedAmount = poolVars.pool.maxProRataAmount(user1);
+
+        uint256 poolTokenDealFormatted = acceptedAmount * 10**(18 - MockERC20(purchaseToken).decimals());
+        uint256 aelinFeeAmount = (poolTokenDealFormatted * AELIN_FEE) / BASE;
+        uint256 sponsorFeeAmount = (poolTokenDealFormatted * boundedVars.sponsorFee) / BASE;
+        uint256 underlyingPerDealExchangeRate = (boundedVars.underlyingDealTokenTotal * 1e18) /
+            (boundedVars.purchaseTokenTotalForDeal * 10**(18 - MockERC20(purchaseToken).decimals()));
+
+        uint256 underlyingProtocolFees = (underlyingPerDealExchangeRate * aelinFeeAmount) / 1e18;
+
+        // Assert
+        vm.expectEmit(true, true, true, true, address(poolVars.pool));
+        emit AcceptDeal(user1, poolVars.dealAddress, acceptedAmount, sponsorFeeAmount, aelinFeeAmount);
+        poolVars.pool.acceptDealTokens(acceptedAmount);
+
+        assertEq(poolVars.pool.amountAccepted(user1), acceptedAmount);
+        assertEq(poolVars.pool.totalAmountAccepted(), acceptedAmount);
+        assertEq(poolVars.pool.totalSponsorFeeAmount(), sponsorFeeAmount);
+        assertEq(
+            MockERC20(underlyingDealToken).balanceOf(address(AelinDeal(poolVars.dealAddress).aelinFeeEscrow())),
+            underlyingProtocolFees
+        );
+        assertEq(
+            AelinDeal(poolVars.dealAddress).totalUnderlyingAccepted(),
+            poolTokenDealFormatted - (sponsorFeeAmount + aelinFeeAmount)
+        );
+        assertEq(MockERC20(purchaseToken).balanceOf(user2), acceptedAmount);
+        vm.stopPrank();
+    }
+
+    function testFuzz_AcceptDealTokens_PoolERC1155(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenAmount,
+        uint256 _purchaseTokenCap,
+        uint256 _proRataRedemptionPeriod,
+        uint256 _openRedemptionPeriod,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _holderFundingExpiry,
+        uint256 _purchaseTokenTotalForDeal
+    ) public {
+        BoundedVars memory boundedVars = boundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _proRataRedemptionPeriod,
+            _openRedemptionPeriod,
+            _vestingPeriod,
+            _vestingCliffPeriod,
+            _underlyingDealTokenTotal,
+            _holderFundingExpiry,
+            _purchaseTokenTotalForDeal
+        );
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.ERC1155
+        );
+
+        // Assert
+        vm.startPrank(user1);
+        MockERC20(purchaseToken).approve(address(poolVars.pool), boundedVars.purchaseTokenAmount);
+        MockERC1155(collection1155_1).mint(user1, 1, 100, "");
+        poolVars.pool.purchasePoolTokensWithNft(poolVars.nftPurchaseList, boundedVars.purchaseTokenAmount);
+
+        vm.warp(boundedVars.purchaseDuration + 1);
+
+        poolVars.dealAddress = poolVars.pool.createDeal(
+            address(underlyingDealToken),
+            boundedVars.purchaseTokenTotalForDeal,
+            boundedVars.underlyingDealTokenTotal,
+            boundedVars.vestingPeriod,
+            boundedVars.vestingCliffPeriod,
+            boundedVars.proRataRedemptionPeriod,
+            boundedVars.openRedemptionPeriod,
+            user2,
+            boundedVars.holderFundingExpiry
+        );
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        deal(address(underlyingDealToken), address(user2), type(uint256).max);
+        MockERC20(address(underlyingDealToken)).approve(address(poolVars.dealAddress), boundedVars.underlyingDealTokenTotal);
+        AelinDeal(poolVars.dealAddress).depositUnderlying(boundedVars.underlyingDealTokenTotal);
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        uint256 acceptedAmount = poolVars.pool.maxProRataAmount(user1);
+
+        uint256 poolTokenDealFormatted = acceptedAmount * 10**(18 - MockERC20(purchaseToken).decimals());
+        uint256 aelinFeeAmount = (poolTokenDealFormatted * AELIN_FEE) / BASE;
+        uint256 sponsorFeeAmount = (poolTokenDealFormatted * boundedVars.sponsorFee) / BASE;
+        uint256 underlyingPerDealExchangeRate = (boundedVars.underlyingDealTokenTotal * 1e18) /
+            (boundedVars.purchaseTokenTotalForDeal * 10**(18 - MockERC20(purchaseToken).decimals()));
+
+        uint256 underlyingProtocolFees = (underlyingPerDealExchangeRate * aelinFeeAmount) / 1e18;
+
+        // Assert
+        vm.expectEmit(true, true, true, true, address(poolVars.pool));
+        emit AcceptDeal(user1, poolVars.dealAddress, acceptedAmount, sponsorFeeAmount, aelinFeeAmount);
+        poolVars.pool.acceptDealTokens(acceptedAmount);
+
+        assertEq(poolVars.pool.amountAccepted(user1), acceptedAmount);
+        assertEq(poolVars.pool.totalAmountAccepted(), acceptedAmount);
+        assertEq(poolVars.pool.totalSponsorFeeAmount(), sponsorFeeAmount);
+        assertEq(
+            MockERC20(underlyingDealToken).balanceOf(address(AelinDeal(poolVars.dealAddress).aelinFeeEscrow())),
+            underlyingProtocolFees
+        );
+        assertEq(
+            AelinDeal(poolVars.dealAddress).totalUnderlyingAccepted(),
+            poolTokenDealFormatted - (sponsorFeeAmount + aelinFeeAmount)
+        );
+        assertEq(MockERC20(purchaseToken).balanceOf(user2), acceptedAmount);
+        vm.stopPrank();
+    }
 
     /*//////////////////////////////////////////////////////////////
                             acceptMaxDealTokens
     //////////////////////////////////////////////////////////////*/
 
-    function testFuzz_AcceptMaxDealTokens_Pool() public {}
+    function testFuzz_AcceptMaxDealTokens_Pool(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenAmount,
+        uint256 _purchaseTokenCap,
+        uint256 _proRataRedemptionPeriod,
+        uint256 _openRedemptionPeriod,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _holderFundingExpiry,
+        uint256 _purchaseTokenTotalForDeal
+    ) public {
+        BoundedVars memory boundedVars = boundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _proRataRedemptionPeriod,
+            _openRedemptionPeriod,
+            _vestingPeriod,
+            _vestingCliffPeriod,
+            _underlyingDealTokenTotal,
+            _holderFundingExpiry,
+            _purchaseTokenTotalForDeal
+        );
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.NONE
+        );
+
+        // Assert
+        vm.startPrank(user1);
+        MockERC20(purchaseToken).approve(address(poolVars.pool), boundedVars.purchaseTokenAmount);
+        poolVars.pool.purchasePoolTokens(boundedVars.purchaseTokenAmount);
+        vm.warp(boundedVars.purchaseDuration + 1);
+
+        vm.warp(boundedVars.purchaseDuration + 1);
+
+        poolVars.dealAddress = poolVars.pool.createDeal(
+            address(underlyingDealToken),
+            boundedVars.purchaseTokenTotalForDeal,
+            boundedVars.underlyingDealTokenTotal,
+            boundedVars.vestingPeriod,
+            boundedVars.vestingCliffPeriod,
+            boundedVars.proRataRedemptionPeriod,
+            boundedVars.openRedemptionPeriod,
+            user2,
+            boundedVars.holderFundingExpiry
+        );
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        deal(address(underlyingDealToken), address(user2), type(uint256).max);
+        MockERC20(address(underlyingDealToken)).approve(address(poolVars.dealAddress), boundedVars.underlyingDealTokenTotal);
+        AelinDeal(poolVars.dealAddress).depositUnderlying(boundedVars.underlyingDealTokenTotal);
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        uint256 acceptedAmount = poolVars.pool.maxProRataAmount(user1);
+
+        uint256 poolTokenDealFormatted = acceptedAmount * 10**(18 - MockERC20(purchaseToken).decimals());
+        uint256 aelinFeeAmount = (poolTokenDealFormatted * AELIN_FEE) / BASE;
+        uint256 sponsorFeeAmount = (poolTokenDealFormatted * boundedVars.sponsorFee) / BASE;
+        uint256 underlyingPerDealExchangeRate = (boundedVars.underlyingDealTokenTotal * 1e18) /
+            (boundedVars.purchaseTokenTotalForDeal * 10**(18 - MockERC20(purchaseToken).decimals()));
+
+        uint256 underlyingProtocolFees = (underlyingPerDealExchangeRate * aelinFeeAmount) / 1e18;
+
+        // Assert
+        vm.expectEmit(true, true, true, true, address(poolVars.pool));
+        emit AcceptDeal(user1, poolVars.dealAddress, acceptedAmount, sponsorFeeAmount, aelinFeeAmount);
+        poolVars.pool.acceptMaxDealTokens();
+
+        assertEq(poolVars.pool.amountAccepted(user1), acceptedAmount);
+        assertEq(poolVars.pool.totalAmountAccepted(), acceptedAmount);
+        assertEq(poolVars.pool.totalSponsorFeeAmount(), sponsorFeeAmount);
+        assertEq(
+            MockERC20(underlyingDealToken).balanceOf(address(AelinDeal(poolVars.dealAddress).aelinFeeEscrow())),
+            underlyingProtocolFees
+        );
+        assertEq(
+            AelinDeal(poolVars.dealAddress).totalUnderlyingAccepted(),
+            poolTokenDealFormatted - (sponsorFeeAmount + aelinFeeAmount)
+        );
+        assertEq(MockERC20(purchaseToken).balanceOf(user2), acceptedAmount);
+        vm.stopPrank();
+    }
 
     /*//////////////////////////////////////////////////////////////
                             maxProRataAmount
     //////////////////////////////////////////////////////////////*/
 
-    function testFuzz_MaxProRata_Pool() public {}
+    function testFuzz_MaxProRata_Pool(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenAmount,
+        uint256 _purchaseTokenCap,
+        uint256 _proRataRedemptionPeriod,
+        uint256 _openRedemptionPeriod,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _holderFundingExpiry,
+        uint256 _purchaseTokenTotalForDeal
+    ) public {
+        BoundedVars memory boundedVars = boundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _proRataRedemptionPeriod,
+            _openRedemptionPeriod,
+            _vestingPeriod,
+            _vestingCliffPeriod,
+            _underlyingDealTokenTotal,
+            _holderFundingExpiry,
+            _purchaseTokenTotalForDeal
+        );
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.NONE
+        );
+
+        // Assert
+        vm.startPrank(user1);
+        MockERC20(purchaseToken).approve(address(poolVars.pool), boundedVars.purchaseTokenAmount);
+        poolVars.pool.purchasePoolTokens(boundedVars.purchaseTokenAmount);
+        vm.warp(boundedVars.purchaseDuration + 1);
+
+        poolVars.dealAddress = poolVars.pool.createDeal(
+            address(underlyingDealToken),
+            boundedVars.purchaseTokenTotalForDeal,
+            boundedVars.underlyingDealTokenTotal,
+            boundedVars.vestingPeriod,
+            boundedVars.vestingCliffPeriod,
+            boundedVars.proRataRedemptionPeriod,
+            boundedVars.openRedemptionPeriod,
+            user2,
+            boundedVars.holderFundingExpiry
+        );
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        deal(address(underlyingDealToken), address(user2), type(uint256).max);
+        MockERC20(address(underlyingDealToken)).approve(address(poolVars.dealAddress), boundedVars.underlyingDealTokenTotal);
+
+        assertEq(poolVars.pool.maxProRataAmount(user1), 0);
+
+        AelinDeal(poolVars.dealAddress).depositUnderlying(boundedVars.underlyingDealTokenTotal);
+        vm.stopPrank();
+
+        uint256 proRataConversion = (boundedVars.purchaseTokenTotalForDeal * 1e18) / boundedVars.purchaseTokenAmount;
+        uint256 maxProRataAmount = (proRataConversion * boundedVars.purchaseTokenAmount) / 1e18;
+
+        assertEq(poolVars.pool.maxProRataAmount(user1), maxProRataAmount);
+
+        uint256 acceptAmount = bound(_purchaseTokenAmount, 0, maxProRataAmount);
+
+        vm.startPrank(user1);
+        poolVars.pool.acceptDealTokens(acceptAmount);
+        vm.stopPrank();
+
+        proRataConversion = (boundedVars.purchaseTokenTotalForDeal * 1e18) / boundedVars.purchaseTokenAmount;
+        maxProRataAmount = (proRataConversion * (poolVars.pool.balanceOf(user1) + acceptAmount)) / 1e18 - acceptAmount;
+
+        assertEq(poolVars.pool.maxProRataAmount(user1), maxProRataAmount);
+    }
 
     /*//////////////////////////////////////////////////////////////
                             maxDealAccept
     //////////////////////////////////////////////////////////////*/
 
-    function testFuzz_MaxDealAccept_Pool() public {}
+    function testFuzz_MaxDealAccept_Pool(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenAmount,
+        uint256 _purchaseTokenCap,
+        uint256 _proRataRedemptionPeriod,
+        uint256 _openRedemptionPeriod,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _holderFundingExpiry,
+        uint256 _purchaseTokenTotalForDeal
+    ) public {
+        BoundedVars memory boundedVars = boundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _proRataRedemptionPeriod,
+            _openRedemptionPeriod,
+            _vestingPeriod,
+            _vestingCliffPeriod,
+            _underlyingDealTokenTotal,
+            _holderFundingExpiry,
+            _purchaseTokenTotalForDeal
+        );
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.NONE
+        );
+
+        vm.assume(boundedVars.purchaseTokenAmount > 1000);
+
+        // Assert
+        vm.startPrank(user3);
+        deal(address(purchaseToken), address(user3), 1000);
+        MockERC20(purchaseToken).approve(address(poolVars.pool), 1000);
+        poolVars.pool.purchasePoolTokens(1000);
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        MockERC20(purchaseToken).approve(address(poolVars.pool), boundedVars.purchaseTokenAmount - 1000);
+        poolVars.pool.purchasePoolTokens(boundedVars.purchaseTokenAmount - 1000);
+        vm.warp(boundedVars.purchaseDuration + 1);
+
+        poolVars.dealAddress = poolVars.pool.createDeal(
+            address(underlyingDealToken),
+            boundedVars.purchaseTokenTotalForDeal,
+            boundedVars.underlyingDealTokenTotal,
+            boundedVars.vestingPeriod,
+            boundedVars.vestingCliffPeriod,
+            boundedVars.proRataRedemptionPeriod,
+            boundedVars.openRedemptionPeriod,
+            user2,
+            boundedVars.holderFundingExpiry
+        );
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        deal(address(underlyingDealToken), address(user2), type(uint256).max);
+        MockERC20(address(underlyingDealToken)).approve(address(poolVars.dealAddress), boundedVars.underlyingDealTokenTotal);
+
+        assertEq(poolVars.pool.maxDealAccept(user1), 0);
+
+        AelinDeal(poolVars.dealAddress).depositUnderlying(boundedVars.underlyingDealTokenTotal);
+        vm.stopPrank();
+
+        uint256 purchaseAmount = boundedVars.purchaseTokenAmount - 1000;
+        uint256 proRataConversion = (boundedVars.purchaseTokenTotalForDeal * 1e18) / boundedVars.purchaseTokenAmount;
+        uint256 maxProRataAmount = (proRataConversion * purchaseAmount) / 1e18;
+
+        if (maxProRataAmount > purchaseAmount) {
+            assertEq(poolVars.pool.maxDealAccept(user1), purchaseAmount);
+        } else {
+            assertEq(poolVars.pool.maxDealAccept(user1), maxProRataAmount);
+        }
+
+        vm.startPrank(user1);
+        poolVars.pool.acceptDealTokens(poolVars.pool.maxProRataAmount(user1));
+
+        vm.warp(block.timestamp + boundedVars.proRataRedemptionPeriod);
+        if (poolVars.pool.balanceOf(user1) + poolVars.pool.totalAmountAccepted() <= boundedVars.purchaseTokenTotalForDeal) {
+            assertEq(poolVars.pool.maxDealAccept(user1), poolVars.pool.balanceOf(user1));
+        } else {
+            assertEq(
+                poolVars.pool.maxDealAccept(user1),
+                boundedVars.purchaseTokenTotalForDeal - poolVars.pool.totalAmountAccepted()
+            );
+        }
+    }
 }
