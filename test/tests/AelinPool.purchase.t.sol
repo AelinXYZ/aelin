@@ -25,6 +25,8 @@ contract AelinPoolTest is Test, AelinTestUtils {
         ERC721
     }
 
+    event PurchasePoolToken(address indexed purchaser, uint256 purchaseTokenAmount);
+
     function setUp() public {
         deal(address(purchaseToken), address(this), type(uint256).max);
         deal(address(underlyingDealToken), address(this), type(uint256).max);

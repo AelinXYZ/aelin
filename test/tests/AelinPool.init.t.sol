@@ -23,6 +23,20 @@ contract AelinPoolTest is Test, AelinTestUtils {
         ERC721
     }
 
+    event SetSponsor(address indexed sponsor);
+
+    event AllowlistAddress(address indexed purchaser, uint256 allowlistAmount);
+
+    event PoolWith721(address indexed collectionAddress, uint256 purchaseAmount, bool purchaseAmountPerToken);
+
+    event PoolWith1155(
+        address indexed collectionAddress,
+        uint256 purchaseAmount,
+        bool purchaseAmountPerToken,
+        uint256[] tokenIds,
+        uint256[] minTokensEligible
+    );
+
     function setUp() public {
         deal(address(purchaseToken), address(this), type(uint256).max);
         deal(address(underlyingDealToken), address(this), type(uint256).max);
