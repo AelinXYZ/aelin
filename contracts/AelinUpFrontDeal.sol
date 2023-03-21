@@ -10,7 +10,7 @@ import {AelinDeal} from "./AelinDeal.sol";
 import {AelinPool} from "./AelinPool.sol";
 import {AelinFeeEscrow} from "./AelinFeeEscrow.sol";
 import {IAelinUpFrontDeal} from "./interfaces/IAelinUpFrontDeal.sol";
-import {IERC20Extended} from "./interfaces/IERC20Extented.sol";
+import {IERC20Extended} from "./interfaces/IERC20Extended.sol";
 import "./libraries/AelinNftGating.sol";
 import "./libraries/AelinAllowList.sol";
 import "./libraries/MerkleTree.sol";
