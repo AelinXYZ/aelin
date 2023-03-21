@@ -5,7 +5,6 @@ import "forge-std/Test.sol";
 import {AelinTestUtils} from "../utils/AelinTestUtils.sol";
 import {AelinPool} from "contracts/AelinPool.sol";
 import {AelinDeal} from "contracts/AelinDeal.sol";
-import {AelinPoolFactory} from "contracts/AelinPoolFactory.sol";
 import {AelinFeeEscrow} from "contracts/AelinFeeEscrow.sol";
 import {IAelinPool} from "contracts/interfaces/IAelinPool.sol";
 import {IAelinDeal} from "contracts/interfaces/IAelinDeal.sol";
