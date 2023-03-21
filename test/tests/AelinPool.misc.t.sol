@@ -87,6 +87,10 @@ contract AelinPoolTest is Test, AelinTestUtils {
 
     event WithdrawFromPool(address indexed purchaser, uint256 purchaseTokenAmount);
     event Transfer(address indexed from, address indexed to, uint256 value);
+    event SetSponsor(address indexed sponsor);
+    event Vouch(address indexed voucher);
+    event Disavow(address indexed voucher);
+    event VestingTokenMinted(address indexed user, uint256 indexed tokenId, uint256 amount, uint256 lastClaimedAt);
 
     /*//////////////////////////////////////////////////////////////
                             helpers
@@ -2671,5 +2675,971 @@ contract AelinPoolTest is Test, AelinTestUtils {
                 boundedVars.purchaseTokenTotalForDeal - poolVars.pool.totalAmountAccepted()
             );
         }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            transfer
+    //////////////////////////////////////////////////////////////*/
+
+    function testFuzz_Transfer_RevertWhen_NotInTransferWindow(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenAmount,
+        uint256 _purchaseTokenCap,
+        uint256 _proRataRedemptionPeriod,
+        uint256 _openRedemptionPeriod,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _holderFundingExpiry,
+        uint256 _purchaseTokenTotalForDeal
+    ) public {
+        BoundedVars memory boundedVars = boundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _proRataRedemptionPeriod,
+            _openRedemptionPeriod,
+            _vestingPeriod,
+            _vestingCliffPeriod,
+            _underlyingDealTokenTotal,
+            _holderFundingExpiry,
+            _purchaseTokenTotalForDeal
+        );
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.NONE
+        );
+
+        // Assert
+        vm.startPrank(user1);
+        MockERC20(purchaseToken).approve(address(poolVars.pool), boundedVars.purchaseTokenAmount);
+        poolVars.pool.purchasePoolTokens(boundedVars.purchaseTokenAmount);
+        vm.warp(boundedVars.purchaseDuration + 1);
+
+        poolVars.dealAddress = poolVars.pool.createDeal(
+            address(underlyingDealToken),
+            boundedVars.purchaseTokenTotalForDeal,
+            boundedVars.underlyingDealTokenTotal,
+            boundedVars.vestingPeriod,
+            boundedVars.vestingCliffPeriod,
+            boundedVars.proRataRedemptionPeriod,
+            boundedVars.openRedemptionPeriod,
+            user2,
+            boundedVars.holderFundingExpiry
+        );
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        deal(address(underlyingDealToken), address(user2), type(uint256).max);
+        MockERC20(address(underlyingDealToken)).approve(address(poolVars.dealAddress), boundedVars.underlyingDealTokenTotal);
+        AelinDeal(poolVars.dealAddress).depositUnderlying(boundedVars.underlyingDealTokenTotal);
+        vm.stopPrank();
+
+        uint256 acceptedAmount = poolVars.pool.maxProRataAmount(user1);
+
+        vm.startPrank(user1);
+        vm.expectRevert("no transfers in redeem window");
+        poolVars.pool.transfer(user3, acceptedAmount);
+
+        poolVars.pool.acceptDealTokens(acceptedAmount);
+
+        vm.expectRevert("no transfers in redeem window");
+        poolVars.pool.transfer(user3, acceptedAmount);
+
+        vm.warp(block.timestamp + boundedVars.proRataRedemptionPeriod);
+
+        if (boundedVars.openRedemptionPeriod > 0) {
+            vm.expectRevert("no transfers in redeem window");
+            poolVars.pool.transfer(user3, acceptedAmount);
+        }
+
+        vm.stopPrank();
+    }
+
+    function testFuzz_Transfer_RevertWhen_NoPoolToken(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenAmount,
+        uint256 _purchaseTokenCap,
+        uint256 _proRataRedemptionPeriod,
+        uint256 _openRedemptionPeriod,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _holderFundingExpiry,
+        uint256 _purchaseTokenTotalForDeal
+    ) public {
+        BoundedVars memory boundedVars = boundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _proRataRedemptionPeriod,
+            _openRedemptionPeriod,
+            _vestingPeriod,
+            _vestingCliffPeriod,
+            _underlyingDealTokenTotal,
+            _holderFundingExpiry,
+            _purchaseTokenTotalForDeal
+        );
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.NONE
+        );
+
+        // Assert
+        vm.startPrank(user1);
+        MockERC20(purchaseToken).approve(address(poolVars.pool), boundedVars.purchaseTokenAmount);
+        poolVars.pool.purchasePoolTokens(boundedVars.purchaseTokenAmount);
+        vm.warp(boundedVars.purchaseDuration + 1);
+
+        poolVars.dealAddress = poolVars.pool.createDeal(
+            address(underlyingDealToken),
+            boundedVars.purchaseTokenTotalForDeal,
+            boundedVars.underlyingDealTokenTotal,
+            boundedVars.vestingPeriod,
+            boundedVars.vestingCliffPeriod,
+            boundedVars.proRataRedemptionPeriod,
+            boundedVars.openRedemptionPeriod,
+            user2,
+            boundedVars.holderFundingExpiry
+        );
+        vm.stopPrank();
+
+        vm.startPrank(user3);
+        vm.expectRevert("ERC20: transfer amount exceeds balance");
+        poolVars.pool.transfer(user1, 1);
+        vm.stopPrank();
+    }
+
+    function testFuzz_Transfer(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenAmount,
+        uint256 _purchaseTokenCap,
+        uint256 _proRataRedemptionPeriod,
+        uint256 _openRedemptionPeriod,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _holderFundingExpiry,
+        uint256 _purchaseTokenTotalForDeal
+    ) public {
+        vm.assume(_purchaseTokenAmount > 10);
+
+        BoundedVars memory boundedVars = boundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _proRataRedemptionPeriod,
+            _openRedemptionPeriod,
+            _vestingPeriod,
+            _vestingCliffPeriod,
+            _underlyingDealTokenTotal,
+            _holderFundingExpiry,
+            _purchaseTokenTotalForDeal
+        );
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.NONE
+        );
+
+        // Assert
+        vm.startPrank(user1);
+        MockERC20(purchaseToken).approve(address(poolVars.pool), boundedVars.purchaseTokenAmount);
+        poolVars.pool.purchasePoolTokens(boundedVars.purchaseTokenAmount);
+        vm.warp(boundedVars.purchaseDuration + 1);
+
+        poolVars.dealAddress = poolVars.pool.createDeal(
+            address(underlyingDealToken),
+            boundedVars.purchaseTokenTotalForDeal,
+            boundedVars.underlyingDealTokenTotal,
+            boundedVars.vestingPeriod,
+            boundedVars.vestingCliffPeriod,
+            boundedVars.proRataRedemptionPeriod,
+            boundedVars.openRedemptionPeriod,
+            user2,
+            boundedVars.holderFundingExpiry
+        );
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        vm.expectEmit(true, true, true, true, address(poolVars.pool));
+        emit Transfer(user1, user3, 1);
+        poolVars.pool.transfer(user3, 1);
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        deal(address(underlyingDealToken), address(user2), type(uint256).max);
+        MockERC20(address(underlyingDealToken)).approve(address(poolVars.dealAddress), boundedVars.underlyingDealTokenTotal);
+        AelinDeal(poolVars.dealAddress).depositUnderlying(boundedVars.underlyingDealTokenTotal);
+        vm.stopPrank();
+
+        uint256 acceptedAmount = poolVars.pool.maxProRataAmount(user1);
+
+        vm.startPrank(user1);
+
+        poolVars.pool.acceptDealTokens(acceptedAmount);
+
+        vm.warp(block.timestamp + boundedVars.proRataRedemptionPeriod);
+
+        if (boundedVars.openRedemptionPeriod == 0) {
+            vm.expectEmit(true, true, true, true, address(poolVars.pool));
+            emit Transfer(user1, user3, 1);
+            poolVars.pool.transfer(user3, 1);
+        }
+
+        vm.warp(block.timestamp + boundedVars.openRedemptionPeriod);
+
+        vm.expectEmit(true, true, true, true, address(poolVars.pool));
+        emit Transfer(user1, user3, 1);
+        poolVars.pool.transfer(user3, 1);
+
+        vm.stopPrank();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            transferFrom
+    //////////////////////////////////////////////////////////////*/
+
+    function testFuzz_TransferFrom_RevertWhen_NotInTransferWindow(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenAmount,
+        uint256 _purchaseTokenCap,
+        uint256 _proRataRedemptionPeriod,
+        uint256 _openRedemptionPeriod,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _holderFundingExpiry,
+        uint256 _purchaseTokenTotalForDeal
+    ) public {
+        BoundedVars memory boundedVars = boundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _proRataRedemptionPeriod,
+            _openRedemptionPeriod,
+            _vestingPeriod,
+            _vestingCliffPeriod,
+            _underlyingDealTokenTotal,
+            _holderFundingExpiry,
+            _purchaseTokenTotalForDeal
+        );
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.NONE
+        );
+
+        // Assert
+        vm.startPrank(user1);
+        MockERC20(purchaseToken).approve(address(poolVars.pool), boundedVars.purchaseTokenAmount);
+        poolVars.pool.purchasePoolTokens(boundedVars.purchaseTokenAmount);
+        vm.warp(boundedVars.purchaseDuration + 1);
+
+        poolVars.dealAddress = poolVars.pool.createDeal(
+            address(underlyingDealToken),
+            boundedVars.purchaseTokenTotalForDeal,
+            boundedVars.underlyingDealTokenTotal,
+            boundedVars.vestingPeriod,
+            boundedVars.vestingCliffPeriod,
+            boundedVars.proRataRedemptionPeriod,
+            boundedVars.openRedemptionPeriod,
+            user2,
+            boundedVars.holderFundingExpiry
+        );
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        deal(address(underlyingDealToken), address(user2), type(uint256).max);
+        MockERC20(address(underlyingDealToken)).approve(address(poolVars.dealAddress), boundedVars.underlyingDealTokenTotal);
+        AelinDeal(poolVars.dealAddress).depositUnderlying(boundedVars.underlyingDealTokenTotal);
+        vm.stopPrank();
+
+        uint256 acceptedAmount = poolVars.pool.maxProRataAmount(user1);
+
+        vm.startPrank(user1);
+        vm.expectRevert("no transfers in redeem window");
+        poolVars.pool.transferFrom(user1, user3, acceptedAmount);
+
+        poolVars.pool.acceptDealTokens(acceptedAmount);
+
+        vm.expectRevert("no transfers in redeem window");
+        poolVars.pool.transferFrom(user1, user3, acceptedAmount);
+
+        vm.warp(block.timestamp + boundedVars.proRataRedemptionPeriod);
+
+        if (boundedVars.openRedemptionPeriod > 0) {
+            vm.expectRevert("no transfers in redeem window");
+            poolVars.pool.transferFrom(user1, user3, acceptedAmount);
+        }
+
+        vm.stopPrank();
+    }
+
+    function testFuzz_TransferFrom_RevertWhen_NoPoolToken(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenAmount,
+        uint256 _purchaseTokenCap,
+        uint256 _proRataRedemptionPeriod,
+        uint256 _openRedemptionPeriod,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _holderFundingExpiry,
+        uint256 _purchaseTokenTotalForDeal
+    ) public {
+        BoundedVars memory boundedVars = boundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _proRataRedemptionPeriod,
+            _openRedemptionPeriod,
+            _vestingPeriod,
+            _vestingCliffPeriod,
+            _underlyingDealTokenTotal,
+            _holderFundingExpiry,
+            _purchaseTokenTotalForDeal
+        );
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.NONE
+        );
+
+        // Assert
+        vm.startPrank(user3);
+        MockERC20(address(poolVars.pool)).approve(user1, type(uint256).max);
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        MockERC20(purchaseToken).approve(address(poolVars.pool), boundedVars.purchaseTokenAmount);
+        poolVars.pool.purchasePoolTokens(boundedVars.purchaseTokenAmount);
+        vm.warp(boundedVars.purchaseDuration + 1);
+
+        poolVars.dealAddress = poolVars.pool.createDeal(
+            address(underlyingDealToken),
+            boundedVars.purchaseTokenTotalForDeal,
+            boundedVars.underlyingDealTokenTotal,
+            boundedVars.vestingPeriod,
+            boundedVars.vestingCliffPeriod,
+            boundedVars.proRataRedemptionPeriod,
+            boundedVars.openRedemptionPeriod,
+            user2,
+            boundedVars.holderFundingExpiry
+        );
+
+        vm.expectRevert("ERC20: transfer amount exceeds balance");
+        poolVars.pool.transferFrom(user3, user1, 1);
+        vm.stopPrank();
+    }
+
+    function testFuzz_TransferFrom(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenAmount,
+        uint256 _purchaseTokenCap,
+        uint256 _proRataRedemptionPeriod,
+        uint256 _openRedemptionPeriod,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _holderFundingExpiry,
+        uint256 _purchaseTokenTotalForDeal
+    ) public {
+        vm.assume(_purchaseTokenAmount > 10);
+
+        BoundedVars memory boundedVars = boundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _proRataRedemptionPeriod,
+            _openRedemptionPeriod,
+            _vestingPeriod,
+            _vestingCliffPeriod,
+            _underlyingDealTokenTotal,
+            _holderFundingExpiry,
+            _purchaseTokenTotalForDeal
+        );
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.NONE
+        );
+
+        // Assert
+        vm.startPrank(user1);
+        MockERC20(purchaseToken).approve(address(poolVars.pool), boundedVars.purchaseTokenAmount);
+        MockERC20(address(poolVars.pool)).approve(user3, type(uint256).max);
+        poolVars.pool.purchasePoolTokens(boundedVars.purchaseTokenAmount);
+        vm.warp(boundedVars.purchaseDuration + 1);
+
+        poolVars.dealAddress = poolVars.pool.createDeal(
+            address(underlyingDealToken),
+            boundedVars.purchaseTokenTotalForDeal,
+            boundedVars.underlyingDealTokenTotal,
+            boundedVars.vestingPeriod,
+            boundedVars.vestingCliffPeriod,
+            boundedVars.proRataRedemptionPeriod,
+            boundedVars.openRedemptionPeriod,
+            user2,
+            boundedVars.holderFundingExpiry
+        );
+        vm.stopPrank();
+
+        vm.startPrank(user3);
+        vm.expectEmit(true, true, true, true, address(poolVars.pool));
+        emit Transfer(user1, user3, 1);
+        poolVars.pool.transferFrom(user1, user3, 1);
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        deal(address(underlyingDealToken), address(user2), type(uint256).max);
+        MockERC20(address(underlyingDealToken)).approve(address(poolVars.dealAddress), boundedVars.underlyingDealTokenTotal);
+        AelinDeal(poolVars.dealAddress).depositUnderlying(boundedVars.underlyingDealTokenTotal);
+        vm.stopPrank();
+
+        uint256 acceptedAmount = poolVars.pool.maxProRataAmount(user1);
+
+        vm.startPrank(user1);
+        poolVars.pool.acceptDealTokens(acceptedAmount);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + boundedVars.proRataRedemptionPeriod);
+
+        vm.startPrank(user3);
+        if (boundedVars.openRedemptionPeriod == 0) {
+            vm.expectEmit(true, true, true, true, address(poolVars.pool));
+            emit Transfer(user1, user3, 1);
+            poolVars.pool.transferFrom(user1, user3, 1);
+        }
+
+        vm.warp(block.timestamp + boundedVars.openRedemptionPeriod);
+
+        vm.expectEmit(true, true, true, true, address(poolVars.pool));
+        emit Transfer(user1, user3, 1);
+        poolVars.pool.transferFrom(user1, user3, 1);
+
+        vm.stopPrank();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                           setSponsor & acceptSponsor
+    //////////////////////////////////////////////////////////////*/
+
+    function testFuzz_SetSponsor_RevertWhen_NotSponsor(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenCap,
+        uint256 _purchaseTokenAmount,
+        uint256 _withdrawAmount
+    ) public {
+        ReducedBoundedVars memory boundedVars = reducedBoundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _withdrawAmount
+        );
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.NONE
+        );
+
+        // Assert
+        vm.startPrank(user3);
+        vm.expectRevert("only sponsor can access");
+        poolVars.pool.setSponsor(user3);
+        vm.stopPrank();
+    }
+
+    function testFuzz_SetSponsor_RevertWhen_SponsorIsNull(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenCap,
+        uint256 _purchaseTokenAmount,
+        uint256 _withdrawAmount
+    ) public {
+        ReducedBoundedVars memory boundedVars = reducedBoundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _withdrawAmount
+        );
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.NONE
+        );
+
+        // Assert
+        vm.startPrank(user1);
+        vm.expectRevert();
+        poolVars.pool.setSponsor(address(0));
+        vm.stopPrank();
+    }
+
+    function testFuzz_AcceptSponsor_RevertWhen_NotDesignatedSponsor(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenCap,
+        uint256 _purchaseTokenAmount,
+        uint256 _withdrawAmount
+    ) public {
+        ReducedBoundedVars memory boundedVars = reducedBoundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _withdrawAmount
+        );
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.NONE
+        );
+
+        // Assert
+        vm.startPrank(user1);
+        poolVars.pool.setSponsor(user3);
+        vm.expectRevert("only future sponsor can access");
+        poolVars.pool.acceptSponsor();
+        vm.stopPrank();
+    }
+
+    function testFuzz_SetSponsor_AcceptSponsor(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenCap,
+        uint256 _purchaseTokenAmount,
+        uint256 _withdrawAmount
+    ) public {
+        ReducedBoundedVars memory boundedVars = reducedBoundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _withdrawAmount
+        );
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.NONE
+        );
+
+        // Assert
+        vm.startPrank(user1);
+        poolVars.pool.setSponsor(user3);
+        vm.stopPrank();
+
+        vm.startPrank(user3);
+        emit SetSponsor(user3);
+        poolVars.pool.acceptSponsor();
+        vm.stopPrank();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            vouch & disavow
+    //////////////////////////////////////////////////////////////*/
+
+    function testFuzz_Vouch(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenCap,
+        uint256 _purchaseTokenAmount,
+        uint256 _withdrawAmount
+    ) public {
+        ReducedBoundedVars memory boundedVars = reducedBoundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _withdrawAmount
+        );
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.NONE
+        );
+
+        // Assert
+        vm.startPrank(user1);
+        emit Vouch(user1);
+        poolVars.pool.vouch();
+        vm.stopPrank();
+    }
+
+    function testFuzz_Disavow(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenCap,
+        uint256 _purchaseTokenAmount,
+        uint256 _withdrawAmount
+    ) public {
+        ReducedBoundedVars memory boundedVars = reducedBoundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _withdrawAmount
+        );
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.NONE
+        );
+
+        // Assert
+        vm.startPrank(user1);
+        emit Disavow(user1);
+        poolVars.pool.disavow();
+        vm.stopPrank();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            sponsorClaim
+    //////////////////////////////////////////////////////////////*/
+
+    function testFuzz_SponsorClaim_RevertWhen_InPurchaseWindow(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenCap,
+        uint256 _purchaseTokenAmount,
+        uint256 _withdrawAmount
+    ) public {
+        ReducedBoundedVars memory boundedVars = reducedBoundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _withdrawAmount
+        );
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.NONE
+        );
+
+        // Assert
+        vm.startPrank(user1);
+        MockERC20(purchaseToken).approve(address(poolVars.pool), boundedVars.purchaseTokenAmount);
+        poolVars.pool.purchasePoolTokens(boundedVars.purchaseTokenAmount);
+
+        vm.expectRevert("still in purchase window");
+        poolVars.pool.sponsorClaim();
+    }
+
+    function testFuzz_SponsorClaim_RevertWhen_AlreadyClaimed(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenAmount,
+        uint256 _purchaseTokenCap,
+        uint256 _proRataRedemptionPeriod,
+        uint256 _openRedemptionPeriod,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _holderFundingExpiry,
+        uint256 _purchaseTokenTotalForDeal
+    ) public {
+        // Ensure positive sponsor fees
+        vm.assume(_purchaseTokenAmount > 1 ether && _purchaseTokenAmount < _purchaseTokenTotalForDeal);
+        vm.assume(_purchaseTokenCap > 10 ether);
+
+        BoundedVars memory boundedVars = boundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _proRataRedemptionPeriod,
+            _openRedemptionPeriod,
+            _vestingPeriod,
+            _vestingCliffPeriod,
+            _underlyingDealTokenTotal,
+            _holderFundingExpiry,
+            _purchaseTokenTotalForDeal
+        );
+
+        boundedVars.sponsorFee = bound(_sponsorFee, 1 * 10**18, MAX_SPONSOR_FEE);
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.NONE
+        );
+
+        // Assert
+        vm.startPrank(user1);
+        MockERC20(purchaseToken).approve(address(poolVars.pool), boundedVars.purchaseTokenAmount);
+        poolVars.pool.purchasePoolTokens(boundedVars.purchaseTokenAmount);
+        vm.warp(boundedVars.purchaseDuration + 1);
+
+        poolVars.dealAddress = poolVars.pool.createDeal(
+            address(underlyingDealToken),
+            boundedVars.purchaseTokenTotalForDeal,
+            boundedVars.underlyingDealTokenTotal,
+            boundedVars.vestingPeriod,
+            boundedVars.vestingCliffPeriod,
+            boundedVars.proRataRedemptionPeriod,
+            boundedVars.openRedemptionPeriod,
+            user2,
+            boundedVars.holderFundingExpiry
+        );
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        deal(address(underlyingDealToken), address(user2), type(uint256).max);
+        MockERC20(address(underlyingDealToken)).approve(address(poolVars.dealAddress), boundedVars.underlyingDealTokenTotal);
+        AelinDeal(poolVars.dealAddress).depositUnderlying(boundedVars.underlyingDealTokenTotal);
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        poolVars.pool.acceptMaxDealTokens();
+
+        poolVars.pool.sponsorClaim();
+
+        vm.expectRevert("sponsor already claimed");
+        poolVars.pool.sponsorClaim();
+
+        vm.stopPrank();
+    }
+
+    function testFuzz_SponsorClaim_RevertWhen_NothingToClaim(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenAmount,
+        uint256 _purchaseTokenCap,
+        uint256 _proRataRedemptionPeriod,
+        uint256 _openRedemptionPeriod,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _holderFundingExpiry,
+        uint256 _purchaseTokenTotalForDeal
+    ) public {
+        BoundedVars memory boundedVars = boundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _proRataRedemptionPeriod,
+            _openRedemptionPeriod,
+            _vestingPeriod,
+            _vestingCliffPeriod,
+            _underlyingDealTokenTotal,
+            _holderFundingExpiry,
+            _purchaseTokenTotalForDeal
+        );
+
+        boundedVars.sponsorFee = 0;
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.NONE
+        );
+
+        // Assert
+        vm.startPrank(user1);
+        MockERC20(purchaseToken).approve(address(poolVars.pool), boundedVars.purchaseTokenAmount);
+        poolVars.pool.purchasePoolTokens(boundedVars.purchaseTokenAmount);
+        vm.warp(boundedVars.purchaseDuration + 1);
+
+        poolVars.dealAddress = poolVars.pool.createDeal(
+            address(underlyingDealToken),
+            boundedVars.purchaseTokenTotalForDeal,
+            boundedVars.underlyingDealTokenTotal,
+            boundedVars.vestingPeriod,
+            boundedVars.vestingCliffPeriod,
+            boundedVars.proRataRedemptionPeriod,
+            boundedVars.openRedemptionPeriod,
+            user2,
+            boundedVars.holderFundingExpiry
+        );
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        deal(address(underlyingDealToken), address(user2), type(uint256).max);
+        MockERC20(address(underlyingDealToken)).approve(address(poolVars.dealAddress), boundedVars.underlyingDealTokenTotal);
+        AelinDeal(poolVars.dealAddress).depositUnderlying(boundedVars.underlyingDealTokenTotal);
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        poolVars.pool.acceptMaxDealTokens();
+
+        vm.expectRevert("no sponsor fees");
+        poolVars.pool.sponsorClaim();
+
+        vm.stopPrank();
+    }
+
+    function testFuzz_SponsorClaim(
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _poolDuration,
+        uint256 _purchaseTokenAmount,
+        uint256 _purchaseTokenCap,
+        uint256 _proRataRedemptionPeriod,
+        uint256 _openRedemptionPeriod,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _holderFundingExpiry,
+        uint256 _purchaseTokenTotalForDeal
+    ) public {
+        // Ensure positive sponsor fees
+        vm.assume(_purchaseTokenAmount > 1 ether && _purchaseTokenAmount < _purchaseTokenTotalForDeal);
+        vm.assume(_purchaseTokenCap > 10 ether);
+
+        BoundedVars memory boundedVars = boundVariables(
+            _sponsorFee,
+            _purchaseDuration,
+            _poolDuration,
+            _purchaseTokenAmount,
+            _purchaseTokenCap,
+            _proRataRedemptionPeriod,
+            _openRedemptionPeriod,
+            _vestingPeriod,
+            _vestingCliffPeriod,
+            _underlyingDealTokenTotal,
+            _holderFundingExpiry,
+            _purchaseTokenTotalForDeal
+        );
+
+        boundedVars.sponsorFee = bound(_sponsorFee, 1 * 10**18, MAX_SPONSOR_FEE);
+
+        PoolVars memory poolVars = getPoolVars(
+            boundedVars.purchaseTokenCap,
+            boundedVars.poolDuration,
+            boundedVars.sponsorFee,
+            boundedVars.purchaseDuration,
+            PoolVarsNftCollection.NONE
+        );
+
+        // Assert
+        vm.startPrank(user1);
+        MockERC20(purchaseToken).approve(address(poolVars.pool), boundedVars.purchaseTokenAmount);
+        poolVars.pool.purchasePoolTokens(boundedVars.purchaseTokenAmount);
+        vm.warp(boundedVars.purchaseDuration + 1);
+
+        poolVars.dealAddress = poolVars.pool.createDeal(
+            address(underlyingDealToken),
+            boundedVars.purchaseTokenTotalForDeal,
+            boundedVars.underlyingDealTokenTotal,
+            boundedVars.vestingPeriod,
+            boundedVars.vestingCliffPeriod,
+            boundedVars.proRataRedemptionPeriod,
+            boundedVars.openRedemptionPeriod,
+            user2,
+            boundedVars.holderFundingExpiry
+        );
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        deal(address(underlyingDealToken), address(user2), type(uint256).max);
+        MockERC20(address(underlyingDealToken)).approve(address(poolVars.dealAddress), boundedVars.underlyingDealTokenTotal);
+        AelinDeal(poolVars.dealAddress).depositUnderlying(boundedVars.underlyingDealTokenTotal);
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+
+        poolVars.pool.acceptMaxDealTokens();
+
+        vm.expectEmit(true, true, true, true);
+        emit VestingTokenMinted(
+            user1,
+            1,
+            poolVars.pool.totalSponsorFeeAmount(),
+            AelinDeal(poolVars.dealAddress).vestingCliffExpiry()
+        );
+        poolVars.pool.sponsorClaim();
+        vm.stopPrank();
     }
 }
