@@ -23,7 +23,8 @@ contract AelinTestUtils is Test {
 
     uint256 constant BASE = 100 * 10**18;
     uint256 constant MAX_SPONSOR_FEE = 15 * 10**18;
-    uint256 public constant AELIN_FEE = 2 * 10**18;
+    uint256 constant AELIN_FEE = 2 * 10**18;
+    uint8 constant DEAL_TOKEN_DECIMALS = 18;
 
     address dealCreatorAddress = address(0xBEEF);
     address dealHolderAddress = address(0xDEAD);
@@ -376,5 +377,91 @@ contract AelinTestUtils is Test {
     function makeAddr(uint256 num) internal returns (address addr) {
         uint256 privateKey = uint256(keccak256(abi.encodePacked(num)));
         addr = vm.addr(privateKey);
+    }
+
+    function getPoolData(
+        uint256 purchaseTokenCap,
+        uint256 duration,
+        uint256 sponsorFee,
+        uint256 purchaseDuration,
+        address[] memory allowListAddresses,
+        uint256[] memory allowListAmounts,
+        IAelinPool.NftCollectionRules[] memory nftCollectionRules
+    ) public view returns (IAelinPool.PoolData memory) {
+        return
+            IAelinPool.PoolData({
+                name: "POOL",
+                symbol: "POOL",
+                purchaseToken: address(purchaseToken),
+                purchaseTokenCap: purchaseTokenCap,
+                duration: duration,
+                sponsorFee: sponsorFee,
+                purchaseDuration: purchaseDuration,
+                allowListAddresses: allowListAddresses,
+                allowListAmounts: allowListAmounts,
+                nftCollectionRules: nftCollectionRules
+            });
+    }
+
+    function getAllowListAddresses(uint256 length) public view returns (address[] memory) {
+        address[] memory allowListAddresses = new address[](length);
+        for (uint256 i; i < length; ++i) {
+            allowListAddresses[i] = address(bytes20(sha256(abi.encodePacked(i, block.timestamp))));
+        }
+        return allowListAddresses;
+    }
+
+    function getAllowListAmounts(uint256 length) public pure returns (uint256[] memory) {
+        uint256[] memory allowListAddresses = new uint256[](length);
+        for (uint256 i; i < length; ++i) {
+            allowListAddresses[i] = i;
+        }
+        return allowListAddresses;
+    }
+
+    function getNft721CollectionRules() public view returns (IAelinPool.NftCollectionRules[] memory) {
+        IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](3);
+        address[3] memory collectionsAddresses = [
+            address(collection721_1),
+            address(collection721_2),
+            address(collection721_3)
+        ];
+        uint256 pseudoRandom;
+        bool pperToken;
+        for (uint256 i; i < 3; ++i) {
+            pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp, i))) % 100_000_000;
+            pperToken = pseudoRandom % 2 == 0;
+            nftCollectionRules[i].collectionAddress = collectionsAddresses[i];
+            nftCollectionRules[i].purchaseAmount = pseudoRandom;
+            nftCollectionRules[i].purchaseAmountPerToken = pperToken;
+        }
+        return nftCollectionRules;
+    }
+
+    function getNft1155CollectionRules() public view returns (IAelinPool.NftCollectionRules[] memory) {
+        IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](3);
+        address[3] memory collectionsAddresses = [
+            address(collection1155_1),
+            address(collection1155_2),
+            address(collection1155_3)
+        ];
+        uint256 pseudoRandom;
+        bool pperToken;
+        for (uint256 i; i < 3; ++i) {
+            pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp, i))) % 100_000_000;
+            pperToken = pseudoRandom % 2 == 0;
+            nftCollectionRules[i].collectionAddress = collectionsAddresses[i];
+            nftCollectionRules[i].purchaseAmount = pseudoRandom;
+            nftCollectionRules[i].purchaseAmountPerToken = pperToken;
+
+            nftCollectionRules[i].tokenIds = new uint256[](2);
+            nftCollectionRules[i].tokenIds[0] = 1;
+            nftCollectionRules[i].tokenIds[1] = 2;
+
+            nftCollectionRules[i].minTokensEligible = new uint256[](2);
+            nftCollectionRules[i].minTokensEligible[0] = 10;
+            nftCollectionRules[i].minTokensEligible[0] = 20;
+        }
+        return nftCollectionRules;
     }
 }
