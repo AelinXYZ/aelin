@@ -176,8 +176,13 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
             uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
             uint256 minTime = schedule.lastClaimedAt > vestingCliffExpiry ? schedule.lastClaimedAt : vestingCliffExpiry;
 
-            if (maxTime > vestingCliffExpiry && minTime <= vestingExpiry) {
-                uint256 underlyingClaimable = (schedule.share * (maxTime - minTime)) / vestingPeriod;
+            if (
+                (maxTime > vestingCliffExpiry && minTime <= vestingExpiry) ||
+                (maxTime == vestingCliffExpiry && vestingPeriod == 0)
+            ) {
+                uint256 underlyingClaimable = vestingPeriod == 0
+                    ? schedule.share
+                    : (schedule.share * (maxTime - minTime)) / vestingPeriod;
 
                 // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
                 // although it will generally never happen as solidity rounds down so there should always be a little bit left
