@@ -73,8 +73,6 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
         require(_dealConfig.purchaseDuration >= 30 minutes && _dealConfig.purchaseDuration <= 30 days, "not within limit");
         require(_dealData.sponsorFee <= MAX_SPONSOR_FEE, "exceeds max sponsor fee");
 
-        uint8 purchaseTokenDecimals = IERC20Extended(_dealData.purchaseToken).decimals();
-
         require(1825 days >= _dealConfig.vestingCliffPeriod, "max 5 year cliff");
         require(1825 days >= _dealConfig.vestingPeriod, "max 5 year vesting");
 
@@ -82,7 +80,6 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
         require(_dealConfig.purchaseTokenPerDealToken > 0, "invalid deal price");
 
         uint8 underlyingTokenDecimals = IERC20Extended(_dealData.underlyingDealToken).decimals();
-        require(purchaseTokenDecimals <= underlyingTokenDecimals, "purchase token not compatible");
 
         if (_dealConfig.purchaseRaiseMinimum > 0) {
             uint256 _totalIntendedRaise = (_dealConfig.purchaseTokenPerDealToken * _dealConfig.underlyingDealTokenTotal) /
