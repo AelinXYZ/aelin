@@ -34,6 +34,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
     address dealAddressNftGating1155;
     address dealAddressNftGatingPunks;
     address dealAddressNftGatingPunksPerToken;
+    address dealAddressNoVestingPeriod;
 
     function setUp() public {
         AelinAllowList.InitData memory allowListEmpty;
@@ -48,6 +49,9 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         IAelinUpFrontDeal.UpFrontDealData memory dealData = getDealData();
         IAelinUpFrontDeal.UpFrontDealConfig memory dealConfig = getDealConfig();
         IAelinUpFrontDeal.UpFrontDealConfig memory dealConfigAllowDeallocation = getDealConfigAllowDeallocation();
+
+        IAelinUpFrontDeal.UpFrontDealConfig memory dealConfigNoVestingPeriod = getDealConfig();
+        dealConfigNoVestingPeriod.vestingPeriod = 0;
 
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules721 = getERC721Collection();
         AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = getPunksCollection(false);
@@ -117,6 +121,13 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
             allowListEmpty
         );
 
+        dealAddressNoVestingPeriod = upFrontDealFactory.createUpFrontDeal(
+            dealData,
+            dealConfigNoVestingPeriod,
+            nftCollectionRulesEmpty,
+            allowListEmpty
+        );
+
         vm.stopPrank();
         vm.startPrank(dealHolderAddress);
 
@@ -132,6 +143,10 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
         underlyingDealToken.approve(address(dealAddressAllowList), type(uint256).max);
         AelinUpFrontDeal(dealAddressAllowList).depositUnderlyingTokens(1e35);
+
+        deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
+        underlyingDealToken.approve(address(dealAddressNoVestingPeriod), type(uint256).max);
+        AelinUpFrontDeal(dealAddressNoVestingPeriod).depositUnderlyingTokens(1e35);
 
         underlyingDealToken.approve(address(dealAddressNftGating721), type(uint256).max);
         AelinUpFrontDeal(dealAddressNftGating721).depositUnderlyingTokens(1e35);
@@ -890,6 +905,30 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
             amountToClaim,
             "claimableAmount"
         );
+        vm.stopPrank();
+    }
+
+    function testFuzz_ClaimableUnderlyingTokens_NoVestingPeriod(uint256 _purchaseAmount) public {
+        AelinUpFrontDeal deal = AelinUpFrontDeal(dealAddressNoVestingPeriod);
+        uint256 vestingCliffExpiry = deal.vestingCliffExpiry();
+
+        vm.startPrank(user1);
+        // lastClaimedAt is 0
+        assertEq(deal.claimableUnderlyingTokens(0), 0, "claimableAmount before accepting");
+
+        // lastClaimedAt > 0
+        setupAndAcceptDealNoDeallocation(dealAddressNoVestingPeriod, _purchaseAmount, user1);
+        purchaserClaim(dealAddressNoVestingPeriod);
+
+        // Before vesting cliff expiry
+        assertEq(deal.claimableUnderlyingTokens(0), 0, "claimableAmount before vesting cliff expiry");
+
+        // After vesting cliff expiry
+        vm.warp(vestingCliffExpiry);
+
+        (uint256 share, ) = deal.vestingDetails(0);
+
+        assertEq(deal.claimableUnderlyingTokens(0), share, "claimableAmount after vesting cliff expiry => all shares");
         vm.stopPrank();
     }
 
