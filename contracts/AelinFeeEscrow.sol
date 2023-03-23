@@ -7,7 +7,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 contract AelinFeeEscrow {
     using SafeERC20 for IERC20;
 
-    uint256 constant VESTING_PERIOD = 180 days;
+    uint256 constant VESTING_PERIOD = 0 days;
     uint256 constant DELAY_PERIOD = 90 days;
 
     uint256 public vestingExpiry;
@@ -46,7 +46,6 @@ contract AelinFeeEscrow {
     }
 
     function delayEscrow() external onlyTreasury {
-        require(vestingExpiry < block.timestamp + DELAY_PERIOD, "must not shorten vesting period");
         vestingExpiry = block.timestamp + DELAY_PERIOD;
         emit DelayEscrow(vestingExpiry);
     }

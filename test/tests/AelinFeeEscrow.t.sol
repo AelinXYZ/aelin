@@ -18,6 +18,8 @@ import {MerkleTree} from "contracts/libraries/MerkleTree.sol";
 contract AelinFeeEscrowTest is Test, AelinTestUtils {
     using SafeERC20 for IERC20;
 
+    uint256 public constant MAX_UINT_SAFE = 10_000_000_000_000_000_000_000_000;
+
     AelinUpFrontDeal public testUpFrontDeal;
     AelinUpFrontDealFactory public upFrontDealFactory;
     AelinFeeEscrow public testEscrow;
@@ -116,13 +118,13 @@ contract AelinFeeEscrowTest is Test, AelinTestUtils {
 
     function test_Initialize() public {
         assertEq(AelinFeeEscrow(escrowAddress).treasury(), aelinTreasury, "aelinTreasuryAddress");
-        assertEq(AelinFeeEscrow(escrowAddress).vestingExpiry(), block.timestamp + 180 days, "vestingExpiry");
+        assertEq(AelinFeeEscrow(escrowAddress).vestingExpiry(), block.timestamp, "vestingExpiry");
         assertEq(AelinFeeEscrow(escrowAddress).escrowedToken(), address(underlyingDealToken), "escrowedToken");
     }
 
     function test_InitializeEvent() public {
         vm.expectEmit(true, true, true, true, address(testEscrow));
-        emit InitializeEscrow(address(this), aelinTreasury, block.timestamp + 180 days, address(underlyingDealToken));
+        emit InitializeEscrow(address(this), aelinTreasury, block.timestamp, address(underlyingDealToken));
         AelinFeeEscrow(testEscrow).initialize(aelinTreasury, address(underlyingDealToken));
     }
 
@@ -203,33 +205,14 @@ contract AelinFeeEscrowTest is Test, AelinTestUtils {
         vm.stopPrank();
     }
 
-    function testFuzz_delayEscrow_RevertIf_CalledTooEarly(uint256 _delay) public {
-        uint256 vestingExpiry = AelinFeeEscrow(escrowAddress).vestingExpiry();
-        (bool success, ) = SafeMath.tryAdd(_delay, 90 days);
-        vm.assume(success);
-        vm.assume(vestingExpiry >= _delay + 90 days);
-
+    function testFuzz_delayEscrow() public {
         vm.startPrank(aelinTreasury);
-        vm.warp(_delay);
-        vm.expectRevert("must not shorten vesting period");
-        AelinFeeEscrow(escrowAddress).delayEscrow();
-        vm.stopPrank();
-    }
-
-    function testFuzz_delayEscrow(uint256 _delay) public {
-        uint256 vestingExpiry = AelinFeeEscrow(escrowAddress).vestingExpiry();
-        (bool success, ) = SafeMath.tryAdd(_delay, 90 days);
-        vm.assume(success);
-        vm.assume(vestingExpiry < _delay + 90 days);
-
-        vm.startPrank(aelinTreasury);
-        vm.warp(_delay);
         vm.expectEmit(true, true, true, true, escrowAddress);
-        emit DelayEscrow(_delay + 90 days);
+        emit DelayEscrow(block.timestamp + 90 days);
         AelinFeeEscrow(escrowAddress).delayEscrow();
         vm.stopPrank();
 
-        assertEq(AelinFeeEscrow(escrowAddress).vestingExpiry(), _delay + 90 days, "vestingExpiry");
+        assertEq(AelinFeeEscrow(escrowAddress).vestingExpiry(), block.timestamp + 90 days, "vestingExpiry");
     }
 
     /*//////////////////////////////////////////////////////////////
