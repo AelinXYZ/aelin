@@ -4,10 +4,12 @@ pragma solidity 0.8.6;
 import "forge-std/Test.sol";
 import {AelinAllowList} from "contracts/libraries/AelinAllowList.sol";
 import {AelinUpFrontDeal} from "contracts/AelinUpFrontDeal.sol";
+import {AelinUpFrontDealFactory} from "contracts/AelinUpFrontDealFactory.sol";
 import {AelinNftGating} from "../../contracts/libraries/AelinNftGating.sol";
 import {IAelinUpFrontDeal} from "contracts/interfaces/IAelinUpFrontDeal.sol";
 import {MerkleTree} from "../../contracts/libraries/MerkleTree.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
+import {MockERC20CustomDecimals} from "../mocks/MockERC20CustomDecimals.sol";
 import {MockERC721} from "../mocks/MockERC721.sol";
 import {MockERC1155} from "../mocks/MockERC1155.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -29,6 +31,7 @@ contract AelinTestUtils is Test {
     address user4 = address(0x1340);
 
     MockERC20 public underlyingDealToken = new MockERC20("MockDeal", "MD");
+    MockERC20CustomDecimals public underlyingDealTokenLowDecimals = new MockERC20CustomDecimals("MockDeal", "MD", 2);
     MockERC20 public purchaseToken = new MockERC20("MockPurchase", "MP");
 
     MockERC721 public collection721_1 = new MockERC721("TestCollection", "TC");
@@ -41,6 +44,148 @@ contract AelinTestUtils is Test {
     AelinNftGating.NftCollectionRules[] public nftCollectionRulesEmpty;
 
     MerkleTree.UpFrontMerkleData public merkleDataEmpty;
+
+    struct FuzzedUpFrontDeal {
+        IAelinUpFrontDeal.UpFrontDealData dealData;
+        IAelinUpFrontDeal.UpFrontDealConfig dealConfig;
+        AelinUpFrontDeal upFrontDeal;
+    }
+
+    struct UpFrontDealVars {
+        uint256 sponsorFee;
+        uint256 underlyingDealTokenTotal;
+        uint256 purchaseTokenPerDealToken;
+        uint256 purchaseRaiseMinimum;
+        uint256 purchaseDuration;
+        uint256 vestingPeriod;
+        uint256 vestingCliffPeriod;
+        uint8 purchaseTokenDecimals;
+        uint8 underlyingTokenDecimals;
+    }
+
+    function getCustomToken(uint8 _decimals) public returns (MockERC20CustomDecimals) {
+        return new MockERC20CustomDecimals("CustomMockERC20", "CMT", _decimals);
+    }
+
+    function getFuzzDealData(
+        uint8 _underlyingTokenDecimals,
+        uint8 _purchaseTokenDecimals,
+        address _holder,
+        address _sponsor,
+        uint256 _sponsorFee,
+        string memory _ipfsHash,
+        bytes32 _merkleRoot
+    ) public returns (IAelinUpFrontDeal.UpFrontDealData memory) {
+        MockERC20CustomDecimals customUnderlyingDealToken = getCustomToken(_underlyingTokenDecimals);
+        MockERC20CustomDecimals customPurchaseToken = getCustomToken(_purchaseTokenDecimals);
+        return
+            IAelinUpFrontDeal.UpFrontDealData({
+                name: "Fuzz DEAL",
+                symbol: "FDEAL",
+                purchaseToken: address(customPurchaseToken),
+                underlyingDealToken: address(customUnderlyingDealToken),
+                holder: _holder,
+                sponsor: _sponsor,
+                sponsorFee: _sponsorFee,
+                ipfsHash: _ipfsHash,
+                merkleRoot: _merkleRoot
+            });
+    }
+
+    function getFuzzDealConfig(
+        uint256 _underlyingDealTokenTotal,
+        uint256 _purchaseTokenPerDealToken,
+        uint256 _purchaseRaiseMinimum,
+        uint256 _purchaseDuration,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        bool _allowDeallocation
+    ) public pure returns (IAelinUpFrontDeal.UpFrontDealConfig memory) {
+        return
+            IAelinUpFrontDeal.UpFrontDealConfig({
+                underlyingDealTokenTotal: _underlyingDealTokenTotal,
+                purchaseTokenPerDealToken: _purchaseTokenPerDealToken,
+                purchaseRaiseMinimum: _purchaseRaiseMinimum,
+                purchaseDuration: _purchaseDuration,
+                vestingPeriod: _vestingPeriod,
+                vestingCliffPeriod: _vestingCliffPeriod,
+                allowDeallocation: _allowDeallocation
+            });
+    }
+
+    function getFuzzedDeal(
+        uint256 _sponsorFee,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _purchaseTokenPerDealToken,
+        uint256 _purchaseRaiseMinimum,
+        uint256 _purchaseDuration,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint8 _purchaseTokenDecimals,
+        uint8 _underlyingTokenDecimals
+    ) public returns (FuzzedUpFrontDeal memory) {
+        FuzzedUpFrontDeal memory fuzzedDeal;
+
+        fuzzedDeal.dealData = getFuzzDealData(
+            _underlyingTokenDecimals,
+            _purchaseTokenDecimals,
+            dealHolderAddress,
+            dealCreatorAddress,
+            _sponsorFee,
+            "",
+            0
+        );
+        fuzzedDeal.dealConfig = getFuzzDealConfig(
+            _underlyingDealTokenTotal,
+            _purchaseTokenPerDealToken,
+            _purchaseRaiseMinimum,
+            _purchaseDuration,
+            _vestingPeriod,
+            _vestingCliffPeriod,
+            true
+        );
+
+        return fuzzedDeal;
+    }
+
+    function boundUpFrontDealVars(
+        uint256 _sponsorFee,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _purchaseTokenPerDealToken,
+        uint256 _purchaseRaiseMinimum,
+        uint256 _purchaseDuration,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint8 _purchaseTokenDecimals,
+        uint8 _underlyingTokenDecimals
+    ) public returns (UpFrontDealVars memory) {
+        UpFrontDealVars memory vars;
+
+        vm.assume(_underlyingDealTokenTotal > 0);
+        vm.assume(_purchaseTokenPerDealToken > 0);
+        vm.assume(_purchaseRaiseMinimum > 0);
+
+        // Bound variables
+        vars.sponsorFee = bound(_sponsorFee, 0, MAX_SPONSOR_FEE);
+        vars.purchaseTokenDecimals = uint8(bound(_purchaseTokenDecimals, 1, 18));
+        vars.underlyingTokenDecimals = uint8(bound(_underlyingTokenDecimals, 1, 18));
+        vars.underlyingDealTokenTotal = bound(vars.underlyingDealTokenTotal, 1000, 1000000 * BASE);
+        vars.purchaseTokenPerDealToken = bound(
+            _purchaseTokenPerDealToken,
+            (10**(vars.underlyingTokenDecimals)) / vars.underlyingDealTokenTotal,
+            1000000 * BASE
+        );
+        vars.purchaseRaiseMinimum = bound(
+            _purchaseRaiseMinimum,
+            1,
+            (vars.purchaseTokenPerDealToken * vars.underlyingDealTokenTotal) / (10**vars.underlyingTokenDecimals)
+        );
+        vars.purchaseDuration = bound(_purchaseDuration, 30 minutes, 30 days);
+        vars.vestingPeriod = bound(_vestingPeriod, 0, 1825 days);
+        vars.vestingCliffPeriod = bound(_vestingCliffPeriod, 0, 1825 days);
+
+        return vars;
+    }
 
     function getDealData() public view returns (IAelinUpFrontDeal.UpFrontDealData memory) {
         return

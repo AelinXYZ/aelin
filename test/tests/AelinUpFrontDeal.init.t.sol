@@ -26,6 +26,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
     address dealAddressNftGating721;
     address dealAddressNftGating1155;
     address dealAddressNftGatingPunks;
+    address dealAddressLowDecimals;
 
     function setUp() public {
         AelinAllowList.InitData memory allowListEmpty;
@@ -40,6 +41,9 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         IAelinUpFrontDeal.UpFrontDealData memory dealData = getDealData();
         IAelinUpFrontDeal.UpFrontDealConfig memory dealConfig = getDealConfig();
         IAelinUpFrontDeal.UpFrontDealConfig memory dealConfigAllowDeallocation = getDealConfigAllowDeallocation();
+
+        IAelinUpFrontDeal.UpFrontDealData memory dealDataLowDecimals = getDealData();
+        dealDataLowDecimals.underlyingDealToken = address(underlyingDealTokenLowDecimals);
 
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules721 = getERC721Collection();
         AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = getPunksCollection(false);
@@ -101,6 +105,13 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
             allowListEmpty
         );
 
+        dealAddressLowDecimals = upFrontDealFactory.createUpFrontDeal(
+            dealDataLowDecimals,
+            dealConfig,
+            nftCollectionRulesEmpty,
+            allowListEmpty
+        );
+
         vm.stopPrank();
         vm.startPrank(dealHolderAddress);
 
@@ -116,6 +127,10 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
         underlyingDealToken.approve(address(dealAddressAllowList), type(uint256).max);
         AelinUpFrontDeal(dealAddressAllowList).depositUnderlyingTokens(1e35);
+
+        deal(address(underlyingDealTokenLowDecimals), dealHolderAddress, type(uint256).max);
+        underlyingDealTokenLowDecimals.approve(address(dealAddressLowDecimals), type(uint256).max);
+        AelinUpFrontDeal(dealAddressLowDecimals).depositUnderlyingTokens(1e35);
 
         underlyingDealToken.approve(address(dealAddressNftGating721), type(uint256).max);
         AelinUpFrontDeal(dealAddressNftGating721).depositUnderlyingTokens(1e35);
@@ -245,20 +260,6 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
 
         dealConfig.vestingCliffPeriod = 365 days;
         vm.expectRevert("max 5 year vesting");
-        upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListEmpty);
-
-        vm.stopPrank();
-    }
-
-    function test_CreateUpFrontDeal_RevertWhen_PurchaseTokenNotCompatible() public {
-        vm.startPrank(dealCreatorAddress);
-
-        AelinAllowList.InitData memory allowListEmpty;
-        IAelinUpFrontDeal.UpFrontDealData memory dealData = getDealData();
-        IAelinUpFrontDeal.UpFrontDealConfig memory dealConfig = getDealConfig();
-
-        dealData.purchaseToken = address(new MockERC20CustomDecimals("MockERC20", "ME", 20));
-        vm.expectRevert("purchase token not compatible");
         upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListEmpty);
 
         vm.stopPrank();
@@ -620,6 +621,66 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         // test nft gating
         (, , tempBool) = AelinUpFrontDeal(dealAddressNoDeallocation).getNftGatingDetails(address(0), address(0), 0);
         assertFalse(tempBool);
+    }
+
+    function test_CreateUpFrontDeal_NoDeallocationLowDecimals() public {
+        string memory tempString;
+        address tempAddress;
+        uint256 tempUint;
+        bool tempBool;
+
+        AelinUpFrontDeal deal = AelinUpFrontDeal(dealAddressLowDecimals);
+        // balance
+        assertEq(underlyingDealTokenLowDecimals.balanceOf(address(dealAddressLowDecimals)), 1e35);
+        // deal contract storage
+        assertEq(deal.dealFactory(), address(upFrontDealFactory));
+        assertEq(deal.name(), "aeUpFrontDeal-DEAL");
+        assertEq(deal.symbol(), "aeUD-DEAL");
+        assertEq(deal.dealStart(), block.timestamp);
+        assertEq(deal.aelinEscrowLogicAddress(), address(testEscrow));
+        assertEq(deal.aelinTreasuryAddress(), aelinTreasury);
+        assertEq(deal.tokenCount(), 0);
+        // underlying has deposited so deal has started
+        assertEq(deal.purchaseExpiry(), block.timestamp + 10 days);
+        assertEq(deal.vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
+        assertEq(deal.vestingExpiry(), block.timestamp + 10 days + 60 days + 365 days);
+        // deal data
+        (tempString, , , , , , , , ) = deal.dealData();
+        assertEq(tempString, "DEAL");
+        (, tempString, , , , , , , ) = deal.dealData();
+        assertEq(tempString, "DEAL");
+        (, , tempAddress, , , , , , ) = deal.dealData();
+        assertEq(tempAddress, address(purchaseToken));
+        (, , , tempAddress, , , , , ) = deal.dealData();
+        assertEq(tempAddress, address(underlyingDealTokenLowDecimals));
+        (, , , , tempAddress, , , , ) = deal.dealData();
+        assertEq(tempAddress, dealHolderAddress);
+        (, , , , , tempAddress, , , ) = deal.dealData();
+        assertEq(tempAddress, dealCreatorAddress);
+        (, , , , , , tempUint, , ) = deal.dealData();
+        assertEq(tempUint, 1e18);
+        // deal config
+        (tempUint, , , , , , ) = deal.dealConfig();
+        assertEq(tempUint, 1e35);
+        (, tempUint, , , , , ) = deal.dealConfig();
+        assertEq(tempUint, 3e18);
+        (, , tempUint, , , , ) = deal.dealConfig();
+        assertEq(tempUint, 1e28);
+        (, , , tempUint, , , ) = deal.dealConfig();
+        assertEq(tempUint, 10 days);
+        (, , , , tempUint, , ) = deal.dealConfig();
+        assertEq(tempUint, 365 days);
+        (, , , , , tempUint, ) = deal.dealConfig();
+        assertEq(tempUint, 60 days);
+        (, , , , , , tempBool) = deal.dealConfig();
+        assertFalse(tempBool);
+        // test allow list
+        (, , , tempBool) = deal.getAllowList(address(0));
+        assertFalse(tempBool);
+        // test nft gating
+        (, , tempBool) = deal.getNftGatingDetails(address(0), address(0), 0);
+        assertFalse(tempBool);
+        assertEq(underlyingDealTokenLowDecimals.decimals(), 2);
     }
 
     function test_CreateUpFrontDeal_AllowDeallocation() public {
