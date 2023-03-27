@@ -1386,7 +1386,7 @@ contract AelinPoolTest is Test, AelinTestUtils {
         vm.stopPrank();
     }
 
-    function testFuzz_WithdrawFromPool_RevertWhen_NotInWithdrawPerdiod(
+    function testFuzz_WithdrawFromPool_RevertWhen_NotInWithdrawPeriod(
         uint256 _purchaseTokenCap,
         uint256 _poolDuration,
         uint256 _sponsorFee,
@@ -2037,7 +2037,7 @@ contract AelinPoolTest is Test, AelinTestUtils {
         vm.stopPrank();
     }
 
-    function tes_AcceptDealTokens_RevertWhen_MoreThanOpenPeriodShare(
+    function testFuzz_AcceptDealTokens_RevertWhen_MoreThanOpenPeriodShare(
         uint256 _purchaseDuration,
         uint256 _poolDuration,
         uint256 _purchaseTokenAmount,
@@ -2048,8 +2048,7 @@ contract AelinPoolTest is Test, AelinTestUtils {
         uint256 _vestingCliffPeriod,
         uint256 _underlyingDealTokenTotal,
         uint256 _holderFundingExpiry,
-        uint256 _purchaseTokenTotalForDeal,
-        uint256 _poolTokenAmount
+        uint256 _purchaseTokenTotalForDeal
     ) public {
         BoundedVars memory boundedVars = boundVariables(
             0,
@@ -2074,10 +2073,18 @@ contract AelinPoolTest is Test, AelinTestUtils {
             PoolVarsNftCollection.NONE
         );
 
+        vm.assume(boundedVars.purchaseTokenTotalForDeal > 100);
+
         // Assert
+        vm.startPrank(user3);
+        deal(address(purchaseToken), address(user3), 100);
+        MockERC20(purchaseToken).approve(address(poolVars.pool), 100);
+        poolVars.pool.purchasePoolTokens(100);
+        vm.stopPrank();
+
         vm.startPrank(user1);
         MockERC20(purchaseToken).approve(address(poolVars.pool), boundedVars.purchaseTokenAmount);
-        poolVars.pool.purchasePoolTokens(boundedVars.purchaseTokenAmount);
+        poolVars.pool.purchasePoolTokens(boundedVars.purchaseTokenAmount - 100);
         vm.warp(boundedVars.purchaseDuration + 1);
 
         poolVars.dealAddress = poolVars.pool.createDeal(
@@ -2099,12 +2106,19 @@ contract AelinPoolTest is Test, AelinTestUtils {
         AelinDeal(poolVars.dealAddress).depositUnderlying(boundedVars.underlyingDealTokenTotal);
         vm.stopPrank();
 
+        uint256 maxProRata = poolVars.pool.maxProRataAmount(user1);
+
         vm.startPrank(user1);
-        poolVars.pool.acceptDealTokens(_poolTokenAmount);
+        poolVars.pool.acceptDealTokens(maxProRata);
         vm.warp(block.timestamp + boundedVars.proRataRedemptionPeriod);
 
+        uint256 maxOpenAvail = poolVars.pool.balanceOf(user1);
+        if (poolVars.pool.balanceOf(user1) + poolVars.pool.totalAmountAccepted() > boundedVars.purchaseTokenTotalForDeal) {
+            maxOpenAvail = boundedVars.purchaseTokenTotalForDeal - poolVars.pool.totalAmountAccepted();
+        }
+
         vm.expectRevert("accepting more than share");
-        poolVars.pool.acceptDealTokens(_poolTokenAmount);
+        poolVars.pool.acceptDealTokens(maxOpenAvail + 1);
         vm.stopPrank();
     }
 
@@ -2198,6 +2212,11 @@ contract AelinPoolTest is Test, AelinTestUtils {
             poolTokenDealFormatted - (sponsorFeeAmount + aelinFeeAmount)
         );
         assertEq(MockERC20(purchaseToken).balanceOf(user2), acceptedAmount);
+
+        (uint256 share, uint256 lastClaimedAt) = AelinDeal(poolVars.dealAddress).vestingDetails(0);
+        assertEq(AelinDeal(poolVars.dealAddress).ownerOf(0), user1);
+        assertEq(share, poolTokenDealFormatted - (sponsorFeeAmount + aelinFeeAmount));
+        assertEq(lastClaimedAt, AelinDeal(poolVars.dealAddress).vestingCliffExpiry());
         vm.stopPrank();
     }
 
@@ -2293,6 +2312,11 @@ contract AelinPoolTest is Test, AelinTestUtils {
             poolTokenDealFormatted - (sponsorFeeAmount + aelinFeeAmount)
         );
         assertEq(MockERC20(purchaseToken).balanceOf(user2), acceptedAmount);
+
+        (uint256 share, uint256 lastClaimedAt) = AelinDeal(poolVars.dealAddress).vestingDetails(0);
+        assertEq(AelinDeal(poolVars.dealAddress).ownerOf(0), user1);
+        assertEq(share, poolTokenDealFormatted - (sponsorFeeAmount + aelinFeeAmount));
+        assertEq(lastClaimedAt, AelinDeal(poolVars.dealAddress).vestingCliffExpiry());
         vm.stopPrank();
     }
 
@@ -2388,6 +2412,11 @@ contract AelinPoolTest is Test, AelinTestUtils {
             poolTokenDealFormatted - (sponsorFeeAmount + aelinFeeAmount)
         );
         assertEq(MockERC20(purchaseToken).balanceOf(user2), acceptedAmount);
+
+        (uint256 share, uint256 lastClaimedAt) = AelinDeal(poolVars.dealAddress).vestingDetails(0);
+        assertEq(AelinDeal(poolVars.dealAddress).ownerOf(0), user1);
+        assertEq(share, poolTokenDealFormatted - (sponsorFeeAmount + aelinFeeAmount));
+        assertEq(lastClaimedAt, AelinDeal(poolVars.dealAddress).vestingCliffExpiry());
         vm.stopPrank();
     }
 
@@ -2487,6 +2516,11 @@ contract AelinPoolTest is Test, AelinTestUtils {
             poolTokenDealFormatted - (sponsorFeeAmount + aelinFeeAmount)
         );
         assertEq(MockERC20(purchaseToken).balanceOf(user2), acceptedAmount);
+
+        (uint256 share, uint256 lastClaimedAt) = AelinDeal(poolVars.dealAddress).vestingDetails(0);
+        assertEq(AelinDeal(poolVars.dealAddress).ownerOf(0), user1);
+        assertEq(share, poolTokenDealFormatted - (sponsorFeeAmount + aelinFeeAmount));
+        assertEq(lastClaimedAt, AelinDeal(poolVars.dealAddress).vestingCliffExpiry());
         vm.stopPrank();
     }
 
