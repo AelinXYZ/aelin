@@ -15,6 +15,8 @@ import "../libraries/MerkleTree.sol";
 import "./interfaces/IVestAMM.sol";
 import "./interfaces/IVestAMMLibrary.sol";
 
+// TODO proper commenting everywhere in the natspec format
+// TODO write an initial test that checks the ability to start a vAMM and deposit base and single reward tokens
 // TODO make sure the logic works with 80/20 balancer pools and not just when its 50/50
 // TODO triple check all arguments start with _, casing is correct. well commented, etc
 contract VestAMM is AelinVestingToken, IVestAMM {
@@ -267,6 +269,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         lpFundingWindow
     {
         require(vAMMInfo.hasLiquidityLaunch, "only for new liquidity");
+        // NOTE for this method we are going to want to pass in a lot of the arguments from
+        // data stored in the contract. it won't be a pure pass through like we have now
+        // at this stage in the development process
         IVestAMMLibrary(ammData.ammLibrary).deployPool(_createPool, _addLiquidity);
         finalizeVesting();
     }
@@ -280,9 +285,13 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     function finalizeVesting() internal {
         dealFunded = true;
+        sendFeesToAelin(_singleRewards[i].token, feeAmount);
         for (uint256 i; i < _singleRewards.length; i++) {
-            uint256 feeAmount = _singleRewards[i].reward (1e18 - deallocationPercent) / 1e18;
-            sendFeesToAelin(, feeAmount);
+            // NOTE this assumes all the reward tokens were claimed
+            // we need to update this so that it calculates the share of investment token vs the actual raise
+            // so a pool trying to raise 1M sUSD but only get 500K sUSD means that we need to pro-rate the fee
+            uint256 feeAmount = (_singleRewards[i].rewardTokenTotal * VEST_ASSET_FEE) / 1e18;
+            sendFeesToAelin(_singleRewards[i].token, feeAmount);
         }
     }
 
@@ -296,6 +305,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     // withdraw deallocated
+    // NOTE maybe this is a public function so we can call it internally when
+    // they claim if they haven't yet withdrawn their deallocated amount
     function depositorDeallocWithdraw(uint256[] _tokenIds) external {
         require(depositComplete && block.timestamp > lpFundingExpiry, "not time to withdraw");
         for (uint256 i; i < _tokenIds.length; i++) {
