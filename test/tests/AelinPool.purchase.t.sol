@@ -217,6 +217,8 @@ contract AelinPoolTest is Test, AelinTestUtils {
         vm.expectEmit(true, true, true, true, address(pool));
         emit PurchasePoolToken(user1, _purchaseTokenAmount);
         pool.purchasePoolTokens(_purchaseTokenAmount);
+
+        assertEq(pool.balanceOf(user1), _purchaseTokenAmount, "user got correct amount of pool tokens");
         vm.stopPrank();
     }
 
@@ -816,6 +818,8 @@ contract AelinPoolTest is Test, AelinTestUtils {
         MockERC721(collection721_1).mint(user1, 1);
         emit PurchasePoolToken(user1, _purchaseTokenAmount);
         pool.purchasePoolTokensWithNft(nftPurchaseList, _purchaseTokenAmount);
+
+        assertEq(pool.balanceOf(user1), _purchaseTokenAmount, "user got correct amount of pool tokens");
         vm.stopPrank();
     }
 
@@ -866,6 +870,8 @@ contract AelinPoolTest is Test, AelinTestUtils {
         MockPunks(punks).mint(user1, 1);
         emit PurchasePoolToken(user1, _purchaseTokenAmount);
         pool.purchasePoolTokensWithNft(nftPurchaseList, _purchaseTokenAmount);
+
+        assertEq(pool.balanceOf(user1), _purchaseTokenAmount, "user got correct amount of pool tokens");
         vm.stopPrank();
     }
 
@@ -918,6 +924,8 @@ contract AelinPoolTest is Test, AelinTestUtils {
         MockERC721(collection721_2).mint(user1, 1);
         emit PurchasePoolToken(user1, _purchaseTokenAmount);
         pool.purchasePoolTokensWithNft(nftPurchaseList, _purchaseTokenAmount);
+
+        assertEq(pool.balanceOf(user1), _purchaseTokenAmount, "user got correct amount of pool tokens");
         vm.stopPrank();
     }
 
@@ -966,6 +974,8 @@ contract AelinPoolTest is Test, AelinTestUtils {
         MockERC1155(collection1155_1).mint(user1, 1, 100, "");
         emit PurchasePoolToken(user1, _purchaseTokenAmount);
         pool.purchasePoolTokensWithNft(nftPurchaseList, _purchaseTokenAmount);
+
+        assertEq(pool.balanceOf(user1), _purchaseTokenAmount, "user got correct amount of pool tokens");
         vm.stopPrank();
     }
 }
