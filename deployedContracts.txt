@@ -123,3 +123,16 @@ npx hardhat verify --network kovan <address> ...args
 # NOTE these commands are also needed for verifying either AELIN or vAELIN
 -- contract contracts/AelinToken.sol:AelinToken
 -- contract contracts/VirtualAelinToken.sol:VirtualAelinToken
+
+
+Polygon:
+AelinFeeEscrow - https://polygonscan.com/address/0x5541da82549d732878c4104c9887c408790397af
+MerkleTree - https://polygonscan.com/address/0x806ec726fc022525a478608e162f528b5deee788
+AelinAllowList - https://polygonscan.com/address/0x3c312abcef37e63e8ca3ac0c370fb1f8e74c0cec
+AelinNftGating - https://polygonscan.com/address/0xfa0de0e65292c12ed22c80da331ca2806a84215d
+NftCheck - https://polygonscan.com/address/0xa7a86ec3c266435c580354d8c9a33b1bc91697a7
+AelinUpFrontDeal - https://polygonscan.com/address/0x24fa2b48178f4acd577230b3ac30b935195dcaf3
+AelinUpFrontDealFactory - https://polygonscan.com/address/0x82eaa001029d4686b343b53ce6e7f1823725e736
+AelinDeal - https://polygonscan.com/address/0x3da77794534c072ded3014ca139390b704c5d8c1
+AelinPool - https://polygonscan.com/address/0x864f82ddb6850dd480936ffa104bdaf3a1ca8afd
+AelinPoolFactory - https://polygonscan.com/address/0xbf7c0fd0d31bc377f861d11d4aac15296c0405b6
