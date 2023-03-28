@@ -49,7 +49,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     bool private calledInitialize;
     bool private baseComplete;
     bool public isCancelled;
-    bool public dealFunded;
+    bool public lpDeposited;
 
     address public lpToken;
 
@@ -77,7 +77,10 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
         // TODO if we are doing a liquidity growth round we need to read the prices of the assets
         // from onchain here and set the current price as the median price
+        // TODO do a require check to make sure the pool exists if they are doing a liquidity growth
         if (!_vAmmInfo.hasLaunchPhase) {
+            // we need to pass in data to check if the pool exists. ammData is a placeholder but not the right argument
+            require(_ammData.ammLibrary.checkPoolExists(ammData), "pool does not exist");
             investmentTokenPerBase = _ammData.ammLibrary.getPriceRatio(_ammData.investmentToken, _ammData.baseAsset);
         }
 
@@ -109,13 +112,15 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     function depositSingle(DepositToken[] calldata _depositTokens) external depositIncomplete {
         for (uint i = 0; i < _depositTokens.length; i++) {
             require(
-                msg.sender == vAmmInfo.mainHolder || singleRewards[_depositTokens[i].singleRewardIndex].holder == msg.sender,
+                msg.sender == vAmmInfo.mainHolder ||
+                    singleRewards[_depositTokens[i].singleRewardIndex].singleHolder == msg.sender,
                 "not the right holder"
             );
             require(
                 _depositTokens[i].token == singleRewards[_depositTokens[i].singleRewardIndex].token,
                 "not the right token"
             );
+            // check deposit is not finalized here
             uint256 balanceBeforeTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
             IERC20(_depositTokens[i].token).safeTransferFrom(msg.sender, address(this), _depositTokens[i].amount);
             uint256 balanceAfterTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
@@ -159,7 +164,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
                 "not the right holder"
             );
             if (finalizedDeposit[_removeIndexList[i]]) {
-                finalizedDeposit[_removeIndexList[i]] = false;
                 singleRewardsComplete -= 1;
             }
             uint256 mainHolderAmount = holderDeposits[vAmmInfo.mainHolder][singleRewards[_removeIndexList[i]].token];
@@ -182,7 +186,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             }
             finalizedDeposit[_removeIndexList[i]] = finalizedDeposit[singleRewards.length - 1];
             singleRewards[_removeIndexList[i]] = singleRewards[singleRewards.length - 1];
+            // one of the bottom two lines
             delete finalizedDeposit[singleRewards.length - 1];
+            finalizedDeposit.pop();
             singleRewards.pop();
             // TODO emit event for the subgraph tracking
         }
@@ -247,11 +253,18 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         uint256 balanceAfterTransfer = IERC20(investmentToken).balanceOf(address(this));
         uint256 depositTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
         totalDeposited += depositTokenAmount;
-        mintVestingToken(msg.sender, depositTokenAmount);
+        // TODO track which vesting schedule you deposited into and pass into mintVestingToken
+        mintVestingToken(msg.sender, depositTokenAmount, _vestingScheduleIndex);
 
+        // TODO this logic might not be right but if you do not allow deallocation in a vesting bucket
+        // then if the person deposits into a bucket you have to fail the transaction. they can't exceed
+        // a bucket amount if its first come, first serve. If deallocation is allowed and people can
+        // oversubscribe to a vesting schedule then this check doesn't matter
         if (vAmmInfo.vestingSchedule[_vestingScheduleIndex].deallocation == Deallocation.None) {
+            // TODO this logic is probably slightly wrong
             uint256 priceRatio = vAmmInfo.hasLaunchPhase ? vAmmInfo.investmentPerBase : investmentTokenPerBase;
             require(
+                // TODO update logic checking if totaldeposited in a given vesting schedule is over the limit
                 totalDeposited <=
                     (vAmmInfo.vestingSchedule[_vestingScheduleIndex].totalHolderTokens * priceRatio) /
                         IERC20(ammData.baseAsset).decimals(),
@@ -284,8 +297,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     function finalizeVesting() internal {
-        dealFunded = true;
-        sendFeesToAelin(_singleRewards[i].token, feeAmount);
+        lpDeposited = true;
+        sendFeesToAelin(ammData.baseAsset, feeAmount);
         for (uint256 i; i < _singleRewards.length; i++) {
             // NOTE this assumes all the reward tokens were claimed
             // we need to update this so that it calculates the share of investment token vs the actual raise
@@ -319,9 +332,14 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             emit Withdraw(msg.sender, excessWithdrawAmount);
         }
     }
+    100 USDC
+    1000 USDC total deposited
 
     // collect the fees from AMMs and send them to the Fee Module
-    function collectAllFees(uint256 tokenId) external returns (uint256 amount0, uint256 amount1) {}
+    function collectAllFees(uint256 tokenId) public returns (uint256 amount0, uint256 amount1) {
+        // we have to call the AMM to check the amount of fees generated since the last time we did this
+        // we need to send X% of those fees to the Aelin Fee Module
+    }
 
     function claimableTokens(
         uint256 _tokenId,
@@ -487,12 +505,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     modifier dealCancelled() {
-        require(
-            isCancelled ||
-                (!depositComplete && block.timestamp > depositExpiry) ||
-                (!dealFunded && block.timestamp > lpFundingExpiry),
-            "deal not cancelled"
-        );
+        require(isCancelled || (!lpDeposited && block.timestamp > lpFundingExpiry), "deal not cancelled");
         _;
     }
 

@@ -58,4 +58,6 @@ interface IVestAMMLibrary {
     function getPriceRatio(address, address) external view returns (uint256);
 
     function feesEarned() external view returns (uint256, uint256);
+
+    function checkPoolExists() external view returns (bool);
 }
