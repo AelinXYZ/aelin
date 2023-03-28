@@ -12,7 +12,7 @@ import {MockERC721} from "../mocks/MockERC721.sol";
 import {MockERC1155} from "../mocks/MockERC1155.sol";
 import {MockPunks} from "../mocks/MockPunks.sol";
 
-contract AelinPoolTest is Test, AelinTestUtils {
+contract AelinPoolPurchaseTest is Test, AelinTestUtils {
     address public poolAddress;
     address public poolAddressWith721;
     address public poolAddressWithAllowList;

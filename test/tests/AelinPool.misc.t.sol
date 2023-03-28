@@ -5,7 +5,6 @@ import "forge-std/Test.sol";
 import {AelinTestUtils} from "../utils/AelinTestUtils.sol";
 import {AelinPool} from "contracts/AelinPool.sol";
 import {AelinDeal} from "contracts/AelinDeal.sol";
-import {AelinPoolFactory} from "contracts/AelinPoolFactory.sol";
 import {AelinFeeEscrow} from "contracts/AelinFeeEscrow.sol";
 import {IAelinPool} from "contracts/interfaces/IAelinPool.sol";
 import {IAelinDeal} from "contracts/interfaces/IAelinDeal.sol";
@@ -14,7 +13,7 @@ import {MockERC721} from "../mocks/MockERC721.sol";
 import {MockERC1155} from "../mocks/MockERC1155.sol";
 import {MockPunks} from "../mocks/MockPunks.sol";
 
-contract AelinPoolTest is Test, AelinTestUtils {
+contract AelinPoolMiscTest is Test, AelinTestUtils {
     address public poolAddress;
     address public poolAddressWith721;
     address public poolAddressWithAllowList;
