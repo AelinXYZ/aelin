@@ -3,7 +3,7 @@ name: Aelin CI
 on:
   push:
   pull_request:
-    branches: [main, dev, dev-fork, aelip-19]
+    branches: [main, dev]
 
 jobs:
   audit:
@@ -94,13 +94,10 @@ jobs:
         run: forge install
 
       - name: Run Tests without fork
-        run: forge test --no-match-contract NftCheck --no-match-test testPunksPurchasePool
+        run: forge test --no-match-contract NftCheck
 
       - name: Run NftCheck tests with fork
         run: forge test --match-contract NftCheck --fork-url ${ALCHEMY_URL}
-
-      - name: Run Punks tests with fork
-        run: forge test --match-contract AelinPoolPurchase --match-test testPunksPurchasePool --fork-url ${ALCHEMY_URL}
 
   test:
     needs: lint

@@ -17,7 +17,7 @@ contract AelinUpFronDealFactoryTest is Test, AelinTestUtils {
 
     uint256 public constant MAX_UINT_SAFE = 100_000_000_000 * BASE;
 
-    struct UpFrontDealVars {
+    struct DealVars {
         AelinAllowList.InitData allowList;
         AelinNftGating.NftCollectionRules[] nftCollectionRules;
         IAelinUpFrontDeal.UpFrontDealData dealData;
@@ -90,8 +90,8 @@ contract AelinUpFronDealFactoryTest is Test, AelinTestUtils {
         bool _allowDeallocation,
         address _holder,
         address _sponsor
-    ) internal returns (UpFrontDealVars memory) {
-        UpFrontDealVars memory upFrontDealVars;
+    ) internal returns (DealVars memory) {
+        DealVars memory upFrontDealVars;
 
         upFrontDealVars.dealData = getUpFronDealData(_holder, _sponsor, _sponsorFee);
         upFrontDealVars.dealConfig = getUpFronDealConfig(
@@ -172,14 +172,14 @@ contract AelinUpFronDealFactoryTest is Test, AelinTestUtils {
         boundedVars.underlyingDealTokenTotal = bound(_underlyingDealTokenTotal, 1, MAX_UINT_SAFE);
         boundedVars.purchaseTokenPerDealToken = bound(
             _purchaseTokenPerDealToken,
-            (10**(underlyingDealToken.decimals())) / boundedVars.underlyingDealTokenTotal,
+            (10 ** (underlyingDealToken.decimals())) / boundedVars.underlyingDealTokenTotal,
             MAX_UINT_SAFE
         );
         boundedVars.purchaseRaiseMinimum = bound(
             _purchaseRaiseMinimum,
             1,
             (boundedVars.purchaseTokenPerDealToken * boundedVars.underlyingDealTokenTotal) /
-                (10**underlyingDealToken.decimals())
+                (10 ** underlyingDealToken.decimals())
         );
 
         return boundedVars;
@@ -205,7 +205,7 @@ contract AelinUpFronDealFactoryTest is Test, AelinTestUtils {
             _vestingCliffPeriod
         );
 
-        UpFrontDealVars memory upFrontDealVars = getUpFrontDealVars(
+        DealVars memory upFrontDealVars = getUpFrontDealVars(
             boundedVars.sponsorFee,
             boundedVars.underlyingDealTokenTotal,
             boundedVars.purchaseTokenPerDealToken,
@@ -242,7 +242,7 @@ contract AelinUpFronDealFactoryTest is Test, AelinTestUtils {
             _vestingCliffPeriod
         );
 
-        UpFrontDealVars memory upFrontDealVars = getUpFrontDealVars(
+        DealVars memory upFrontDealVars = getUpFrontDealVars(
             boundedVars.sponsorFee,
             boundedVars.underlyingDealTokenTotal,
             boundedVars.purchaseTokenPerDealToken,
@@ -279,7 +279,7 @@ contract AelinUpFronDealFactoryTest is Test, AelinTestUtils {
             _vestingCliffPeriod
         );
 
-        UpFrontDealVars memory upFrontDealVars = getUpFrontDealVars(
+        DealVars memory upFrontDealVars = getUpFrontDealVars(
             boundedVars.sponsorFee,
             boundedVars.underlyingDealTokenTotal,
             boundedVars.purchaseTokenPerDealToken,
@@ -316,7 +316,7 @@ contract AelinUpFronDealFactoryTest is Test, AelinTestUtils {
             _vestingCliffPeriod
         );
 
-        UpFrontDealVars memory upFrontDealVars = getUpFrontDealVars(
+        DealVars memory upFrontDealVars = getUpFrontDealVars(
             boundedVars.sponsorFee,
             boundedVars.underlyingDealTokenTotal,
             boundedVars.purchaseTokenPerDealToken,
@@ -365,7 +365,7 @@ contract AelinUpFronDealFactoryTest is Test, AelinTestUtils {
             _vestingCliffPeriod
         );
 
-        UpFrontDealVars memory upFrontDealVars = getUpFrontDealVars(
+        DealVars memory upFrontDealVars = getUpFrontDealVars(
             boundedVars.sponsorFee,
             boundedVars.underlyingDealTokenTotal,
             boundedVars.purchaseTokenPerDealToken,
