@@ -17,11 +17,12 @@ contract VestVestingToken is VestERC721, IVestVestingToken {
         address _to,
         uint256 _amount,
         uint256 _timestamp,
-        uint256[] _singleRewardTimestamps
+        uint256[] _singleRewardTimestamps,
+        uint8 _vestingScheduleIndex
     ) internal {
         _mint(_to, tokenCount);
-        vestVestingToken[tokenCount] = VestVestingToken(_amount, _timestamp, _singleRewardTimestamps);
-        emit VestingTokenMinted(_to, tokenCount, _amount, _timestamp, _singleRewardTimestamps);
+        vestVestingToken[tokenCount] = VestVestingToken(_amount, _timestamp, _singleRewardTimestamps, _vestingScheduleIndex);
+        emit VestingTokenMinted(_to, tokenCount, _amount, _timestamp, _singleRewardTimestamps, _vestingScheduleIndex);
         tokenCount += 1;
     }
 
@@ -34,13 +35,19 @@ contract VestVestingToken is VestERC721, IVestVestingToken {
         require(schedule.amountDeposited > 0, "schedule does not exist");
         require(_shareAmount > 0, "share amount should be > 0");
         require(schedule.amountDeposited > _shareAmount, "cant transfer more than share");
-        // NOTE can we just update the one field we are changing like vestVestingToken[_tokenId].amountDeposited = ...
         vestVestingToken[_tokenId] = VestVestingToken(
             schedule.amountDeposited - _shareAmount,
             schedule.lastClaimedAt,
-            schedule.lastClaimedAtRewardList
+            schedule.lastClaimedAtRewardList,
+            schedule.vestingScheduleIndex
         );
-        _mintVestingToken(_to, _shareAmount, schedule.lastClaimedAt, schedule.lastClaimedAtRewardList);
+        _mintVestingToken(
+            _to,
+            _shareAmount,
+            schedule.lastClaimedAt,
+            schedule.lastClaimedAtRewardList,
+            schedule.vestingScheduleIndex
+        );
     }
 
     // NOTE I am not sure we can just leave transfer like this. Circle back later when have time

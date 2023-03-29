@@ -28,7 +28,6 @@ interface IVestAMM {
         address investmentToken;
         address baseAsset;
         uint256 baseAssetAmount;
-        Deallocation deallocation;
     }
 
     struct FundingLimits {
@@ -43,6 +42,7 @@ interface IVestAMM {
         uint256 depositWindow;
         uint256 lpFundingWindow;
         address mainHolder;
+        Deallocation deallocation;
         VestingSchedule[] vestingSchedules;
         FundingLimits fundingLimits;
     }
@@ -81,7 +81,7 @@ interface IVestAMM {
         address holder;
     }
 
-    event AcceptVestDeal(address indexed depositor, uint256 depositTokenAmount);
+    event AcceptVestDeal(address indexed depositor, uint256 depositTokenAmount, uint8 vestingScheduleIndex);
 
     event TokenDeposited(address token, uint256 amount);
 

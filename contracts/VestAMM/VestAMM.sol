@@ -28,8 +28,10 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     uint256 public depositExpiry;
     uint256 public lpFundingExpiry;
     uint256 public totalLPClaimed;
-    // TODO save this on initialization
-    uint256 public maxInvestmentTokens;
+    uint256 public holderTokenTotal;
+    uint256 public maxInvTokens;
+    mapping(uint8 => uint256) public maxInvTokensPerVestSchedule;
+    mapping(uint8 => uint256) public depositedPerVestSchedule;
     uint8 private singleRewardsComplete;
     uint8 private numSingleRewards;
     uint8 constant MAX_SINGLE_REWARDS = 10;
@@ -134,6 +136,14 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             // we need to pass in data to check if the pool exists. ammData is a placeholder but not the right argument
             require(_ammData.ammLibrary.checkPoolExists(ammData), "pool does not exist");
             investmentTokenPerBase = _ammData.ammLibrary.getPriceRatio(_ammData.investmentToken, _ammData.baseAsset);
+        }
+
+        for (uint i = 0; i < vAmmInfo.vestingSchedules.length; i++) {
+            holderTokenTotal += vAmmInfo.vestingSchedules[i].totalHolderTokens;
+            maxInvTokensPerVestSchedule[i] =
+                (vAmmInfo.vestingSchedules[i].totalHolderTokens * investmentTokenPerBase) /
+                IERC20(ammData.baseAsset).decimals();
+            maxInvTokens += maxInvTokensPerVestSchedule[i];
         }
 
         // Allow list logic
@@ -267,7 +277,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     ) external lock acceptDealOpen {
         // TODO how to check if an array item is empty in solidity.
         // it says access to a non-existing index will throw an exception. lets test this.
-        require(vAmmInfo.vestingSchedule[_vestingScheduleIndex], "vesting schedule doesnt exist");
+        require(!!vAmmInfo.vestingSchedule[_vestingScheduleIndex], "vesting schedule doesnt exist");
         address investmentToken = ammContract.investmentToken;
         require(IERC20(investmentToken).balanceOf(msg.sender) >= _investmentTokenAmount, "balance too low");
         if (nftGating.hasNftList || _nftPurchaseList.length > 0) {
@@ -282,26 +292,20 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         IERC20(investmentToken).safeTransferFrom(msg.sender, address(this), _investmentTokenAmount);
         uint256 balanceAfterTransfer = IERC20(investmentToken).balanceOf(address(this));
         uint256 depositTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
-        totalDeposited += depositTokenAmount;
-        // TODO track which vesting schedule you deposited into and pass into mintVestingToken
-        mintVestingToken(msg.sender, depositTokenAmount, _vestingScheduleIndex);
+        depositedPerVestSchedule[_vestingScheduleIndex] += depositTokenAmount;
 
-        // TODO this logic might not be right but if you do not allow deallocation in a vesting bucket
-        // then if the person deposits into a bucket you have to fail the transaction. they can't exceed
-        // a bucket amount if its first come, first serve. If deallocation is allowed and people can
-        // oversubscribe to a vesting schedule then this check doesn't matter
-        if (vAmmInfo.vestingSchedule[_vestingScheduleIndex].deallocation == Deallocation.None) {
-            // TODO this logic is probably slightly wrong
-            uint256 priceRatio = vAmmInfo.hasLaunchPhase ? vAmmInfo.investmentPerBase : investmentTokenPerBase;
+        // TODO switch it back to where each vesting period can be deallocated or not
+        // instead of having all the schedules have the same dealloction rules
+        if (vAmmInfo.deallocation == Deallocation.None) {
             require(
-                // TODO update logic checking if totaldeposited in a given vesting schedule is over the limit
-                totalDeposited <=
-                    (vAmmInfo.vestingSchedule[_vestingScheduleIndex].totalHolderTokens * priceRatio) /
-                        IERC20(ammData.baseAsset).decimals(),
-                "purchased amount > total"
+                depositedPerVestSchedule[_vestingScheduleIndex] <= maxInvTokensPerVestSchedule,
+                "purchased more than total"
             );
         }
-        emit AcceptVestDeal(msg.sender, depositTokenAmount);
+        totalDeposited += depositTokenAmount;
+        mintVestingToken(msg.sender, depositTokenAmount, _vestingScheduleIndex);
+
+        emit AcceptVestDeal(msg.sender, depositTokenAmount, _vestingScheduleIndex);
     }
 
     // to create the pool and deposit assets after phase 0 ends
@@ -507,13 +511,17 @@ contract VestAMM is AelinVestingToken, IVestAMM {
      * their index will be set to 1. This system gets rid of the need to have a settle step where the
      * deallocation is managed like we do in the regular Aelin pools.
      */
-    function mintVestingToken(address _to, uint256 _amount) internal {
+    function mintVestingToken(
+        address _to,
+        uint256 _amount,
+        uint8 _vestingScheduleIndex
+    ) internal {
         // NOTE there is maybe a better way to do this
         uint256[] singleDepositExpiry;
         for (uint i = 0; i < singleRewards.length; i++) {
             singleDepositExpiry[i] = depositExpiry;
         }
-        _mintVestingToken(_to, _amount, depositExpiry, singleDepositExpiry);
+        _mintVestingToken(_to, _amount, depositExpiry, singleDepositExpiry, _vestingScheduleIndex);
     }
 
     modifier initOnce() {

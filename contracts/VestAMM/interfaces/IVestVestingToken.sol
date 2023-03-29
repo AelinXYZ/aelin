@@ -6,6 +6,7 @@ interface IVestVestingToken {
         uint256 amountDeposited;
         uint256 lastClaimedAt;
         uint256[] lastClaimedAtRewardList;
+        uint8 vestingScheduleIndex;
     }
 
     event VestingTokenMinted(
@@ -13,6 +14,7 @@ interface IVestVestingToken {
         uint256 indexed tokenId,
         uint256 amount,
         uint256 lastClaimedAt,
-        uint256[] lastClaimedAtRewardList
+        uint256[] lastClaimedAtRewardList,
+        uint8 vestingScheduleIndex
     );
 }
