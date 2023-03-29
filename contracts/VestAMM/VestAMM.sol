@@ -296,6 +296,11 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
         // TODO switch it back to where each vesting period can be deallocated or not
         // instead of having all the schedules have the same dealloction rules
+        // the current system means it can either be FCFS or every schedule can be deallocated
+        // but this means that one vesting schdule can be over allocated while all the rest haven't filled up yet
+        // we should maybe enforce that all schedules have to fill up before you can have deallocation or something. idk
+        // lets discuss this together soon. it has a lot of different options. we should go with the simplest that
+        // satisfies the most amount of pools
         if (vAmmInfo.deallocation == Deallocation.None) {
             require(
                 depositedPerVestSchedule[_vestingScheduleIndex] <= maxInvTokensPerVestSchedule,
