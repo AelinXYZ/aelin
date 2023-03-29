@@ -54,6 +54,8 @@ interface IVestAMM {
 
     struct SingleRewardConfig {
         address rewardToken;
+        bool finalizedDeposit;
+        uint256 amountDeposited;
         uint256 rewardPerQuote;
         uint256 rewardTokenTotal;
         VestingSchedule vestingData;
@@ -72,7 +74,11 @@ interface IVestAMM {
     struct DepositToken {
         address token;
         uint256 amount;
-        uint8 singleRewardIndex;
+    }
+
+    struct RemoveSingle {
+        address token;
+        address holder;
     }
 
     event AcceptVestDeal(address indexed depositor, uint256 depositTokenAmount);

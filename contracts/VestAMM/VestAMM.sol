@@ -28,7 +28,10 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     uint256 public depositExpiry;
     uint256 public lpFundingExpiry;
     uint256 public totalLPClaimed;
+    // TODO save this on initialization
+    uint256 public maxInvestmentTokens;
     uint8 private singleRewardsComplete;
+    uint8 private numSingleRewards;
     uint8 constant MAX_SINGLE_REWARDS = 10;
 
     MerkleTree.TrackClaimed private trackClaimed;
@@ -38,13 +41,11 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     uint256 public totalDeposited;
     uint256 investmentTokenPerBase;
-    mapping(uint256 => bool) private finalizedDeposit;
-    mapping(address => mapping(address => uint256)) holderDeposits;
 
     AmmData public ammData;
     VAmmInfo public vAmmInfo;
     DealAccess public dealAccess;
-    SingleRewardConfig[] public singleRewards;
+    mapping(address => mapping(address => SingleRewardConfig)) public singleRewards;
 
     bool private calledInitialize;
     bool private baseComplete;
@@ -52,6 +53,54 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     bool public lpDeposited;
 
     address public lpToken;
+
+    // NOTE the example below does not take into account multiple vesting schedules which will sightly add some extra complexity on top
+
+    // step 1 is create the vest amm and pass in the price and the amount of base tokens you want to deposit in phase 2
+    // for a liquidity launch price will remain the same throughout the process
+    // for a liquidity growth round the price will shift throughout the process
+    // the amount of base tokens the protocol selects will set the max amount of investment tokens that can be accepted
+    // step 2 is fund the rewards (base and single sided rewards)
+    // step 3 is for investors to accept the deal
+    // step 4 is to provide liquidity (could be at any price in a liquidity growth round)
+    // step 5 is for claiming of vesting schedules
+
+    // e.g. liquidity launch round
+    // step 1 pass in the price, Price 5 sUSD/ABC when you create the pool
+    // step 1 you set the amount of ABC tokens to 1M.
+    // what this means is that you are not going to accept more than $5M sUSD (max sUSD accepted for the deal)
+
+    // e.g. liquidity growth round
+    // step 1 do not pass in the price, you read it from the AMM. Price 5 sUSD/ABC when you create the pool
+    // step 1 you set the amount of ABC tokens to 1M.
+    // what this means is that you are not going to accept more than $5M sUSD (max sUSD accepted for the deal)
+
+    // step 2 is the same for both, the protocol funds 1M ABC tokens in each case
+
+    // step 3 is the same for both, investors deposit sUSD (can be capped at 5M or uncapped where they get deallocated e.g. 10M sUSD)
+
+    // step 4 for liquidity launch round you just create the pool and deposit it at the fixed price.
+    // if there is excess sUSD you give everyone back their deallocated amount
+
+    // For the examples below let's make the simple assumption 5M sUSD was deposited and capped at that amount
+
+    // step 4 for liquidity growth round you just create the pool and deposit it at the current price.
+    // outcome 1: price is lower than when the pool started (1 ABC is now 2.5 sUSD)
+    // 1M ABC tokens in the contract and 5M sUSD but when you go to LP you can only match 2.5M sUSD
+    // protocol has 2 choices
+    // choice 1: just match 1M ABC against 2.5M sUSD and return the 2.5M sUSD extra to investors
+    // choice 2: deposit more ABC tokens up to an additional 1M so they can match more sUSD. 2M ABC/ 5M sUSD is deposited
+    // outcome 2: price is the same (1 ABC is 5 sUSD)
+    // see liquidity launch. you LP 1M ABC against 5M sUSD and there are no changes to the original ratios
+    // outcome 3: price has shifted higher (1 ABC is 10 sUSD)
+    // when you go to LP you match 0.5M ABC against 5M sUSD and the additional 0.5M ABC tokens will be sent to the investors
+    // in the pool as a single sided reward. this extra 0.5M ABC will offset the investors against IL. Generally, the reward
+    // is sufficient to cover extremely large IL after a price run up.
+
+    // step 5 investors claim their tokens when the vesting is done
+
+    // NOTE the example below takes into account multiple vesting schedules
+    // TODO add the detailed notes on multiple vesting schedules here
 
     /**
      * @dev initializes the contract configuration, called from the factory contract when creating a new Up Front Deal
@@ -63,15 +112,13 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         DealAccess calldata _dealAccess,
         address _aelinFeeModule
     ) external initOnce {
-        validateSingleRewards(singleRewards);
+        validateAndSaveSingle(singleRewards);
         validateVestingSchedules(_vAmmInfo.vestingSchedules);
         // pool initialization checks
         // TODO how to name these
         // _setNameAndSymbol(string(abi.encodePacked("vAMM-", TBD)), string(abi.encodePacked("v-", TBD)));
         ammData = _ammData;
         vAmmInfo = _vAmmInfo;
-        // NOTE we may need to emit all the single rewards holders for the subgraph to know they need to make a deposit
-        singleRewards = _singleRewards;
         dealAccess = _dealAccess;
         aelinFeeModule = _aelinFeeModule;
 
@@ -101,7 +148,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     function setDepositComplete() internal {
-        if (baseComplete == true && singleRewardsComplete == singleRewards.length) {
+        if (baseComplete == true && singleRewardsComplete == numSingleRewards) {
             depositComplete = true;
             depositExpiry = block.timestamp + vAmmInfo.depositWindow;
             lpFundingExpiry = depositExpiry + vAmmInfo.lpFundingWindow;
@@ -112,84 +159,61 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     function depositSingle(DepositToken[] calldata _depositTokens) external depositIncomplete {
         for (uint i = 0; i < _depositTokens.length; i++) {
             require(
-                msg.sender == vAmmInfo.mainHolder ||
-                    singleRewards[_depositTokens[i].singleRewardIndex].singleHolder == msg.sender,
-                "not the right holder"
+                (!!singleRewards[msg.sender][_depositTokens[i].token] &&
+                    !singleRewards[msg.sender][_depositTokens[i].token].finalizedDeposit),
+                "cannot deposit reward"
             );
-            require(
-                _depositTokens[i].token == singleRewards[_depositTokens[i].singleRewardIndex].token,
-                "not the right token"
-            );
-            // check deposit is not finalized here
             uint256 balanceBeforeTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
             IERC20(_depositTokens[i].token).safeTransferFrom(msg.sender, address(this), _depositTokens[i].amount);
             uint256 balanceAfterTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
             uint256 amountPostTransfer = balanceAfterTransfer - balanceBeforeTransfer;
-            holderDeposits[msg.sender][_depositTokens[i].token] += amountPostTransfer;
+
+            singleRewards[msg.sender][_depositTokens[i].token].amountDeposited += amountPostTransfer;
             emit TokenDeposited(_depositTokens[i].token, amountPostTransfer);
             if (
-                amountPostTransfer >= singleRewards[_depositTokens[i].singleRewardIndex].rewardTokenTotal &&
-                finalizedDeposit[_depositTokens[i].singleRewardIndex] == false
+                singleRewards[msg.sender][_depositTokens[i].token].amountDeposited >=
+                singleRewards[msg.sender][_depositTokens[i].token].rewardTokenTotal
             ) {
                 singleRewardsComplete += 1;
-                finalizedDeposit[_depositTokens[i].singleRewardIndex] = true;
+                singleRewards[msg.sender][_depositTokens[i].token].finalizedDeposit = true;
                 emit TokenDepositComplete(_depositTokens[i].token);
             }
         }
         setDepositComplete();
     }
 
-    function cancelVestAMM() onlyHolder depositIncomlete {
-        for (uint i = 0; i < singleRewards.length; i++) {
-            removeSingle(i);
-        }
-        if (holderDeposits[msg.sender][baseAsset] > 0) {
-            IERC20(baseAsset).safeTransferFrom(address(this), vAmmInfo.mainHolder, holderDeposits[msg.sender][baseAsset]);
-        }
-        isCancelled = true;
-    }
+    // TODO fix this function so that it works after the single reward changes
+    // function cancelVestAMM() onlyHolder depositIncomlete {
+    //     for (uint i = 0; i < numSingleRewards; i++) {
+    //         removeSingle(i);
+    //     }
+    //     if (holderDeposits[msg.sender][baseAsset] > 0) {
+    //         IERC20(baseAsset).safeTransferFrom(address(this), vAmmInfo.mainHolder, holderDeposits[msg.sender][baseAsset]);
+    //     }
+    //     isCancelled = true;
+    // }
 
     function addSingle(SingleRewardConfig[] calldata _newSingleRewards) external onlyHolder depositIncomplete {
-        require(_singleRewards.length + _newSingleRewards.length <= MAX_SINGLE_REWARDS, "max 10 single-sided rewards");
-        validateSingleRewards(_newSingleRewards);
-        for (uint i = 0; i < _newSingleRewards.length; i++) {
-            singleRewards.push(_newSingleRewards[i]);
-        }
+        require(numSingleRewards + _newSingleRewards.length <= MAX_SINGLE_REWARDS, "max 10 single-sided rewards");
+        validateAndSaveSingle(_newSingleRewards);
     }
 
-    function removeSingle(uint256[] calldata _removeIndexList) external depositIncomplete {
-        for (uint i = 0; i < _removeIndexList.length; i++) {
+    function removeSingle(RemoveSingle[] calldata _removeSingleList) external depositIncomplete {
+        for (uint i = 0; i < _removeSingleList.length; i++) {
             require(
-                msg.sender == vAmmInfo.mainHolder || singleRewards[_removeIndexList[i]].holder == msg.sender,
-                "not the right holder"
+                (msg.sender == vAmmInfo.mainHolder && !!singleRewards[_removeSingleList.holder][_removeSingleList.token]) ||
+                    !!singleRewards[msg.sender][_removeSingleList.token],
+                "cant access this reward"
             );
-            if (finalizedDeposit[_removeIndexList[i]]) {
+            if (singleRewards[_removeSingleList.holder][_removeSingleList.token].finalizedDeposit) {
                 singleRewardsComplete -= 1;
             }
-            uint256 mainHolderAmount = holderDeposits[vAmmInfo.mainHolder][singleRewards[_removeIndexList[i]].token];
-            uint256 singleHolderAmount = holderDeposits[singleRewards[_removeIndexList[i]].holder][
-                singleRewards[_removeIndexList[i]].token
-            ];
-            if (mainHolderAmount > 0) {
-                IERC20(singleRewards[_removeIndexList[i]].token).safeTransferFrom(
-                    address(this),
-                    vAmmInfo.mainHolder,
-                    mainHolderAmount
-                );
+            uint256 amt = singleRewards[_removeSingleList.holder][_removeSingleList.token].amountDeposited;
+            if (amt > 0) {
+                IERC20(_removeSingleList.token).safeTransferFrom(address(this), _removeSingleList.holder, amt);
             }
-            if (singleHolderAmount > 0) {
-                IERC20(singleRewards[_removeIndexList[i]].token).safeTransferFrom(
-                    address(this),
-                    singleRewards[_removeIndexList[i]].holder,
-                    singleHolderAmount
-                );
-            }
-            finalizedDeposit[_removeIndexList[i]] = finalizedDeposit[singleRewards.length - 1];
-            singleRewards[_removeIndexList[i]] = singleRewards[singleRewards.length - 1];
-            // one of the bottom two lines
-            delete finalizedDeposit[singleRewards.length - 1];
-            finalizedDeposit.pop();
-            singleRewards.pop();
+            delete singleRewards[_removeSingleList.holder][_removeSingleList.token];
+            numSingleRewards -= 1;
             // TODO emit event for the subgraph tracking
         }
     }
@@ -211,6 +235,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         setDepositComplete();
     }
 
+    // TODO circle back to this method
     function withdrawExcessFunding(bool _isBase, uint256 _singleIndex) {
         // TODO emit any events?
         // TODO store baseAccepted under acceptDeal probably
@@ -332,8 +357,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             emit Withdraw(msg.sender, excessWithdrawAmount);
         }
     }
-    100 USDC
-    1000 USDC total deposited
 
     // collect the fees from AMMs and send them to the Fee Module
     function collectAllFees(uint256 tokenId) public returns (uint256 amount0, uint256 amount1) {
@@ -439,20 +462,20 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         emit SentFees(_token, _amount);
     }
 
-    function validateSingleRewards(SingleRewardConfig[] _singleRewards) internal {
+    function validateAndSaveSingle(SingleRewardConfig[] _singleRewards) internal {
         require(_singleRewards.length <= MAX_SINGLE_REWARDS, "max 10 single-sided rewards");
         for (uint256 i; i < _singleRewards.length; i++) {
-            // NOTE can the single holder be null? the main holder can do this when they are
-            // the single as well maybe.
             // Also we need to potentially validate more of the fields like migration rules
             // if we use the migration stuff at all for v1
-            require(rewardToken != address(0), "cannot pass null address");
+            require(_singleRewards[i].rewardToken != address(0), "cannot pass null address");
             // DO we need this field
-            require(rewardPerQuote > 0, "rpq: must pass an amount");
-            require(amountClaimed == 0, "amount claimed must be 0");
-            require(rewardTokenTotal > 0, "rtt: must pass an amount");
+            require(_singleRewards[i].rewardPerQuote > 0, "rpq: must pass an amount");
+            require(_singleRewards[i].amountClaimed == 0, "amount claimed must be 0");
+            require(_singleRewards[i].rewardTokenTotal > 0, "rtt: must pass an amount");
             VestingSchedule[] vestingSchedule = [_singleRewards.vestingData];
             validateVestingSchedules(vestingSchedule);
+            singleRewards[_singleRewards[i].singleHolder][_singleRewards[i].rewardToken] = _singleRewards[i];
+            numSingleRewards++;
         }
     }
 
