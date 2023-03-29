@@ -54,12 +54,20 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     address public lpToken;
 
-    // NOTE the example below does not take into account multiple vesting schedules which will sightly add some extra complexity on top
+    // NOTE VestAMM workflow notes
 
     // step 1 is create the vest amm and pass in the price and the amount of base tokens you want to deposit in phase 2
     // for a liquidity launch price will remain the same throughout the process
     // for a liquidity growth round the price will shift throughout the process
     // the amount of base tokens the protocol selects will set the max amount of investment tokens that can be accepted
+
+    // NOTE on multiple vesting schedules
+
+    // in step 1 the protocol may select up to 5 different vesting schedules for users and the amount of LP tokens they will
+    // get for participating in each round. NOTE that multiple vesting schedules doesn't affect the pricing each user gets
+    // instead for a longer vesting schedule you should get more of the LP tokens than people entering with less of a lockup
+    // also NOTE there is a benefit to having multiple vesting schedules which is that investors dont all unlock at once.
+
     // step 2 is fund the rewards (base and single sided rewards)
     // step 3 is for investors to accept the deal
     // step 4 is to provide liquidity (could be at any price in a liquidity growth round)
@@ -98,9 +106,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     // is sufficient to cover extremely large IL after a price run up.
 
     // step 5 investors claim their tokens when the vesting is done
-
-    // NOTE the example below takes into account multiple vesting schedules
-    // TODO add the detailed notes on multiple vesting schedules here
 
     /**
      * @dev initializes the contract configuration, called from the factory contract when creating a new Up Front Deal

@@ -18,7 +18,6 @@ interface IVestAMM {
     struct VestingSchedule {
         uint256 vestingPeriod;
         uint256 vestingCliffPeriod;
-        Deallocation deallocation;
         uint256 investorShare; // 0 to 100
         uint256 totalHolderTokens;
     }
@@ -29,6 +28,7 @@ interface IVestAMM {
         address investmentToken;
         address baseAsset;
         uint256 baseAssetAmount;
+        Deallocation deallocation;
     }
 
     struct FundingLimits {
