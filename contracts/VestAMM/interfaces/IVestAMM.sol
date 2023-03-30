@@ -15,6 +15,7 @@ interface IVestAMM {
         Base
     }
 
+    // used for each reward to be claimed or the LP tokens
     struct VestingSchedule {
         uint256 vestingPeriod;
         uint256 vestingCliffPeriod;

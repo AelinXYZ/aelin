@@ -30,11 +30,14 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     uint256 public totalLPClaimed;
     uint256 public holderTokenTotal;
     uint256 public maxInvTokens;
+    uint8 private numVestingSchedules;
     mapping(uint8 => uint256) public maxInvTokensPerVestSchedule;
     mapping(uint8 => uint256) public depositedPerVestSchedule;
+    mapping(uint8 => bool) public isVestingScheduleFull;
     uint8 private singleRewardsComplete;
     uint8 private numSingleRewards;
     uint8 constant MAX_SINGLE_REWARDS = 10;
+    uint8 constant MAX_VESTING_SCHEDULES = 5;
 
     MerkleTree.TrackClaimed private trackClaimed;
     AelinAllowList.AllowList public allowList;
@@ -69,6 +72,21 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     // get for participating in each round. NOTE that multiple vesting schedules doesn't affect the pricing each user gets
     // instead for a longer vesting schedule you should get more of the LP tokens than people entering with less of a lockup
     // also NOTE there is a benefit to having multiple vesting schedules which is that investors dont all unlock at once.
+
+    // 500 ABC tokens being matched against 2500 sUSD across 4 buckets
+    // ABC is 5 sUSD per token
+    // protocol selects 50/50 pool on Balancer
+    // protocol provides half the capital. Investors provide the other half.
+    // the protocol only passes in the number of ABC tokens per schedule. not the amount of sUSD.
+    // The sUSD amount is taken from the pricing which is either passed in for a liquidity or read from the AMM for a liquidity growth.
+    // schedule 1 - 100 ABC tokens match 500 sUSD in this bucket (3 month cliff, 3 month linear vest). Investors get 60% of LP tokens.
+    // schedule 2 - 100 ABC tokens match 500 sUSD in this bucket (3 month cliff, 6 month linear vest). Investors get 70% of LP tokens.
+    // schedule 3 - 100 ABC tokens match 500 sUSD in this bucket (6 month cliff, 6 month linear vest). Investors get 80% of LP tokens.
+    // schedule 4 - 200 ABC tokens match 1000 sUSD in this bucket (6 month cliff, 18 month linear vest). Investors get 100% of LP tokens.
+
+    // deallocation rules
+    // all buckets must be full and are sold on a FCFS basis
+    // optionally, a protocol may allow buckets to be oversubscribed only after all buckets are full
 
     // step 2 is fund the rewards (base and single sided rewards)
     // step 3 is for investors to accept the deal
@@ -138,11 +156,13 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             investmentTokenPerBase = _ammData.ammLibrary.getPriceRatio(_ammData.investmentToken, _ammData.baseAsset);
         }
 
+        require(vAmmInfo.vestingSchedules.length <= MAX_VESTING_SCHEDULES, "too many vesting periods");
+        numVestingSchedules = vAmmInfo.vestingSchedules.length;
         for (uint i = 0; i < vAmmInfo.vestingSchedules.length; i++) {
             holderTokenTotal += vAmmInfo.vestingSchedules[i].totalHolderTokens;
             maxInvTokensPerVestSchedule[i] =
                 (vAmmInfo.vestingSchedules[i].totalHolderTokens * investmentTokenPerBase) /
-                IERC20(ammData.baseAsset).decimals();
+                10**IERC20(ammData.baseAsset).decimals();
             maxInvTokens += maxInvTokensPerVestSchedule[i];
         }
 
@@ -274,7 +294,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         MerkleTree.UpFrontMerkleData calldata _merkleData,
         uint256 _investmentTokenAmount,
         uint8 _vestingScheduleIndex
-    ) external lock acceptDealOpen {
+    ) external lock acceptDealOpen vestingScheduleOpen(_vestingScheduleIndex, _investmentTokenAmount) {
         // TODO how to check if an array item is empty in solidity.
         // it says access to a non-existing index will throw an exception. lets test this.
         require(!!vAmmInfo.vestingSchedule[_vestingScheduleIndex], "vesting schedule doesnt exist");
@@ -294,18 +314,12 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         uint256 depositTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
         depositedPerVestSchedule[_vestingScheduleIndex] += depositTokenAmount;
 
-        // TODO switch it back to where each vesting period can be deallocated or not
-        // instead of having all the schedules have the same dealloction rules
-        // the current system means it can either be FCFS or every schedule can be deallocated
-        // but this means that one vesting schdule can be over allocated while all the rest haven't filled up yet
-        // we should maybe enforce that all schedules have to fill up before you can have deallocation or something. idk
-        // lets discuss this together soon. it has a lot of different options. we should go with the simplest that
-        // satisfies the most amount of pools
-        if (vAmmInfo.deallocation == Deallocation.None) {
-            require(
-                depositedPerVestSchedule[_vestingScheduleIndex] <= maxInvTokensPerVestSchedule,
-                "purchased more than total"
-            );
+        if (
+            !isVestingScheduleFull[_vestingScheduleIndex] &&
+            depositedPerVestSchedule[_vestingScheduleIndex] + _investmentTokenAmount >=
+            maxInvTokensPerVestSchedule[_vestingScheduleIndex]
+        ) {
+            isVestingScheduleFull[_vestingScheduleIndex] = true;
         }
         totalDeposited += depositTokenAmount;
         mintVestingToken(msg.sender, depositTokenAmount, _vestingScheduleIndex);
@@ -500,7 +514,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             require(100 * 10**18 >= _vestingSchedules[i].investorShare, "max 100% to investor");
             require(0 <= _vestingSchedules[i].investorShare, "min 0% to investor");
             require(0 < _vestingSchedules[i].totalHolderTokens, "allocate tokens to schedule");
-            require(_vestingSchedules[i].purchaseTokenPerDealToken > 0, "invalid deal price");
         }
     }
 
@@ -564,6 +577,26 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         require(!isCancelled, "deal is cancelled");
         // TODO double check < vs <= matches everywhere
         require(depositComplete && block.timestamp <= depositExpiry, "not in deposit window");
+        _;
+    }
+
+    modifier vestingScheduleOpen(uint8 _vestingScheduleIndex, uint256 _investmentTokenAmount) {
+        bool otherBucketsFull = true;
+        for (uint8 i; i < numVestingSchedules.length; i++) {
+            if (i == _vestingScheduleIndex) {
+                continue;
+            }
+            if (!isVestingScheduleFull[numVestingSchedules[i]]) {
+                otherBucketsFull = false;
+                break;
+            }
+        }
+        require(
+            depositedPerVestSchedule[_vestingScheduleIndex] + _investmentTokenAmount <=
+                maxInvTokensPerVestSchedule[_vestingScheduleIndex] ||
+                (otherBucketsFull && vAmmInfo.deallocation == Deallocation.Proportional),
+            "purchased more than total"
+        );
         _;
     }
 }
