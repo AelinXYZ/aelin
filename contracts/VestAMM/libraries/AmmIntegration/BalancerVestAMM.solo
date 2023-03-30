@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // import "./IBalancerPool.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 import "@balancer-labs/v2-interfaces/contracts/pool-weighted/WeightedPoolUserData.sol";
+import {IVault} from "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 
 // TODO if Balancer offers additional rewards to locked LPs outside of the trading fees
 // first, they can do those rewards directly using single sided rewards via our contracts instead
