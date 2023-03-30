@@ -87,7 +87,7 @@ interface IAelinUpFrontDeal {
         uint256 timestamp
     );
 
-    event FeeEscrowClaimed(address indexed aelinFeeEscrow, address indexed underlyingTokenAddress, uint256 amount);
+    event FeeEscrowClaim(address indexed aelinFeeEscrow, address indexed underlyingTokenAddress, uint256 amount);
 
     event ClaimedUnderlyingDealToken(address indexed user, address underlyingToken, uint256 amountClaimed);
 

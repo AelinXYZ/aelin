@@ -397,7 +397,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
             uint256 aelinFeeAmt = (totalSold * AELIN_FEE) / BASE;
             IERC20(_underlyingDealToken).safeTransfer(address(aelinFeeEscrow), aelinFeeAmt);
 
-            emit FeeEscrowClaimed(aelinEscrowStorageProxy, _underlyingDealToken, aelinFeeAmt);
+            emit FeeEscrowClaim(aelinEscrowStorageProxy, _underlyingDealToken, aelinFeeAmt);
         }
     }
 
