@@ -15,6 +15,10 @@ import "../libraries/MerkleTree.sol";
 import "./interfaces/IVestAMM.sol";
 import "./interfaces/IVestAMMLibrary.sol";
 
+// we will have a modified staking rewards contract that reads the balances of each investor in the locked LP alongside which bucket they are in
+// so you can distribute protocol fees to locked LPs and also do highly targeted rewards just to specific buckets if you want
+// TODO add in a curve multi rewards contract to the VestAMM so that you can distribute protocol fees to holders
+// NOTE can we do this without any restrictions???
 // TODO proper commenting everywhere in the natspec format
 // TODO write an initial test that checks the ability to start a vAMM and deposit base and single reward tokens
 // TODO make sure the logic works with 80/20 balancer pools and not just when its 50/50
@@ -30,10 +34,13 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     uint256 public totalLPClaimed;
     uint256 public holderTokenTotal;
     uint256 public maxInvTokens;
+    uint256 public amountBaseDeposited;
     uint8 private numVestingSchedules;
     mapping(uint8 => uint256) public maxInvTokensPerVestSchedule;
     mapping(uint8 => uint256) public depositedPerVestSchedule;
     mapping(uint8 => bool) public isVestingScheduleFull;
+    mapping(uint8 => bool) public finalizedDeposit;
+    mapping(address => mapping(uint8 => uint256)) public holderDeposits;
     uint8 private singleRewardsComplete;
     uint8 private numSingleRewards;
     uint8 constant MAX_SINGLE_REWARDS = 10;
@@ -137,7 +144,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         DealAccess calldata _dealAccess,
         address _aelinFeeModule
     ) external initOnce {
-        validateAndSaveSingle(singleRewards);
+        validateSingle(singleRewards);
         validateVestingSchedules(_vAmmInfo.vestingSchedules);
         // pool initialization checks
         // TODO how to name these
@@ -146,6 +153,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         vAmmInfo = _vAmmInfo;
         dealAccess = _dealAccess;
         aelinFeeModule = _aelinFeeModule;
+        singleRewards = _singleRewards;
 
         // TODO if we are doing a liquidity growth round we need to read the prices of the assets
         // from onchain here and set the current price as the median price
@@ -183,7 +191,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     function setDepositComplete() internal {
-        if (baseComplete == true && singleRewardsComplete == numSingleRewards) {
+        if (baseComplete == true && singleRewardsComplete == singleRewards.length) {
             depositComplete = true;
             depositExpiry = block.timestamp + vAmmInfo.depositWindow;
             lpFundingExpiry = depositExpiry + vAmmInfo.lpFundingWindow;
@@ -194,62 +202,102 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     function depositSingle(DepositToken[] calldata _depositTokens) external depositIncomplete {
         for (uint i = 0; i < _depositTokens.length; i++) {
             require(
-                (!!singleRewards[msg.sender][_depositTokens[i].token] &&
-                    !singleRewards[msg.sender][_depositTokens[i].token].finalizedDeposit),
-                "cannot deposit reward"
+                msg.sender == vAmmInfo.mainHolder ||
+                    singleRewards[_depositTokens[i].singleRewardIndex].singleHolder == msg.sender,
+                "not the right holder"
             );
+            require(
+                _depositTokens[i].token == singleRewards[_depositTokens[i].singleRewardIndex].token,
+                "not the right token"
+            );
+            require(IERC20(_depositTokens[i].token).balanceOf(msg.sender) > _depositTokens[i].amount, "not enough balance");
+            require(!finalizedDeposit[_depositTokens[i].singleRewardIndex], "deposit already finalized");
+            // check deposit is not finalized here
             uint256 balanceBeforeTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
             IERC20(_depositTokens[i].token).safeTransferFrom(msg.sender, address(this), _depositTokens[i].amount);
             uint256 balanceAfterTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
             uint256 amountPostTransfer = balanceAfterTransfer - balanceBeforeTransfer;
+            holderDeposits[msg.sender][_depositTokens[i].singleRewardIndex] += amountPostTransfer;
 
-            singleRewards[msg.sender][_depositTokens[i].token].amountDeposited += amountPostTransfer;
             emit TokenDeposited(_depositTokens[i].token, amountPostTransfer);
-            if (
-                singleRewards[msg.sender][_depositTokens[i].token].amountDeposited >=
-                singleRewards[msg.sender][_depositTokens[i].token].rewardTokenTotal
-            ) {
+            if (amountPostTransfer >= singleRewards[_depositTokens[i].singleRewardIndex].rewardTokenTotal) {
                 singleRewardsComplete += 1;
-                singleRewards[msg.sender][_depositTokens[i].token].finalizedDeposit = true;
-                emit TokenDepositComplete(_depositTokens[i].token);
+                finalizedDeposit[_depositTokens[i].singleRewardIndex] = true;
+                emit SingleDepositComplete(_depositTokens[i].token, _depositTokens[i].singleRewardIndex);
             }
         }
         setDepositComplete();
     }
 
-    // TODO fix this function so that it works after the single reward changes
-    // function cancelVestAMM() onlyHolder depositIncomlete {
-    //     for (uint i = 0; i < numSingleRewards; i++) {
-    //         removeSingle(i);
-    //     }
-    //     if (holderDeposits[msg.sender][baseAsset] > 0) {
-    //         IERC20(baseAsset).safeTransferFrom(address(this), vAmmInfo.mainHolder, holderDeposits[msg.sender][baseAsset]);
-    //     }
-    //     isCancelled = true;
-    // }
-
-    function addSingle(SingleRewardConfig[] calldata _newSingleRewards) external onlyHolder depositIncomplete {
-        require(numSingleRewards + _newSingleRewards.length <= MAX_SINGLE_REWARDS, "max 10 single-sided rewards");
-        validateAndSaveSingle(_newSingleRewards);
+    function cancelVestAMM() onlyHolder depositIncomlete {
+        uint8[] removeIndexes;
+        for (uint i = 0; i < singleRewards.length; i++) {
+            removeIndexes[i] = i;
+        }
+        removeSingle(removeIndexes);
+        if (amountBaseDeposited > 0) {
+            IERC20(baseAsset).safeTransferFrom(address(this), vAmmInfo.mainHolder, amountBaseDeposited);
+        }
+        isCancelled = true;
     }
 
-    function removeSingle(RemoveSingle[] calldata _removeSingleList) external depositIncomplete {
-        for (uint i = 0; i < _removeSingleList.length; i++) {
+    function addSingle(SingleRewardConfig[] calldata _newSingleRewards) external onlyHolder depositIncomplete {
+        require(singleRewards.length + _newSingleRewards.length <= MAX_SINGLE_REWARDS, "max 10 single-sided rewards");
+        validateSingle(_newSingleRewards);
+        for (uint i = 0; i < _newSingleRewards.length; i++) {
+            singleRewards[singleRewards.length + i] = _newSingleRewards[i];
+        }
+    }
+
+    function removeSingle(uint256[] calldata _removeIndexList) external depositIncomplete {
+        for (uint i = 0; i < _removeIndexList.length; i++) {
             require(
-                (msg.sender == vAmmInfo.mainHolder && !!singleRewards[_removeSingleList.holder][_removeSingleList.token]) ||
-                    !!singleRewards[msg.sender][_removeSingleList.token],
-                "cant access this reward"
+                msg.sender == vAmmInfo.mainHolder || singleRewards[_removeIndexList[i]].singleHolder == msg.sender,
+                "not the right holder"
             );
-            if (singleRewards[_removeSingleList.holder][_removeSingleList.token].finalizedDeposit) {
+            uint256 mainHolderAmount = holderDeposits[vAmmInfo.mainHolder][_removeIndexList[i]];
+            uint256 singleHolderAmount = holderDeposits[singleRewards[_removeIndexList[i]].singleHolder][
+                _removeIndexList[i]
+            ];
+            if (mainHolderAmount > 0) {
+                IERC20(singleRewards[_removeIndexList[i]].token).safeTransferFrom(
+                    address(this),
+                    vAmmInfo.mainHolder,
+                    mainHolderAmount
+                );
+            }
+            if (singleHolderAmount > 0) {
+                IERC20(singleRewards[_removeIndexList[i]].token).safeTransferFrom(
+                    address(this),
+                    singleRewards[_removeIndexList[i]].singleHolder,
+                    singleHolderAmount
+                );
+            }
+            emit SingleRemoved(
+                _removeIndexList[i],
+                singleRewards[_removeIndexList[i]].token,
+                singleRewards[_removeIndexList[i]].rewardTokenTotal,
+                mainHolderAmount,
+                singleHolderAmount
+            );
+
+            if (finalizedDeposit[_removeIndexList[i]]) {
                 singleRewardsComplete -= 1;
             }
-            uint256 amt = singleRewards[_removeSingleList.holder][_removeSingleList.token].amountDeposited;
-            if (amt > 0) {
-                IERC20(_removeSingleList.token).safeTransferFrom(address(this), _removeSingleList.holder, amt);
-            }
-            delete singleRewards[_removeSingleList.holder][_removeSingleList.token];
-            numSingleRewards -= 1;
-            // TODO emit event for the subgraph tracking
+            finalizedDeposit[_removeIndexList[i]] = finalizedDeposit[singleRewards.length - 1];
+            singleRewards[_removeIndexList[i]] = singleRewards[singleRewards.length - 1];
+            holderDeposits[vAmmInfo.mainHolder][_removeIndexList[i]] = holderDeposits[vAmmInfo.mainHolder][
+                singleRewards.length - 1
+            ];
+            holderDeposits[singleRewards[_removeIndexList[i]].singleHolder][_removeIndexList[i]] = holderDeposits[
+                singleRewards[_removeIndexList[i]].singleHolder
+            ][singleRewards.length - 1];
+
+            delete holderDeposits[singleRewards[_removeIndexList[i]].singleHolder][singleRewards.length - 1];
+            delete holderDeposits[vAmmInfo.mainHolder][singleRewards.length - 1];
+
+            finalizedDeposit.pop();
+            singleRewards.pop();
         }
     }
 
@@ -261,9 +309,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         IERC20(baseAsset).safeTransferFrom(msg.sender, address(this), baseAssetAmount);
         uint256 balanceAfterTransfer = IERC20(baseAsset).balanceOf(address(this));
         uint256 amountPostTransfer = balanceAfterTransfer - balanceBeforeTransfer;
-        holderDeposits[msg.sender][baseAsset] += amountPostTransfer;
+        amountBaseDeposited += amountPostTransfer;
         emit DepositPoolToken(baseAsset, msg.sender, amountPostTransfer);
-        if (IERC20(baseAsset).balanceOf(address(this)) >= ammData.baseAssetAmount) {
+        if (amountBaseDeposited >= ammData.baseAssetAmount) {
             baseComplete = true;
         }
 
@@ -339,6 +387,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // data stored in the contract. it won't be a pure pass through like we have now
         // at this stage in the development process
         IVestAMMLibrary(ammData.ammLibrary).deployPool(_createPool, _addLiquidity);
+        // mintVestingToken(msg.sender, depositTokenAmount, _vestingScheduleIndex);
         finalizeVesting();
     }
 
@@ -392,6 +441,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // we need to send X% of those fees to the Aelin Fee Module
     }
 
+    // logic
+    // you have LP tokens which may or may not be on vesting schedules to claim
+    // you have single sided reward tokens which may or may not be on vesting schedules to claim
     function claimableTokens(
         uint256 _tokenId,
         ClaimType _claimType,
@@ -399,28 +451,35 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     ) public view returns (uint256) {
         VestVestingToken memory schedule = vestingDetails[_tokenId];
         uint256 precisionAdjustedClaimable;
+
         uint256 lastClaimedAt = _claimType == ClaimType.Single
             ? schedule.lastClaimedAtRewardList[_claimIndex]
             : schedule.lastClaimedAt;
 
-        if (lastClaimedAt > 0) {
-            uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
-            uint256 minTime = lastClaimedAt > depositExpiry ? lastClaimedAt : depositExpiry;
+        depositExpiry = block.timestamp + vAmmInfo.depositWindow;
+        lpFundingExpiry = depositExpiry + vAmmInfo.lpFundingWindow;
 
-            if (maxTime > depositExpiry && minTime <= vestingExpiry) {
-                // NOTE that schedule.share needs to be updated
-                // to be the total deposited / global total somehow without requiring a settle method
-                // NOTE this math is wrong probably. need to figure out what to do with Math here to avoid issues
-                // TODO check how share is used on the other contracts
-                uint256 lpClaimable = (((schedule.amountDeposited * 10**depositTokenDecimals) / totalDeposited) *
-                    (maxTime - minTime)) / vestingPeriod;
+        // vestingExpiry
+        // depositExpiry
+        // lastClaimedAt
+        // block.timestamp
 
-                // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
-                // although it will generally never happen as solidity rounds down so there should always be a little bit left
-                precisionAdjustedClaimable = lpClaimable > IERC20(lpToken).balanceOf(address(this))
-                    ? IERC20(lpToken).balanceOf(address(this))
-                    : lpClaimable;
-            }
+        uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        uint256 currTime = lastClaimedAt > depositExpiry ? lastClaimedAt : depositExpiry;
+
+        if (maxTime > depositExpiry && currTime <= vestingExpiry) {
+            // NOTE that schedule.share needs to be updated
+            // to be the total deposited / global total somehow without requiring a settle method
+            // NOTE this math is wrong probably. need to figure out what to do with Math here to avoid issues
+            // TODO check how share is used on the other contracts
+            uint256 lpClaimable = (((schedule.amountDeposited * 10**depositTokenDecimals) / totalDeposited) *
+                (maxTime - currTime)) / vestingPeriod;
+
+            // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
+            // although it will generally never happen as solidity rounds down so there should always be a little bit left
+            precisionAdjustedClaimable = lpClaimable > IERC20(lpToken).balanceOf(address(this))
+                ? IERC20(lpToken).balanceOf(address(this))
+                : lpClaimable;
         }
         return precisionAdjustedClaimable;
     }
@@ -450,7 +509,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
      * created by the protocol
      */
     function claimLPTokens(uint256 _tokenId) external {
-        _claimTokens(msg.sender, _tokenId, ClaimType.Base, 0);
+        _claimTokens(_tokenId, ClaimType.LP, 0);
     }
 
     /**
@@ -458,20 +517,19 @@ contract VestAMM is AelinVestingToken, IVestAMM {
      * of their single sided reward tokens once they have vested according to the schedule
      */
     function claimRewardToken(uint256 _tokenId, uint256 _claimIndex) external {
-        _claimTokens(msg.sender, _tokenId, ClaimType.Single, _claimIndex);
+        _claimTokens(_tokenId, ClaimType.Single, _claimIndex);
     }
 
     function _claimTokens(
-        address _owner,
         uint256 _tokenId,
         ClaimType _claimType,
         uint256 _claimIndex
     ) internal {
-        require(ownerOf(_tokenId) == _owner, "must be owner to claim");
+        require(ownerOf(_tokenId) == msg.sender, "must be owner to claim");
         // TODO double check this doesn't error if there are no single sided rewards
         uint256 claimableAmount = claimableTokens(_tokenId, _claimType, _claimIndex);
         require(claimableAmount > 0, "no lp tokens ready to claim");
-        if (_claimType == ClaimType.Base) {
+        if (_claimType == ClaimType.LP) {
             vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
             totalLPClaimed += claimableAmount;
         } else {
@@ -479,9 +537,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             // TODO like we do for the LP positions, track totals for each single reward type claimed
             // in a mapping we can query from UI
         }
-        address claimToken = _claimType == ClaimType.Base ? lpToken : singleRewards[_claimIndex].token;
-        IERC20(claimToken).safeTransfer(_owner, claimableAmount);
-        emit ClaimedToken(claimToken, _owner, claimableAmount, _claimType);
+        address claimToken = _claimType == ClaimType.LP ? lpToken : singleRewards[_claimIndex].token;
+        IERC20(claimToken).safeTransfer(msg.sender, claimableAmount);
+        emit ClaimedToken(claimToken, msg.sender, claimableAmount, _claimType);
     }
 
     function sendFeesToAelin(address _token, uint256 _amount) external {
@@ -490,7 +548,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         emit SentFees(_token, _amount);
     }
 
-    function validateAndSaveSingle(SingleRewardConfig[] _singleRewards) internal {
+    function validateSingle(SingleRewardConfig[] _singleRewards) internal {
         require(_singleRewards.length <= MAX_SINGLE_REWARDS, "max 10 single-sided rewards");
         for (uint256 i; i < _singleRewards.length; i++) {
             // Also we need to potentially validate more of the fields like migration rules
@@ -502,8 +560,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             require(_singleRewards[i].rewardTokenTotal > 0, "rtt: must pass an amount");
             VestingSchedule[] vestingSchedule = [_singleRewards.vestingData];
             validateVestingSchedules(vestingSchedule);
-            singleRewards[_singleRewards[i].singleHolder][_singleRewards[i].rewardToken] = _singleRewards[i];
-            numSingleRewards++;
         }
     }
 
@@ -534,12 +590,20 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         uint256 _amount,
         uint8 _vestingScheduleIndex
     ) internal {
+        mintVestingToken(msg.sender, depositTokenAmount, _vestingScheduleIndex);
         // NOTE there is maybe a better way to do this
-        uint256[] singleDepositExpiry;
+        uint256[] singleRewardTimestamps;
         for (uint i = 0; i < singleRewards.length; i++) {
-            singleDepositExpiry[i] = depositExpiry;
+            singleRewardTimestamps[i] = depositExpiry;
         }
-        _mintVestingToken(_to, _amount, depositExpiry, singleDepositExpiry, _vestingScheduleIndex);
+        // we have to track up to 11 vesting schedules in a single NFT
+        singleRewards[_singleRewards[i].singleHolder][_singleRewards[i].rewardToken] = _singleRewards[i];
+        // we need to track when you claimed each single sided reward separately
+        // and also when you last claimed the base asset
+        // [ts1, ts2, ts3, ts4]
+        // ts1 tied to singleRewards[0]
+        // singleRewards[_singleRewards[i].singleHolder][_singleRewards[i].rewardToken] = _singleRewards[i];
+        _mintVestingToken(_to, _amount, depositExpiry, singleRewardTimestamps, _vestingScheduleIndex);
     }
 
     modifier initOnce() {
