@@ -39,8 +39,9 @@ interface IAelinDeal {
         uint256 underlyingDealTokenAmount
     );
     event ClaimedUnderlyingDealToken(
-        address indexed underlyingDealTokenAddress,
         address indexed recipient,
+        uint256 indexed tokenId,
+        address underlyingDealTokenAddress,
         uint256 underlyingDealTokensClaimed
     );
 }

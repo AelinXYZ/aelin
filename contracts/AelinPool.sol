@@ -499,7 +499,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     }
 
     function sponsorClaim() external {
-        require(block.timestamp >= purchaseExpiry, "still in purchase window");
+        require(address(aelinDeal) != address(0), "no deal yet");
+        (, , uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
+        (uint256 openRedemptionPeriod, , ) = aelinDeal.openRedemption();
+        require(block.timestamp >= proRataRedemptionExpiry + openRedemptionPeriod, "still in redemption period");
         require(sponsorClaimed != true, "sponsor already claimed");
         require(totalSponsorFeeAmount > 0, "no sponsor fees");
 

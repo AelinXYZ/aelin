@@ -195,6 +195,12 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
         return precisionAdjustedUnderlyingClaimable;
     }
 
+    function claimUnderlyingMultipleEntries(uint256[] memory _indices) external {
+        for (uint256 i = 0; i < _indices.length; i++) {
+            _claimUnderlyingTokens(msg.sender, _indices[i]);
+        }
+    }
+
     /**
      * @dev allows a user to claim their underlying deal tokens or a partial amount
      * of their underlying tokens once they have vested according to the schedule
@@ -211,7 +217,7 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
         vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
         totalUnderlyingClaimed += claimableAmount;
         IERC20(underlyingDealToken).safeTransfer(_owner, claimableAmount);
-        emit ClaimedUnderlyingDealToken(underlyingDealToken, _owner, claimableAmount);
+        emit ClaimedUnderlyingDealToken(_owner, _tokenId, underlyingDealToken, claimableAmount);
     }
 
     /**

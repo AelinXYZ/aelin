@@ -423,7 +423,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
         vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
         totalUnderlyingClaimed += claimableAmount;
         IERC20(_underlyingDealToken).safeTransfer(_owner, claimableAmount);
-        emit ClaimedUnderlyingDealToken(_owner, _underlyingDealToken, claimableAmount);
+        emit ClaimedUnderlyingDealToken(_owner, _tokenId, _underlyingDealToken, claimableAmount);
     }
 
     /**

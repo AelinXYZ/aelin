@@ -89,7 +89,12 @@ interface IAelinUpFrontDeal {
 
     event FeeEscrowClaim(address indexed aelinFeeEscrow, address indexed underlyingTokenAddress, uint256 amount);
 
-    event ClaimedUnderlyingDealToken(address indexed user, address underlyingToken, uint256 amountClaimed);
+    event ClaimedUnderlyingDealToken(
+        address indexed user,
+        uint256 indexed tokenId,
+        address underlyingToken,
+        uint256 amountClaimed
+    );
 
     event PoolWith721(address indexed collectionAddress, uint256 purchaseAmount, bool purchaseAmountPerToken);
 
