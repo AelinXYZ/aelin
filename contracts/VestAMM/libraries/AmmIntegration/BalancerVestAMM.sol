@@ -3,9 +3,17 @@ pragma solidity 0.8.6;
 pragma experimental ABIEncoderV2;
 
 import "../../interfaces/IVestAMMLibrary.sol";
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+// import "./IBalancerPool.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 import "@balancer-labs/v2-interfaces/contracts/pool-weighted/WeightedPoolUserData.sol";
 
+// TODO if Balancer offers additional rewards to locked LPs outside of the trading fees
+// first, they can do those rewards directly using single sided rewards via our contracts instead
+// but let's say that if you own any balancer LP tokens you are eligible for rewards separate from VestAMM
+// what we can do is take those rewards here in this contract somewhere and claim them for LPs in the pool as well
+// or we just give the extra fees to AELIN Fee Module
 library BalancerVestAMM is IVestAMMLibrary {
     IWeightedPoolFactory immutable weightedPoolFactory;
     address public vault;
@@ -46,188 +54,239 @@ library BalancerVestAMM is IVestAMMLibrary {
     // - calculate the amount of swap fees earned. Send 20% to the AelinFeeModule
     // - not for Balancer: if the fees are not reinvested into the LP tokens, write a method to reinvest them
 
-    function deployPool(CreateNewPool _createPool, AddLiquidity _addLiquidity) external {
-        // 50/50 pool KWENTA/sUSD on Balancer
-        // arguments might need: name, symbol, tokens, normalizedWeights, rateProviders, swapFeePercentage, owner
-        DeployPoolBalancer deployArgs = parseDeployPoolArgs(_createPool);
-        // TODO make sure we are calling the latest pool factory with the right arguments
-        // TODO save the vault here
-        // save the pool id
-        balancerPool = weightedPoolFactory.create(deployArgs);
-        poolId = balancerPool.id;
-        // name,
-        // symbol,
-        // tokens,
-        // normalizedWeights,
-        // 0.04e16,
-        // address(this)
-        // TODO implement adding liquidity after pool creation if you can't do it when creating the pool itself
-        addLiquidity(_addLiquidity, true);
+    function deployPool(
+        address tokenA,
+        address tokenB,
+        uint256 ratioA,
+        uint256 ratioB,
+        uint256 swapFeePercentage
+    ) external returns (address) {
+        // Check if the tokens and ratios are valid
+        require(tokenA != address(0) && tokenB != address(0), "Invalid token addresses");
+        require(ratioA > 0 && ratioB > 0, "Invalid token ratios");
+
+        // Prepare pool creation data
+        bytes memory poolCreationData = abi.encode(tokenA, tokenB, ratioA, ratioB, swapFeePercentage);
+
+        // Create the new weighted pool
+        address newPoolAddress = balancerPoolFactory.create("WeightedBalancerPool", balancerVault, poolCreationData);
+
+        // Return the new pool address
+        return newPoolAddress;
     }
 
-    function addLiquidity(AddLiquidity _addLiquidity, bool _isLaunch) external {
-        // arguments might need: tokens, amounts, poolAmountOut
-        // TODO do some math to check the right ratio of assets based on the
-        // amount deposited in the contract to create liquidity here
-        // NOTE it looks like we want to use this function to calculate the proportional amount
-        // const { tokens, amounts } = pool.calcProportionalAmounts(token, amount);
+    // the protocol gives us 100K ABC
+    // investors give us the full cap of 500K sUSD or a lower amount e.g. 253K sUSD
+    function addLiquidity(
+        address tokenA, // ABC
+        address tokenB, // sUSD
+        uint256 amountA, // 100000 * 1e18
+        uint256 amountB, // 253000 * 1e6 or up to 500000 * 1e6 if we hit the cap
+        address balancerPoolAddress
+    )
+        external
+        returns (
+            uint256 lpTokens,
+            uint256 finalAmountA,
+            uint256 finalAmountB
+        )
+    {
+        // Check if the Balancer pool address is valid
+        require(balancerPoolAddress != address(0), "Invalid Balancer pool address");
 
-        // TODO add modifiers here to restrict access
+        // Instances of the ERC20 tokens and Balancer pool
+        IERC20 erc20A = IERC20(tokenA);
+        IERC20 erc20B = IERC20(tokenB);
+        IBalancerPool balancerPool = IBalancerPool(balancerPoolAddress);
+
+        // Approve the Balancer pool to spend tokens on behalf of the sender
+        erc20A.approve(balancerPoolAddress, amountA);
+        erc20B.approve(balancerPoolAddress, amountB);
+
+        // Get the current balance of the sender's LP tokens
+        uint256 initialLpBalance = balancerPool.balanceOf(address(this));
+
+        // Calculate the maximum amount of token A that can be added based on the desired token B amount
+        uint256 maxAmountA = balancerPool.calcTokenAForB(amountB, tokenA, tokenB);
+
+        // Calculate the maximum amount of token B that can be added based on the desired token A amount
+        uint256 maxAmountB = balancerPool.calcTokenBForA(amountA, tokenA, tokenB);
+
+        // Calculate the actual amounts of tokens A and B to be added
+        finalAmountA = amountA <= maxAmountA ? amountA : maxAmountA;
+        finalAmountB = amountB <= maxAmountB ? amountB : maxAmountB;
+
+        // Add liquidity to the Balancer pool
+        uint256[] memory minAmountsOut = new uint256[](2);
+        minAmountsOut[0] = 0;
+        minAmountsOut[1] = 0;
+        address[] memory tokens = new address[](2);
+        tokens[0] = tokenA;
+        tokens[1] = tokenB;
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = finalAmountA;
+        amounts[1] = finalAmountB;
+        // join as this contract and not the msg.sender
+        balancerPool.joinPool(amounts, minAmountsOut);
+
+        // Get the balance of the sender's LP tokens after providing liquidity
+        uint256 finalLpBalance = balancerPool.balanceOf(address(this));
+
+        // Calculate the number of LP tokens received
+        lpTokens = finalLpBalance - initialLpBalance;
+
+        // Return LP tokens, final amount of token A, and final amount of token B
+        // TODO if ABC token goes up in price and we have some left then we are going
+        // to put that on a single sided rewards on the same vesting schedule
+        return (lpTokens, finalAmountA, finalAmountB);
+    }
+
+    //     pragma solidity ^0.8.0;
+
+    // import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+    // import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+    // import "./interfaces/IVault.sol";
+    // import "./interfaces/IWeightedPool.sol";
+
+    // contract BalancerLiquidityRemover {
+    //     using SafeMath for uint256;
+
+    //     IVault public balancerVault;
+
+    //     constructor(address _balancerVault) {
+    //         balancerVault = IVault(_balancerVault);
+    //     }
+
+    function removeFixedPercentLiquidity(address poolAddress, uint256 percent) external {
+        require(percent > 0 && percent <= 100, "Invalid percentage");
+
+        IWeightedPool balancerPool = IWeightedPool(poolAddress);
+
+        // Calculate the amount of LP tokens to remove based on the percentage
+        uint256 lpTokenBalance = balancerPool.balanceOf(msg.sender);
+        uint256 lpTokensToRemove = lpTokenBalance.mul(percent).div(100);
+
+        // Approve the Balancer pool to burn the LP tokens
+        balancerPool.approve(poolAddress, lpTokensToRemove);
+
+        // Get the pool tokens
+        (address[] memory tokens, , ) = balancerVault.getPoolTokens(poolAddress);
         uint256 numTokens = tokens.length;
-        require(numTokens == amounts.length, "TOKEN_AMOUNTS_COUNT_MISMATCH");
-        require(numTokens > 0, "!TOKENS");
-        require(poolAmountOut > 0, "!POOL_AMOUNT_OUT");
 
-        // get bpt address of the pool (for later balance checks)
-        (address poolAddress, ) = vault.getPool(poolId);
-
-        // verify that we're passing correct pool tokens
-        // (two part verification: total number checked here, and individual match check below)
-        (IERC20[] memory poolAssets, , ) = vault.getPoolTokens(poolId);
-        require(poolAssets.length == numTokens, "numTokens != numPoolTokens");
-
-        uint256[] memory assetBalancesBefore = new uint256[](numTokens);
-
-        // run through tokens and make sure we have approvals (and correct token order)
-        for (uint256 i = 0; i < numTokens; ++i) {
-            // as per new requirements, 0 amounts are not allowed even though balancer supports it
-            require(amounts[i] > 0, "!AMOUNTS[i]");
-
-            require(tokens[i] == poolAssets[i], "tokens[i]!=poolAssets[i]");
-
-            // record previous balance for this asset
-            // NOTE it might not be address(this) here. TBD
-            assetBalancesBefore[i] = tokens[i].balanceOf(address(this));
-
-            // grant spending approval to balancer's Vault
-            _approve(tokens[i], amounts[i]);
+        // Set the minimum amounts of tokens to be received when removing liquidity
+        uint256[] memory minAmountsOut = new uint256[](numTokens);
+        for (uint256 i = 0; i < numTokens; i++) {
+            minAmountsOut[i] = 0;
         }
 
-        // record balances before deposit
-        // NOTE again it might not be address(this) here
-        uint256 bptBalanceBefore = IERC20(poolAddress).balanceOf(address(this));
+        // Remove the liquidity from the Balancer pool
+        balancerPool.exitPool(lpTokensToRemove, minAmountsOut);
+    }
 
-        // encode pool entrance custom userData
-        bytes memory userData = abi.encode(
-            WeightedPoolUserData.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT,
-            amounts, //maxAmountsIn,
-            poolAmountOut
-        );
+    // import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+    // import "@openzeppelin/contracts/utils/math/Math.sol";
+    // import "./interfaces/IVault.sol";
+    // import "./interfaces/IWeightedPool.sol";
+    // contract BalancerFeesCalculator {
+    // IVault public balancerVault;
 
-        IVault.JoinPoolRequest memory joinRequest = IVault.JoinPoolRequest({
-            assets: _convertERC20sToAssets(tokens),
-            maxAmountsIn: amounts, // maxAmountsIn,
-            userData: userData,
-            fromInternalBalance: false // vault will pull the tokens from contoller instead of internal balances
-        });
+    // constructor(address _balancerVault) {
+    //     balancerVault = IVault(_balancerVault);
+    // }
 
-        vault.joinPool(
-            poolId,
-            address(this), // sender
-            address(this), // recipient of BPT token
-            joinRequest
-        );
+    function calculateFeesEarned(address poolAddress, address lpAddress)
+        external
+        view
+        returns (uint256[] memory feesEarned)
+    {
+        IWeightedPool balancerPool = IWeightedPool(poolAddress);
 
-        // make sure we received bpt
-        uint256 bptBalanceAfter = IERC20(poolAddress).balanceOf(address(this));
-        require(bptBalanceAfter >= bptBalanceBefore.add(poolAmountOut), "BPT_MUST_INCREASE_BY_MIN_POOLAMOUNTOUT");
-        // NOTE we probably want to record bptBalancerAfter
-        // at the end and maybe return this value for tracking
-        // make sure assets were taken out
-        for (uint256 i = 0; i < numTokens; ++i) {
-            require(tokens[i].balanceOf(address(this)) == assetBalancesBefore[i].sub(amounts[i]), "ASSET_MUST_DECREASE");
+        // Get the pool tokens and their balances
+        (address[] memory tokens, , ) = balancerVault.getPoolTokens(poolAddress);
+
+        uint256 numTokens = tokens.length;
+        feesEarned = new uint256[](numTokens);
+
+        // Calculate the total swap fees in the pool
+        uint256 totalFees = 0;
+        for (uint256 i = 0; i < numTokens; i++) {
+            uint256 tokenFees = balancerPool.getSwapFeeAmount(tokens[i]);
+            totalFees = Math.add(totalFees, tokenFees);
+        }
+
+        // Calculate the LP's share of the fees
+        uint256 lpBalance = balancerPool.balanceOf(lpAddress);
+        uint256 totalSupply = balancerPool.totalSupply();
+
+        for (uint256 i = 0; i < numTokens; i++) {
+            uint256 tokenFees = balancerPool.getSwapFeeAmount(tokens[i]);
+            uint256 lpTokenFees = Math.mulDiv(tokenFees, lpBalance, totalSupply);
+            feesEarned[i] = lpTokenFees;
         }
     }
 
-    function removeLiquidity(RemoveLiquidity _removeLiquidity) external {
-        // arguments might need: uint256 maxBurnAmount, IERC20[] calldata tokens, uint256[] calldata exactAmountsOut
-        // arguments might need: uint256 poolAmountIn, IERC20[] calldata tokens, uint256[] calldata minAmountsOut
-        // TODO add modifiers here to restrict access
-        // TODO add parsing function here
-        // encode withdraw request
-        // bytes memory userData = abi.encode(
-        //     WeightedPoolUserData.ExitKind.BPT_IN_FOR_EXACT_TOKENS_OUT,
-        //     exactAmountsOut,
-        //     maxBurnAmount
-        // );
+    // using SafeMath for uint256;
 
-        // _withdraw(poolId, maxBurnAmount, tokens, exactAmountsOut, userData);
-        bytes memory userData = abi.encode(WeightedPoolUserData.ExitKind.EXACT_BPT_IN_FOR_TOKENS_OUT, poolAmountIn);
-        _withdraw(poolId, poolAmountIn, tokens, minAmountsOut, userData);
-    }
+    // IVault public balancerVault;
 
-    function _withdraw(
-        uint256 bptAmount,
-        IERC20[] calldata tokens,
-        uint256[] calldata amountsOut,
-        bytes memory userData
-    ) internal {
-        uint256 nTokens = tokens.length;
-        require(nTokens == amountsOut.length, "IN_TOKEN_AMOUNTS_COUNT_MISMATCH");
-        require(nTokens > 0, "!TOKENS");
+    // constructor(address _balancerVault) {
+    //     balancerVault = IVault(_balancerVault);
+    // }
 
-        (IERC20[] memory poolTokens, , ) = vault.getPoolTokens(poolId);
-        uint256 numTokens = poolTokens.length;
-        require(numTokens == amountsOut.length, "TOKEN_AMOUNTS_LENGTH_MISMATCH");
+    // TODO we need to determine how many swap fees have been generated by all the
+    // balancer or whatever AMM LP tokens that we have in our control and we want to
+    // take 20% of the swap fees for AELIN protocol fees. the rest of the swap fees
+    // we want to auto reinvest for users in the LP tokens held by this contract
+    // NOTE that balancer and many AMMs auto reinvest fees for us. while Uniswap
+    // does not auto reinvest fees but if we are building on Uniswap via Gamma strategies
+    // then Gamma will auto reinvest the fees for us
+    function removeAndSendFees(
+        address poolAddress,
+        address lpAddress,
+        address destination
+    ) external {
+        // NOTE this function should return the amount of trading swap fees generated
+        // by the tokens held in this account only, so the total amount of fees
+        // generated by our contracts. Then we want to take 20% of this and
+        // send it to Aelin Fee Module
+        // so here's the logic. you put in 500K sUSD against 100K ABC. this is roughly 1M USD
+        // the LPs in the pool earn 10% APY for the year. so there are 100K in trading fees for LPs
+        // so AELIN is going to keep 20K in trading fees split between ABC and sUSD
+        // the LPs will have the other 80K reinvested into the LP unless the AMM does that automatically
+        // we have to know the amount of fees generated since the last time we took the aelin amount
+        // a more detailed walkthrough:
+        // each time a user goes to claim, we need to make sure that they are not claiming Aelin fees
+        // 10 users each put in 100 sUSD for a total of 1000 sUSD against 10 ABC tokens
+        // 6 month cliff, 18 month vesting period
+        // contract has total of 2000 sUSD roughly and if it earns 10% a year you have
+        // roughly 100 sUSD and 10 ABC tokens as interest
+        // AELIN fees will be 20 sUSD and 2 ABC tokens
+        // 9 months in everyone claims their share of the LPs that have vested
+        // whenver someone vests their tokens we need to make sure that we are not giving
+        // away Aelin fees
+        // lets say the contract owns 10 LP tokens representing 2000 sUSD of tokens
+        // each user owns 1 LP token. so after 9 months they are 3/18 months done vesting
+        // after 9 months they can claim 3/18 of an LP token but the LP token might include some of hte fees
+        // which have been generated. so when we let them claim we need to remove those fees and separate them
 
-        // run through tokens and make sure it matches the pool's assets
-        for (uint256 i = 0; i < nTokens; ++i) {
-            require(tokens[i] == poolTokens[i], "tokens[i] != poolTokens[i]");
-        }
-
-        // grant erc20 approval for vault to spend our tokens
-        (address poolAddress, ) = vault.getPool(poolId);
-        _approve(IERC20(poolAddress), bptAmount);
-
-        // record balance before withdraw
-        // NOTE again might not be address(this)
-        uint256 bptBalanceBefore = IERC20(poolAddress).balanceOf(address(this));
-        uint256[] memory assetBalancesBefore = new uint256[](poolTokens.length);
-        for (uint256 i = 0; i < numTokens; ++i) {
-            assetBalancesBefore[i] = poolTokens[i].balanceOf(address(this));
-        }
-
-        // As we're exiting the pool we need to make an ExitPoolRequest instead
-        IVault.ExitPoolRequest memory request = IVault.ExitPoolRequest({
-            assets: _convertERC20sToAssets(poolTokens),
-            minAmountsOut: amountsOut,
-            userData: userData,
-            toInternalBalance: false // send tokens back to us vs keeping inside vault for later use
-        });
-
-        vault.exitPool(
-            poolId,
-            address(this), // sender,
-            payable(address(this)), // recipient,
-            request
-        );
-
-        // make sure we burned bpt, and assets were received
-        require(IERC20(poolAddress).balanceOf(address(this)) < bptBalanceBefore, "BPT_MUST_DECREASE");
-        for (uint256 i = 0; i < numTokens; ++i) {
-            require(
-                poolTokens[i].balanceOf(address(this)) >= assetBalancesBefore[i].add(amountsOut[i]),
-                "ASSET_MUST_INCREASE"
-            );
-        }
-    }
-
-    /// @dev Make sure vault has our approval for given token (reset prev approval)
-    function _approve(IERC20 token, uint256 amount) internal {
-        uint256 currentAllowance = token.allowance(address(this), address(vault));
-        if (currentAllowance > 0) {
-            token.safeDecreaseAllowance(address(vault), currentAllowance);
-        }
-        token.safeIncreaseAllowance(address(vault), amount);
-    }
-
-    /**
-     * @dev This helper function is a fast and cheap way to convert between IERC20[] and IAsset[] types
-     */
-    function _convertERC20sToAssets(IERC20[] memory tokens) internal pure returns (IAsset[] memory assets) {
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            assets := tokens
+        // example implementation
+        IWeightedPool balancerPool = IWeightedPool(poolAddress);
+        // Get the pool tokens and their balances
+        (address[] memory tokens, , ) = balancerVault.getPoolTokens(poolAddress);
+        uint256 lpBalance = balancerPool.balanceOf(lpAddress);
+        uint256 totalSupply = balancerPool.totalSupply();
+        uint256 numTokens = tokens.length;
+        uint256[] memory feesToSend = new uint256[](numTokens);
+        // Calculate the total swap fees in the pool
+        for (uint256 i = 0; i < numTokens; i++) {
+            uint256 tokenFees = balancerPool.getSwapFeeAmount(tokens[i]);
+            uint256 lpTokenFees = Math.mulDiv(tokenFees, lpBalance, totalSupply);
+            // Calculate 20% of the fees
+            feesToSend[i] = lpTokenFees.mul(20).div(100);
+            // Withdraw the fees from the pool
+            balancerPool.withdrawSwapFee(tokens[i], feesToSend[i]);
+            // Transfer the fees to the destination address
+            IERC20(tokens[i]).transfer(destination, feesToSend[i]);
         }
     }
 }

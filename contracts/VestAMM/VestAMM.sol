@@ -400,6 +400,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     function finalizeVesting() internal {
         lpDeposited = true;
+        // 20% fee of all trading fees from the LP tokens. this gets taken out later
+        // 1% fee for assets going through VestAMM
         sendFeesToAelin(ammData.baseAsset, feeAmount);
         for (uint256 i; i < _singleRewards.length; i++) {
             // NOTE this assumes all the reward tokens were claimed
