@@ -3,6 +3,7 @@ pragma solidity 0.8.6;
 
 // NEED pausing and management features
 import "./VestVestingToken.sol";
+import "./VestAMMMultiRewards.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
@@ -55,6 +56,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     uint256 investmentTokenPerBase;
 
     AmmData public ammData;
+    VestAMMMultiRewards public vestAmmMultiRewards;
     VAmmInfo public vAmmInfo;
     DealAccess public dealAccess;
     mapping(address => mapping(address => SingleRewardConfig)) public singleRewards;
@@ -154,6 +156,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         dealAccess = _dealAccess;
         aelinFeeModule = _aelinFeeModule;
         singleRewards = _singleRewards;
+        vestAmmMultiRewards = new VestAMMMultiRewards(address(this));
 
         // TODO if we are doing a liquidity growth round we need to read the prices of the assets
         // from onchain here and set the current price as the median price
@@ -370,6 +373,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             isVestingScheduleFull[_vestingScheduleIndex] = true;
         }
         totalDeposited += depositTokenAmount;
+        // VestAMMMultiRewards.stake(depositTokenAmount);
         mintVestingToken(msg.sender, depositTokenAmount, _vestingScheduleIndex);
 
         emit AcceptVestDeal(msg.sender, depositTokenAmount, _vestingScheduleIndex);
@@ -465,6 +469,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // depositExpiry
         // lastClaimedAt
         // block.timestamp
+        // TODO probably have to claim or account for fees for AELIN Fee Module in here so that
+        // existing LPs dont withdraw too much. we also need to auto reinvest for users somehow
+        // and might do that when someone claims
 
         uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
         uint256 currTime = lastClaimedAt > depositExpiry ? lastClaimedAt : depositExpiry;
@@ -539,6 +546,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             // TODO like we do for the LP positions, track totals for each single reward type claimed
             // in a mapping we can query from UI
         }
+        // VestAMMMultiRewards.withdraw(depositTokenAmount);
         address claimToken = _claimType == ClaimType.LP ? lpToken : singleRewards[_claimIndex].token;
         IERC20(claimToken).safeTransfer(msg.sender, claimableAmount);
         emit ClaimedToken(claimToken, msg.sender, claimableAmount, _claimType);

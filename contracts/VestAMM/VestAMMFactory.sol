@@ -22,6 +22,18 @@ contract VestAMMDealFactory is IVestAMM {
         AELIN_LIBRARY_LIST = _aelinLibraryList;
     }
 
+    // MAJOR TODO list
+    // TODO add in a curve multi rewards contract to the VestAMM so that you can distribute protocol fees to holders
+    // NOTE can we do this without any restrictions on the amount of rewards tokens since it loops through an array
+    // TODO write initial tests that checks the ability to start a vAMM and deposit base and single reward tokens to start the acceptDeal window
+    // TODO triple check all arguments start with _, casing is correct. well commented in the natspec format, etc
+    // TODO create a pool and add liquidity on Balancer
+    // TODO finish the create liquidity methods on the vest amm contracts
+    // TODO finish the claiming logic and make the math is all correct
+    // TODO finish the fee claiming of swap fees and figure out how to integrated it
+    // TODO finish the withdraw methods like depositorWithdraw and depositorDeallocWithdraw which will handle edge cases such as deallocation or when the deal is cancelled
+    // or when someone puts too many funds into a contract
+    // TODO (future) make sure the logic works with 80/20 balancer pools and not just when its 50/50
     function createVestAMM(
         AmmData calldata _ammData,
         VAmmInfo calldata _vAmmInfo,
