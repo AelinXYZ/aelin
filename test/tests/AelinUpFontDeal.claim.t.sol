@@ -950,15 +950,14 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
                         claimUnderlying()
     //////////////////////////////////////////////////////////////*/
 
-    function testFuzz_ClaimUnderlying_RevertWhen_NothingToClaim(uint256 _purchaseAmount) public {
+    function testFuzz_ClaimUnderlying_NothingToClaim(uint256 _purchaseAmount) public {
         vm.startPrank(user1);
         setupAndAcceptDealNoDeallocation(dealAddressNoDeallocation, _purchaseAmount, user1);
         uint256 vestingTokenId = AelinUpFrontDeal(dealAddressNoDeallocation).tokenCount();
         purchaserClaim(dealAddressNoDeallocation);
 
         assertEq(MockERC721(dealAddressNoDeallocation).ownerOf(vestingTokenId), user1);
-        vm.expectRevert("no underlying ready to claim");
-        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId), 0);
         vm.stopPrank();
     }
 
@@ -990,7 +989,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         vm.stopPrank();
     }
 
-    function testFuzz_ClaimUnderlying_RevertWhen_VestingCliff(uint256 _purchaseAmount, uint256 _delay) public {
+    function testFuzz_ClaimUnderlying_VestingCliff(uint256 _purchaseAmount, uint256 _delay) public {
         uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressNoDeallocation).purchaseExpiry();
         uint256 vestingCliffExpiry = AelinUpFrontDeal(dealAddressNoDeallocation).vestingCliffExpiry();
         (bool success, ) = SafeMath.tryAdd(purchaseExpiry, _delay);
@@ -1003,8 +1002,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         purchaserClaim(dealAddressNoDeallocation);
         assertEq(MockERC721(dealAddressNoDeallocation).ownerOf(vestingTokenId), user1);
         vm.warp(purchaseExpiry + _delay);
-        vm.expectRevert("no underlying ready to claim");
-        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId), 0);
         vm.stopPrank();
     }
 
@@ -1065,8 +1063,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
             0,
             "claimableUnderlyingTokens"
         );
-        vm.expectRevert("no underlying ready to claim");
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId), 0);
 
         vm.stopPrank();
     }
@@ -1128,8 +1125,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
             0,
             "claimableUnderlyingTokens"
         );
-        vm.expectRevert("no underlying ready to claim");
-        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId), 0);
 
         vm.stopPrank();
     }
@@ -1182,8 +1178,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         // new claim attempt should revert
         vm.warp(vestingExpiry + 2 days);
         assertEq(deal.claimableUnderlyingTokens(vestingTokenId), 0, "claimableUnderlyingTokens");
-        vm.expectRevert("no underlying ready to claim");
-        deal.claimUnderlying(vestingTokenId);
+        assertEq(deal.claimUnderlying(vestingTokenId), 0);
 
         vm.stopPrank();
     }
@@ -1222,8 +1217,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
             0,
             "claimableUnderlyingTokens"
         );
-        vm.expectRevert("no underlying ready to claim");
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId), 0);
         vm.stopPrank();
 
         // sponsor claims and empty the contract from its underlying deal tokens
@@ -1286,8 +1280,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
             0,
             "claimableUnderlyingTokens"
         );
-        vm.expectRevert("no underlying ready to claim");
-        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId), 0);
         vm.stopPrank();
     }
 
@@ -1315,8 +1308,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         // new claim attempt should revert
         vm.warp(vestingExpiry + 2 days);
         assertEq(deal.claimableUnderlyingTokens(vestingTokenId), 0, "claimableUnderlyingTokens");
-        vm.expectRevert("no underlying ready to claim");
-        deal.claimUnderlying(vestingTokenId);
+        assertEq(deal.claimUnderlying(vestingTokenId), 0);
         vm.stopPrank();
     }
 
@@ -1384,8 +1376,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         // nothing is claimable, all the tokens have been vested
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimableUnderlyingTokens(vestingTokenId - 1), 0);
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimableUnderlyingTokens(vestingTokenId), 0);
-        vm.expectRevert("no underlying ready to claim");
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlyingMultipleEntries(indices);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlyingMultipleEntries(indices), 0);
         vm.stopPrank();
     }
 
@@ -1558,8 +1549,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         emit ClaimedUnderlyingDealToken(user1, tokenCount, address(underlyingDealToken), share - _shareAmount);
         AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount);
         vm.warp(block.timestamp + 1 days);
-        vm.expectRevert("no underlying ready to claim");
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount), 0);
         vm.expectEmit(true, true, true, false);
         emit VestingShareTransferred(user1, user3, tokenCount, (share - _shareAmount) / 2);
         AelinUpFrontDeal(dealAddressAllowDeallocation).transferVestingShare(user3, tokenCount, (share - _shareAmount) / 2);
@@ -1570,8 +1560,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user3), 1, "vestingTokenBalance");
         assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(tokenCount + 2), user3, "vestingTokenOwnerOf");
         vm.warp(block.timestamp + 1 days);
-        vm.expectRevert("no underlying ready to claim");
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount + 2);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount + 2), 0);
         vm.stopPrank();
 
         // user 2 claims and cannot claim more later
@@ -1580,8 +1569,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         emit ClaimedUnderlyingDealToken(user2, tokenCount + 1, address(underlyingDealToken), _shareAmount);
         AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount + 1);
         vm.warp(block.timestamp + 1 days);
-        vm.expectRevert("no underlying ready to claim");
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount + 1);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount + 1), 0);
 
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalUnderlyingClaimed(), share, "totalUnderlyingClaimed");
 

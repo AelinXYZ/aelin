@@ -683,14 +683,14 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         vm.stopPrank();
     }
 
-    function test_ClaimUnderlyingTokens_RevertWhen_NothingToClaimBeforeVestingStarts() public {
+    function test_ClaimUnderlyingTokens_NothingToClaimBeforeVestingStarts() public {
         vm.startPrank(dealCreatorAddress);
         AelinPool(poolNoOpenRedemptionDealAddress).acceptMaxDealTokens();
         assertEq(AelinDeal(dealNoOpenRedemptionAddress).claimUnderlyingTokens(0), 0);
         vm.stopPrank();
     }
 
-    function test_ClaimUnderlyingTokens_RevertWhen_NothingToClaimAfterClaimingAll() public {
+    function test_ClaimUnderlyingTokens_NothingToClaimAfterClaimingAll() public {
         vm.startPrank(dealCreatorAddress);
         AelinPool(poolNoOpenRedemptionDealAddress).acceptMaxDealTokens();
         // we are now after the end of the vesting period

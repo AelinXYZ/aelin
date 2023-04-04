@@ -401,29 +401,34 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
         }
     }
 
-    function claimUnderlyingMultipleEntries(uint256[] memory _indices) external {
+    function claimUnderlyingMultipleEntries(uint256[] memory _indices) external returns (uint256) {
+        uint256 totalClaimed;
         for (uint256 i = 0; i < _indices.length; i++) {
-            _claimUnderlying(msg.sender, _indices[i]);
+            totalClaimed += _claimUnderlying(msg.sender, _indices[i]);
         }
+        return totalClaimed;
     }
 
     /**
      * @dev ERC721 deal token holder calls after the purchasing period to claim underlying deal tokens
      * amount based on the vesting schedule
      */
-    function claimUnderlying(uint256 _tokenId) external {
-        _claimUnderlying(msg.sender, _tokenId);
+    function claimUnderlying(uint256 _tokenId) external returns (uint256) {
+        return _claimUnderlying(msg.sender, _tokenId);
     }
 
-    function _claimUnderlying(address _owner, uint256 _tokenId) internal {
+    function _claimUnderlying(address _owner, uint256 _tokenId) internal returns (uint256) {
         require(ownerOf(_tokenId) == _owner, "must be owner to claim");
         uint256 claimableAmount = claimableUnderlyingTokens(_tokenId);
-        require(claimableAmount > 0, "no underlying ready to claim");
+        if (claimableAmount == 0) {
+            return 0;
+        }
         address _underlyingDealToken = dealData.underlyingDealToken;
         vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
         totalUnderlyingClaimed += claimableAmount;
         IERC20(_underlyingDealToken).safeTransfer(_owner, claimableAmount);
         emit ClaimedUnderlyingDealToken(_owner, _tokenId, _underlyingDealToken, claimableAmount);
+        return claimableAmount;
     }
 
     /**
