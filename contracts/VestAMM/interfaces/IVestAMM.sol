@@ -5,21 +5,6 @@ import "../../libraries/AelinNftGating.sol";
 import "../../libraries/AelinAllowList.sol";
 
 interface IVestAMM {
-    enum Deallocation {
-        None,
-        Proportional
-    }
-
-    enum ClaimType {
-        Single,
-        LP
-    }
-
-    struct VestingSchedule {
-        uint256 vestingPeriod;
-        uint256 vestingCliffPeriod;
-    }
-
     // Protocol ABC has multiple vesting schedules for the LP tokens (LPVestingSchedule)
     // schedule 1 example
     // uint256 vestingPeriod = 3 months;
@@ -61,6 +46,20 @@ interface IVestAMM {
     // if the protocol raises 400 sUSD then all 10 OP tokens are given out to holders
     // if the protoocol only raises 200 sUSD then only 5 of the OP tokens are given to holders
     // the other 5 OP tokens are claimable by the single rewards holder
+    enum Deallocation {
+        None,
+        Proportional
+    }
+
+    enum ClaimType {
+        Single,
+        LP
+    }
+
+    struct VestingSchedule {
+        uint256 vestingPeriod;
+        uint256 vestingCliffPeriod;
+    }
 
     // used for each reward to be claimed or the LP tokens
     struct LPVestingSchedule {
@@ -105,15 +104,13 @@ interface IVestAMM {
         uint256 rewardPerQuote;
     }
 
+    // TODO consider migration rules later
     struct SingleRewardConfig {
         address rewardToken;
-        bool finalizedDeposit;
-        uint256 amountDeposited;
-        uint256 rewardPerQuote;
         uint256 rewardTokenTotal;
-        VestingSchedule vestingData;
-        MigrationRules migrationRules; // ??
+        SingleVestingSchedule[] vestingSchedules;
         address singleHolder;
+        // TODO  maybe remove this later
         uint256 amountClaimed;
     }
 

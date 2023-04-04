@@ -23,6 +23,7 @@ contract VestAMMDealFactory is IVestAMM {
     }
 
     // MAJOR TODO list
+    // TODO change errors to use Custom structs
     // TODO add in a curve multi rewards contract to the VestAMM so that you can distribute protocol fees to holders
     // NOTE can we do this without any restrictions on the amount of rewards tokens since it loops through an array
     // TODO write initial tests that checks the ability to start a vAMM and deposit base and single reward tokens to start the acceptDeal window

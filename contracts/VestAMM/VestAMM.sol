@@ -32,6 +32,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     uint256 constant VEST_SWAP_FEE = 20 * 10**18;
     uint256 public depositExpiry;
     uint256 public lpFundingExpiry;
+    uint256 public lpDepositTime;
     uint256 public totalLPClaimed;
     uint256 public holderTokenTotal;
     uint256 public maxInvTokens;
@@ -44,8 +45,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     mapping(address => mapping(uint8 => uint256)) public holderDeposits;
     uint8 private singleRewardsComplete;
     uint8 private numSingleRewards;
-    uint8 constant MAX_SINGLE_REWARDS = 10;
-    uint8 constant MAX_VESTING_SCHEDULES = 5;
+    uint8 constant MAX_SINGLE_REWARDS = 20;
+    uint8 constant MAX_LP_VESTING_SCHEDULES = 5;
 
     MerkleTree.TrackClaimed private trackClaimed;
     AelinAllowList.AllowList public allowList;
@@ -64,7 +65,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     bool private calledInitialize;
     bool private baseComplete;
     bool public isCancelled;
-    bool public lpDeposited;
 
     address public lpToken;
 
@@ -98,8 +98,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     // optionally, a protocol may allow buckets to be oversubscribed only after all buckets are full
 
     // step 2 is fund the rewards (base and single sided rewards)
-    // step 3 is for investors to accept the deal
-    // step 4 is to provide liquidity (could be at any price in a liquidity growth round)
+    // step 3 is for investors to accept the deal (deposit window for this period)
+    // step 4 is to provide liquidity (could be at any price in a liquidity growth round - liquidity providing window for this too)
     // step 5 is for claiming of vesting schedules
 
     // e.g. liquidity launch round
@@ -146,8 +146,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         DealAccess calldata _dealAccess,
         address _aelinFeeModule
     ) external initOnce {
-        validateSingle(singleRewards);
-        validateVestingSchedules(_vAmmInfo.vestingSchedules);
+        _validateAddSingle(singleRewards);
+        _validateLPVesting(_vAmmInfo.vestingSchedules);
         // pool initialization checks
         // TODO how to name these
         // _setNameAndSymbol(string(abi.encodePacked("vAMM-", TBD)), string(abi.encodePacked("v-", TBD)));
@@ -155,7 +155,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         vAmmInfo = _vAmmInfo;
         dealAccess = _dealAccess;
         aelinFeeModule = _aelinFeeModule;
-        singleRewards = _singleRewards;
         vestAmmMultiRewards = new VestAMMMultiRewards(address(this));
 
         // TODO if we are doing a liquidity growth round we need to read the prices of the assets
@@ -167,7 +166,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             investmentTokenPerBase = _ammData.ammLibrary.getPriceRatio(_ammData.investmentToken, _ammData.baseAsset);
         }
 
-        require(vAmmInfo.vestingSchedules.length <= MAX_VESTING_SCHEDULES, "too many vesting periods");
         numVestingSchedules = vAmmInfo.vestingSchedules.length;
         for (uint i = 0; i < vAmmInfo.vestingSchedules.length; i++) {
             holderTokenTotal += vAmmInfo.vestingSchedules[i].totalHolderTokens;
@@ -245,11 +243,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     function addSingle(SingleRewardConfig[] calldata _newSingleRewards) external onlyHolder depositIncomplete {
-        require(singleRewards.length + _newSingleRewards.length <= MAX_SINGLE_REWARDS, "max 10 single-sided rewards");
-        validateSingle(_newSingleRewards);
-        for (uint i = 0; i < _newSingleRewards.length; i++) {
-            singleRewards[singleRewards.length + i] = _newSingleRewards[i];
-        }
+        _validateAddSingle(_newSingleRewards);
     }
 
     function removeSingle(uint256[] calldata _removeIndexList) external depositIncomplete {
@@ -403,7 +397,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     function finalizeVesting() internal {
-        lpDeposited = true;
+        lpDepositTime = block.timestamp;
         // 20% fee of all trading fees from the LP tokens. this gets taken out later
         // 1% fee for assets going through VestAMM
         sendFeesToAelin(ammData.baseAsset, feeAmount);
@@ -450,39 +444,59 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     // logic
     // you have LP tokens which may or may not be on vesting schedules to claim
     // you have single sided reward tokens which may or may not be on vesting schedules to claim
+    // single rewards has an index [UNI, OP, SNX] within that index there are sub arrays of vesting schedule
+    // base rewards there is only a sub array of vesting schedules
     function claimableTokens(
         uint256 _tokenId,
         ClaimType _claimType,
-        uint256 _claimIndex
+        uint8 _vestingScheduleIndex,
+        uint8 _singleRewardsIndex
     ) public view returns (uint256) {
+        // struct VestVestingToken {
+        //     uint256 amountDeposited;
+        //     uint256 lastClaimedAt;
+        //     uint256[] lastClaimedAtRewardList;
+        //     uint8 vestingScheduleIndex;
+        // }
         VestVestingToken memory schedule = vestingDetails[_tokenId];
         uint256 precisionAdjustedClaimable;
 
         uint256 lastClaimedAt = _claimType == ClaimType.Single
-            ? schedule.lastClaimedAtRewardList[_claimIndex]
+            ? schedule.lastClaimedAtRewardList[_singleRewardsIndex]
             : schedule.lastClaimedAt;
 
-        depositExpiry = block.timestamp + vAmmInfo.depositWindow;
-        lpFundingExpiry = depositExpiry + vAmmInfo.lpFundingWindow;
+        // address rewardToken;
+        // uint256 rewardTokenTotal;
+        // SingleVestingSchedule[] vestingSchedules;
+        // address singleHolder;
+        // // TODO  maybe remove this later
+        // uint256 amountClaimed;
+        // either going to read it off the singleRewards stu
+        uint256 vestingCliffPeriod = _claimType == ClaimType.Single
+            ? singleRewards[_singleRewardsIndex].vestingSchedules[schedule.vestingScheduleIndex].vestingCliffPeriod
+            : vAmmInfo.vestingSchedules[schedule.vestingScheduleIndex].vestingCliffPeriod;
 
-        // vestingExpiry
-        // depositExpiry
-        // lastClaimedAt
-        // block.timestamp
-        // TODO probably have to claim or account for fees for AELIN Fee Module in here so that
-        // existing LPs dont withdraw too much. we also need to auto reinvest for users somehow
-        // and might do that when someone claims
+        uint256 vestingPeriod = _claimType == ClaimType.Single
+            ? singleRewards[_singleRewardsIndex].vestingSchedules[schedule.vestingScheduleIndex].vestingPeriod
+            : vAmmInfo.vestingSchedules[schedule.vestingScheduleIndex].vestingPeriod;
+
+        uint256 vestingCliff = lpDepositTime + vestingCliffPeriod;
+        uint256 vestingExpiry = vestingCliff + vestingPeriod;
+
+        // the logic for claiming is this you have the lpDepositWindow is when everything starts
+        // then you have the vesting period cliff, then you have the vesting period
+        // if the vesting period cliff is set to 0 along with the vesting period the lpDepositTime
 
         uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
-        uint256 currTime = lastClaimedAt > depositExpiry ? lastClaimedAt : depositExpiry;
+        uint256 minTime = lastClaimedAt > depositExpiry ? lastClaimedAt : depositExpiry;
 
-        if (maxTime > depositExpiry && currTime <= vestingExpiry) {
+        if (maxTime > depositExpiry && minTime <= vestingExpiry) {
             // NOTE that schedule.share needs to be updated
             // to be the total deposited / global total somehow without requiring a settle method
             // NOTE this math is wrong probably. need to figure out what to do with Math here to avoid issues
             // TODO check how share is used on the other contracts
             uint256 lpClaimable = (((schedule.amountDeposited * 10**depositTokenDecimals) / totalDeposited) *
-                (maxTime - currTime)) / vestingPeriod;
+                (maxTime - minTime)) / vestingPeriod;
 
             // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
             // although it will generally never happen as solidity rounds down so there should always be a little bit left
@@ -558,27 +572,47 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         emit SentFees(_token, _amount);
     }
 
-    function validateSingle(SingleRewardConfig[] _singleRewards) internal {
-        require(_singleRewards.length <= MAX_SINGLE_REWARDS, "max 10 single-sided rewards");
+    // NOTE that each single rewards will have multiple vesting schedules for each
+    function _validateAddSingle(SingleRewardConfig[] _singleRewards) internal {
+        require(_singleRewards.length + singleRewards.length <= MAX_SINGLE_REWARDS, "too many single-sided rewards");
         for (uint256 i; i < _singleRewards.length; i++) {
-            // Also we need to potentially validate more of the fields like migration rules
-            // if we use the migration stuff at all for v1
             require(_singleRewards[i].rewardToken != address(0), "cannot pass null address");
-            // DO we need this field
-            require(_singleRewards[i].rewardPerQuote > 0, "rpq: must pass an amount");
+            require(_singleRewards[i].singleHolder != address(0), "cannot pass null address");
             require(_singleRewards[i].amountClaimed == 0, "amount claimed must be 0");
             require(_singleRewards[i].rewardTokenTotal > 0, "rtt: must pass an amount");
-            VestingSchedule[] vestingSchedule = [_singleRewards.vestingData];
-            validateVestingSchedules(vestingSchedule);
+            SingleVestingSchedule[] vestingSchedules = _singleRewards.vestingSchedules;
+            _validateSingleVesting(vestingSchedules);
+        }
+        for (uint i = 0; i < _singleRewards.length; i++) {
+            singleRewards[singleRewards.length + i] = _singleRewards[i];
         }
     }
 
-    function validateVestingSchedules(VestingSchedule[] _vestingSchedules) internal {
+    // TODO consider editing these as a possibility before the deal is final insetad of just cancelling
+    function _validateLPVesting(LPVestingSchedule[] _vestingSchedules) internal {
+        require(_vestingSchedules.length <= MAX_LP_VESTING_SCHEDULES, "too many vesting periods");
         for (uint256 i; i < _vestingSchedules.length; ++i) {
-            require(1825 days >= _vestingSchedules[i].vestingCliffPeriod, "max 5 year cliff");
-            require(1825 days >= _vestingSchedules[i].vestingPeriod, "max 5 year vesting");
+            require(1825 days >= _vestingSchedules[i].vestingSchedule.vestingCliffPeriod, "max 5 year cliff");
+            require(1825 days >= _vestingSchedules[i].vestingSchedule.vestingPeriod, "max 5 year vesting");
             require(100 * 10**18 >= _vestingSchedules[i].investorShare, "max 100% to investor");
             require(0 <= _vestingSchedules[i].investorShare, "min 0% to investor");
+            require(0 < _vestingSchedules[i].totalHolderTokens, "allocate tokens to schedule");
+        }
+    }
+
+    function _validateSingleVesting(SingleVestingSchedule[] _vestingSchedules) internal {
+        uint8[] usedIndexes = [];
+        for (uint256 i; i < _vestingSchedules.length; ++i) {
+            require(1825 days >= _vestingSchedules[i].vestingSchedule.vestingCliffPeriod, "max 5 year cliff");
+            require(1825 days >= _vestingSchedules[i].vestingSchedule.vestingPeriod, "max 5 year vesting");
+
+            require(_vestingSchedules[i].totalSingleTokens > 0, "need tokens as rewards");
+            require(!usedIndexes.contains(_vestingSchedules[i].vestingScheduleIndex), "vesting schedule already used");
+            require(
+                _vestingSchedules[i].vestingScheduleIndex < vAmmInfo.vestingSchedules.length,
+                "vesting schedule does not exist"
+            );
+            usedIndexes.push(_vestingSchedules[i].vestingScheduleIndex);
             require(0 < _vestingSchedules[i].totalHolderTokens, "allocate tokens to schedule");
         }
     }
@@ -633,7 +667,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     modifier dealCancelled() {
-        require(isCancelled || (!lpDeposited && block.timestamp > lpFundingExpiry), "deal not cancelled");
+        require(isCancelled || (lpDepositTime == 0 && block.timestamp > lpFundingExpiry), "deal not cancelled");
         _;
     }
 
