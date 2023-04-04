@@ -32,7 +32,6 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
     AelinFeeEscrow public aelinFeeEscrow;
 
     bool public depositComplete;
-    mapping(address => uint256) public amountVested;
 
     Timeline public openRedemption;
     Timeline public proRataRedemption;
@@ -180,9 +179,10 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
                 (maxTime > vestingCliffExpiry && minTime <= vestingExpiry) ||
                 (maxTime == vestingCliffExpiry && vestingPeriod == 0)
             ) {
-                uint256 underlyingClaimable = vestingPeriod == 0
+                uint256 claimableAmount = vestingPeriod == 0
                     ? schedule.share
                     : (schedule.share * (maxTime - minTime)) / vestingPeriod;
+                uint256 underlyingClaimable = (underlyingPerDealExchangeRate * claimableAmount) / 1e18;
 
                 // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
                 // although it will generally never happen as solidity rounds down so there should always be a little bit left

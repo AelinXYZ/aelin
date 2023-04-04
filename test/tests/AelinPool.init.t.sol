@@ -8,7 +8,7 @@ import {AelinPool} from "contracts/AelinPool.sol";
 import {AelinDeal} from "contracts/AelinDeal.sol";
 import {AelinPoolFactory} from "contracts/AelinPoolFactory.sol";
 import {IAelinPool} from "contracts/interfaces/IAelinPool.sol";
-import {MockERC20CustomDecimals} from "../mocks/MockERC20CustomDecimals.sol";
+import {MockERC20} from "../mocks/MockERC20.sol";
 
 contract AelinPoolInitTest is Test, AelinTestUtils {
     address public poolAddress;
@@ -155,11 +155,7 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
         address[] memory allowListAddressesEmpty;
         uint256[] memory allowListAmountsEmpty;
         IAelinPool.NftCollectionRules[] memory nftCollectionRulesEmpty;
-        MockERC20CustomDecimals customPurchaseToken = new MockERC20CustomDecimals(
-            "MockCustomDecimals",
-            "MP",
-            _purchaseTokenDecimals
-        );
+        MockERC20 customPurchaseToken = new MockERC20("MockCustomDecimals", "MP", _purchaseTokenDecimals);
 
         IAelinPool.PoolData memory poolData = IAelinPool.PoolData({
             name: "POOL",
@@ -180,9 +176,10 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
         pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
     }
 
-    function testFuzz_Initialize_RevertWhen_AllowListIncorrect(uint256 _allowListAddresses, uint256 _allowListAmounts)
-        public
-    {
+    function testFuzz_Initialize_RevertWhen_AllowListIncorrect(
+        uint256 _allowListAddresses,
+        uint256 _allowListAmounts
+    ) public {
         vm.assume(_allowListAddresses < 100 && _allowListAmounts < 100); // Otherwise will run out of gas
         vm.assume(_allowListAddresses != _allowListAmounts);
 

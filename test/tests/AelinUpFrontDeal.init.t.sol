@@ -11,7 +11,6 @@ import {AelinFeeEscrow} from "contracts/AelinFeeEscrow.sol";
 import {IAelinUpFrontDeal} from "contracts/interfaces/IAelinUpFrontDeal.sol";
 import {MerkleTree} from "contracts/libraries/MerkleTree.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
-import {MockERC20CustomDecimals} from "../mocks/MockERC20CustomDecimals.sol";
 
 contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
     AelinUpFrontDeal public testUpFrontDeal;
@@ -358,7 +357,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         vm.startPrank(dealCreatorAddress);
 
         AelinAllowList.InitData memory allowListEmpty;
-        MockERC20 token = new MockERC20("MockToken", "MT");
+        MockERC20 token = new MockERC20("MockToken", "MT", 18);
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules = new AelinNftGating.NftCollectionRules[](1);
 
         nftCollectionRules[0].collectionAddress = address(token);

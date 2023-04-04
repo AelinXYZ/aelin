@@ -9,7 +9,6 @@ import {IAelinPool} from "contracts/interfaces/IAelinPool.sol";
 import {IAelinUpFrontDeal} from "contracts/interfaces/IAelinUpFrontDeal.sol";
 import {MerkleTree} from "../../contracts/libraries/MerkleTree.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
-import {MockERC20CustomDecimals} from "../mocks/MockERC20CustomDecimals.sol";
 import {MockERC721} from "../mocks/MockERC721.sol";
 import {MockERC1155} from "../mocks/MockERC1155.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -31,9 +30,9 @@ contract AelinTestUtils is Test {
     address user3 = address(0x1339);
     address user4 = address(0x1340);
 
-    MockERC20 public underlyingDealToken = new MockERC20("MockDeal", "MD");
-    MockERC20CustomDecimals public underlyingDealTokenLowDecimals = new MockERC20CustomDecimals("MockDeal", "MD", 2);
-    MockERC20 public purchaseToken = new MockERC20("MockPurchase", "MP");
+    MockERC20 public underlyingDealToken = new MockERC20("MockDeal", "MD", 18);
+    MockERC20 public underlyingDealTokenLowDecimals = new MockERC20("MockDeal", "MD", 2);
+    MockERC20 public purchaseToken = new MockERC20("MockPurchase", "MP", 6);
 
     MockERC721 public collection721_1 = new MockERC721("TestCollection", "TC");
     MockERC721 public collection721_2 = new MockERC721("TestCollection", "TC");
@@ -66,8 +65,8 @@ contract AelinTestUtils is Test {
         uint8 underlyingTokenDecimals;
     }
 
-    function getCustomToken(uint8 _decimals) public returns (MockERC20CustomDecimals) {
-        return new MockERC20CustomDecimals("CustomMockERC20", "CMT", _decimals);
+    function getCustomToken(uint8 _decimals) public returns (MockERC20) {
+        return new MockERC20("CustomMockERC20", "CMT", _decimals);
     }
 
     function getFuzzDealData(
@@ -79,8 +78,8 @@ contract AelinTestUtils is Test {
         string memory _ipfsHash,
         bytes32 _merkleRoot
     ) public returns (IAelinUpFrontDeal.UpFrontDealData memory) {
-        MockERC20CustomDecimals customUnderlyingDealToken = getCustomToken(_underlyingTokenDecimals);
-        MockERC20CustomDecimals customPurchaseToken = getCustomToken(_purchaseTokenDecimals);
+        MockERC20 customUnderlyingDealToken = getCustomToken(_underlyingTokenDecimals);
+        MockERC20 customPurchaseToken = getCustomToken(_purchaseTokenDecimals);
         return
             IAelinUpFrontDeal.UpFrontDealData({
                 name: "Fuzz DEAL",
