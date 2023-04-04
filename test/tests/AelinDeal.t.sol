@@ -686,8 +686,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
     function test_ClaimUnderlyingTokens_RevertWhen_NothingToClaimBeforeVestingStarts() public {
         vm.startPrank(dealCreatorAddress);
         AelinPool(poolNoOpenRedemptionDealAddress).acceptMaxDealTokens();
-        vm.expectRevert("no underlying ready to claim");
-        AelinDeal(dealNoOpenRedemptionAddress).claimUnderlyingTokens(0);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).claimUnderlyingTokens(0), 0);
         vm.stopPrank();
     }
 
@@ -700,8 +699,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         AelinDeal(dealNoOpenRedemptionAddress).claimUnderlyingTokens(0);
         // claiming again after a day should revert
         vm.warp(AelinDeal(dealNoOpenRedemptionAddress).vestingExpiry() + 2 days);
-        vm.expectRevert("no underlying ready to claim");
-        AelinDeal(dealNoOpenRedemptionAddress).claimUnderlyingTokens(0);
+        assertEq(AelinDeal(dealNoOpenRedemptionAddress).claimUnderlyingTokens(0), 0);
         vm.stopPrank();
     }
 

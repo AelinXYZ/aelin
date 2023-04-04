@@ -206,18 +206,21 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
      * of their underlying tokens once they have vested according to the schedule
      * created by the sponsor
      */
-    function claimUnderlyingTokens(uint256 _tokenId) external {
-        _claimUnderlyingTokens(msg.sender, _tokenId);
+    function claimUnderlyingTokens(uint256 _tokenId) external returns (uint256) {
+        return _claimUnderlyingTokens(msg.sender, _tokenId);
     }
 
-    function _claimUnderlyingTokens(address _owner, uint256 _tokenId) internal {
+    function _claimUnderlyingTokens(address _owner, uint256 _tokenId) internal returns (uint256) {
         require(ownerOf(_tokenId) == _owner, "must be owner to claim");
         uint256 claimableAmount = claimableUnderlyingTokens(_tokenId);
-        require(claimableAmount > 0, "no underlying ready to claim");
+        if (claimableAmount == 0) {
+            return 0;
+        }
         vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
         totalUnderlyingClaimed += claimableAmount;
         IERC20(underlyingDealToken).safeTransfer(_owner, claimableAmount);
         emit ClaimedUnderlyingDealToken(_owner, _tokenId, underlyingDealToken, claimableAmount);
+        return claimableAmount;
     }
 
     /**
