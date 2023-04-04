@@ -8,16 +8,17 @@ contract AelinVestingToken is AelinERC721, IAelinVestingToken {
     mapping(uint256 => VestingDetails) public vestingDetails;
     uint256 public tokenCount;
 
-    function _burnVestingToken(uint256 _tokenId) internal {
-        _burn(_tokenId);
-        delete vestingDetails[_tokenId];
-    }
-
     function _mintVestingToken(address _to, uint256 _amount, uint256 _timestamp) internal {
         _mint(_to, tokenCount);
         vestingDetails[tokenCount] = VestingDetails(_amount, _timestamp);
         emit VestingTokenMinted(_to, tokenCount, _amount, _timestamp);
         tokenCount += 1;
+    }
+
+    function _burnVestingToken(uint256 _tokenId) internal {
+        _burn(_tokenId);
+        delete vestingDetails[_tokenId];
+        emit VestingTokenBurned(_tokenId);
     }
 
     function transferVestingShare(address _to, uint256 _tokenId, uint256 _shareAmount) public nonReentrant {

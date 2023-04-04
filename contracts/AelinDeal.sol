@@ -218,7 +218,11 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
         if (claimableAmount == 0) {
             return 0;
         }
-        vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
+        if (block.timestamp >= vestingExpiry) {
+            _burnVestingToken(_tokenId);
+        } else {
+            vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
+        }
         totalUnderlyingClaimed += claimableAmount;
         IERC20(underlyingDealToken).safeTransfer(_owner, claimableAmount);
         emit ClaimedUnderlyingDealToken(_owner, _tokenId, underlyingDealToken, claimableAmount);

@@ -6,11 +6,7 @@ import {AelinTestUtils} from "../utils/AelinTestUtils.sol";
 import {AelinVestingToken} from "contracts/AelinVestingToken.sol";
 
 contract DerivedAelinVestingToken is AelinVestingToken {
-    function mintVestingToken(
-        address _to,
-        uint256 _amount,
-        uint256 _timestamp
-    ) public {
+    function mintVestingToken(address _to, uint256 _amount, uint256 _timestamp) public {
         _mintVestingToken(_to, _amount, _timestamp);
     }
 }
@@ -26,7 +22,7 @@ contract AelinVestingTokenTest is Test, AelinTestUtils {
         vestingToken = new DerivedAelinVestingToken();
     }
 
-    function mintToknes(
+    function mintTokens(
         uint256 _amount1,
         uint256 _amount2,
         uint256 _amount3,
@@ -57,7 +53,7 @@ contract AelinVestingTokenTest is Test, AelinTestUtils {
         uint256 _tokenId,
         uint256 _shareAmount
     ) public {
-        mintToknes(_amount1, _amount2, _amount3, _timestamp1, _timestamp2, _timestamp3);
+        mintTokens(_amount1, _amount2, _amount3, _timestamp1, _timestamp2, _timestamp3);
         vm.assume(_tokenId == 0 || _tokenId == 1 || _tokenId == 2);
         vm.assume(user1 != vestingToken.ownerOf(_tokenId));
 
@@ -77,7 +73,7 @@ contract AelinVestingTokenTest is Test, AelinTestUtils {
         address _to,
         uint256 _tokenId
     ) public {
-        mintToknes(_amount1, _amount2, _amount3, _timestamp1, _timestamp2, _timestamp3);
+        mintTokens(_amount1, _amount2, _amount3, _timestamp1, _timestamp2, _timestamp3);
         vm.assume(_tokenId == 0 || _tokenId == 1 || _tokenId == 2);
 
         vm.startPrank(vestingToken.ownerOf(_tokenId));
@@ -97,7 +93,7 @@ contract AelinVestingTokenTest is Test, AelinTestUtils {
         uint256 _tokenId,
         uint256 _shareAmount
     ) public {
-        mintToknes(_amount1, _amount2, _amount3, _timestamp1, _timestamp2, _timestamp3);
+        mintTokens(_amount1, _amount2, _amount3, _timestamp1, _timestamp2, _timestamp3);
         vm.assume(_tokenId == 0 || _tokenId == 1 || _tokenId == 2);
 
         (uint256 share, ) = vestingToken.vestingDetails(_tokenId);
@@ -121,7 +117,7 @@ contract AelinVestingTokenTest is Test, AelinTestUtils {
         uint256 _tokenId,
         uint256 _shareAmount
     ) public {
-        mintToknes(_amount1, _amount2, _amount3, _timestamp1, _timestamp2, _timestamp3);
+        mintTokens(_amount1, _amount2, _amount3, _timestamp1, _timestamp2, _timestamp3);
         vm.assume(_tokenId == 0 || _tokenId == 1 || _tokenId == 2);
         vm.assume(_to != address(0));
 

@@ -1063,7 +1063,8 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
             0,
             "claimableUnderlyingTokens"
         );
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId), 0);
+        vm.expectRevert("ERC721: invalid token ID");
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId);
 
         vm.stopPrank();
     }
@@ -1125,7 +1126,8 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
             0,
             "claimableUnderlyingTokens"
         );
-        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId), 0);
+        vm.expectRevert("ERC721: invalid token ID");
+        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId);
 
         vm.stopPrank();
     }
@@ -1178,7 +1180,8 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         // new claim attempt should revert
         vm.warp(vestingExpiry + 2 days);
         assertEq(deal.claimableUnderlyingTokens(vestingTokenId), 0, "claimableUnderlyingTokens");
-        assertEq(deal.claimUnderlying(vestingTokenId), 0);
+        vm.expectRevert("ERC721: invalid token ID");
+        deal.claimUnderlying(vestingTokenId);
 
         vm.stopPrank();
     }
@@ -1217,7 +1220,8 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
             0,
             "claimableUnderlyingTokens"
         );
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId), 0);
+        vm.expectRevert("ERC721: invalid token ID");
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId);
         vm.stopPrank();
 
         // sponsor claims and empty the contract from its underlying deal tokens
@@ -1280,7 +1284,8 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
             0,
             "claimableUnderlyingTokens"
         );
-        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId), 0);
+        vm.expectRevert("ERC721: invalid token ID");
+        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId);
         vm.stopPrank();
     }
 
@@ -1308,7 +1313,8 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         // new claim attempt should revert
         vm.warp(vestingExpiry + 2 days);
         assertEq(deal.claimableUnderlyingTokens(vestingTokenId), 0, "claimableUnderlyingTokens");
-        assertEq(deal.claimUnderlying(vestingTokenId), 0);
+        vm.expectRevert("ERC721: invalid token ID");
+        deal.claimUnderlying(vestingTokenId);
         vm.stopPrank();
     }
 
@@ -1373,9 +1379,10 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         // user1 attempts claiming more the next day but it reverts
         vm.warp(vestingExpiry + 2 days);
-        // nothing is claimable, all the tokens have been vested
+        // nothing is claimable, all the tokens have been vested and burned
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimableUnderlyingTokens(vestingTokenId - 1), 0);
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimableUnderlyingTokens(vestingTokenId), 0);
+        vm.expectRevert("ERC721: invalid token ID");
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlyingMultipleEntries(indices), 0);
         vm.stopPrank();
     }
@@ -1545,34 +1552,18 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         // user1 claims all and transfer to user3
         vm.startPrank(user1);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).balanceOf(user1), 1);
+        vm.expectEmit(true, false, false, false);
+        emit VestingTokenBurned(tokenCount);
         vm.expectEmit(true, false, false, true);
         emit ClaimedUnderlyingDealToken(user1, tokenCount, address(underlyingDealToken), share - _shareAmount);
         AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount);
-        vm.warp(block.timestamp + 1 days);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount), 0);
-        vm.expectEmit(true, true, true, false);
-        emit VestingShareTransferred(user1, user3, tokenCount, (share - _shareAmount) / 2);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).balanceOf(user1), 0);
+
+        // user1 can't transfer because the token has been burned
+        vm.warp(AelinUpFrontDeal(dealAddressAllowDeallocation).vestingExpiry() + 2 days);
+        vm.expectRevert("ERC721: invalid token ID");
         AelinUpFrontDeal(dealAddressAllowDeallocation).transferVestingShare(user3, tokenCount, (share - _shareAmount) / 2);
-        vm.stopPrank();
-
-        // user3 can't claim because user1 claimed everything already
-        vm.startPrank(user3);
-        assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user3), 1, "vestingTokenBalance");
-        assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(tokenCount + 2), user3, "vestingTokenOwnerOf");
-        vm.warp(block.timestamp + 1 days);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount + 2), 0);
-        vm.stopPrank();
-
-        // user 2 claims and cannot claim more later
-        vm.startPrank(user2);
-        vm.expectEmit(true, false, false, true);
-        emit ClaimedUnderlyingDealToken(user2, tokenCount + 1, address(underlyingDealToken), _shareAmount);
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount + 1);
-        vm.warp(block.timestamp + 1 days);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount + 1), 0);
-
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).totalUnderlyingClaimed(), share, "totalUnderlyingClaimed");
-
         vm.stopPrank();
     }
 
