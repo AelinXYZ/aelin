@@ -106,7 +106,9 @@ interface IAelinUpFrontDeal {
         uint256[] minTokensEligible
     );
 
-    event SetHolder(address indexed holder);
+    event HolderSet(address indexed holder);
+
+    event HolderAccepted(address indexed holder);
 
     event Vouch(address indexed voucher);
 

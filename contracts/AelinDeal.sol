@@ -76,7 +76,7 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
          * calculates the amount of underlying deal tokens you get per wrapped deal token accepted
          */
         underlyingPerDealExchangeRate = (_dealData.underlyingDealTokenTotal * 1e18) / maxTotalSupply;
-        emit SetHolder(_dealData.holder);
+        emit HolderSet(_dealData.holder);
     }
 
     /**
@@ -254,12 +254,13 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
     function setHolder(address _holder) external onlyHolder {
         require(_holder != address(0), "holder cant be null");
         futureHolder = _holder;
+        emit HolderSet(_holder);
     }
 
     function acceptHolder() external {
         require(msg.sender == futureHolder, "only future holder can access");
         holder = futureHolder;
-        emit SetHolder(futureHolder);
+        emit HolderAccepted(futureHolder);
     }
 
     modifier initOnce() {

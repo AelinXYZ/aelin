@@ -474,7 +474,9 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
      * @param _holder address to swap the holder role
      */
     function setHolder(address _holder) external onlyHolder {
+        require(_holder != address(0), "holder cant be null");
         futureHolder = _holder;
+        emit HolderSet(_holder);
     }
 
     /**
@@ -483,7 +485,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     function acceptHolder() external {
         require(msg.sender == futureHolder, "only future holder can access");
         dealData.holder = futureHolder;
-        emit SetHolder(futureHolder);
+        emit HolderAccepted(futureHolder);
     }
 
     /**

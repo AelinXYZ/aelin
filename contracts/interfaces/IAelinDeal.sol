@@ -20,7 +20,8 @@ interface IAelinDeal {
         uint256 expiry;
     }
 
-    event SetHolder(address indexed holder);
+    event HolderSet(address indexed holder);
+    event HolderAccepted(address indexed holder);
     event DealFullyFunded(
         address indexed poolAddress,
         uint256 proRataRedemptionStart,

@@ -1200,6 +1200,8 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
     function test_SetHolder(address _futureHolder) public {
         vm.assume(_futureHolder != address(0));
         vm.startPrank(dealHolderAddress);
+        vm.expectEmit(true, false, false, false);
+        emit HolderSet(_futureHolder);
         AelinDeal(dealAddress).setHolder(_futureHolder);
         assertEq(AelinDeal(dealAddress).futureHolder(), _futureHolder);
         vm.stopPrank();
@@ -1220,11 +1222,13 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
     function testFuzz_AcceptHolder(address _futureHolder) public {
         vm.assume(_futureHolder != address(0));
         vm.startPrank(dealHolderAddress);
+        vm.expectEmit(true, false, false, false);
+        emit HolderSet(_futureHolder);
         AelinDeal(dealAddress).setHolder(_futureHolder);
         vm.stopPrank();
         vm.startPrank(_futureHolder);
         vm.expectEmit(true, false, false, false);
-        emit SetHolder(_futureHolder);
+        emit HolderAccepted(_futureHolder);
         AelinDeal(dealAddress).acceptHolder();
         vm.stopPrank();
     }

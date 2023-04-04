@@ -299,8 +299,8 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
     }
 
     /*//////////////////////////////////////////////////////////////
-											setHolder() / acceptHolder()
-		//////////////////////////////////////////////////////////////*/
+                        setHolder() / acceptHolder()
+    //////////////////////////////////////////////////////////////*/
 
     function testFuzz_SetHolder_RevertWhen_CallerNotHolder(address _futureHolder) public {
         vm.assume(_futureHolder != dealHolderAddress);
@@ -309,6 +309,13 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).setHolder(_futureHolder);
         (, , , , address holderAddress, , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
         assertEq(holderAddress, dealHolderAddress);
+        vm.stopPrank();
+    }
+
+    function test_SetHolder_RevertWhen_HolderIsZero() public {
+        vm.startPrank(dealHolderAddress);
+        vm.expectRevert("holder cant be null");
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).setHolder(address(0));
         vm.stopPrank();
     }
 
@@ -331,6 +338,8 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         vm.startPrank(dealHolderAddress);
         address temHolderAddress;
 
+        vm.expectEmit(true, false, false, false);
+        emit HolderSet(_futureHolder);
         AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).setHolder(_futureHolder);
         assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).futureHolder(), _futureHolder);
         (, , , , temHolderAddress, , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
@@ -338,8 +347,8 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         vm.stopPrank();
 
         vm.startPrank(_futureHolder);
-        vm.expectEmit(false, false, false, false);
-        emit SetHolder(_futureHolder);
+        vm.expectEmit(true, false, false, false);
+        emit HolderAccepted(_futureHolder);
         AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).acceptHolder();
         (, , , , temHolderAddress, , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
         assertEq(temHolderAddress, _futureHolder);
