@@ -177,6 +177,48 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         vm.stopPrank();
     }
 
+    // Helpers
+    function getUpFrontDealFuzzed(uint256 _purchaseAmount, UpFrontDealVars memory _dealVars)
+        public
+        returns (FuzzedUpFrontDeal memory)
+    {
+        vm.assume(_purchaseAmount > 0 && _purchaseAmount < 1000000 * BASE);
+
+        AelinAllowList.InitData memory allowListInitEmpty;
+
+        FuzzedUpFrontDeal memory fuzzed = getFuzzedDeal(
+            _dealVars.sponsorFee,
+            _dealVars.underlyingDealTokenTotal,
+            _dealVars.purchaseTokenPerDealToken,
+            _dealVars.purchaseRaiseMinimum,
+            _dealVars.purchaseDuration,
+            _dealVars.vestingPeriod,
+            _dealVars.vestingCliffPeriod,
+            _dealVars.purchaseTokenDecimals,
+            _dealVars.underlyingTokenDecimals
+        );
+
+        vm.prank(dealCreatorAddress);
+        address upfrontDealAddress = upFrontDealFactory.createUpFrontDeal(
+            fuzzed.dealData,
+            fuzzed.dealConfig,
+            nftCollectionRulesEmpty,
+            allowListInitEmpty
+        );
+        fuzzed.upFrontDeal = AelinUpFrontDeal(upfrontDealAddress);
+
+        vm.startPrank(dealHolderAddress);
+        deal(fuzzed.dealData.underlyingDealToken, dealHolderAddress, type(uint256).max);
+        MockERC20(fuzzed.dealData.underlyingDealToken).approve(address(fuzzed.upFrontDeal), type(uint256).max);
+        fuzzed.upFrontDeal.depositUnderlyingTokens(_dealVars.underlyingDealTokenTotal);
+        vm.stopPrank();
+
+        // Avoid "purchase amount too small"
+        vm.assume(_purchaseAmount > _dealVars.purchaseTokenPerDealToken / (10**_dealVars.underlyingTokenDecimals));
+
+        return fuzzed;
+    }
+
     /*//////////////////////////////////////////////////////////////
                             purchaserClaim()
     //////////////////////////////////////////////////////////////*/
@@ -202,35 +244,56 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
     }
 
     // Does not meet purchaseRaiseMinimum
-    function testFuzz_PurchaserClaim_FullRefund(uint256 _purchaseAmount) public {
-        (, uint256 purchaseTokenPerDealToken, uint256 purchaseRaiseMinimum, , , , ) = AelinUpFrontDeal(
-            dealAddressNoDeallocation
-        ).dealConfig();
-        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
-        uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressNoDeallocation).purchaseExpiry();
-        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
-        vm.assume(_purchaseAmount > 0);
-        vm.assume(_purchaseAmount < purchaseRaiseMinimum);
-        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
-        vm.assume(poolSharesAmount > 0);
+    function testFuzz_PurchaserClaim_FullRefund(
+        uint256 _sponsorFee,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _purchaseTokenPerDealToken,
+        uint256 _purchaseRaiseMinimum,
+        uint256 _purchaseDuration,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint8 _purchaseTokenDecimals,
+        uint8 _underlyingTokenDecimals,
+        uint256 _purchaseAmount
+    ) public {
+        UpFrontDealVars memory dealVars = boundUpFrontDealVars(
+            _sponsorFee,
+            _underlyingDealTokenTotal,
+            _purchaseTokenPerDealToken,
+            _purchaseRaiseMinimum,
+            _purchaseDuration,
+            _vestingPeriod,
+            _vestingCliffPeriod,
+            _purchaseTokenDecimals,
+            _underlyingTokenDecimals
+        );
+
+        vm.assume(_purchaseAmount < dealVars.purchaseRaiseMinimum);
+
+        FuzzedUpFrontDeal memory fuzzed = getUpFrontDealFuzzed(_purchaseAmount, dealVars);
 
         // user1 accepts the deal with _purchaseAmount < purchaseRaiseMinimum
         vm.startPrank(user1);
-        deal(address(purchaseToken), user1, type(uint256).max);
-        purchaseToken.approve(address(dealAddressNoDeallocation), type(uint256).max);
-        vm.expectEmit(true, false, false, true);
+
+        deal(address(fuzzed.dealData.purchaseToken), user1, type(uint256).max);
+        MockERC20(fuzzed.dealData.purchaseToken).approve(address(fuzzed.upFrontDeal), type(uint256).max);
+
+        uint256 poolSharesAmount = (_purchaseAmount * 10**dealVars.underlyingTokenDecimals) /
+            dealVars.purchaseTokenPerDealToken;
+
+        vm.expectEmit(true, true, true, true);
         emit AcceptDeal(user1, _purchaseAmount, _purchaseAmount, poolSharesAmount, poolSharesAmount);
-        AelinUpFrontDeal(dealAddressNoDeallocation).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).totalPurchasingAccepted(), _purchaseAmount);
-        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).purchaseTokensPerUser(user1), _purchaseAmount);
-        assertEq(IERC20(address(purchaseToken)).balanceOf(user1), type(uint256).max - _purchaseAmount);
+        fuzzed.upFrontDeal.acceptDeal(nftPurchaseListEmpty, merkleDataEmpty, _purchaseAmount);
+        assertEq(fuzzed.upFrontDeal.totalPurchasingAccepted(), _purchaseAmount);
+        assertEq(fuzzed.upFrontDeal.purchaseTokensPerUser(user1), _purchaseAmount);
+        assertEq(IERC20(fuzzed.dealData.purchaseToken).balanceOf(user1), type(uint256).max - _purchaseAmount);
 
         // purchase period is over, user1 tries to claim and gets a refund instead
-        vm.warp(purchaseExpiry + 1 days);
-        vm.expectEmit(true, false, false, true);
+        vm.warp(dealVars.purchaseDuration + 2);
+        vm.expectEmit(true, true, true, true);
         emit ClaimDealTokens(user1, 0, _purchaseAmount);
-        AelinUpFrontDeal(dealAddressNoDeallocation).purchaserClaim();
-        assertEq(IERC20(address(purchaseToken)).balanceOf(user1), type(uint256).max);
+        fuzzed.upFrontDeal.purchaserClaim();
+        assertEq(IERC20(fuzzed.dealData.purchaseToken).balanceOf(user1), type(uint256).max);
 
         vm.stopPrank();
     }
