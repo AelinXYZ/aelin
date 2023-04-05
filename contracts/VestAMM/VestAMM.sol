@@ -4,6 +4,7 @@ pragma solidity 0.8.6;
 // NEED pausing and management features
 import "./VestVestingToken.sol";
 import "./VestAMMMultiRewards.sol";
+import {AelinVestingToken} from "contracts/AelinVestingToken.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
@@ -15,6 +16,7 @@ import "../libraries/AelinAllowList.sol";
 import "../libraries/MerkleTree.sol";
 import "./interfaces/IVestAMM.sol";
 import "./interfaces/IVestAMMLibrary.sol";
+import "contracts/interfaces/balancer/IBalancerPool.sol";
 
 // we will have a modified staking rewards contract that reads the balances of each investor in the locked LP alongside which bucket they are in
 // so you can distribute protocol fees to locked LPs and also do highly targeted rewards just to specific buckets if you want
@@ -51,7 +53,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     MerkleTree.TrackClaimed private trackClaimed;
     AelinAllowList.AllowList public allowList;
     AelinNftGating.NftGatingData public nftGating;
-    AelinFeeModule public aelinFeeModule;
+    // TODO
+    // AelinFeeModule public aelinFeeModule;
 
     uint256 public totalDeposited;
     uint256 investmentTokenPerBase;
@@ -230,8 +233,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         setDepositComplete();
     }
 
-    function cancelVestAMM() onlyHolder depositIncomlete {
-        uint8[] removeIndexes;
+    // TODO check if we need modifier
+    // function cancelVestAMM()external onlyHolder depositIncomlete {
+    function cancelVestAMM() external onlyHolder {
         for (uint i = 0; i < singleRewards.length; i++) {
             removeIndexes[i] = i;
         }
@@ -316,7 +320,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     // TODO circle back to this method
-    function withdrawExcessFunding(bool _isBase, uint256 _singleIndex) {
+    function withdrawExcessFunding(bool _isBase, uint256 _singleIndex) external {
         // TODO emit any events?
         // TODO store baseAccepted under acceptDeal probably
         if (_isBase && holderDeposits[msg.sender][baseAsset] > (ammData.baseAssetAmount - baseAccepted)) {
@@ -375,7 +379,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     // to create the pool and deposit assets after phase 0 ends
     // TODO create a struct here that should cover every AMM. If needed to support more add a second struct
-    function createInitialLiquidity(CreateNewPool _createPool, AddLiquidity _addLiquidity)
+    function createInitialLiquidity(IBalancerPool.CreateNewPool _createPool, bytes memory _userData)
         external
         onlyHolder
         lpFundingWindow
@@ -384,15 +388,14 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // NOTE for this method we are going to want to pass in a lot of the arguments from
         // data stored in the contract. it won't be a pure pass through like we have now
         // at this stage in the development process
-        IVestAMMLibrary(ammData.ammLibrary).deployPool(_createPool, _addLiquidity);
-        // mintVestingToken(msg.sender, depositTokenAmount, _vestingScheduleIndex);
+        IVestAMMLibrary(ammData.ammLibrary).deployPool(_createPool, _userData);
         finalizeVesting();
     }
 
     // to create the pool and deposit assets after phase 0 ends
-    function createLiquidity(AddLiquidity _addLiquidity) external onlyHolder lpFundingWindow {
+    function createLiquidity(IBalancerPool.AddLiquidity _addLiquidity) external onlyHolder lpFundingWindow {
         require(!vAMMInfo.hasLiquidityLaunche, "only for existing liquidity");
-        IVestAMMLibrary(ammData.ammLibrary).addLiquidity(_addLiquidity, false);
+        IVestAMMLibrary(ammData.ammLibrary).addLiquidity(_addLiquidity);
         finalizeVesting();
     }
 
@@ -706,5 +709,12 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             "purchased more than total"
         );
         _;
+    }
+
+    modifier lock() {
+        require(!locked, "locked");
+        locked = true;
+        _;
+        locked = false;
     }
 }

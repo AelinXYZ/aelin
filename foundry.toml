@@ -11,6 +11,7 @@ remappings = [
     'openzeppelin-solidity-2.3.0/=node_modules/openzeppelin-solidity-2.3.0/',
     'ds-test/=lib/forge-std/lib/ds-test/src/',
     'forge-std/=lib/forge-std/src/',
+    '@balancer-labs/=node_modules/@balancer-labs/',
 ]
 # libraries = [
 #     "contracts/libraries/MerkleTree.sol:MerkleTree:0x70B0D8c1a00B937Cbb08DcA33812670D235157Bc",
