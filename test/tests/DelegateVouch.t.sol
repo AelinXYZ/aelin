@@ -10,11 +10,8 @@ contract DelegateVouchTest is Test {
 
     event AddDelegateVouch(address indexed delegate);
     event RemoveDelegateVouch(address indexed delegate);
-    Vm vm = Vm(address(0));
-    uint256 mainnetFork;
 
     function setUp() public {
-        mainnetFork = vm.createFork("https://eth-mainnet.g.alchemy.com/v2/EW9N4oDCQJ58k_9wF-wG8pkq7amdPnqD");
         delegateVouchAddress = new DelegateVouch(aelinCouncil);
     }
 
