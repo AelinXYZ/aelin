@@ -991,28 +991,64 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         vm.stopPrank();
     }
 
-    function testFuzz_ClaimableUnderlyingTokens_AfterVestingPeriod(uint256 _purchaseAmount, uint256 _delay) public {
-        (, , , , , , uint256 sponsorFee, , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealData();
-        uint256 vestingCliffExpiry = AelinUpFrontDeal(dealAddressNoDeallocation).vestingCliffExpiry();
-        uint256 vestingExpiry = AelinUpFrontDeal(dealAddressNoDeallocation).vestingExpiry();
-        (bool success, ) = SafeMath.tryAdd(vestingCliffExpiry, _delay);
-        vm.assume(success);
-        vm.assume(_delay > 0);
-        vm.assume(vestingCliffExpiry + _delay >= vestingExpiry);
+    function testFuzz_ClaimableUnderlyingTokens_AfterVestingPeriod(
+        uint256 _sponsorFee,
+        uint256 _underlyingDealTokenTotal,
+        uint256 _purchaseTokenPerDealToken,
+        uint256 _purchaseRaiseMinimum,
+        uint256 _purchaseDuration,
+        uint256 _vestingPeriod,
+        uint256 _vestingCliffPeriod,
+        uint8 _purchaseTokenDecimals,
+        uint8 _underlyingTokenDecimals,
+        uint256 _purchaseAmount,
+        uint256 _delay
+    ) public {
+        UpFrontDealVars memory dealVars = boundUpFrontDealVars(
+            _sponsorFee,
+            _underlyingDealTokenTotal,
+            _purchaseTokenPerDealToken,
+            _purchaseRaiseMinimum,
+            _purchaseDuration,
+            _vestingPeriod,
+            _vestingCliffPeriod,
+            _purchaseTokenDecimals,
+            _underlyingTokenDecimals
+        );
+
+        vm.assume(_delay > dealVars.vestingPeriod && _delay < 1000000 * BASE);
+
+        FuzzedUpFrontDeal memory fuzzed = getUpFrontDealFuzzed(_purchaseAmount, false, dealVars);
+
+        uint256 poolSharesAmount = (_purchaseAmount * 10**dealVars.underlyingTokenDecimals) /
+            dealVars.purchaseTokenPerDealToken;
+
+        vm.assume(_purchaseAmount > dealVars.purchaseRaiseMinimum);
+        vm.assume(poolSharesAmount <= dealVars.underlyingDealTokenTotal);
+
+        // user1 accepts the deal with _purchaseAmount > purchaseRaiseMinimum
         vm.startPrank(user1);
-        setupAndAcceptDealNoDeallocation(dealAddressNoDeallocation, _purchaseAmount, user1);
-        uint256 vestingTokenId = AelinUpFrontDeal(dealAddressNoDeallocation).tokenCount();
-        uint256 amountToClaim = ((BASE - AELIN_FEE - sponsorFee) *
-            AelinUpFrontDeal(dealAddressNoDeallocation).poolSharesPerUser(user1)) / BASE;
-        purchaserClaim(dealAddressNoDeallocation);
-        assertEq(MockERC721(dealAddressNoDeallocation).ownerOf(vestingTokenId), user1);
+
+        deal(address(fuzzed.dealData.purchaseToken), user1, type(uint256).max);
+        MockERC20(fuzzed.dealData.purchaseToken).approve(address(fuzzed.upFrontDeal), type(uint256).max);
+        fuzzed.upFrontDeal.acceptDeal(nftPurchaseListEmpty, merkleDataEmpty, _purchaseAmount);
+
+        uint256 vestingCliffExpiry = fuzzed.upFrontDeal.vestingCliffExpiry();
         vm.warp(vestingCliffExpiry + _delay);
-        // user can claim an amount as we are past the vesting period
+
+        uint256 vestingTokenId = fuzzed.upFrontDeal.tokenCount();
+        uint256 adjustedShareAmountForUser = ((BASE - AELIN_FEE - dealVars.sponsorFee) *
+            fuzzed.upFrontDeal.poolSharesPerUser(user1)) / BASE;
+
+        fuzzed.upFrontDeal.purchaserClaim();
+
+        assertEq(MockERC721(address(fuzzed.upFrontDeal)).ownerOf(vestingTokenId), user1);
         assertEq(
-            AelinUpFrontDeal(dealAddressNoDeallocation).claimableUnderlyingTokens(vestingTokenId),
-            amountToClaim,
+            fuzzed.upFrontDeal.claimableUnderlyingTokens(vestingTokenId),
+            adjustedShareAmountForUser,
             "claimableAmount"
         );
+
         vm.stopPrank();
     }
 
