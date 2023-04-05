@@ -158,6 +158,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         vAmmInfo = _vAmmInfo;
         dealAccess = _dealAccess;
         aelinFeeModule = _aelinFeeModule;
+        // TODO work on the rewards logic
         vestAmmMultiRewards = new VestAMMMultiRewards(address(this));
 
         // TODO if we are doing a liquidity growth round we need to read the prices of the assets
@@ -171,9 +172,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
         numVestingSchedules = vAmmInfo.vestingSchedules.length;
         for (uint i = 0; i < vAmmInfo.vestingSchedules.length; i++) {
-            holderTokenTotal += vAmmInfo.vestingSchedules[i].totalHolderTokens;
+            holderTokenTotal += vAmmInfo.vestingSchedules[i].schedule.totalTokens;
             maxInvTokensPerVestSchedule[i] =
-                (vAmmInfo.vestingSchedules[i].totalHolderTokens * investmentTokenPerBase) /
+                (vAmmInfo.vestingSchedules[i].schedule.totalTokens * investmentTokenPerBase) /
                 10**IERC20(ammData.baseAsset).decimals();
             maxInvTokens += maxInvTokensPerVestSchedule[i];
         }
@@ -455,6 +456,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         uint8 _vestingScheduleIndex,
         uint8 _singleRewardsIndex
     ) public view returns (uint256) {
+        if (lpDepositTime == 0) {
+            return 0;
+        }
         // struct VestVestingToken {
         //     uint256 amountDeposited;
         //     uint256 lastClaimedAt;
@@ -486,27 +490,43 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         uint256 vestingCliff = lpDepositTime + vestingCliffPeriod;
         uint256 vestingExpiry = vestingCliff + vestingPeriod;
 
+        // claiming logic outline:
         // the logic for claiming is this you have the lpDepositWindow is when everything starts
-        // then you have the vesting period cliff, then you have the vesting period
-        // if the vesting period cliff is set to 0 along with the vesting period the lpDepositTime
+        // then you have the vesting period cliff, then you have the vesting period.
+        // you can start vesting at the end of the cliff
+        // if the vesting period cliff is set to 0, you can start vesting right away.
+        // if the vesting period is also 0 you can vest everything
+
+    //       struct SingleRewardConfig {
+    //     address rewardToken;
+    //     uint256 rewardTokenTotal;
+    //     SingleVestingSchedule[] vestingSchedules;
+    //     address singleHolder;
+    //     // TODO  maybe remove this later
+    //     uint256 amountClaimed;
+    // }
+    //     struct SingleVestingSchedule {
+    //     VestingSchedule vestingSchedule;
+    //     uint8 vestingScheduleIndex;
+    //     uint256 totalTokens;
+    // }
 
         uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
-        uint256 minTime = lastClaimedAt > depositExpiry ? lastClaimedAt : depositExpiry;
+        uint256 minTime = block.timestamp < lpDepositTime ? lpDepositTime : block.timestamp;
 
-        if (maxTime > depositExpiry && minTime <= vestingExpiry) {
-            // NOTE that schedule.share needs to be updated
-            // to be the total deposited / global total somehow without requiring a settle method
-            // NOTE this math is wrong probably. need to figure out what to do with Math here to avoid issues
-            // TODO check how share is used on the other contracts
-            uint256 lpClaimable = (((schedule.amountDeposited * 10**depositTokenDecimals) / totalDeposited) *
-                (maxTime - minTime)) / vestingPeriod;
+        if (lastClaimedAt < maxTime) {
+            // uint8 investmentTokenDecimals = IERC20Decimals(ammData.investmentToken).decimals();
+            uint256 tokensClaimable = _claimType == ClaimType.Single
+                ? singleRewards[_singleRewardsIndex].schedules[schedule.vestingScheduleIndex]. ((schedule.amountDeposited) / depositedPerVestSchedule[_vestingScheduleIndex]) // 10% of the bucket *
+                    ((maxTime - minTime) / vestingPeriod) // 50% of the vesting period
+                : 0;
 
             // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
             // although it will generally never happen as solidity rounds down so there should always be a little bit left
-            precisionAdjustedClaimable = lpClaimable > IERC20(lpToken).balanceOf(address(this))
+            precisionAdjustedClaimable = tokensClaimable > IERC20(lpToken).balanceOf(address(this))
                 ? IERC20(lpToken).balanceOf(address(this))
-                : lpClaimable;
-        }
+                : tokensClaimable;
+        } else if (maxTime == minTime && vestingPeriod == 0) {}
         return precisionAdjustedClaimable;
     }
 
@@ -595,28 +615,28 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     function _validateLPVesting(LPVestingSchedule[] _vestingSchedules) internal {
         require(_vestingSchedules.length <= MAX_LP_VESTING_SCHEDULES, "too many vesting periods");
         for (uint256 i; i < _vestingSchedules.length; ++i) {
-            require(1825 days >= _vestingSchedules[i].vestingSchedule.vestingCliffPeriod, "max 5 year cliff");
-            require(1825 days >= _vestingSchedules[i].vestingSchedule.vestingPeriod, "max 5 year vesting");
+            require(1825 days >= _vestingSchedules[i].schedule.vestingCliffPeriod, "max 5 year cliff");
+            require(1825 days >= _vestingSchedules[i].schedule.vestingPeriod, "max 5 year vesting");
             require(100 * 10**18 >= _vestingSchedules[i].investorShare, "max 100% to investor");
             require(0 <= _vestingSchedules[i].investorShare, "min 0% to investor");
-            require(0 < _vestingSchedules[i].totalHolderTokens, "allocate tokens to schedule");
+            require(0 < _vestingSchedules[i]..schedule.totalTokens, "allocate tokens to schedule");
         }
     }
 
     function _validateSingleVesting(SingleVestingSchedule[] _vestingSchedules) internal {
         uint8[] usedIndexes = [];
         for (uint256 i; i < _vestingSchedules.length; ++i) {
-            require(1825 days >= _vestingSchedules[i].vestingSchedule.vestingCliffPeriod, "max 5 year cliff");
-            require(1825 days >= _vestingSchedules[i].vestingSchedule.vestingPeriod, "max 5 year vesting");
+            require(1825 days >= _vestingSchedules[i].schedule.vestingCliffPeriod, "max 5 year cliff");
+            require(1825 days >= _vestingSchedules[i].schedule.vestingPeriod, "max 5 year vesting");
 
-            require(_vestingSchedules[i].totalSingleTokens > 0, "need tokens as rewards");
+            require(_vestingSchedules[i].schedule.totalTokens > 0, "need tokens as rewards");
             require(!usedIndexes.contains(_vestingSchedules[i].vestingScheduleIndex), "vesting schedule already used");
             require(
                 _vestingSchedules[i].vestingScheduleIndex < vAmmInfo.vestingSchedules.length,
                 "vesting schedule does not exist"
             );
             usedIndexes.push(_vestingSchedules[i].vestingScheduleIndex);
-            require(0 < _vestingSchedules[i].totalHolderTokens, "allocate tokens to schedule");
+            require(0 < _vestingSchedules[i].schedule.totalTokens, "allocate tokens to schedule");
         }
     }
 

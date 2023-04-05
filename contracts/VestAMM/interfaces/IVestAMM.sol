@@ -10,17 +10,17 @@ interface IVestAMM {
     // uint256 vestingPeriod = 3 months;
     // uint256 vestingCliffPeriod = 3 months;
     // uint8 investorLPShare = 50;
-    // uint8 totalHolderTokens = 100 * 1e18 (100 ABC tokens)
+    // uint8 totalTokens = 100 * 1e18 (100 ABC tokens)
     // schedule 2 example
     // uint256 vestingPeriod = 6 months;
     // uint256 vestingCliffPeriod = 6 months;
     // uint8 investorLPShare = 75;
-    // uint8 totalHolderTokens = 200 * 1e18 (200 ABC tokens)
+    // uint8 totalTokens = 200 * 1e18 (200 ABC tokens)
     // schedule 3 example
     // uint256 vestingPeriod = 12 months;
     // uint256 vestingCliffPeriod = 12 months;
     // uint8 investorLPShare = 100;
-    // uint8 totalHolderTokens = 300 * 1e18 (300 ABC tokens)
+    // uint8 totalTokens = 300 * 1e18 (300 ABC tokens)
 
     // we have multiple single rewards programs each with different vesting schedules (SingleVestingSchedule)
     // reward 1 example is OP tokens
@@ -29,12 +29,12 @@ interface IVestAMM {
     // NOTE OP is vesting 50% faster than the LP tokens
     // uint256 vestingPeriod = 3 months;
     // uint256 vestingCliffPeriod = 3 months;
-    // uint8 totalSingleTokens = 10 * 1e18 (10 OP tokens)
+    // uint8 totalTokens = 10 * 1e18 (10 OP tokens)
     // uint 8 vestingScheduleIndex = 2;
 
     // uint256 vestingPeriod = 3 months;
     // uint256 vestingCliffPeriod = 3 months;
-    // uint8 totalSingleTokens = 20 * 1e18 (20 OP tokens)
+    // uint8 totalTokens = 20 * 1e18 (20 OP tokens)
     // uint 8 vestingScheduleIndex = 3;
 
     // the extra logic piece that goes in the contracts is for schedule 2 there are 200 ABC tokens
@@ -59,19 +59,17 @@ interface IVestAMM {
     struct VestingSchedule {
         uint256 vestingPeriod;
         uint256 vestingCliffPeriod;
+        uint256 totalTokens;
     }
 
     // used for each reward to be claimed or the LP tokens
     struct LPVestingSchedule {
-        VestingSchedule vestingSchedule;
+        VestingSchedule schedule;
         uint8 investorLPShare; // 0 - 100
-        uint256 totalHolderTokens;
     }
     // used for each reward to be claimed or the LP tokens
     struct SingleVestingSchedule {
-        VestingSchedule vestingSchedule;
-        uint8 vestingScheduleIndex;
-        uint256 totalSingleTokens;
+        mapping(uint8 => VestingSchedule) schedule;
     }
 
     // assume 50/50 to deposit ratio to start

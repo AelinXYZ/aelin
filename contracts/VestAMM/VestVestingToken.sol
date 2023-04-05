@@ -17,7 +17,7 @@ contract VestVestingToken is VestERC721, IVestVestingToken {
         address _to,
         uint256 _amount,
         uint256 _lpTimestamp,
-        uint256[] _singleRewardTimestamps,
+        uint256[] calldata _singleRewardTimestamps,
         uint8 _vestingScheduleIndex
     ) internal {
         _mint(_to, tokenCount);
