@@ -5,9 +5,17 @@ import "forge-std/Test.sol";
 import {BalancerVestAMM} from "contracts/VestAMM/libraries/AmmIntegration/BalancerVestAMM.sol";
 import {WeightedPoolUserData} from "@balancer-labs/v2-interfaces/contracts/pool-weighted/WeightedPoolUserData.sol";
 import {IRateProvider} from "@balancer-labs/v2-interfaces/contracts/pool-utils/IRateProvider.sol";
-import {IBalancerPool} from "contracts/interfaces/balancer/IBalancerPool.sol";
+
+import "contracts/VestAMM/interfaces/balancer/IBalancerPool.sol";
+import "contracts/VestAMM/interfaces/IVestAMMLibrary.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+contract DerivedBalancerVestAMM is BalancerVestAMM {
+    function createPool(IBalancerPool.CreateNewPool memory _newPool) public returns (address) {
+        return _createPool(_newPool);
+    }
+}
 
 contract BalancerLibraryTest is Test {
     uint256 mainnetFork;
@@ -19,12 +27,11 @@ contract BalancerLibraryTest is Test {
         string name;
         string symbol;
         IERC20[] tokens;
-        uint256[] weights;
+        uint256[] normalizedWeights;
         IRateProvider[] rateProviders;
         uint256 swapFeePercentage;
         BalancerVestAMM balancerLib;
         address pool;
-        bytes32 poolId;
     }
 
     // Alchemy url + key in .env
@@ -34,31 +41,37 @@ contract BalancerLibraryTest is Test {
         mainnetFork = vm.createFork(MAINNET_RPC_URL);
     }
 
-    function getBalancerTestData() public returns (BalancerPoolData memory) {
+    function getBalancerTestData(uint256[] memory tokenAmtsIn) public returns (BalancerPoolData memory) {
         IERC20[] memory tokens = new IERC20[](2);
         IRateProvider[] memory rateProviders = new IRateProvider[](2);
-        uint256[] memory weights = new uint256[](2);
+        uint256[] memory normalizedWeights = new uint256[](2);
 
         tokens[0] = Dai;
         tokens[1] = Aelin;
         rateProviders[0] = IRateProvider(address(0));
         rateProviders[1] = IRateProvider(address(0));
-        weights[0] = 500000000000000000;
-        weights[1] = 500000000000000000;
+        normalizedWeights[0] = 500000000000000000;
+        normalizedWeights[1] = 500000000000000000;
 
-        IBalancerPool.CreateNewPool memory newPoolData = IBalancerPool.CreateNewPool(
+        IVestAMMLibrary.CreateNewPool memory newPoolData = IVestAMMLibrary.CreateNewPool(
             "aelindai",
             "AELIN-DAI",
             tokens,
-            weights,
+            tokenAmtsIn,
+            normalizedWeights,
             rateProviders,
-            2500000000000000 // 2,5%
+            2500000000000000, // 2,5%
+            address(0) // OWNER: Do we need this?
         );
 
-        BalancerVestAMM balancerLib = new BalancerVestAMM();
+        DerivedBalancerVestAMM balancerLib = new DerivedBalancerVestAMM();
 
-        address pool = balancerLib.createPool(newPoolData);
-        bytes32 poolId = IBalancerPool(pool).getPoolId();
+        // First we need to approve the VestAMM(or the library for this test case) to use user's tokens
+        for (uint256 i = 0; i < tokens.length; i++) {
+            tokens[i].approve(address(balancerLib), type(uint256).max);
+        }
+
+        address pool = balancerLib.deployPool(newPoolData);
 
         BalancerPoolData memory data;
 
@@ -66,11 +79,10 @@ contract BalancerLibraryTest is Test {
         data.name = "aelindai";
         data.symbol = "AELIN-DAI";
         data.tokens = tokens;
-        data.weights = weights;
+        data.normalizedWeights = normalizedWeights;
         data.rateProviders = rateProviders;
         data.swapFeePercentage = 2500000000000000;
         data.pool = pool;
-        data.poolId = poolId;
 
         return data;
     }
@@ -79,50 +91,42 @@ contract BalancerLibraryTest is Test {
         vm.selectFork(mainnetFork);
         vm.startPrank(user);
 
-        BalancerPoolData memory data = getBalancerTestData();
-
-        Aelin.transfer(address(data.balancerLib), Aelin.balanceOf(user));
-        Dai.transfer(address(data.balancerLib), Dai.balanceOf(user));
-
-        /* ADD LIQUIDITY FOR THE FIRS TIME */
-        // NOTE: Since this is the First time we add liquidity => WeightedPoolUserData.JoinKind.INIT
+        /* DEPLOY POOL (LIQUIDITY IS ADDED FOR THE FIRST TIME) */
         uint256[] memory amountsIn = new uint256[](2);
         amountsIn[0] = 10000000;
         amountsIn[1] = 10000000;
 
-        //NOTE: poolAmountOut: Amount of LP tokens to be received from the pool
-        uint256 maxBpTAmountOut = type(uint256).max;
-        bytes memory userData = abi.encode(WeightedPoolUserData.JoinKind.INIT, amountsIn, maxBpTAmountOut);
-        data.balancerLib.addLiquidity(data.poolId, userData);
+        BalancerPoolData memory data = getBalancerTestData(amountsIn);
 
         uint256 poolLPSupply = IBalancerPool(data.pool).getActualSupply();
         uint256 vAMMLPBalance = IBalancerPool(data.pool).balanceOf(address(data.balancerLib));
-        // Check liquidity has been added
+
+        // Check liquidity has been added and LP tokens balance in vAMM
         assertGt(poolLPSupply, 0);
-        // Check LP tokens balance in vAMM
         assertGt(vAMMLPBalance, 0);
 
         /* ADD LIQUIDITY FOR THE SECOND TIME */
         amountsIn[0] = 30000000;
         amountsIn[1] = 30000000;
 
-        // TODO Not sure about this one. minBptAmountOut == 0
-        uint256 minBptAmountOut = 0;
-        userData = abi.encode(WeightedPoolUserData.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT, amountsIn, minBptAmountOut);
-        data.balancerLib.addLiquidity(data.poolId, userData);
+        IVestAMMLibrary.AddLiquidity memory addLiquidityData = IVestAMMLibrary.AddLiquidity(data.pool, amountsIn);
+        data.balancerLib.addLiquidity(addLiquidityData);
 
         uint256 newPoolLPSupply = IBalancerPool(data.pool).getActualSupply();
         uint256 newVAMMBalance = IBalancerPool(data.pool).balanceOf(address(data.balancerLib));
-        // Check liquidity has been added
+
+        // Check new liquidity has been added and new LP tokens balance in vAMM
         assertGt(newPoolLPSupply, poolLPSupply);
-        // Check LP tokens balance in vAMM
         assertGt(newVAMMBalance, vAMMLPBalance);
 
-        /* REMOVE SOME LIQUIDITY FOR THE SECOND TIME */
-        uint256 bptAmountIn = 20000000;
+        // /* REMOVE SOME LIQUIDITY */
+        uint256 lpTokenAmountIn = 20000000;
 
-        userData = abi.encode(WeightedPoolUserData.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT, bptAmountIn);
-        data.balancerLib.removeLiquidity(data.poolId, userData, bptAmountIn);
+        IVestAMMLibrary.RemoveLiquidity memory removeLiquidityData = IVestAMMLibrary.RemoveLiquidity(
+            data.pool,
+            lpTokenAmountIn
+        );
+        data.balancerLib.removeLiquidity(removeLiquidityData);
 
         uint256 removedPoolLPSupply = IBalancerPool(data.pool).getActualSupply();
         uint256 removedVAMMBalance = IBalancerPool(data.pool).balanceOf(address(data.balancerLib));
