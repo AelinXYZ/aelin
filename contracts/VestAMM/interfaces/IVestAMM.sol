@@ -5,47 +5,6 @@ import "../../libraries/AelinNftGating.sol";
 import "../../libraries/AelinAllowList.sol";
 
 interface IVestAMM {
-    // Protocol ABC has multiple vesting schedules for the LP tokens (LPVestingSchedule)
-    // schedule 1 example
-    // uint256 vestingPeriod = 3 months;
-    // uint256 vestingCliffPeriod = 3 months;
-    // uint8 investorLPShare = 50;
-    // uint8 totalTokens = 100 * 1e18 (100 ABC tokens)
-    // schedule 2 example
-    // uint256 vestingPeriod = 6 months;
-    // uint256 vestingCliffPeriod = 6 months;
-    // uint8 investorLPShare = 75;
-    // uint8 totalTokens = 200 * 1e18 (200 ABC tokens)
-    // schedule 3 example
-    // uint256 vestingPeriod = 12 months;
-    // uint256 vestingCliffPeriod = 12 months;
-    // uint8 investorLPShare = 100;
-    // uint8 totalTokens = 300 * 1e18 (300 ABC tokens)
-
-    // we have multiple single rewards programs each with different vesting schedules (SingleVestingSchedule)
-    // reward 1 example is OP tokens
-    // vestingScheduleIndex = 1 gets nothing because they do not want to incentivize short term lockups
-
-    // NOTE OP is vesting 50% faster than the LP tokens
-    // uint256 vestingPeriod = 3 months;
-    // uint256 vestingCliffPeriod = 3 months;
-    // uint8 totalTokens = 10 * 1e18 (10 OP tokens)
-    // uint 8 vestingScheduleIndex = 2;
-
-    // uint256 vestingPeriod = 3 months;
-    // uint256 vestingCliffPeriod = 3 months;
-    // uint8 totalTokens = 20 * 1e18 (20 OP tokens)
-    // uint 8 vestingScheduleIndex = 3;
-
-    // the extra logic piece that goes in the contracts is for schedule 2 there are 200 ABC tokens
-    // the pricing of these is set up front when the vAMM is created either by passing in the price or
-    // reading it from an existing AMM
-    // so you might have 2 sUSD/ ABC in which case the second bucket will have a maximum of 400 sUSD
-    // if there is more than 400 everyone gets dellocated. if there is less than 400 the protocol will get
-    // some of their ABC tokens back since they are unmatched
-    // if the protocol raises 400 sUSD then all 10 OP tokens are given out to holders
-    // if the protoocol only raises 200 sUSD then only 5 of the OP tokens are given to holders
-    // the other 5 OP tokens are claimable by the single rewards holder
     enum Deallocation {
         None,
         Proportional
@@ -56,20 +15,22 @@ interface IVestAMM {
         LP
     }
 
-    struct VestingSchedule {
+    struct SingleVestingSchedule {
+        address rewardToken;
+        uint256 vestingPeriod;
+        uint256 vestingCliffPeriod;
+        address singleHolder;
+        uint256 totalTokens;
+        uint256 claimed;
+    }
+
+    struct LPVestingSchedule {
+        SingleVestingSchedule[] singleVestingSchedules;
         uint256 vestingPeriod;
         uint256 vestingCliffPeriod;
         uint256 totalTokens;
-    }
-
-    // used for each reward to be claimed or the LP tokens
-    struct LPVestingSchedule {
-        VestingSchedule schedule;
+        uint256 claimed;
         uint8 investorLPShare; // 0 - 100
-    }
-    // used for each reward to be claimed or the LP tokens
-    struct SingleVestingSchedule {
-        mapping(uint8 => VestingSchedule) schedule;
     }
 
     // assume 50/50 to deposit ratio to start
@@ -93,23 +54,13 @@ interface IVestAMM {
         uint256 lpFundingWindow;
         address mainHolder;
         Deallocation deallocation;
-        LPVestingSchedule[] vestingSchedules;
+        LPVestingSchedule[] lpVestingSchedules;
         FundingLimits fundingLimits;
     }
 
     struct MigrationRules {
         bool canMigrate;
         uint256 rewardPerQuote;
-    }
-
-    // TODO consider migration rules later
-    struct SingleRewardConfig {
-        address rewardToken;
-        uint256 rewardTokenTotal;
-        SingleVestingSchedule[] vestingSchedules;
-        address singleHolder;
-        // TODO  maybe remove this later
-        uint256 amountClaimed;
     }
 
     struct DealAccess {
@@ -134,7 +85,7 @@ interface IVestAMM {
 
     event TokenDeposited(address token, uint256 amount);
 
-    event NewVestAMM(AmmData ammData, VAmmInfo vAMMInfo, SingleRewardConfig[] singleRewards, DealAccess dealAccess);
+    event NewVestAMM(AmmData ammData, VAmmInfo vAMMInfo, DealAccess dealAccess);
 
     event SetHolder(address indexed holder);
 

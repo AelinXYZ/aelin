@@ -39,16 +39,15 @@ contract VestAMMDealFactory is IVestAMM {
     function createVestAMM(
         AmmData calldata _ammData,
         VAmmInfo calldata _vAmmInfo,
-        SingleRewardConfig[] calldata _singleRewards,
         DealAccess calldata _dealAccess
     ) external returns (address vAmmAddress) {
         require(AELIN_LIBRARY_LIST.libraryList[_ammData.ammLibrary], "invalid AMM library");
 
         vAmmAddress = Clones.clone(VEST_AMM_LOGIC);
 
-        VestAMM(vAmmAddress).initialize(_ammData, _vAmmInfo, _singleRewards, _dealAccess, AELIN_FEE_MODULE);
+        VestAMM(vAmmAddress).initialize(_ammData, _vAmmInfo, _dealAccess, AELIN_FEE_MODULE);
 
-        emit NewVestAMM(_ammData, _vAmmInfo, _singleRewards, _dealAccess);
+        emit NewVestAMM(_ammData, _vAmmInfo, _dealAccess);
     }
 
     // TODO a function that locks existing LP tokens
