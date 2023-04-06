@@ -76,7 +76,7 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
          * calculates the amount of underlying deal tokens you get per wrapped deal token accepted
          */
         underlyingPerDealExchangeRate = (_dealData.underlyingDealTokenTotal * 1e18) / maxTotalSupply;
-        emit HolderSet(_dealData.holder);
+        emit HolderAccepted(_dealData.holder);
     }
 
     /**
