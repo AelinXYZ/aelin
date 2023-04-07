@@ -116,6 +116,8 @@ library AelinNftGating {
             uint256[] memory _tokenIds = nftPurchaseList.tokenIds;
 
             NftCollectionRules memory nftCollectionRules = _data.nftCollectionDetails[_collectionAddress];
+
+            require(_collectionAddress != address(0), "collection should not be null");
             require(nftCollectionRules.collectionAddress == _collectionAddress, "collection not in the pool");
 
             if (nftCollectionRules.purchaseAmountPerToken && nftCollectionRules.purchaseAmount > 0) {

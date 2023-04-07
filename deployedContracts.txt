@@ -35,6 +35,11 @@ v5
 ║ upFrontDealFactory │ 0x97EfdB29C0D6daCDc0BB334Cc227AE03A1a7c01E ║
 
 
+v6 just has a new upFrontDealLogic contract and a new factory contract
+UpFrontDeal:0x3618938a8734f05eb16B8c0C0c4186088b1e4B0E
+AelinNftGating:0x7096e34e27688b7db4a1dab0146531e5b0cec5a2
+UpFrontDealFactory:0x82bccfa913db473147e5274c7821bc13ffbabe17
+
 Optimism:
 AelinTokenV1 (deprecated from first Aelin pool) - 0x04432a6fd94e8bC8559d10AC1D98f15Cd9C08363
 AelinToken - 0x61BAADcF22d2565B0F471b291C475db5555e0b76

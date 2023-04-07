@@ -13,9 +13,10 @@ remappings = [
     'forge-std/=lib/forge-std/src/',
 ]
 # libraries = [
-#     "contracts/libraries/MerkleTree.sol:MerkleTree:0x70B0D8c1a00B937Cbb08DcA33812670D235157Bc",
-#     "contracts/libraries/AelinAllowList.sol:AelinAllowList:0xAA837deD11f623F6F56d03A5496FA6af71E6c9F5",
-#     "contracts/libraries/AelinNftGating.sol:AelinNftGating:0x103Dc458C4CEb1B47A4CF031919e426218a34048"
+#    "contracts/libraries/MerkleTree.sol:MerkleTree:0x15545F77783c8B47E7D9af53cd9a91AE612B3bAc",
+#     "contracts/libraries/AelinAllowList.sol:AelinAllowList:0x011829226A32e992a4dEF3Efe225978136dD5ccE",
+#    "contracts/libraries/AelinNftGating.sol:AelinNftGating:0x7096e34e27688b7db4a1dab0146531e5b0cec5a2",
+#    "contracts/libraries/NftCheck.sol:NftCheck:0xe2D312365cB83b3073c702d81832f27B0A23c482"
 # ]
 fuzz_max_global_rejects = 50000000
 
