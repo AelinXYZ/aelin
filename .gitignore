@@ -10,5 +10,3 @@ coverage.json
 lint-results.sarif
 .env
 .vscode/
-package.json
-package-lock.json
