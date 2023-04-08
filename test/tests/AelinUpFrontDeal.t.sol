@@ -20,9 +20,9 @@ contract AelinUpFrontDealTest is Test {
     address public aelinTreasury = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
     address public punks = address(0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB);
 
-    uint256 constant BASE = 100 * 10**18;
-    uint256 constant MAX_SPONSOR_FEE = 15 * 10**18;
-    uint256 constant AELIN_FEE = 2 * 10**18;
+    uint256 constant BASE = 100 * 10 ** 18;
+    uint256 constant MAX_SPONSOR_FEE = 15 * 10 ** 18;
+    uint256 constant AELIN_FEE = 2 * 10 ** 18;
 
     address dealCreatorAddress = address(0xBEEF);
 
@@ -131,7 +131,7 @@ contract AelinUpFrontDealTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0xBEEF),
-            sponsorFee: 1 * 10**18,
+            sponsorFee: 1 * 10 ** 18,
             ipfsHash: "",
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000
         });
@@ -286,7 +286,7 @@ contract AelinUpFrontDealTest is Test {
         (, , , tempBool) = AelinUpFrontDeal(dealAddress).getAllowList(address(0));
         assertFalse(tempBool);
         // test nft gating
-        (, , tempBool) = AelinUpFrontDeal(dealAddress).getNftGatingDetails(address(0), address(0), 0);
+        (, tempBool) = AelinUpFrontDeal(dealAddress).getNftGatingDetails(address(0), 0);
         assertFalse(tempBool);
     }
 
@@ -342,7 +342,7 @@ contract AelinUpFrontDealTest is Test {
         (, , , tempBool) = AelinUpFrontDeal(dealAddressAllowDeallocation).getAllowList(address(0));
         assertFalse(tempBool);
         // test nft gating
-        (, , tempBool) = AelinUpFrontDeal(dealAddressAllowDeallocation).getNftGatingDetails(address(0), address(0), 0);
+        (, tempBool) = AelinUpFrontDeal(dealAddressAllowDeallocation).getNftGatingDetails(address(0), 0);
         assertFalse(tempBool);
     }
 
@@ -401,7 +401,7 @@ contract AelinUpFrontDealTest is Test {
         (, , , tempBool) = AelinUpFrontDeal(dealAddressOverFullDeposit).getAllowList(address(0));
         assertFalse(tempBool);
         // test nft gating
-        (, , tempBool) = AelinUpFrontDeal(dealAddressOverFullDeposit).getNftGatingDetails(address(0), address(0), 0);
+        (, tempBool) = AelinUpFrontDeal(dealAddressOverFullDeposit).getNftGatingDetails(address(0), 0);
         assertFalse(tempBool);
     }
 
@@ -481,7 +481,7 @@ contract AelinUpFrontDealTest is Test {
             }
         }
         // test nft gating
-        (, , tempBool) = AelinUpFrontDeal(dealAddressAllowList).getNftGatingDetails(address(0), address(0), 0);
+        (, tempBool) = AelinUpFrontDeal(dealAddressAllowList).getNftGatingDetails(address(0), 0);
         assertFalse(tempBool);
     }
 
@@ -539,7 +539,7 @@ contract AelinUpFrontDealTest is Test {
         // test nft gating
         uint256[] memory tempUintArray1;
         uint256[] memory tempUintArray2;
-        (, , tempBool) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(0), address(0), 0);
+        (, tempBool) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(0), 0);
         assertTrue(tempBool);
         (tempUint, tempAddress, tempBool, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating721)
             .getNftCollectionDetails(address(collectionAddress1));
@@ -607,7 +607,7 @@ contract AelinUpFrontDealTest is Test {
         // test nft gating
         uint256[] memory tempUintArray1;
         uint256[] memory tempUintArray2;
-        (, , tempBool) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(0), address(0), 0);
+        (, tempBool) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(0), 0);
         assertTrue(tempBool);
         (tempUint, tempAddress, tempBool, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGatingPunks)
             .getNftCollectionDetails(address(collectionAddress1));
@@ -675,7 +675,7 @@ contract AelinUpFrontDealTest is Test {
         // test nft gating
         uint256[] memory tempUintArray1;
         uint256[] memory tempUintArray2;
-        (, , tempBool) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(address(0), address(0), 0);
+        (, tempBool) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(address(0), 0);
         assertTrue(tempBool);
         (tempUint, tempAddress, tempBool, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating1155)
             .getNftCollectionDetails(address(collectionAddress4));
@@ -1016,7 +1016,7 @@ contract AelinUpFrontDealTest is Test {
         ).dealConfig();
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         vm.assume(_purchaseAmount <= underlyingDealTokenTotal);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         address user = address(0x456);
@@ -1042,7 +1042,7 @@ contract AelinUpFrontDealTest is Test {
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         uint256 _purchaseAmount = 1e34;
         vm.assume(_purchaseAmount <= underlyingDealTokenTotal);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         require(poolSharesAmount > 0, "purchase amount too small");
         vm.assume(poolSharesAmount > 0);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -1093,8 +1093,8 @@ contract AelinUpFrontDealTest is Test {
         (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
         uint256 purchaseAmount1 = 1e34;
         uint256 purchaseAmount2 = 1e37;
-        uint256 poolSharesAmount1 = (purchaseAmount1 * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
-        uint256 poolSharesAmount2 = (purchaseAmount2 * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount1 = (purchaseAmount1 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount2 = (purchaseAmount2 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         require(poolSharesAmount1 > 0, "purchase amount too small");
         require(poolSharesAmount2 > 0, "purchase amount too small");
         vm.assume(poolSharesAmount1 > 0);
@@ -1133,7 +1133,7 @@ contract AelinUpFrontDealTest is Test {
             dealAddressAllowDeallocation
         ).dealConfig();
         uint256 purchaseAmount1 = 6e35;
-        uint256 poolSharesAmount1 = (purchaseAmount1 * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount1 = (purchaseAmount1 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         require(poolSharesAmount1 > 0, "purchase amount too small");
         require(poolSharesAmount1 > underlyingDealTokenTotal, "pool shares lower than total");
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -1160,37 +1160,33 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressAllowList
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         deal(address(purchaseToken), _user, type(uint256).max);
         purchaseToken.approve(address(dealAddressAllowList), type(uint256).max);
         uint256 purchaseAmount1 = 1e34;
-        uint256 poolSharesAmount1 = (purchaseAmount1 * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount1 = (purchaseAmount1 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         require(poolSharesAmount1 > 0, "purchase amount too small");
         vm.expectRevert("more than allocation");
         AelinUpFrontDeal(dealAddressAllowList).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         vm.stopPrank();
     }
 
-    function testAcceptDealAllowList(
-        uint256 _purchaseAmount1,
-        uint256 _purchaseAmount2,
-        uint256 _purchaseAmount3
-    ) public {
+    function testAcceptDealAllowList(uint256 _purchaseAmount1, uint256 _purchaseAmount2, uint256 _purchaseAmount3) public {
         vm.assume(_purchaseAmount1 <= 1e18);
         vm.assume(_purchaseAmount2 <= 2e18);
         vm.assume(_purchaseAmount3 <= 3e18);
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressAllowList).dealConfig();
-        uint256 poolSharesAmount1 = (_purchaseAmount1 * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount1 = (_purchaseAmount1 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount1 > 0);
-        uint256 poolSharesAmount2 = (_purchaseAmount2 * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount2 = (_purchaseAmount2 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount2 > 0);
-        uint256 poolSharesAmount3 = (_purchaseAmount3 * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount3 = (_purchaseAmount3 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount3 > 0);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         // user1
@@ -1241,9 +1237,9 @@ contract AelinUpFrontDealTest is Test {
         vm.assume(_purchaseAmount > 1e18);
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressAllowList).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         vm.startPrank(address(0x1337));
@@ -1283,9 +1279,9 @@ contract AelinUpFrontDealTest is Test {
         vm.assume(_purchaseAmount <= 1e20 + 1e20 + 1e22);
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressAllowList).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](2);
         uint256[] memory tokenIdsArray = new uint256[](2);
@@ -1301,40 +1297,31 @@ contract AelinUpFrontDealTest is Test {
         MockERC721(collectionAddress2).mint(address(0x1337), 2);
         deal(address(purchaseToken), address(0x1337), type(uint256).max);
         purchaseToken.approve(address(dealAddressNftGating721), type(uint256).max);
-        bool walletClaimed;
         bool NftIdUsed;
         bool hasNftList;
         // checks before purchase
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
             address(collectionAddress1),
-            address(0x1337),
             1
         );
-        assertFalse(walletClaimed);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
             address(collectionAddress1),
-            address(0x1337),
             2
         );
-        assertFalse(walletClaimed);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
             address(collectionAddress2),
-            address(0x1337),
             1
         );
-        assertFalse(walletClaimed);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
             address(collectionAddress2),
-            address(0x1337),
             2
         );
-        assertFalse(walletClaimed);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
         // purchase
@@ -1346,36 +1333,28 @@ contract AelinUpFrontDealTest is Test {
         assertEq(AelinUpFrontDeal(dealAddressNftGating721).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressNftGating721).totalPurchasingAccepted(), _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressNftGating721).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
             address(collectionAddress1),
-            address(0x1337),
             1
         );
-        assertFalse(walletClaimed);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
             address(collectionAddress1),
-            address(0x1337),
             2
         );
-        assertFalse(walletClaimed);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
             address(collectionAddress2),
-            address(0x1337),
             1
         );
-        assertTrue(walletClaimed);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
             address(collectionAddress2),
-            address(0x1337),
             2
         );
-        assertTrue(walletClaimed);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
     }
@@ -1385,9 +1364,9 @@ contract AelinUpFrontDealTest is Test {
         uint256 purchaseAmount = 1e20 + 1e20 + 1e22;
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressAllowList).dealConfig();
-        (bool success, ) = SafeMath.tryMul(purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](2);
         uint256[] memory tokenIdsArray = new uint256[](2);
@@ -1412,9 +1391,9 @@ contract AelinUpFrontDealTest is Test {
         uint256 purchaseAmount = 1e20 + 1e20 + 1e22;
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressAllowList).dealConfig();
-        (bool success, ) = SafeMath.tryMul(purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](2);
         uint256[] memory tokenIdsArray = new uint256[](2);
@@ -1437,40 +1416,14 @@ contract AelinUpFrontDealTest is Test {
         AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
     }
 
-    function testRevertAcceptDealERC721WalletAlreadyUsed() public {
-        vm.startPrank(address(0x1337));
-        uint256 purchaseAmount = 1e22;
-        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
-        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressAllowList).dealConfig();
-        (bool success, ) = SafeMath.tryMul(purchaseAmount, 10**underlyingTokenDecimals);
-        vm.assume(success);
-        uint256 poolSharesAmount = (purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
-        vm.assume(poolSharesAmount > 0);
-        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
-        uint256[] memory tokenIdsArray = new uint256[](2);
-        tokenIdsArray[0] = 1;
-        tokenIdsArray[1] = 2;
-        nftPurchaseList[0].collectionAddress = address(collectionAddress2);
-        nftPurchaseList[0].tokenIds = tokenIdsArray;
-        MockERC721(collectionAddress2).mint(address(0x1337), 1);
-        MockERC721(collectionAddress2).mint(address(0x1337), 2);
-        deal(address(purchaseToken), address(0x1337), type(uint256).max);
-        purchaseToken.approve(address(dealAddressNftGating721), type(uint256).max);
-        vm.expectEmit(true, false, false, true);
-        emit AcceptDeal(address(0x1337), purchaseAmount, purchaseAmount, poolSharesAmount, poolSharesAmount);
-        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
-        vm.expectRevert("wallet already used for nft set");
-        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
-    }
-
     function testRevertAcceptDealERC721OverAllowed() public {
         vm.startPrank(address(0x1337));
         uint256 purchaseAmount = 1e20 + 1e20 + 1e22 + 1;
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressAllowList).dealConfig();
-        (bool success, ) = SafeMath.tryMul(purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](2);
         uint256[] memory tokenIdsArray = new uint256[](2);
@@ -1501,9 +1454,9 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressNftGating1155
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](2);
@@ -1520,22 +1473,11 @@ contract AelinUpFrontDealTest is Test {
         MockERC1155(collectionAddress5).mint(address(0x1337), 10, 1000, data);
         deal(address(purchaseToken), address(0x1337), type(uint256).max);
         purchaseToken.approve(address(dealAddressNftGating1155), type(uint256).max);
-        bool walletClaimed;
         bool NftIdUsed;
         // checks before purchase
-        (walletClaimed, NftIdUsed, ) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(
-            address(collectionAddress4),
-            address(0x1337),
-            1
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, ) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(address(collectionAddress4), 1);
         assertTrue(NftIdUsed);
-        (walletClaimed, NftIdUsed, ) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(
-            address(collectionAddress5),
-            address(0x1337),
-            10
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, ) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(address(collectionAddress5), 10);
         assertTrue(NftIdUsed);
         // purchase
         vm.expectEmit(true, false, false, true);
@@ -1546,19 +1488,9 @@ contract AelinUpFrontDealTest is Test {
         assertEq(AelinUpFrontDeal(dealAddressNftGating1155).getPoolSharesPerUser(address(0x1337)), poolSharesAmount);
         assertEq(AelinUpFrontDeal(dealAddressNftGating1155).totalPurchasingAccepted(), _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressNftGating1155).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
-        (walletClaimed, NftIdUsed, ) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(
-            address(collectionAddress4),
-            address(0x1337),
-            1
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, ) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(address(collectionAddress4), 1);
         assertTrue(NftIdUsed);
-        (walletClaimed, NftIdUsed, ) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(
-            address(collectionAddress5),
-            address(0x1337),
-            10
-        );
-        assertTrue(walletClaimed);
+        (NftIdUsed, ) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(address(collectionAddress5), 10);
         assertTrue(NftIdUsed);
         vm.stopPrank();
     }
@@ -1568,9 +1500,9 @@ contract AelinUpFrontDealTest is Test {
         uint256 purchaseAmount = 1e20 * 11 + 1e22;
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressNftGating1155).dealConfig();
-        (bool success, ) = SafeMath.tryMul(purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](2);
         uint256[] memory tokenIdsArray1 = new uint256[](1);
@@ -1596,9 +1528,9 @@ contract AelinUpFrontDealTest is Test {
         uint256 purchaseAmount = 1e20 * 11 + 1e22;
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressNftGating1155).dealConfig();
-        (bool success, ) = SafeMath.tryMul(purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](2);
         uint256[] memory tokenIdsArray1 = new uint256[](1);
@@ -1649,9 +1581,9 @@ contract AelinUpFrontDealTest is Test {
         // accept deal
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         deal(address(purchaseToken), address(0x1337), type(uint256).max);
@@ -1684,9 +1616,9 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressOverFullDeposit
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -1734,9 +1666,9 @@ contract AelinUpFrontDealTest is Test {
             dealAddressAllowDeallocation
         ).dealConfig();
         (, , , , , , uint256 sponsorFee, , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealData();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount > underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -1756,7 +1688,7 @@ contract AelinUpFrontDealTest is Test {
             address(0x1337)
         ) * underlyingDealTokenTotal) / AelinUpFrontDeal(dealAddressAllowDeallocation).totalPoolShares()) *
             (BASE - AELIN_FEE - sponsorFee)) / BASE;
-        uint256 totalIntendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10**underlyingTokenDecimals;
+        uint256 totalIntendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10 ** underlyingTokenDecimals;
         uint256 purchasingRefund = AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(address(0x1337)) -
             ((AelinUpFrontDeal(dealAddressAllowDeallocation).getPurchaseTokensPerUser(address(0x1337)) *
                 totalIntendedRaise) / AelinUpFrontDeal(dealAddressAllowDeallocation).totalPurchasingAccepted());
@@ -1793,9 +1725,9 @@ contract AelinUpFrontDealTest is Test {
         // accept deal
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         deal(address(purchaseToken), address(0x1337), type(uint256).max);
@@ -1828,9 +1760,9 @@ contract AelinUpFrontDealTest is Test {
         // accept deal
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         deal(address(purchaseToken), _address, type(uint256).max);
@@ -1859,9 +1791,9 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressOverFullDeposit
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -1900,9 +1832,9 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressOverFullDeposit
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -1952,9 +1884,9 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressAllowDeallocation
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount > underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -2011,9 +1943,9 @@ contract AelinUpFrontDealTest is Test {
         // accept deal
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         deal(address(purchaseToken), _address, type(uint256).max);
@@ -2042,9 +1974,9 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressOverFullDeposit
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -2086,9 +2018,9 @@ contract AelinUpFrontDealTest is Test {
         vm.startPrank(address(0x1337));
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         deal(address(purchaseToken), address(0x1337), type(uint256).max);
@@ -2131,9 +2063,9 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressOverFullDeposit
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -2191,9 +2123,9 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressAllowDeallocation
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount > underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -2211,7 +2143,7 @@ contract AelinUpFrontDealTest is Test {
         // claim
         vm.startPrank(address(0xDEAD));
         assertEq(address(AelinUpFrontDeal(dealAddressAllowDeallocation).aelinFeeEscrow()), address(0));
-        uint256 totalIntendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10**underlyingTokenDecimals;
+        uint256 totalIntendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10 ** underlyingTokenDecimals;
         uint256 purchaseExpiry = AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry();
         vm.warp(purchaseExpiry + 1 days);
         vm.expectEmit(true, false, false, true);
@@ -2254,9 +2186,9 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressOverFullDeposit
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -2301,9 +2233,9 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressAllowDeallocation
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount > underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -2362,9 +2294,9 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressOverFullDeposit
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -2405,9 +2337,9 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressOverFullDeposit
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -2473,9 +2405,9 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressOverFullDeposit
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -2518,9 +2450,9 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressOverFullDeposit
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -2565,9 +2497,9 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressOverFullDeposit
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -2617,9 +2549,9 @@ contract AelinUpFrontDealTest is Test {
         // accept deal
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressOverFullDeposit).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         deal(address(purchaseToken), address(0x1337), type(uint256).max);
@@ -2657,9 +2589,9 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressOverFullDeposit
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -2706,9 +2638,9 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressOverFullDeposit
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -2750,9 +2682,9 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressOverFullDeposit
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -2812,21 +2744,21 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressOverFullDeposit
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        vm.assume((_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken > 0);
-        vm.assume((_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken <= underlyingDealTokenTotal);
+        vm.assume((_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken > 0);
+        vm.assume((_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken <= underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         deal(address(purchaseToken), address(0x1337), type(uint256).max);
         purchaseToken.approve(address(dealAddressOverFullDeposit), type(uint256).max);
         AelinUpFrontDeal(dealAddressOverFullDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         assertEq(
             AelinUpFrontDeal(dealAddressOverFullDeposit).totalPoolShares(),
-            (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken
+            (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken
         );
         assertEq(
             AelinUpFrontDeal(dealAddressOverFullDeposit).getPoolSharesPerUser(address(0x1337)),
-            (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken
+            (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken
         );
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).totalPurchasingAccepted(), _purchaseAmount);
         assertEq(AelinUpFrontDeal(dealAddressOverFullDeposit).getPurchaseTokensPerUser(address(0x1337)), _purchaseAmount);
@@ -2899,9 +2831,9 @@ contract AelinUpFrontDealTest is Test {
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
             dealAddressOverFullDeposit
         ).dealConfig();
-        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10**underlyingTokenDecimals);
+        (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
-        uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.assume(poolSharesAmount > 0);
         vm.assume(poolSharesAmount <= underlyingDealTokenTotal);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
@@ -2985,7 +2917,7 @@ contract AelinUpFrontDealTest is Test {
             upfrontDealAddress
         ).dealConfig();
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
-        uint256 totalIntendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10**underlyingTokenDecimals;
+        uint256 totalIntendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10 ** underlyingTokenDecimals;
         // Deal funding
         vm.stopPrank();
         vm.startPrank(address(0xBAAF));
@@ -3026,7 +2958,7 @@ contract AelinUpFrontDealTest is Test {
         //Holder is likely to have accepted more than what the wallets will invest once the deallocation occurs
         assertEq(
             purchaseToken.balanceOf(address(0xBAAF)),
-            (underlyingDealTokenTotal * purchaseTokenPerDealToken) / 10**underlyingTokenDecimals
+            (underlyingDealTokenTotal * purchaseTokenPerDealToken) / 10 ** underlyingTokenDecimals
         );
 
         // PurchaserClaim 1
@@ -3138,7 +3070,7 @@ contract AelinUpFrontDealTest is Test {
             upfrontDealAddress
         ).dealConfig();
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
-        uint256 totalIntendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10**underlyingTokenDecimals;
+        uint256 totalIntendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10 ** underlyingTokenDecimals;
         // Deal funding
         vm.stopPrank();
         vm.startPrank(address(0xBAAF));
@@ -3240,7 +3172,7 @@ contract AelinUpFrontDealTest is Test {
         vm.startPrank(address(0xBAAF));
         assertEq(purchaseToken.balanceOf(address(0xBAAF)), 0);
         uint256 contractRemainingBalance = purchaseToken.balanceOf(upfrontDealAddress);
-        uint256 intendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10**underlyingTokenDecimals;
+        uint256 intendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10 ** underlyingTokenDecimals;
         console.log("intendedRaise test 1", intendedRaise);
         console.log("contractRemainingBalance test 1", contractRemainingBalance);
         assertGt(intendedRaise, contractRemainingBalance);
@@ -3278,7 +3210,7 @@ contract AelinUpFrontDealTest is Test {
         vm.fee(1 gwei);
         for (uint256 i = 1; i < 10000; ++i) {
             uint256 _purchaseAmount = 1e34 + i;
-            uint256 poolSharesAmount = (_purchaseAmount * 10**underlyingTokenDecimals) / purchaseTokenPerDealToken;
+            uint256 poolSharesAmount = (_purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
             require(poolSharesAmount > 0, "purchase amount too small");
             vm.assume(poolSharesAmount > 0);
             if (i % 200 == 0) {
@@ -3314,7 +3246,7 @@ contract AelinUpFrontDealTest is Test {
         vm.startPrank(address(0xDEAD));
         assertEq(purchaseToken.balanceOf(address(0xDEAD)), 0);
         uint256 contractRemainingBalance = purchaseToken.balanceOf(dealAddressAllowDeallocation);
-        uint256 intendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10**underlyingTokenDecimals;
+        uint256 intendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10 ** underlyingTokenDecimals;
         console.log("intendedRaise test 2", intendedRaise);
         console.log("contractRemainingBalance test 2", contractRemainingBalance);
         assertGt(intendedRaise, contractRemainingBalance);
@@ -3346,7 +3278,7 @@ contract AelinUpFrontDealTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0xBEEF),
-            sponsorFee: 1 * 10**18,
+            sponsorFee: 1 * 10 ** 18,
             merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7,
             ipfsHash: ""
         });
@@ -3372,7 +3304,7 @@ contract AelinUpFrontDealTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0xBEEF),
-            sponsorFee: 1 * 10**18,
+            sponsorFee: 1 * 10 ** 18,
             merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7,
             ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
         });
@@ -3392,7 +3324,7 @@ contract AelinUpFrontDealTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0xBEEF),
-            sponsorFee: 1 * 10**18,
+            sponsorFee: 1 * 10 ** 18,
             merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7,
             ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
         });
@@ -3430,7 +3362,7 @@ contract AelinUpFrontDealTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0xBEEF),
-            sponsorFee: 1 * 10**18,
+            sponsorFee: 1 * 10 ** 18,
             merkleRoot: root,
             ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
         });
@@ -3476,7 +3408,7 @@ contract AelinUpFrontDealTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0xBEEF),
-            sponsorFee: 1 * 10**18,
+            sponsorFee: 1 * 10 ** 18,
             merkleRoot: root,
             ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
         });
@@ -3524,7 +3456,7 @@ contract AelinUpFrontDealTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0xBEEF),
-            sponsorFee: 1 * 10**18,
+            sponsorFee: 1 * 10 ** 18,
             merkleRoot: root,
             ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
         });
@@ -3569,7 +3501,7 @@ contract AelinUpFrontDealTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0xBEEF),
-            sponsorFee: 1 * 10**18,
+            sponsorFee: 1 * 10 ** 18,
             merkleRoot: root,
             ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
         });
@@ -3616,7 +3548,7 @@ contract AelinUpFrontDealTest is Test {
             underlyingDealToken: address(underlyingDealToken),
             holder: address(0xDEAD),
             sponsor: address(0xBEEF),
-            sponsorFee: 1 * 10**18,
+            sponsorFee: 1 * 10 ** 18,
             merkleRoot: root,
             ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
         });
