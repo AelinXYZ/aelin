@@ -23,7 +23,6 @@ library AelinNftGating {
 
     struct NftGatingData {
         mapping(address => NftCollectionRules) nftCollectionDetails;
-        mapping(address => mapping(address => bool)) nftWalletUsedForPurchase;
         mapping(address => mapping(uint256 => bool)) nftId;
         bool hasNftList;
     }
@@ -155,8 +154,6 @@ library AelinNftGating {
             }
 
             if (!nftCollectionRules.purchaseAmountPerToken && nftCollectionRules.purchaseAmount > 0) {
-                require(!_data.nftWalletUsedForPurchase[_collectionAddress][msg.sender], "wallet already used for nft set");
-                _data.nftWalletUsedForPurchase[_collectionAddress][msg.sender] = true;
                 unchecked {
                     maxPurchaseTokenAmount += nftCollectionRules.purchaseAmount;
                     // if addition causes overflow the max allowance is max value of uint256
