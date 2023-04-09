@@ -513,17 +513,15 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
      * @param _collection NFT collection address to get the collection details for
      * @return uint256 purchase amount, if 0 then unlimited purchase
      * @return address collection address used for configuration
-     * @return bool if true then purchase amount is per token, if false then purchase amount is per user
      * @return uint256[] for ERC1155, included token IDs for this collection
      * @return uint256[] for ERC1155, min number of tokens required for participating
      */
     function getNftCollectionDetails(
         address _collection
-    ) public view returns (uint256, address, bool, uint256[] memory, uint256[] memory) {
+    ) public view returns (uint256, address, uint256[] memory, uint256[] memory) {
         return (
             nftGating.nftCollectionDetails[_collection].purchaseAmount,
             nftGating.nftCollectionDetails[_collection].collectionAddress,
-            nftGating.nftCollectionDetails[_collection].purchaseAmountPerToken,
             nftGating.nftCollectionDetails[_collection].tokenIds,
             nftGating.nftCollectionDetails[_collection].minTokensEligible
         );

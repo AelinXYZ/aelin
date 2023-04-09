@@ -252,10 +252,8 @@ contract AelinTestUtils is Test {
 
         nftCollectionRules721[0].collectionAddress = address(collection721_1);
         nftCollectionRules721[0].purchaseAmount = 1e20;
-        nftCollectionRules721[0].purchaseAmountPerToken = true;
         nftCollectionRules721[1].collectionAddress = address(collection721_2);
         nftCollectionRules721[1].purchaseAmount = 1e22;
-        nftCollectionRules721[1].purchaseAmountPerToken = false;
 
         return nftCollectionRules721;
     }
@@ -265,16 +263,15 @@ contract AelinTestUtils is Test {
 
         nftCollectionRules1155[0].collectionAddress = address(collection1155_1);
         nftCollectionRules1155[0].purchaseAmount = 1e20;
-        nftCollectionRules1155[0].purchaseAmountPerToken = true;
         nftCollectionRules1155[0].tokenIds = new uint256[](2);
         nftCollectionRules1155[0].minTokensEligible = new uint256[](2);
         nftCollectionRules1155[0].tokenIds[0] = 1;
         nftCollectionRules1155[0].tokenIds[1] = 2;
         nftCollectionRules1155[0].minTokensEligible[0] = 10;
         nftCollectionRules1155[0].minTokensEligible[1] = 20;
+        
         nftCollectionRules1155[1].collectionAddress = address(collection1155_2);
         nftCollectionRules1155[1].purchaseAmount = 1e22;
-        nftCollectionRules1155[1].purchaseAmountPerToken = false;
         nftCollectionRules1155[1].tokenIds = new uint256[](2);
         nftCollectionRules1155[1].minTokensEligible = new uint256[](2);
         nftCollectionRules1155[1].tokenIds[0] = 10;
@@ -290,7 +287,6 @@ contract AelinTestUtils is Test {
 
         nftCollectionRulesPunks[0].collectionAddress = address(punks);
         nftCollectionRulesPunks[0].purchaseAmount = 1e22;
-        nftCollectionRulesPunks[0].purchaseAmountPerToken = _purchaseIsPerToken;
 
         return nftCollectionRulesPunks;
     }

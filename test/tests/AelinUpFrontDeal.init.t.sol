@@ -363,7 +363,6 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
 
         nftCollectionRules[0].collectionAddress = address(token);
         nftCollectionRules[0].purchaseAmount = 1e20;
-        nftCollectionRules[0].purchaseAmountPerToken = true;
 
         vm.expectRevert("collection is not compatible");
         upFrontDealFactory.createUpFrontDeal(getDealData(), getDealConfig(), nftCollectionRules, allowListEmpty);
@@ -399,7 +398,6 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
 
         nftCollectionRules721[0].collectionAddress = address(collection721_1);
         nftCollectionRules721[0].purchaseAmount = 1e20;
-        nftCollectionRules721[0].purchaseAmountPerToken = true;
 
         merkleDealData = IAelinUpFrontDeal.UpFrontDealData({
             name: "DEAL",
@@ -812,16 +810,14 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         uint256[] memory tempUintArray2;
         (, tempBool) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(0), 0);
         assertTrue(tempBool);
-        (tempUint, tempAddress, tempBool, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating721)
+        (tempUint, tempAddress, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating721)
             .getNftCollectionDetails(address(collection721_1));
         assertEq(tempUint, 1e20);
         assertEq(tempAddress, address(collection721_1));
-        assertTrue(tempBool);
-        (tempUint, tempAddress, tempBool, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating721)
+        (tempUint, tempAddress, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating721)
             .getNftCollectionDetails(address(collection721_2));
         assertEq(tempUint, 1e22);
         assertEq(tempAddress, address(collection721_2));
-        assertFalse(tempBool);
     }
 
     function test_CreateUpFrontDeal_NftGatingPunks() public {
@@ -849,11 +845,10 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         uint256[] memory tempUintArray2;
         (, tempBool) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(0), 0);
         assertTrue(tempBool);
-        (tempUint, tempAddress, tempBool, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGatingPunks)
+        (tempUint, tempAddress, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGatingPunks)
             .getNftCollectionDetails(address(punks));
         assertEq(tempUint, 1e22);
         assertEq(tempAddress, address(punks));
-        assertFalse(tempBool);
     }
 
     function test_CreateUpFrontDeal_NftGating1155() public {
@@ -881,20 +876,18 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         uint256[] memory tempUintArray2;
         (, tempBool) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(address(0), 0);
         assertTrue(tempBool);
-        (tempUint, tempAddress, tempBool, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating1155)
+        (tempUint, tempAddress, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating1155)
             .getNftCollectionDetails(address(collection1155_1));
         assertEq(tempUint, 1e20);
         assertEq(tempAddress, address(collection1155_1));
-        assertTrue(tempBool);
         assertEq(tempUintArray1[0], 1);
         assertEq(tempUintArray1[1], 2);
         assertEq(tempUintArray2[0], 10);
         assertEq(tempUintArray2[1], 20);
-        (tempUint, tempAddress, tempBool, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating1155)
+        (tempUint, tempAddress, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating1155)
             .getNftCollectionDetails(address(collection1155_2));
         assertEq(tempUint, 1e22);
         assertEq(tempAddress, address(collection1155_2));
-        assertFalse(tempBool);
         assertEq(tempUintArray1[0], 10);
         assertEq(tempUintArray1[1], 20);
         assertEq(tempUintArray2[0], 1000);

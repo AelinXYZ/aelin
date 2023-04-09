@@ -12,9 +12,6 @@ library AelinNftGating {
         // if 0, then unlimited purchase
         uint256 purchaseAmount;
         address collectionAddress;
-        // if true, then `purchaseAmount` is per token
-        // else `purchaseAmount` is per account regardless of the NFTs held
-        bool purchaseAmountPerToken;
         uint256[] tokenIds;
         // min number of tokens required for participating
         uint256[] minTokensEligible;
@@ -51,11 +48,7 @@ library AelinNftGating {
                         "can only contain 721"
                     );
                     _data.nftCollectionDetails[_nftCollectionRules[i].collectionAddress] = _nftCollectionRules[i];
-                    emit PoolWith721(
-                        _nftCollectionRules[i].collectionAddress,
-                        _nftCollectionRules[i].purchaseAmount,
-                        _nftCollectionRules[i].purchaseAmountPerToken
-                    );
+                    emit PoolWith721(_nftCollectionRules[i].collectionAddress, _nftCollectionRules[i].purchaseAmount);
                 }
                 _data.hasNftList = true;
             }
@@ -71,7 +64,6 @@ library AelinNftGating {
                     emit PoolWith1155(
                         _nftCollectionRules[i].collectionAddress,
                         _nftCollectionRules[i].purchaseAmount,
-                        _nftCollectionRules[i].purchaseAmountPerToken,
                         _nftCollectionRules[i].tokenIds,
                         _nftCollectionRules[i].minTokensEligible
                     );
@@ -118,7 +110,7 @@ library AelinNftGating {
             require(_collectionAddress != address(0), "collection should not be null");
             require(nftCollectionRules.collectionAddress == _collectionAddress, "collection not in the pool");
 
-            if (nftCollectionRules.purchaseAmountPerToken && nftCollectionRules.purchaseAmount > 0) {
+            if (nftCollectionRules.purchaseAmount > 0) {
                 if (NftCheck.supports1155(_collectionAddress)) {
                     for (uint256 j; j < _tokenIds.length; ++j) {
                         unchecked {
@@ -150,17 +142,6 @@ library AelinNftGating {
                                 maxPurchaseTokenAmount = type(uint256).max;
                             }
                         }
-                    }
-                }
-            }
-
-            //Removed entire block
-            if (!nftCollectionRules.purchaseAmountPerToken && nftCollectionRules.purchaseAmount > 0) {
-                unchecked {
-                    maxPurchaseTokenAmount += nftCollectionRules.purchaseAmount;
-                    // if addition causes overflow the max allowance is max value of uint256
-                    if (maxPurchaseTokenAmount < nftCollectionRules.purchaseAmount) {
-                        maxPurchaseTokenAmount = type(uint256).max;
                     }
                 }
             }
@@ -205,12 +186,11 @@ library AelinNftGating {
         return (maxPurchaseTokenAmount);
     }
 
-    event PoolWith721(address indexed collectionAddress, uint256 purchaseAmount, bool purchaseAmountPerToken);
+    event PoolWith721(address indexed collectionAddress, uint256 purchaseAmount);
 
     event PoolWith1155(
         address indexed collectionAddress,
         uint256 purchaseAmount,
-        bool purchaseAmountPerToken,
         uint256[] tokenIds,
         uint256[] minTokensEligible
     );

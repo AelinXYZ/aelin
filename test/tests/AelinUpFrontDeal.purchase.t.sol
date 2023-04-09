@@ -1233,10 +1233,10 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
         uint256[] memory tokenIdsArray = new uint256[](2);
         // we get the allocation for each collection
-        (uint256 purchaseCollection1, , , , ) = AelinUpFrontDeal(dealAddressNftGating721).getNftCollectionDetails(
+        (uint256 purchaseCollection1, , , ) = AelinUpFrontDeal(dealAddressNftGating721).getNftCollectionDetails(
             address(collection721_1)
         );
-        (uint256 purchaseCollection2, , , , ) = AelinUpFrontDeal(dealAddressNftGating721).getNftCollectionDetails(
+        (uint256 purchaseCollection2, , , ) = AelinUpFrontDeal(dealAddressNftGating721).getNftCollectionDetails(
             address(collection721_2)
         );
 
@@ -1316,9 +1316,9 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         nftPurchaseList[0].collectionAddress = address(collection721_2);
         nftPurchaseList[0].tokenIds = tokenIdsArray;
 
-        // since purchaseAmountPerToken = false, user2 can't buy more than the allocation amount for collection2
+        // balance(user2) * purchaseCollection2 as user2 can't buy more than the allocation amount for collection2
         vm.expectRevert("purchase amount greater than max allocation");
-        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, 2 * purchaseCollection2);
+        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, 6 * purchaseCollection2);
 
         // we then make user2 buy the exact amount
         poolSharesAmount = (purchaseCollection2 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
@@ -1390,7 +1390,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
         uint256[] memory tokenIdsArray = new uint256[](2);
         // we get the allocation for each collection
-        (uint256 purchaseCollection, , , , ) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftCollectionDetails(
+        (uint256 purchaseCollection, , , ) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftCollectionDetails(
             address(punks)
         );
 
@@ -1425,7 +1425,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         nftPurchaseList[0].collectionAddress = address(punks);
         nftPurchaseList[0].tokenIds = tokenIdsArray;
         vm.expectRevert("purchase amount greater than max allocation");
-        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, (2 * purchaseCollection));
+        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, (7 * purchaseCollection));
 
         // user1 now purchases half of the allocation
         uint256 purchaseAmount = purchaseCollection / 2;
@@ -1474,7 +1474,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
         uint256[] memory tokenIdsArray = new uint256[](2);
         // we get the allocation for each collection
-        (uint256 purchaseCollection, , , , ) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftCollectionDetails(
+        (uint256 purchaseCollection, , , ) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftCollectionDetails(
             address(punks)
         );
 
@@ -1576,10 +1576,10 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressNftGating1155).dealConfig();
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](2);
-        (uint256 purchaseCollection1, , , , ) = AelinUpFrontDeal(dealAddressNftGating1155).getNftCollectionDetails(
+        (uint256 purchaseCollection1, , , ) = AelinUpFrontDeal(dealAddressNftGating1155).getNftCollectionDetails(
             address(collection1155_1)
         );
-        (uint256 purchaseCollection2, , , , ) = AelinUpFrontDeal(dealAddressNftGating1155).getNftCollectionDetails(
+        (uint256 purchaseCollection2, , , ) = AelinUpFrontDeal(dealAddressNftGating1155).getNftCollectionDetails(
             address(collection1155_2)
         );
 
@@ -1604,9 +1604,9 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         nftPurchaseList[1].tokenIds[0] = 10;
         nftPurchaseList[1].tokenIds[1] = 20;
 
-        // first collection is per token, second is per wallet
-        // so total allocation = balanceOf(tokens) * allocationCollection1 + allocationCollection2
-        uint256 purchaseAmount = (200 * purchaseCollection1) + purchaseCollection2;
+        // both collections are per token - per wallet removed
+        // so total allocation = (balanceOf(tokens) * allocationCollection1) + (balanceOf(tokens) * allocationCollection2)
+        uint256 purchaseAmount = (200 * purchaseCollection1) + (3000 * purchaseCollection2);
         uint256 poolSharesAmount = (purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
 
         // user can't buy more than purchase amount
