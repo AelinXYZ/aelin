@@ -498,7 +498,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         (, , , tempBool) = AelinUpFrontDeal(dealAddressNoDeallocation).getAllowList(address(0));
         assertFalse(tempBool);
         // test nft gating
-        (, , tempBool) = AelinUpFrontDeal(dealAddressNoDeallocation).getNftGatingDetails(address(0), address(0), 0);
+        (, tempBool) = AelinUpFrontDeal(dealAddressNoDeallocation).getNftGatingDetails(address(0), 0);
         assertFalse(tempBool);
     }
 
@@ -555,11 +555,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         (, , , tempBool) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).getAllowList(address(0));
         assertFalse(tempBool);
         // test nft gating
-        (, , tempBool) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).getNftGatingDetails(
-            address(0),
-            address(0),
-            0
-        );
+        (, tempBool) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).getNftGatingDetails(address(0), 0);
         assertFalse(tempBool);
     }
 
@@ -619,7 +615,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         (, , , tempBool) = AelinUpFrontDeal(dealAddressNoDeallocation).getAllowList(address(0));
         assertFalse(tempBool);
         // test nft gating
-        (, , tempBool) = AelinUpFrontDeal(dealAddressNoDeallocation).getNftGatingDetails(address(0), address(0), 0);
+        (, tempBool) = AelinUpFrontDeal(dealAddressNoDeallocation).getNftGatingDetails(address(0), 0);
         assertFalse(tempBool);
     }
 
@@ -678,7 +674,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         (, , , tempBool) = deal.getAllowList(address(0));
         assertFalse(tempBool);
         // test nft gating
-        (, , tempBool) = deal.getNftGatingDetails(address(0), address(0), 0);
+        (, tempBool) = deal.getNftGatingDetails(address(0), 0);
         assertFalse(tempBool);
         assertEq(underlyingDealTokenLowDecimals.decimals(), 2);
     }
@@ -739,7 +735,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         (, , , tempBool) = AelinUpFrontDeal(dealAddressAllowDeallocation).getAllowList(address(0));
         assertFalse(tempBool);
         // test nft gating
-        (, , tempBool) = AelinUpFrontDeal(dealAddressAllowDeallocation).getNftGatingDetails(address(0), address(0), 0);
+        (, tempBool) = AelinUpFrontDeal(dealAddressAllowDeallocation).getNftGatingDetails(address(0), 0);
         assertFalse(tempBool);
     }
 
@@ -787,7 +783,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
             }
         }
         // test nft gating
-        (, , tempBool) = AelinUpFrontDeal(dealAddressAllowList).getNftGatingDetails(address(0), address(0), 0);
+        (, tempBool) = AelinUpFrontDeal(dealAddressAllowList).getNftGatingDetails(address(0), 0);
         assertFalse(tempBool);
     }
 
@@ -814,7 +810,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         // test nft gating
         uint256[] memory tempUintArray1;
         uint256[] memory tempUintArray2;
-        (, , tempBool) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(0), address(0), 0);
+        (, tempBool) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(0), 0);
         assertTrue(tempBool);
         (tempUint, tempAddress, tempBool, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating721)
             .getNftCollectionDetails(address(collection721_1));
@@ -851,7 +847,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         // test nft gating
         uint256[] memory tempUintArray1;
         uint256[] memory tempUintArray2;
-        (, , tempBool) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(0), address(0), 0);
+        (, tempBool) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(0), 0);
         assertTrue(tempBool);
         (tempUint, tempAddress, tempBool, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGatingPunks)
             .getNftCollectionDetails(address(punks));
@@ -883,7 +879,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         // test nft gating
         uint256[] memory tempUintArray1;
         uint256[] memory tempUintArray2;
-        (, , tempBool) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(address(0), address(0), 0);
+        (, tempBool) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(address(0), 0);
         assertTrue(tempBool);
         (tempUint, tempAddress, tempBool, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating1155)
             .getNftCollectionDetails(address(collection1155_1));

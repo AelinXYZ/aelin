@@ -630,35 +630,6 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         vm.stopPrank();
     }
 
-    function test_AcceptDeal_RevertWhen_ERC721WalletAlreadyUsed() public {
-        vm.startPrank(user1);
-
-        uint256 purchaseAmount = 1e18;
-        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
-        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressNftGating721).dealConfig();
-        uint256 poolSharesAmount = (purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
-
-        deal(address(purchaseToken), user1, type(uint256).max);
-        purchaseToken.approve(address(dealAddressNftGating721), type(uint256).max);
-
-        uint256[] memory tokenIdsArray = new uint256[](2);
-        tokenIdsArray[0] = 1;
-        tokenIdsArray[1] = 2;
-        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
-        nftPurchaseList[0].collectionAddress = address(collection721_2);
-        nftPurchaseList[0].tokenIds = tokenIdsArray;
-        MockERC721(collection721_2).mint(user1, 1);
-        MockERC721(collection721_2).mint(user1, 2);
-
-        vm.expectEmit(true, false, false, true);
-        emit AcceptDeal(user1, purchaseAmount, purchaseAmount, poolSharesAmount, poolSharesAmount);
-        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, 1e18);
-        vm.expectRevert("wallet already used for nft set");
-        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, 1e18);
-
-        vm.stopPrank();
-    }
-
     function testFuzz_AcceptDeal_RevertWhen_ERC721OverAllowance(uint256 _purchaseAmount) public {
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(
@@ -1270,71 +1241,30 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         );
 
         // checks pre-purchase
-        bool walletClaimed;
         bool NftIdUsed;
         bool hasNftList;
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
-            address(collection721_1),
-            user1,
-            1
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(collection721_1), 1);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
-            address(collection721_1),
-            user1,
-            2
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(collection721_1), 2);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
-            address(collection721_1),
-            user1,
-            3
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(collection721_1), 3);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
-            address(collection721_1),
-            user2,
-            4
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(collection721_1), 4);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
-            address(collection721_1),
-            user2,
-            5
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(collection721_1), 5);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
-            address(collection721_2),
-            user2,
-            1
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(collection721_2), 1);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
-            address(collection721_2),
-            user2,
-            2
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(collection721_2), 2);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
-            address(collection721_2),
-            user2,
-            3
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(collection721_2), 3);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
 
@@ -1397,11 +1327,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         emit AcceptDeal(user2, purchaseCollection2, purchaseCollection2, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseCollection2);
 
-        // user2 is now blacklisted from purchasing again in this collection
-        vm.expectRevert("wallet already used for nft set");
-        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseCollection2);
-
-        // case 3: [collection1] user2 comes back and max out their allocation (purchaseAmountPerToken = true)
+        // case 2: [collection1] user2 comes back and max out their allocation (purchaseAmountPerToken = true)
         nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
         tokenIdsArray = new uint256[](2);
         tokenIdsArray[0] = 4;
@@ -1427,68 +1353,28 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         vm.stopPrank();
 
         //checks post-purchase
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
-            address(collection721_1),
-            user1,
-            1
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(collection721_1), 1);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
-            address(collection721_1),
-            user1,
-            2
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(collection721_1), 2);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
-            address(collection721_1),
-            user1,
-            3
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(collection721_1), 3);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
-            address(collection721_1),
-            user2,
-            4
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(collection721_1), 4);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
-            address(collection721_1),
-            user2,
-            5
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(collection721_1), 5);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
-            address(collection721_2),
-            user2,
-            1
-        );
-        assertTrue(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(collection721_2), 1);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
-            address(collection721_2),
-            user2,
-            2
-        );
-        assertTrue(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(collection721_2), 2);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(
-            address(collection721_2),
-            user2,
-            3
-        );
-        assertTrue(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(collection721_2), 3);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
     }
@@ -1515,39 +1401,18 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         MockPunks(punks).mint(user2, 4);
 
         // checks pre-purchase
-        bool walletClaimed;
         bool NftIdUsed;
         bool hasNftList;
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(
-            address(punks),
-            user1,
-            1
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(punks), 1);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(
-            address(punks),
-            user1,
-            2
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(punks), 2);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(
-            address(punks),
-            user2,
-            3
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(punks), 3);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(
-            address(punks),
-            user2,
-            4
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(punks), 4);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
 
@@ -1568,10 +1433,6 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         vm.expectEmit(true, false, false, true);
         emit AcceptDeal(user1, purchaseAmount, purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
-
-        // user1 now tries to buy the remaining allocation, but fails
-        vm.expectRevert("wallet already used for nft set");
-        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
         vm.stopPrank();
 
         // user2 tries to buy all the allocation
@@ -1585,43 +1446,19 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         vm.expectEmit(true, false, false, true);
         emit AcceptDeal(user2, purchaseCollection, purchaseCollection, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseCollection);
-
-        // user2 now tries to buy some extra tokens, but fails
-        vm.expectRevert("wallet already used for nft set");
-        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseCollection);
         vm.stopPrank();
 
         //checks post-purchase
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(
-            address(punks),
-            user1,
-            1
-        );
-        assertTrue(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(punks), 1);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(
-            address(punks),
-            user1,
-            2
-        );
-        assertTrue(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(punks), 2);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(
-            address(punks),
-            user2,
-            3
-        );
-        assertTrue(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(punks), 3);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(
-            address(punks),
-            user2,
-            4
-        );
-        assertTrue(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(punks), 4);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
     }
@@ -1649,47 +1486,21 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         MockPunks(punks).mint(user2, 5);
 
         // checks pre-purchase
-        bool walletClaimed;
         bool NftIdUsed;
         bool hasNftList;
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
-            address(punks),
-            user1,
-            1
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(address(punks), 1);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
-            address(punks),
-            user1,
-            2
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(address(punks), 2);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
-            address(punks),
-            user2,
-            3
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(address(punks), 3);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
-            address(punks),
-            user2,
-            4
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(address(punks), 4);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
-            address(punks),
-            user2,
-            5
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(address(punks), 5);
         assertFalse(NftIdUsed);
         assertTrue(hasNftList);
 
@@ -1743,44 +1554,19 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         vm.stopPrank();
 
         // checks post-purchase
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
-            address(punks),
-            user1,
-            1
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(address(punks), 1);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
-            address(punks),
-            user1,
-            2
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(address(punks), 2);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
-            address(punks),
-            user2,
-            3
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(address(punks), 3);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
-            address(punks),
-            user2,
-            4
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(address(punks), 4);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(
-            address(punks),
-            user2,
-            5
-        );
-        assertFalse(walletClaimed);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).getNftGatingDetails(address(punks), 5);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
     }
@@ -1832,17 +1618,9 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         emit AcceptDeal(user1, purchaseAmount, purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressNftGating1155).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
 
-        // user1 cannot buy anymore
-        vm.expectRevert("wallet already used for nft set");
-        AelinUpFrontDeal(dealAddressNftGating1155).acceptDeal(nftPurchaseList, merkleDataEmpty, 1);
-
         // we mint new tokens for both collections
         MockERC1155(address(collection1155_1)).mint(user1, 1, 100, "");
         MockERC1155(address(collection1155_2)).mint(user1, 20, 2000, "");
-
-        // it still doesn't work because wallet is blacklisted for collection 2
-        vm.expectRevert("wallet already used for nft set");
-        AelinUpFrontDeal(dealAddressNftGating1155).acceptDeal(nftPurchaseList, merkleDataEmpty, 1);
 
         // if we only use collection 1, it is working because allocation is per new token
         nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
@@ -1869,37 +1647,29 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         nftPurchaseList[0].tokenIds = new uint256[](1);
         nftPurchaseList[0].tokenIds[0] = 20;
 
-        vm.expectRevert("wallet already used for nft set");
-        AelinUpFrontDeal(dealAddressNftGating1155).acceptDeal(nftPurchaseList, merkleDataEmpty, 1);
-
         // checks post-purchase
-        (bool walletClaimed, bool NftIdUsed, bool hasNftList) = AelinUpFrontDeal(dealAddressNftGating1155)
-            .getNftGatingDetails(address(collection1155_1), user1, 1);
-        assertFalse(walletClaimed);
+        (bool NftIdUsed, bool hasNftList) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(
+            address(collection1155_1),
+            1
+        );
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(
             address(collection1155_1),
-            user1,
             2
         );
-        assertFalse(walletClaimed);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(
             address(collection1155_2),
-            user1,
             10
         );
-        assertTrue(walletClaimed);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
-        (walletClaimed, NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(
             address(collection1155_2),
-            user1,
             20
         );
-        assertTrue(walletClaimed);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
 
