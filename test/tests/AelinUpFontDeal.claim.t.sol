@@ -33,7 +33,6 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
     address dealAddressNftGating721;
     address dealAddressNftGating1155;
     address dealAddressNftGatingPunks;
-    address dealAddressNftGatingPunksPerToken;
     address dealAddressNoVestingPeriod;
     address dealAddressLowDecimals;
 
@@ -58,8 +57,8 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         dealDataLowDecimals.underlyingDealToken = address(underlyingDealTokenLowDecimals);
 
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules721 = getERC721Collection();
-        AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = getPunksCollection(false);
-        AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunksPerToken = getPunksCollection(true);
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = getPunksCollection();
+        //AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunksPerToken = getPunksCollection();
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules1155 = getERC1155Collection();
 
         dealAddressNoDeallocationNoDeposit = upFrontDealFactory.createUpFrontDeal(
@@ -108,13 +107,6 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
             dealData,
             dealConfig,
             nftCollectionRulesPunks,
-            allowListEmpty
-        );
-
-        dealAddressNftGatingPunksPerToken = upFrontDealFactory.createUpFrontDeal(
-            dealData,
-            dealConfig,
-            nftCollectionRulesPunksPerToken,
             allowListEmpty
         );
 
@@ -168,9 +160,6 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         underlyingDealToken.approve(address(dealAddressNftGatingPunks), type(uint256).max);
         AelinUpFrontDeal(dealAddressNftGatingPunks).depositUnderlyingTokens(1e35);
-
-        underlyingDealToken.approve(address(dealAddressNftGatingPunksPerToken), type(uint256).max);
-        AelinUpFrontDeal(dealAddressNftGatingPunksPerToken).depositUnderlyingTokens(1e35);
 
         underlyingDealToken.approve(address(dealAddressNftGating1155), type(uint256).max);
         AelinUpFrontDeal(dealAddressNftGating1155).depositUnderlyingTokens(1e35);
@@ -1135,9 +1124,10 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         vm.stopPrank();
     }
 
-    function testFuzz_ClaimUnderlying_NoDeallocationVestingPeriodLowDecimals(uint256 _purchaseAmount, uint256 _delay)
-        public
-    {
+    function testFuzz_ClaimUnderlying_NoDeallocationVestingPeriodLowDecimals(
+        uint256 _purchaseAmount,
+        uint256 _delay
+    ) public {
         AelinUpFrontDeal deal = AelinUpFrontDeal(dealAddressLowDecimals);
 
         uint256 vestingCliffExpiry = deal.vestingCliffExpiry();
@@ -1665,7 +1655,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         //Holder is likely to have accepted more than what the wallets will invest once the deallocation occurs
         assertEq(
             purchaseToken.balanceOf(dealHolderAddress),
-            (underlyingDealTokenTotal * purchaseTokenPerDealToken) / 10**underlyingTokenDecimals
+            (underlyingDealTokenTotal * purchaseTokenPerDealToken) / 10 ** underlyingTokenDecimals
         );
 
         // PurchaserClaim 1
@@ -1891,7 +1881,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         vm.startPrank(dealHolderAddress);
         assertEq(purchaseToken.balanceOf(dealHolderAddress), 0);
         uint256 contractRemainingBalance = purchaseToken.balanceOf(upfrontDealAddress);
-        uint256 intendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10**underlyingTokenDecimals;
+        uint256 intendedRaise = (purchaseTokenPerDealToken * underlyingDealTokenTotal) / 10 ** underlyingTokenDecimals;
         assertGt(intendedRaise, contractRemainingBalance);
         vm.expectEmit(true, false, false, true);
         emit HolderClaim(
@@ -1971,15 +1961,15 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         vm.stopPrank();
 
         // Avoid "purchase amount too small"
-        vm.assume(_purchaseAmount1 > dealVars.purchaseTokenPerDealToken / (10**dealVars.underlyingTokenDecimals));
-        vm.assume(_purchaseAmount2 > dealVars.purchaseTokenPerDealToken / (10**dealVars.underlyingTokenDecimals));
-        vm.assume(_purchaseAmount3 > dealVars.purchaseTokenPerDealToken / (10**dealVars.underlyingTokenDecimals));
+        vm.assume(_purchaseAmount1 > dealVars.purchaseTokenPerDealToken / (10 ** dealVars.underlyingTokenDecimals));
+        vm.assume(_purchaseAmount2 > dealVars.purchaseTokenPerDealToken / (10 ** dealVars.underlyingTokenDecimals));
+        vm.assume(_purchaseAmount3 > dealVars.purchaseTokenPerDealToken / (10 ** dealVars.underlyingTokenDecimals));
 
         // Force deallocation
         vm.assume(
             _purchaseAmount1 + _purchaseAmount2 + _purchaseAmount3 >
                 (dealVars.underlyingDealTokenTotal * dealVars.purchaseTokenPerDealToken) /
-                    (10**dealVars.underlyingTokenDecimals)
+                    (10 ** dealVars.underlyingTokenDecimals)
         );
 
         vm.startPrank(user1);
@@ -2025,7 +2015,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         assertEq(
             MockERC20(fuzzed.dealData.purchaseToken).balanceOf(dealHolderAddress),
-            (dealVars.underlyingDealTokenTotal * dealVars.purchaseTokenPerDealToken) / 10**dealVars.underlyingTokenDecimals
+            (dealVars.underlyingDealTokenTotal * dealVars.purchaseTokenPerDealToken) / 10 ** dealVars.underlyingTokenDecimals
         );
 
         // First purchaser gets refunded

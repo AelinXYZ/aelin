@@ -46,7 +46,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         dealDataLowDecimals.underlyingDealToken = address(underlyingDealTokenLowDecimals);
 
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules721 = getERC721Collection();
-        AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = getPunksCollection(false);
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = getPunksCollection();
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules1155 = getERC1155Collection();
 
         dealAddressNoDeallocationNoDeposit = upFrontDealFactory.createUpFrontDeal(
@@ -332,7 +332,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         vm.startPrank(dealCreatorAddress);
 
         AelinAllowList.InitData memory allowListEmpty;
-        AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = getPunksCollection(false);
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = getPunksCollection();
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules1155 = getERC1155Collection();
 
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules = new AelinNftGating.NftCollectionRules[](3);

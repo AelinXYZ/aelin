@@ -269,7 +269,7 @@ contract AelinTestUtils is Test {
         nftCollectionRules1155[0].tokenIds[1] = 2;
         nftCollectionRules1155[0].minTokensEligible[0] = 10;
         nftCollectionRules1155[0].minTokensEligible[1] = 20;
-        
+
         nftCollectionRules1155[1].collectionAddress = address(collection1155_2);
         nftCollectionRules1155[1].purchaseAmount = 1e22;
         nftCollectionRules1155[1].tokenIds = new uint256[](2);
@@ -282,7 +282,7 @@ contract AelinTestUtils is Test {
         return nftCollectionRules1155;
     }
 
-    function getPunksCollection(bool _purchaseIsPerToken) public view returns (AelinNftGating.NftCollectionRules[] memory) {
+    function getPunksCollection() public view returns (AelinNftGating.NftCollectionRules[] memory) {
         AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = new AelinNftGating.NftCollectionRules[](1);
 
         nftCollectionRulesPunks[0].collectionAddress = address(punks);
