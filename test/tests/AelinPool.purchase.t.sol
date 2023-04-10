@@ -359,7 +359,6 @@ contract AelinPoolPurchaseTest is Test, AelinTestUtils {
         IAelinPool.NftCollectionRules[] memory nftCollectionRules = getNft721CollectionRules();
         nftCollectionRules[0].collectionAddress = address(collection721_1);
         nftCollectionRules[0].purchaseAmount = _purchaseTokenAmount;
-        nftCollectionRules[0].purchaseAmountPerToken = false;
 
         IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
         nftPurchaseList[0].collectionAddress = address(collection721_1);
@@ -544,7 +543,6 @@ contract AelinPoolPurchaseTest is Test, AelinTestUtils {
         IAelinPool.NftCollectionRules[] memory nftCollectionRules = getNft721CollectionRules();
         nftCollectionRules[0].collectionAddress = address(collection721_1);
         nftCollectionRules[0].purchaseAmount = _purchaseTokenAmount;
-        nftCollectionRules[0].purchaseAmountPerToken = false;
 
         IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
         nftPurchaseList[0].collectionAddress = address(collection721_1);
@@ -688,10 +686,8 @@ contract AelinPoolPurchaseTest is Test, AelinTestUtils {
 
         IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](1);
         uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp))) % 100_000_000;
-        bool pperToken = pseudoRandom % 2 == 0;
         nftCollectionRules[0].collectionAddress = punks;
         nftCollectionRules[0].purchaseAmount = pseudoRandom;
-        nftCollectionRules[0].purchaseAmountPerToken = pperToken;
 
         IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
         nftPurchaseList[0].collectionAddress = punks;
@@ -736,10 +732,8 @@ contract AelinPoolPurchaseTest is Test, AelinTestUtils {
 
         IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](1);
         uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp))) % 100_000_000;
-        bool pperToken = pseudoRandom % 2 == 0;
         nftCollectionRules[0].collectionAddress = punks;
         nftCollectionRules[0].purchaseAmount = 0;
-        nftCollectionRules[0].purchaseAmountPerToken = pperToken;
 
         IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
         nftPurchaseList[0].collectionAddress = punks;
@@ -837,10 +831,8 @@ contract AelinPoolPurchaseTest is Test, AelinTestUtils {
 
         IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](1);
         uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp))) % 100_000_000;
-        bool pperToken = pseudoRandom % 2 == 0;
         nftCollectionRules[0].collectionAddress = punks;
         nftCollectionRules[0].purchaseAmount = 0;
-        nftCollectionRules[0].purchaseAmountPerToken = pperToken;
 
         IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
         nftPurchaseList[0].collectionAddress = punks;
@@ -875,9 +867,10 @@ contract AelinPoolPurchaseTest is Test, AelinTestUtils {
         vm.stopPrank();
     }
 
-    function testFuzz_PurchasePoolTokensWithNft_PoolERC721AndPunks(uint256 _purchaseTokenCap, uint256 _purchaseTokenAmount)
-        public
-    {
+    function testFuzz_PurchasePoolTokensWithNft_PoolERC721AndPunks(
+        uint256 _purchaseTokenCap,
+        uint256 _purchaseTokenAmount
+    ) public {
         vm.assume(_purchaseTokenAmount > 0 && _purchaseTokenAmount <= 1000 ether);
         vm.assume(_purchaseTokenCap > 0);
 
@@ -886,10 +879,8 @@ contract AelinPoolPurchaseTest is Test, AelinTestUtils {
 
         IAelinPool.NftCollectionRules[] memory nftCollectionRules = getNft721CollectionRules();
         uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp))) % 100_000_000;
-        bool pperToken = pseudoRandom % 2 == 0;
         nftCollectionRules[0].collectionAddress = punks;
         nftCollectionRules[0].purchaseAmount = 0;
-        nftCollectionRules[0].purchaseAmountPerToken = pperToken;
 
         IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](2);
         nftPurchaseList[0].collectionAddress = punks;

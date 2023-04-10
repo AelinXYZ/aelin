@@ -27,12 +27,11 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
 
     event AllowlistAddress(address indexed purchaser, uint256 allowlistAmount);
 
-    event PoolWith721(address indexed collectionAddress, uint256 purchaseAmount, bool purchaseAmountPerToken);
+    event PoolWith721(address indexed collectionAddress, uint256 purchaseAmount);
 
     event PoolWith1155(
         address indexed collectionAddress,
         uint256 purchaseAmount,
-        bool purchaseAmountPerToken,
         uint256[] tokenIds,
         uint256[] minTokensEligible
     );
@@ -180,9 +179,10 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
         pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
     }
 
-    function testFuzz_Initialize_RevertWhen_AllowListIncorrect(uint256 _allowListAddresses, uint256 _allowListAmounts)
-        public
-    {
+    function testFuzz_Initialize_RevertWhen_AllowListIncorrect(
+        uint256 _allowListAddresses,
+        uint256 _allowListAmounts
+    ) public {
         vm.assume(_allowListAddresses < 100 && _allowListAmounts < 100); // Otherwise will run out of gas
         vm.assume(_allowListAddresses != _allowListAmounts);
 
@@ -214,11 +214,9 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
         IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](2);
         nftCollectionRules[0].collectionAddress = address(collection721_1);
         nftCollectionRules[0].purchaseAmount = 0;
-        nftCollectionRules[0].purchaseAmountPerToken = false;
 
         nftCollectionRules[1].collectionAddress = address(collection1155_1);
         nftCollectionRules[1].purchaseAmount = 0;
-        nftCollectionRules[1].purchaseAmountPerToken = false;
 
         IAelinPool.PoolData memory poolData = getPoolData({
             purchaseTokenCap: 1e35,
@@ -243,11 +241,9 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
         IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](2);
         nftCollectionRules[0].collectionAddress = address(collection1155_1);
         nftCollectionRules[0].purchaseAmount = 0;
-        nftCollectionRules[0].purchaseAmountPerToken = false;
 
         nftCollectionRules[1].collectionAddress = address(collection721_1);
         nftCollectionRules[1].purchaseAmount = 0;
-        nftCollectionRules[1].purchaseAmountPerToken = false;
 
         IAelinPool.PoolData memory poolData = getPoolData({
             purchaseTokenCap: 1e35,
@@ -272,7 +268,6 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
         IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](1);
         nftCollectionRules[0].collectionAddress = address(purchaseToken); // ERC20 not supported as NFT collection
         nftCollectionRules[0].purchaseAmount = 0;
-        nftCollectionRules[0].purchaseAmountPerToken = false;
 
         IAelinPool.PoolData memory poolData = getPoolData({
             purchaseTokenCap: 1e35,
@@ -414,24 +409,15 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
 
         vm.expectEmit(true, true, true, true, address(pool));
         for (uint256 i; i < 3; ++i) {
-            emit PoolWith721(
-                nftCollectionRules[i].collectionAddress,
-                nftCollectionRules[i].purchaseAmount,
-                nftCollectionRules[i].purchaseAmountPerToken
-            );
+            emit PoolWith721(nftCollectionRules[i].collectionAddress, nftCollectionRules[i].purchaseAmount);
         }
         pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
         for (uint256 i; i < 3; ++i) {
-            (uint256 purchaseAmount, address collectionAddress, bool purchaseAmountPerToken) = pool.nftCollectionDetails(
+            (uint256 purchaseAmount, address collectionAddress) = pool.nftCollectionDetails(
                 nftCollectionRules[i].collectionAddress
             );
             assertEq(collectionAddress, nftCollectionRules[i].collectionAddress, "Should have same collection address");
             assertEq(purchaseAmount, nftCollectionRules[i].purchaseAmount, "Should have same purchaseAmount");
-            assertEq(
-                purchaseAmountPerToken,
-                nftCollectionRules[i].purchaseAmountPerToken,
-                "Should have same purchaseAemountPerToken"
-            );
         }
 
         assertTrue(pool.hasNftList());
@@ -470,23 +456,17 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
             emit PoolWith1155(
                 nftCollectionRules[i].collectionAddress,
                 nftCollectionRules[i].purchaseAmount,
-                nftCollectionRules[i].purchaseAmountPerToken,
                 nftCollectionRules[i].tokenIds,
                 nftCollectionRules[i].minTokensEligible
             );
         }
         pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
         for (uint256 i; i < 3; ++i) {
-            (uint256 purchaseAmount, address collectionAddress, bool purchaseAmountPerToken) = pool.nftCollectionDetails(
+            (uint256 purchaseAmount, address collectionAddress) = pool.nftCollectionDetails(
                 nftCollectionRules[i].collectionAddress
             );
             assertEq(collectionAddress, nftCollectionRules[i].collectionAddress, "Should have same collection address");
             assertEq(purchaseAmount, nftCollectionRules[i].purchaseAmount, "Should have same purchaseAmount");
-            assertEq(
-                purchaseAmountPerToken,
-                nftCollectionRules[i].purchaseAmountPerToken,
-                "Should have same purchaseAemountPerToken"
-            );
         }
 
         assertTrue(pool.hasNftList());
@@ -507,10 +487,8 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
 
         IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](1);
         uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp))) % 100_000_000;
-        bool pperToken = pseudoRandom % 2 == 0;
         nftCollectionRules[0].collectionAddress = punks;
         nftCollectionRules[0].purchaseAmount = pseudoRandom;
-        nftCollectionRules[0].purchaseAmountPerToken = pperToken;
 
         IAelinPool.PoolData memory poolData = getPoolData({
             purchaseTokenCap: _purchaseTokenCap,
@@ -526,23 +504,14 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
         AelinFeeEscrow escrow = new AelinFeeEscrow();
 
         vm.expectEmit(true, true, true, true, address(pool));
-        emit PoolWith721(
-            nftCollectionRules[0].collectionAddress,
-            nftCollectionRules[0].purchaseAmount,
-            nftCollectionRules[0].purchaseAmountPerToken
-        );
+        emit PoolWith721(nftCollectionRules[0].collectionAddress, nftCollectionRules[0].purchaseAmount);
 
         pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
-        (uint256 purchaseAmount, address collectionAddress, bool purchaseAmountPerToken) = pool.nftCollectionDetails(
+        (uint256 purchaseAmount, address collectionAddress) = pool.nftCollectionDetails(
             nftCollectionRules[0].collectionAddress
         );
         assertEq(collectionAddress, nftCollectionRules[0].collectionAddress, "Should have same collection address");
         assertEq(purchaseAmount, nftCollectionRules[0].purchaseAmount, "Should have same purchaseAmount");
-        assertEq(
-            purchaseAmountPerToken,
-            nftCollectionRules[0].purchaseAmountPerToken,
-            "Should have same purchaseAemountPerToken"
-        );
 
         assertTrue(pool.hasNftList());
     }
@@ -562,14 +531,11 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
 
         IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](2);
         uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp))) % 100_000_000;
-        bool pperToken = pseudoRandom % 2 == 0;
         nftCollectionRules[0].collectionAddress = punks;
         nftCollectionRules[0].purchaseAmount = pseudoRandom;
-        nftCollectionRules[0].purchaseAmountPerToken = pperToken;
 
         nftCollectionRules[1].collectionAddress = address(collection721_1);
         nftCollectionRules[1].purchaseAmount = pseudoRandom;
-        nftCollectionRules[1].purchaseAmountPerToken = pperToken;
 
         IAelinPool.PoolData memory poolData = getPoolData({
             purchaseTokenCap: _purchaseTokenCap,
@@ -586,24 +552,15 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
 
         vm.expectEmit(true, true, true, true, address(pool));
         for (uint256 i; i < 2; ++i) {
-            emit PoolWith721(
-                nftCollectionRules[i].collectionAddress,
-                nftCollectionRules[i].purchaseAmount,
-                nftCollectionRules[i].purchaseAmountPerToken
-            );
+            emit PoolWith721(nftCollectionRules[i].collectionAddress, nftCollectionRules[i].purchaseAmount);
         }
         pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
         for (uint256 i; i < 2; ++i) {
-            (uint256 purchaseAmount, address collectionAddress, bool purchaseAmountPerToken) = pool.nftCollectionDetails(
+            (uint256 purchaseAmount, address collectionAddress) = pool.nftCollectionDetails(
                 nftCollectionRules[i].collectionAddress
             );
             assertEq(collectionAddress, nftCollectionRules[i].collectionAddress, "Should have same collection address");
             assertEq(purchaseAmount, nftCollectionRules[i].purchaseAmount, "Should have same purchaseAmount");
-            assertEq(
-                purchaseAmountPerToken,
-                nftCollectionRules[i].purchaseAmountPerToken,
-                "Should have same purchaseAemountPerToken"
-            );
         }
 
         assertTrue(pool.hasNftList());

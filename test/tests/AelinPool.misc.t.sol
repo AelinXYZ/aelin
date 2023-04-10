@@ -117,7 +117,6 @@ contract AelinPoolMiscTest is Test, AelinTestUtils {
             poolVars.nftCollectionRules = getNft1155CollectionRules();
             poolVars.nftCollectionRules[0].collectionAddress = address(collection1155_1);
             poolVars.nftCollectionRules[0].purchaseAmount = 0;
-            poolVars.nftCollectionRules[0].purchaseAmountPerToken = false;
             poolVars.nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
             poolVars.nftPurchaseList[0].collectionAddress = address(collection1155_1);
             poolVars.nftPurchaseList[0].tokenIds = new uint256[](1);
@@ -1078,7 +1077,7 @@ contract AelinPoolMiscTest is Test, AelinTestUtils {
         );
         assertEq(
             AelinDeal(poolVars.dealAddress).maxTotalSupply(),
-            boundedVars.purchaseTokenTotalForDeal * 10**(18 - purchaseToken.decimals()),
+            boundedVars.purchaseTokenTotalForDeal * 10 ** (18 - purchaseToken.decimals()),
             "deal max total supply"
         );
         assertEq(AelinDeal(poolVars.dealAddress).aelinPool(), address(poolVars.pool), "aelin pool address (deal)");
@@ -1196,7 +1195,7 @@ contract AelinPoolMiscTest is Test, AelinTestUtils {
         );
         assertEq(
             AelinDeal(poolVars.dealAddress).maxTotalSupply(),
-            boundedVars.purchaseTokenTotalForDeal * 10**(18 - purchaseToken.decimals()),
+            boundedVars.purchaseTokenTotalForDeal * 10 ** (18 - purchaseToken.decimals()),
             "deal max total supply"
         );
         assertEq(AelinDeal(poolVars.dealAddress).aelinPool(), address(poolVars.pool), "aelin pool address (deal)");
@@ -1313,7 +1312,7 @@ contract AelinPoolMiscTest is Test, AelinTestUtils {
         );
         assertEq(
             AelinDeal(poolVars.dealAddress).maxTotalSupply(),
-            boundedVars.purchaseTokenTotalForDeal * 10**(18 - purchaseToken.decimals()),
+            boundedVars.purchaseTokenTotalForDeal * 10 ** (18 - purchaseToken.decimals()),
             "deal max total supply"
         );
         assertEq(AelinDeal(poolVars.dealAddress).aelinPool(), address(poolVars.pool), "aelin pool address (deal)");
@@ -2186,11 +2185,11 @@ contract AelinPoolMiscTest is Test, AelinTestUtils {
         vm.startPrank(user1);
         uint256 acceptedAmount = poolVars.pool.maxProRataAmount(user1);
 
-        uint256 poolTokenDealFormatted = acceptedAmount * 10**(18 - MockERC20(purchaseToken).decimals());
+        uint256 poolTokenDealFormatted = acceptedAmount * 10 ** (18 - MockERC20(purchaseToken).decimals());
         uint256 aelinFeeAmount = (poolTokenDealFormatted * AELIN_FEE) / BASE;
         uint256 sponsorFeeAmount = (poolTokenDealFormatted * boundedVars.sponsorFee) / BASE;
         uint256 underlyingPerDealExchangeRate = (boundedVars.underlyingDealTokenTotal * 1e18) /
-            (boundedVars.purchaseTokenTotalForDeal * 10**(18 - MockERC20(purchaseToken).decimals()));
+            (boundedVars.purchaseTokenTotalForDeal * 10 ** (18 - MockERC20(purchaseToken).decimals()));
 
         uint256 underlyingProtocolFees = (underlyingPerDealExchangeRate * aelinFeeAmount) / 1e18;
 
@@ -2286,11 +2285,11 @@ contract AelinPoolMiscTest is Test, AelinTestUtils {
         vm.startPrank(user1);
         uint256 acceptedAmount = poolVars.pool.maxProRataAmount(user1);
 
-        uint256 poolTokenDealFormatted = acceptedAmount * 10**(18 - MockERC20(purchaseToken).decimals());
+        uint256 poolTokenDealFormatted = acceptedAmount * 10 ** (18 - MockERC20(purchaseToken).decimals());
         uint256 aelinFeeAmount = (poolTokenDealFormatted * AELIN_FEE) / BASE;
         uint256 sponsorFeeAmount = (poolTokenDealFormatted * boundedVars.sponsorFee) / BASE;
         uint256 underlyingPerDealExchangeRate = (boundedVars.underlyingDealTokenTotal * 1e18) /
-            (boundedVars.purchaseTokenTotalForDeal * 10**(18 - MockERC20(purchaseToken).decimals()));
+            (boundedVars.purchaseTokenTotalForDeal * 10 ** (18 - MockERC20(purchaseToken).decimals()));
 
         uint256 underlyingProtocolFees = (underlyingPerDealExchangeRate * aelinFeeAmount) / 1e18;
 
@@ -2386,11 +2385,11 @@ contract AelinPoolMiscTest is Test, AelinTestUtils {
         vm.startPrank(user1);
         uint256 acceptedAmount = poolVars.pool.maxProRataAmount(user1);
 
-        uint256 poolTokenDealFormatted = acceptedAmount * 10**(18 - MockERC20(purchaseToken).decimals());
+        uint256 poolTokenDealFormatted = acceptedAmount * 10 ** (18 - MockERC20(purchaseToken).decimals());
         uint256 aelinFeeAmount = (poolTokenDealFormatted * AELIN_FEE) / BASE;
         uint256 sponsorFeeAmount = (poolTokenDealFormatted * boundedVars.sponsorFee) / BASE;
         uint256 underlyingPerDealExchangeRate = (boundedVars.underlyingDealTokenTotal * 1e18) /
-            (boundedVars.purchaseTokenTotalForDeal * 10**(18 - MockERC20(purchaseToken).decimals()));
+            (boundedVars.purchaseTokenTotalForDeal * 10 ** (18 - MockERC20(purchaseToken).decimals()));
 
         uint256 underlyingProtocolFees = (underlyingPerDealExchangeRate * aelinFeeAmount) / 1e18;
 
@@ -2490,11 +2489,11 @@ contract AelinPoolMiscTest is Test, AelinTestUtils {
         vm.startPrank(user1);
         uint256 acceptedAmount = poolVars.pool.maxProRataAmount(user1);
 
-        uint256 poolTokenDealFormatted = acceptedAmount * 10**(18 - MockERC20(purchaseToken).decimals());
+        uint256 poolTokenDealFormatted = acceptedAmount * 10 ** (18 - MockERC20(purchaseToken).decimals());
         uint256 aelinFeeAmount = (poolTokenDealFormatted * AELIN_FEE) / BASE;
         uint256 sponsorFeeAmount = (poolTokenDealFormatted * boundedVars.sponsorFee) / BASE;
         uint256 underlyingPerDealExchangeRate = (boundedVars.underlyingDealTokenTotal * 1e18) /
-            (boundedVars.purchaseTokenTotalForDeal * 10**(18 - MockERC20(purchaseToken).decimals()));
+            (boundedVars.purchaseTokenTotalForDeal * 10 ** (18 - MockERC20(purchaseToken).decimals()));
 
         uint256 underlyingProtocolFees = (underlyingPerDealExchangeRate * aelinFeeAmount) / 1e18;
 
@@ -3474,7 +3473,7 @@ contract AelinPoolMiscTest is Test, AelinTestUtils {
             _purchaseTokenTotalForDeal
         );
 
-        boundedVars.sponsorFee = bound(_sponsorFee, 1 * 10**18, MAX_SPONSOR_FEE);
+        boundedVars.sponsorFee = bound(_sponsorFee, 1 * 10 ** 18, MAX_SPONSOR_FEE);
 
         PoolVars memory poolVars = getPoolVars(
             boundedVars.purchaseTokenCap,
@@ -3626,7 +3625,7 @@ contract AelinPoolMiscTest is Test, AelinTestUtils {
             _purchaseTokenTotalForDeal
         );
 
-        boundedVars.sponsorFee = bound(_sponsorFee, 1 * 10**18, MAX_SPONSOR_FEE);
+        boundedVars.sponsorFee = bound(_sponsorFee, 1 * 10 ** 18, MAX_SPONSOR_FEE);
 
         PoolVars memory poolVars = getPoolVars(
             boundedVars.purchaseTokenCap,

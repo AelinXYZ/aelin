@@ -417,13 +417,10 @@ contract AelinTestUtils is Test {
             address(collection721_3)
         ];
         uint256 pseudoRandom;
-        bool pperToken;
         for (uint256 i; i < 3; ++i) {
             pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp, i))) % 100_000_000;
-            pperToken = pseudoRandom % 2 == 0;
             nftCollectionRules[i].collectionAddress = collectionsAddresses[i];
             nftCollectionRules[i].purchaseAmount = pseudoRandom;
-            nftCollectionRules[i].purchaseAmountPerToken = pperToken;
         }
         return nftCollectionRules;
     }
@@ -436,13 +433,10 @@ contract AelinTestUtils is Test {
             address(collection1155_3)
         ];
         uint256 pseudoRandom;
-        bool pperToken;
         for (uint256 i; i < 3; ++i) {
             pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp, i))) % 100_000_000;
-            pperToken = pseudoRandom % 2 == 0;
             nftCollectionRules[i].collectionAddress = collectionsAddresses[i];
             nftCollectionRules[i].purchaseAmount = pseudoRandom;
-            nftCollectionRules[i].purchaseAmountPerToken = pperToken;
 
             nftCollectionRules[i].tokenIds = new uint256[](2);
             nftCollectionRules[i].tokenIds[0] = 1;
