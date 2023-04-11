@@ -682,7 +682,6 @@ contract AelinPoolPurchaseTest is Test, AelinTestUtils {
         uint256[] memory allowListAmountsEmpty;
 
         IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](1);
-        uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp))) % 100_000_000;
         nftCollectionRules[0].collectionAddress = punks;
         nftCollectionRules[0].purchaseAmount = 0;
 
@@ -781,7 +780,6 @@ contract AelinPoolPurchaseTest is Test, AelinTestUtils {
         uint256[] memory allowListAmountsEmpty;
 
         IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](1);
-        uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp))) % 100_000_000;
         nftCollectionRules[0].collectionAddress = punks;
         nftCollectionRules[0].purchaseAmount = 0;
 
@@ -829,7 +827,6 @@ contract AelinPoolPurchaseTest is Test, AelinTestUtils {
         uint256[] memory allowListAmountsEmpty;
 
         IAelinPool.NftCollectionRules[] memory nftCollectionRules = getNft721CollectionRules();
-        uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp))) % 100_000_000;
         nftCollectionRules[0].collectionAddress = punks;
         nftCollectionRules[0].purchaseAmount = 0;
 
