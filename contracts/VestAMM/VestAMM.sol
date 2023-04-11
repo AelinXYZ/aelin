@@ -18,6 +18,8 @@ import "./interfaces/IVestAMM.sol";
 import "./interfaces/IVestAMMLibrary.sol";
 import "contracts/interfaces/balancer/IBalancerPool.sol";
 
+import "contracts/libraries/AelinErrors.sol";
+
 // we will have a modified staking rewards contract that reads the balances of each investor in the locked LP alongside which bucket they are in
 // so you can distribute protocol fees to locked LPs and also do highly targeted rewards just to specific buckets if you want
 // TODO add in a curve multi rewards contract to the VestAMM so that you can distribute protocol fees to holders
@@ -95,7 +97,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // TODO do a require check to make sure the pool exists if they are doing a liquidity growth
         if (!_vAmmInfo.hasLaunchPhase) {
             // we need to pass in data to check if the pool exists. ammData is a placeholder but not the right argument
-            require(_ammData.ammLibrary.checkPoolExists(ammData), "pool does not exist");
+            _require(_ammData.ammLibrary.checkPoolExists(ammData), Errors.POOL_DOES_NOT_EXIST);
             investmentTokenPerBase = _ammData.ammLibrary.getPriceRatio(_ammData.investmentToken, _ammData.baseAsset);
         }
         // LP vesting schedule array up to 4 buckets
@@ -131,10 +133,10 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // if yes, store it in `nftCollectionDetails` and `nftId` and emit respective events for 721 and 1155
         AelinNftGating.initialize(_dealAccess.nftCollectionRules, nftGating);
 
-        require(!(allowList.hasAllowList && nftGating.hasNftList), "cant have allow list & nft");
-        require(!(allowList.hasAllowList && _dealAccess.merkleRoot != 0), "cant have allow list & merkle");
-        require(!(nftGating.hasNftList && _dealAccess.merkleRoot != 0), "cant have nft & merkle");
-        require(!(bytes(_dealAccess.ipfsHash).length == 0 && _dealAccess.merkleRoot != 0), "merkle needs ipfs hash");
+        _require(!(allowList.hasAllowList && nftGating.hasNftList), Errors.ALLOWLIST_AND_NFT_NOT_ALLOWED);
+        _require(!(allowList.hasAllowList && _dealAccess.merkleRoot != 0), Errors.ALLOWLIST_AND_MERKLE_NOT_ALLOWED);
+        _require(!(nftGating.hasNftList && _dealAccess.merkleRoot != 0), Errors.NFT_AND_MERKLE_NOT_ALLOWED);
+        _require(!(bytes(_dealAccess.ipfsHash).length == 0 && _dealAccess.merkleRoot != 0), Errors.IPFS_HASH_NEEDED);
     }
 
     function setDepositComplete() internal {
@@ -155,9 +157,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
                 msg.sender == vAmmInfo.mainHolder || singleVestingSchedule.singleHolder == msg.sender,
                 "not the right holder"
             );
-            require(_depositTokens[i].token == singleVestingSchedule.rewardToken, "not the right token");
-            require(IERC20(_depositTokens[i].token).balanceOf(msg.sender) > _depositTokens[i].amount, "not enough balance");
-            require(!singleVestingSchedule.finalizedDeposit, "deposit already finalized");
+            _require(_depositTokens[i].token == singleVestingSchedule.rewardToken, Errors.INVALID_HOLDER);
+            _require(IERC20(_depositTokens[i].token).balanceOf(msg.sender) > _depositTokens[i].amount, Errors.NOT_ENOUGH_BALANCE);
+            _require(!singleVestingSchedule.finalizedDeposit, Errors.DEPOSIT_FINALIZED);
             // check deposit is not finalized here
             uint256 balanceBeforeTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
             IERC20(_depositTokens[i].token).safeTransferFrom(msg.sender, address(this), _depositTokens[i].amount);
@@ -312,13 +314,13 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // TODO emit any events?
         // TODO store baseAccepted under acceptDeal probably
         if (_isBase && holderDeposits[msg.sender][baseAsset] > (ammData.baseAssetAmount - baseAccepted)) {
-            require(msg.sender == vAmmInfo.mainHolder, "not the right holder");
+            _require(msg.sender == vAmmInfo.mainHolder, Errors.INVALID_HOLDER);
             uint256 excessAmount = holderDeposits[msg.sender][baseAsset] - (ammData.baseAssetAmount - baseAccepted);
             IERC20(ammData.baseAsset).safeTransferFrom(address(this), msg.sender, excessAmount);
         } else {
-            require(
+            _require(
                 msg.sender == vAmmInfo.mainHolder || singleRewards[_singleIndex].holder == msg.sender,
-                "not the right holder"
+                Errors.INVALID_HOLDER
             );
             // TODO deleted amountClaimed from single rewards. maybe add back if needed. tbd
             uint256 excessAmount = holderDeposits[msg.sender][singleRewards[_singleIndex].token] -
@@ -335,13 +337,13 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     ) external lock acceptDealOpen vestingScheduleOpen(_vestingScheduleIndex, _investmentTokenAmount) {
         // TODO how to check if an array item is empty in solidity.
         // it says access to a non-existing index will throw an exception. lets test this.
-        require(!!vAmmInfo.vestingSchedule[_vestingScheduleIndex], "vesting schedule doesnt exist");
+        _require(!!vAmmInfo.vestingSchedule[_vestingScheduleIndex], Errors.SCHEDULE_DOESNT_EXIST);
         address investmentToken = ammContract.investmentToken;
-        require(IERC20(investmentToken).balanceOf(msg.sender) >= _investmentTokenAmount, "balance too low");
+        _require(IERC20(investmentToken).balanceOf(msg.sender) >= _investmentTokenAmount, Errors.BALANCE_TOO_LOW);
         if (nftGating.hasNftList || _nftPurchaseList.length > 0) {
             AelinNftGating.purchaseDealTokensWithNft(_nftPurchaseList, nftGating, _investmentTokenAmount);
         } else if (allowList.hasAllowList) {
-            require(_investmentTokenAmount <= allowList.amountPerAddress[msg.sender], "more than allocation");
+            _require(_investmentTokenAmount <= allowList.amountPerAddress[msg.sender], Errors.MORE_THAN_ALLOCATION);
             allowList.amountPerAddress[msg.sender] -= _investmentTokenAmount;
         } else if (dealAccess.merkleRoot != 0) {
             MerkleTree.purchaseMerkleAmount(_merkleData, trackClaimed, _investmentTokenAmount, dealAccess.merkleRoot);
@@ -373,7 +375,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         onlyHolder
         lpFundingWindow
     {
-        require(vAMMInfo.hasLiquidityLaunch, "only for new liquidity");
+        _require(vAMMInfo.hasLiquidityLaunch, Errors.NEW_LIQUIDITY_ONLY);
         // NOTE for this method we are going to want to pass in a lot of the arguments from
         // data stored in the contract. it won't be a pure pass through like we have now
         // at this stage in the development process
@@ -383,7 +385,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     // to create the pool and deposit assets after phase 0 ends
     function createLiquidity(IBalancerPool.AddLiquidity _addLiquidity) external onlyHolder lpFundingWindow {
-        require(!vAMMInfo.hasLiquidityLaunche, "only for existing liquidity");
+        _require(!vAMMInfo.hasLiquidityLaunche, Erros.EXISTING_LIQUIDITY_ONLY);
         IVestAMMLibrary(ammData.ammLibrary).addLiquidity(_addLiquidity);
         finalizeVesting();
     }
@@ -415,7 +417,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     // NOTE maybe this is a public function so we can call it internally when
     // they claim if they haven't yet withdrawn their deallocated amount
     function depositorDeallocWithdraw(uint256[] _tokenIds) external {
-        require(depositComplete && block.timestamp > lpFundingExpiry, "not time to withdraw");
+        _require(depositComplete && block.timestamp > lpFundingExpiry, Errors.NOT_WINDRAW_WINDOW);
         for (uint256 i; i < _tokenIds.length; i++) {
             VestVestingToken memory schedule = vestingDetails[_tokenId];
             // TODO need to calculate and save this number during LP submission
@@ -531,10 +533,10 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         ClaimType _claimType,
         uint256 _claimIndex
     ) internal {
-        require(ownerOf(_tokenId) == msg.sender, "must be owner to claim");
+        _require(ownerOf(_tokenId) == msg.sender, Errors.ONLY_OWNER);
         // TODO double check this doesn't error if there are no single sided rewards
         uint256 claimableAmount = claimableTokens(_tokenId, _claimType, _claimIndex);
-        require(claimableAmount > 0, "no lp tokens ready to claim");
+        _require(claimableAmount > 0, Errors.NO_LP_TOKENS);
         if (_claimType == ClaimType.LP) {
             vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
             totalLPClaimed += claimableAmount;
@@ -556,7 +558,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     function _validateSchedules(LPVestingSchedule[] _vestingSchedules) internal {
-        require(_vestingSchedules.length <= MAX_LP_VESTING_SCHEDULES, "too many vesting periods");
+        _require(_vestingSchedules.length <= MAX_LP_VESTING_SCHEDULES, Errors.TOO_MANY_VESTING_PERIODS);
         for (uint256 i; i < _vestingSchedules.length; ++i) {
             require(1825 days >= _vestingSchedules[i].schedule.vestingCliffPeriod, "max 5 year cliff");
             require(1825 days >= _vestingSchedules[i].schedule.vestingPeriod, "max 5 year vesting");
@@ -571,8 +573,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     function _validateSingleVestingSched(SingleVestingSchedule[] _singleVestingSchedules) internal {
         for (uint256 i; i < _singleVestingSchedules.length; ++i) {
-            require(1825 days >= _singleVestingSchedules[i].vestingCliffPeriod, "max 5 year cliff");
-            require(1825 days >= _singleVestingSchedules[i].vestingPeriod, "max 5 year vesting");
+            _require(1825 days >= _singleVestingSchedules[i].vestingCliffPeriod, Errors.VESTING_CLIFF_TOO_LONG);
+            _require(1825 days >= _singleVestingSchedules[i].vestingPeriod, Errors.VESTING_PERIOD_TOO_LONG);
 
             require(_singleVestingSchedules[i].totalTokens > 0, "need tokens as rewards");
             require(_singleVestingSchedules[i].claimed == 0, "amount claimed must be 0");
@@ -625,18 +627,18 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     modifier initOnce() {
-        require(!calledInitialize, "can only init once");
+        _require(!calledInitialize, Errors.INIT_ONLY_ONCE);
         calledInitialize = true;
         _;
     }
 
     modifier onlyHolder() {
-        require(msg.sender == vAmmInfo.mainHolder, "only holder can access");
+        _require(msg.sender == vAmmInfo.mainHolder, Errors.ONLY_HOLDER);
         _;
     }
 
     modifier depositIncomplete() {
-        require(!depositComplete, "too late: deposit complete");
+        _require(!depositComplete, Errors.DEPOSIT_COMPLETED);
         _;
     }
 
@@ -646,24 +648,24 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     modifier dealCancelled() {
-        require(isCancelled || (lpDepositTime == 0 && block.timestamp > lpFundingExpiry), "deal not cancelled");
+        _require(isCancelled || (lpDepositTime == 0 && block.timestamp > lpFundingExpiry), Errors.DEAL_NOT_CANCELLED);
         _;
     }
 
     modifier lpFundingWindow() {
-        require(!isCancelled, "deal is cancelled");
+        _require(!isCancelled, Errors.DEAL_CANCELLED);
         // TODO double check < vs <= matches everywhere
-        require(
+        _require(
             depositComplete && block.timestamp > depositExpiry && block.timestamp <= lpFundingExpiry,
-            "not in funding window"
+            Errors.NOT_FUNDING_WINDOW
         );
         _;
     }
 
     modifier acceptDealOpen() {
-        require(!isCancelled, "deal is cancelled");
+        _require(!isCancelled, Errors.DEAL_CANCELLED);
         // TODO double check < vs <= matches everywhere
-        require(depositComplete && block.timestamp <= depositExpiry, "not in deposit window");
+        _require(depositComplete && block.timestamp <= depositExpiry, Errors.NOT_DEPOSIT_WINDOW);
         _;
     }
 
@@ -678,17 +680,17 @@ contract VestAMM is AelinVestingToken, IVestAMM {
                 break;
             }
         }
-        require(
+        _require(
             depositedPerVestSchedule[_vestingScheduleIndex] + _investmentTokenAmount <=
                 maxInvTokensPerVestSchedule[_vestingScheduleIndex] ||
                 (otherBucketsFull && vAmmInfo.deallocation == Deallocation.Proportional),
-            "purchased more than total"
+           Errros.PURCHASE_MORE_THAN_TOTAL
         );
         _;
     }
 
     modifier lock() {
-        require(!locked, "locked");
+        _require(!locked, Errors.LOCKED);
         locked = true;
         _;
         locked = false;
