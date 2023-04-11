@@ -234,6 +234,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
             uint256[] memory tokenIds = nftPurchaseList.tokenIds;
 
             NftCollectionRules memory nftCollectionRules = nftCollectionDetails[collectionAddress];
+
+            require(collectionAddress != address(0), "collection should not be null");
             require(nftCollectionRules.collectionAddress == collectionAddress, "collection not in the pool");
 
             if (nftCollectionRules.purchaseAmountPerToken) {
