@@ -20,16 +20,18 @@ interface IVestAMM {
         uint256 vestingPeriod;
         uint256 vestingCliffPeriod;
         address singleHolder;
-        uint256 totalTokens;
+        uint256 totalSingleTokens;
         uint256 claimed;
+        bool finalizedDeposit;
     }
 
     struct LPVestingSchedule {
         SingleVestingSchedule[] singleVestingSchedules;
         uint256 vestingPeriod;
         uint256 vestingCliffPeriod;
-        uint256 totalTokens;
+        uint256 totalBaseTokens;
         uint256 claimed;
+        bool finalizedDeposit;
         uint8 investorLPShare; // 0 - 100
     }
 
@@ -71,6 +73,7 @@ interface IVestAMM {
     }
 
     struct DepositToken {
+        uint8 lpScheduleIndex;
         uint8 singleRewardIndex;
         address token;
         uint256 amount;
@@ -83,7 +86,13 @@ interface IVestAMM {
 
     event AcceptVestDeal(address indexed depositor, uint256 depositTokenAmount, uint8 vestingScheduleIndex);
 
-    event TokenDeposited(address token, uint256 amount);
+    event SingleRewardDeposited(
+        address indexed holder,
+        uint8 vestingScheduleIndex,
+        uint8 singleRewardIndex,
+        address indexed token,
+        uint256 amountPostTransfer
+    );
 
     event NewVestAMM(AmmData ammData, VAmmInfo vAMMInfo, DealAccess dealAccess);
 
@@ -97,7 +106,7 @@ interface IVestAMM {
 
     event Disavow(address indexed voucher);
 
-    event SingleDepositComplete(address indexed token, uint8 singleRewardIndex);
+    event SingleDepositComplete(address indexed token, uint8 vestingScheduleIndex, uint8 singleRewardIndex);
 
     event DepositComplete(uint256 depositExpiry, uint256 lpFundingExpiry);
 
