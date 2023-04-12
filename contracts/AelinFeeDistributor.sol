@@ -11,25 +11,23 @@ contract AelinFeeDistributor is Ownable, IMerkleDistributor {
 
     uint256 public immutable BASE = 1e18;
 
-    address public immutable TOKEN1 = address(0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984);
-    address public immutable TOKEN2 = address(0x1f9840A85D5aF5BF1D1762f925BdaDdC4201f985);
-    address public immutable TOKEN3 = address(0x1f9840A85D5Af5bf1d1762F925bDAddC4201F911);
-    address public immutable TOKEN4 = address(0x1f9840A85d5af5BF1d1762F925BdaDDC4201F910);
+    address public immutable TOKEN1 = address(0x0ab8DCB1f5DA04CE8f41695c7685c949dC240918);
+    address public immutable TOKEN2 = address(0x11fE4B6AE13d2a6055C8D9cF65c55bac32B5d844);
+    address public immutable TOKEN3 = address(0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6);
+    address public immutable TOKEN4 = address(0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984);
 
-    uint256 public immutable TOKEN1_AMOUNT = 100e18;
-    uint256 public immutable TOKEN2_AMOUNT = 50e18;
-    uint256 public immutable TOKEN3_AMOUNT = 25e18;
-    uint256 public immutable TOKEN4_AMOUNT = 1e18;
+    uint256 public immutable TOKEN1_AMOUNT = 80e18;
+    uint256 public immutable TOKEN2_AMOUNT = 100e18;
+    uint256 public immutable TOKEN3_AMOUNT = 1e18;
+    uint256 public immutable TOKEN4_AMOUNT = 50e18;
 
     bytes32 public immutable override merkleRoot;
-    uint256 public claimExpiry;
 
     // This is a packed array of booleans.
     mapping(uint256 => uint256) private claimedBitMap;
 
     constructor(bytes32 merkleRoot_) Ownable() {
         merkleRoot = merkleRoot_;
-        claimExpiry = block.timestamp + 365 days;
     }
 
     function isClaimed(uint256 index) public view override returns (bool) {
@@ -73,8 +71,6 @@ contract AelinFeeDistributor is Ownable, IMerkleDistributor {
     }
 
     function withdraw() public onlyOwner {
-        require(block.timestamp >= claimExpiry, "still in claimable window");
-
         emit Withdrawn(owner(), TOKEN1, IERC20(TOKEN1).balanceOf(address(this)));
         IERC20(TOKEN1).safeTransfer(owner(), IERC20(TOKEN1).balanceOf(address(this)));
 
