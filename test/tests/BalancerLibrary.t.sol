@@ -41,7 +41,7 @@ contract BalancerLibraryTest is Test {
         mainnetFork = vm.createFork(MAINNET_RPC_URL);
     }
 
-    function getBalancerTestData(uint256[] memory tokenAmtsIn) public returns (BalancerPoolData memory) {
+    function getBalancerTestData() public returns (BalancerPoolData memory) {
         IERC20[] memory tokens = new IERC20[](2);
         IRateProvider[] memory rateProviders = new IRateProvider[](2);
         uint256[] memory normalizedWeights = new uint256[](2);
@@ -57,7 +57,6 @@ contract BalancerLibraryTest is Test {
             "aelindai",
             "AELIN-DAI",
             tokens,
-            tokenAmtsIn,
             normalizedWeights,
             rateProviders,
             2500000000000000, // 2,5%
@@ -91,12 +90,17 @@ contract BalancerLibraryTest is Test {
         vm.selectFork(mainnetFork);
         vm.startPrank(user);
 
-        /* DEPLOY POOL (LIQUIDITY IS ADDED FOR THE FIRST TIME) */
+        /* DEPLOY POOL */
+        BalancerPoolData memory data = getBalancerTestData();
+
+        /* ADD LIQUIDITY FOR THE FIRST TIME */
         uint256[] memory amountsIn = new uint256[](2);
         amountsIn[0] = 10000000;
         amountsIn[1] = 10000000;
 
-        BalancerPoolData memory data = getBalancerTestData(amountsIn);
+        IVestAMMLibrary.AddLiquidity memory addLiquidityData = IVestAMMLibrary.AddLiquidity(data.pool, amountsIn);
+
+        data.balancerLib.addInitialLiquidity(addLiquidityData);
 
         uint256 poolLPSupply = IBalancerPool(data.pool).getActualSupply();
         uint256 vAMMLPBalance = IBalancerPool(data.pool).balanceOf(address(data.balancerLib));
@@ -109,7 +113,7 @@ contract BalancerLibraryTest is Test {
         amountsIn[0] = 30000000;
         amountsIn[1] = 30000000;
 
-        IVestAMMLibrary.AddLiquidity memory addLiquidityData = IVestAMMLibrary.AddLiquidity(data.pool, amountsIn);
+        addLiquidityData = IVestAMMLibrary.AddLiquidity(data.pool, amountsIn);
         data.balancerLib.addLiquidity(addLiquidityData);
 
         uint256 newPoolLPSupply = IBalancerPool(data.pool).getActualSupply();

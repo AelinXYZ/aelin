@@ -31,8 +31,6 @@ interface IVestAMMLibrary {
         string symbol;
         // NOTE these are the 2 tokens we are using
         IERC20[] tokens;
-        // Amount of initial liquidity to be deposited
-        uint256[] tokenAmtsIn;
         // this is where you put the ratio between the 2 tokens
         uint256[] normalizedWeights;
         // not sure what this is
