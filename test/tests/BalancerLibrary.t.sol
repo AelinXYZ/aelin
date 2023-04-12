@@ -86,7 +86,7 @@ contract BalancerLibraryTest is Test {
         return data;
     }
 
-    function testCanSetForkBlockNumber() public {
+    function testAddRemoveLiquidity() public {
         vm.selectFork(mainnetFork);
         vm.startPrank(user);
 
@@ -141,5 +141,19 @@ contract BalancerLibraryTest is Test {
         vm.stopPrank();
 
         // TODO Get liquidity fees
+    }
+
+    function test_checkPoolExists() public {
+        vm.selectFork(mainnetFork);
+        vm.startPrank(user);
+
+        /* DEPLOY POOL */
+        BalancerPoolData memory data = getBalancerTestData();
+
+        bytes32 id = IBalancerPool(address(data.pool)).getPoolId();
+        bytes32 wrongId = keccak256(abi.encodePacked(user));
+
+        assertFalse(data.balancerLib.checkPoolExists(wrongId), "Wrong Id");
+        assertTrue(data.balancerLib.checkPoolExists(id), "Correct Id");
     }
 }
