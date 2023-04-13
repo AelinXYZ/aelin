@@ -30,6 +30,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
     address dealAddressAllowList;
     address dealAddressNftGating721;
     address dealAddressNftGating1155;
+    address dealAddressNftGating1155v2;
     address dealAddressNftGatingPunks;
     address dealAddressNftGatingPunksPerToken;
 
@@ -107,6 +108,15 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
             allowListEmpty
         );
 
+        nftCollectionRules1155[0].purchaseAmount = 1; //Faulty purchase amount for v2
+
+        dealAddressNftGating1155v2 = upFrontDealFactory.createUpFrontDeal(
+            dealData,
+            dealConfig,
+            nftCollectionRules1155,
+            allowListEmpty
+        );
+
         vm.stopPrank();
         vm.startPrank(dealHolderAddress);
 
@@ -131,6 +141,9 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
 
         underlyingDealToken.approve(address(dealAddressNftGating1155), type(uint256).max);
         AelinUpFrontDeal(dealAddressNftGating1155).depositUnderlyingTokens(1e35);
+
+        underlyingDealToken.approve(address(dealAddressNftGating1155v2), type(uint256).max);
+        AelinUpFrontDeal(dealAddressNftGating1155v2).depositUnderlyingTokens(1e35);
 
         vm.stopPrank();
     }
@@ -696,6 +709,25 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
         vm.expectRevert("tokenId already used");
         AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
+        vm.stopPrank();
+    }
+
+    //Fail if PurchaseAmount in NftCollectionRules is non-zero
+    //Uses the dealAddressNftGating1155v2 address with the faulty setting
+    function testFuzz_AcceptDeal_RevertWhen_NftCollectionRulesPurchaseAmountNotZero(uint256 _purchaseAmount) public {
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating1155v2), type(uint256).max);
+        uint256[] memory tokenIdsArray = new uint256[](2);
+        tokenIdsArray[0] = 1;
+        tokenIdsArray[1] = 2;
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collection1155_1);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+        MockERC1155(collection1155_1).mint(user1, 1, 100, "");
+        MockERC1155(collection1155_1).mint(user1, 2, 100, "");
+        vm.expectRevert("purchase amount in nft collection rules must be set to 0 (unlimited) for erc1155 contracts");
+        AelinUpFrontDeal(dealAddressNftGating1155v2).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         vm.stopPrank();
     }
 
@@ -1457,12 +1489,6 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressNftGating1155).dealConfig();
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](2);
-        (uint256 purchaseCollection1, , , ) = AelinUpFrontDeal(dealAddressNftGating1155).getNftCollectionDetails(
-            address(collection1155_1)
-        );
-        (uint256 purchaseCollection2, , , ) = AelinUpFrontDeal(dealAddressNftGating1155).getNftCollectionDetails(
-            address(collection1155_2)
-        );
 
         // we mint some tokens
         MockERC1155(address(collection1155_1)).mint(user1, 1, 100, "");
@@ -1470,7 +1496,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         MockERC1155(address(collection1155_2)).mint(user1, 10, 1000, "");
         MockERC1155(address(collection1155_2)).mint(user1, 20, 2000, "");
 
-        // case 1: [collection4] user1 max out their allocation with the 2 collections
+        // [collection4] user1 max out their allocation with the 2 collections
         vm.startPrank(user1);
         deal(address(purchaseToken), user1, type(uint256).max);
         purchaseToken.approve(address(dealAddressNftGating1155), type(uint256).max);
@@ -1485,14 +1511,14 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         nftPurchaseList[1].tokenIds[0] = 10;
         nftPurchaseList[1].tokenIds[1] = 20;
 
+        //These values used to be maximum purchase allocations, but that logic no longer exists
+        uint256 purchaseCollection1 = 1e20;
+        uint256 purchaseCollection2 = 1e22;
+
         // both collections are per token - per wallet removed
-        // so total allocation = (balanceOf(tokens) * allocationCollection1) + (balanceOf(tokens) * allocationCollection2)
+        // (balanceOf(tokens) * allocationCollection1) + (balanceOf(tokens) * allocationCollection2)
         uint256 purchaseAmount = (200 * purchaseCollection1) + (3000 * purchaseCollection2);
         uint256 poolSharesAmount = (purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
-
-        // user can't buy more than purchase amount
-        vm.expectRevert("purchase amount greater than max allocation");
-        AelinUpFrontDeal(dealAddressNftGating1155).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount + 1);
 
         // user1 buys the tokens
         vm.expectEmit(true, false, false, true);

@@ -111,26 +111,7 @@ library AelinNftGating {
             require(nftCollectionRules.collectionAddress == _collectionAddress, "collection not in the pool");
 
             if (nftCollectionRules.purchaseAmount > 0) {
-                if (NftCheck.supports1155(_collectionAddress)) {
-                    for (uint256 j; j < _tokenIds.length; ++j) {
-                        unchecked {
-                            uint256 collectionAllowance = nftCollectionRules.purchaseAmount *
-                                IERC1155(_collectionAddress).balanceOf(msg.sender, _tokenIds[j]);
-                            // if there is an overflow of the pervious calculation, allow the max purchase token amount
-                            if (
-                                collectionAllowance / nftCollectionRules.purchaseAmount !=
-                                IERC1155(_collectionAddress).balanceOf(msg.sender, _tokenIds[j])
-                            ) {
-                                maxPurchaseTokenAmount = type(uint256).max;
-                            } else {
-                                maxPurchaseTokenAmount += collectionAllowance;
-                                if (maxPurchaseTokenAmount < collectionAllowance) {
-                                    maxPurchaseTokenAmount = type(uint256).max;
-                                }
-                            }
-                        }
-                    }
-                } else {
+                if (NftCheck.supports721(_collectionAddress) || _collectionAddress == CRYPTO_PUNKS) {
                     unchecked {
                         uint256 collectionAllowance = nftCollectionRules.purchaseAmount * _tokenIds.length;
                         // if there is an overflow of the pervious calculation, allow the max purchase token amount
@@ -159,6 +140,10 @@ library AelinNftGating {
                 }
             }
             if (NftCheck.supports1155(_collectionAddress)) {
+                require(
+                    nftCollectionRules.purchaseAmount == 0,
+                    "purchase amount in nft collection rules must be set to 0 (unlimited) for erc1155 contracts"
+                );
                 for (uint256 j; j < _tokenIds.length; ++j) {
                     require(_data.nftId[_collectionAddress][_tokenIds[j]], "tokenId not in the pool");
                     require(

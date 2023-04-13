@@ -283,7 +283,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     ) internal view {
         require(
             _nftCollectionRules.purchaseAmount == 0,
-            "purchase amount must be set to 0 (unlimited) for erc1155 contracts"
+            "purchase amount in nft collection rules must be set to 0 (unlimited) for erc1155 contracts"
         );
 
         for (uint256 i; i < _tokenIds.length; ++i) {

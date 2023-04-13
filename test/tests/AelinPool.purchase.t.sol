@@ -571,7 +571,7 @@ contract AelinPoolPurchaseTest is Test, AelinTestUtils {
 
         // Assert
         vm.startPrank(user1);
-        vm.expectRevert("purchase amount must be set to 0 (unlimited) for erc1155 contracts");
+        vm.expectRevert("purchase amount in nft collection rules must be set to 0 (unlimited) for erc1155 contracts");
         pool.purchasePoolTokensWithNft(nftPurchaseList, _purchaseTokenAmount);
         vm.stopPrank();
     }

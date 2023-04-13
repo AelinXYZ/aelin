@@ -262,7 +262,7 @@ contract AelinTestUtils is Test {
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules1155 = new AelinNftGating.NftCollectionRules[](2);
 
         nftCollectionRules1155[0].collectionAddress = address(collection1155_1);
-        nftCollectionRules1155[0].purchaseAmount = 1e20;
+        nftCollectionRules1155[0].purchaseAmount = 0;
         nftCollectionRules1155[0].tokenIds = new uint256[](2);
         nftCollectionRules1155[0].minTokensEligible = new uint256[](2);
         nftCollectionRules1155[0].tokenIds[0] = 1;
@@ -271,7 +271,7 @@ contract AelinTestUtils is Test {
         nftCollectionRules1155[0].minTokensEligible[1] = 20;
 
         nftCollectionRules1155[1].collectionAddress = address(collection1155_2);
-        nftCollectionRules1155[1].purchaseAmount = 1e22;
+        nftCollectionRules1155[1].purchaseAmount = 0;
         nftCollectionRules1155[1].tokenIds = new uint256[](2);
         nftCollectionRules1155[1].minTokensEligible = new uint256[](2);
         nftCollectionRules1155[1].tokenIds[0] = 10;

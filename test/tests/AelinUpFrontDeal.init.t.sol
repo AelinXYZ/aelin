@@ -878,7 +878,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         assertTrue(tempBool);
         (tempUint, tempAddress, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating1155)
             .getNftCollectionDetails(address(collection1155_1));
-        assertEq(tempUint, 1e20);
+        assertEq(tempUint, 0);
         assertEq(tempAddress, address(collection1155_1));
         assertEq(tempUintArray1[0], 1);
         assertEq(tempUintArray1[1], 2);
@@ -886,7 +886,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         assertEq(tempUintArray2[1], 20);
         (tempUint, tempAddress, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating1155)
             .getNftCollectionDetails(address(collection1155_2));
-        assertEq(tempUint, 1e22);
+        assertEq(tempUint, 0);
         assertEq(tempAddress, address(collection1155_2));
         assertEq(tempUintArray1[0], 10);
         assertEq(tempUintArray1[1], 20);
