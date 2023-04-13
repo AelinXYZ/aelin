@@ -432,11 +432,9 @@ contract AelinTestUtils is Test {
             address(collection1155_2),
             address(collection1155_3)
         ];
-        uint256 pseudoRandom;
         for (uint256 i; i < 3; ++i) {
-            pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp, i))) % 100_000_000;
             nftCollectionRules[i].collectionAddress = collectionsAddresses[i];
-            nftCollectionRules[i].purchaseAmount = pseudoRandom;
+            nftCollectionRules[i].purchaseAmount = 0;
 
             nftCollectionRules[i].tokenIds = new uint256[](2);
             nftCollectionRules[i].tokenIds[0] = 1;

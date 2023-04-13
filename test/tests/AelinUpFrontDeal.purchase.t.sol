@@ -1316,7 +1316,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         emit AcceptDeal(user2, purchaseCollection2, purchaseCollection2, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseCollection2);
 
-        // case 2: [collection1] user2 comes back and max out their allocation (purchaseAmountPerToken = true)
+        // case 3: [collection1] user2 comes back and max out their allocation (purchaseAmountPerToken = true)
         nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
         tokenIdsArray = new uint256[](2);
         tokenIdsArray[0] = 4;
