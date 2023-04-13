@@ -18,6 +18,8 @@ import "./interfaces/IVestAMM.sol";
 import "./interfaces/IVestAMMLibrary.sol";
 import "contracts/interfaces/balancer/IBalancerPool.sol";
 
+import "contracts/libraries/AelinValidation.sol";
+
 // we will have a modified staking rewards contract that reads the balances of each investor in the locked LP alongside which bucket they are in
 // so you can distribute protocol fees to locked LPs and also do highly targeted rewards just to specific buckets if you want
 // TODO add in a curve multi rewards contract to the VestAMM so that you can distribute protocol fees to holders
@@ -558,11 +560,11 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     function _validateSchedules(LPVestingSchedule[] _vestingSchedules) internal {
         require(_vestingSchedules.length <= MAX_LP_VESTING_SCHEDULES, "too many vesting periods");
         for (uint256 i; i < _vestingSchedules.length; ++i) {
-            require(1825 days >= _vestingSchedules[i].schedule.vestingCliffPeriod, "max 5 year cliff");
-            require(1825 days >= _vestingSchedules[i].schedule.vestingPeriod, "max 5 year vesting");
+            Validate.vestingCliff(1825 days, _vestingSchedules[i].schedule.vestingCliffPeriod);
+            Validate.vestingPeriod(1825 days, _vestingSchedules[i].schedule.vestingPeriod);
             require(0 < _vestingSchedules[i].totalTokens, "allocate tokens to schedule");
             require(0 == _vestingSchedules[i].claimed, "claimed must start at 0");
-            require(100 * 10**18 >= _vestingSchedules[i].investorLPShare, "max 100% to investor");
+            Validate.investorShare(100 * 10**18, _vestingSchedules[i].investorLPShare);
             require(0 <= _vestingSchedules[i].investorLPShare, "min 0% to investor");
             require(_vestingSchedules[i].singleVestingSchedules.length <= MAX_SINGLE_REWARDS, "too many single rewards");
             _validateSingleVestingSched(_vestingSchedules[i].singleVestingSchedules);
@@ -625,18 +627,18 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     modifier initOnce() {
-        require(!calledInitialize, "can only init once");
+        Validate.isNotInitialized(calledInitialize);
         calledInitialize = true;
         _;
     }
 
     modifier onlyHolder() {
-        require(msg.sender == vAmmInfo.mainHolder, "only holder can access");
+        Validate.callerIsHolder(msg.sender);
         _;
     }
 
     modifier depositIncomplete() {
-        require(!depositComplete, "too late: deposit complete");
+        Validate.depositIncomplete(depositComplete);
         _;
     }
 
@@ -646,17 +648,12 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     modifier dealCancelled() {
-        require(isCancelled || (lpDepositTime == 0 && block.timestamp > lpFundingExpiry), "deal not cancelled");
+        Validate.vammIsCancelled(isCancelled, lpDepositTime, lpFundingExpiry);
         _;
     }
 
     modifier lpFundingWindow() {
-        require(!isCancelled, "deal is cancelled");
-        // TODO double check < vs <= matches everywhere
-        require(
-            depositComplete && block.timestamp > depositExpiry && block.timestamp <= lpFundingExpiry,
-            "not in funding window"
-        );
+        Validate.vammInFundingWindow(isCancelled, depositComplete, depositExpiry ,lpFundingExpiry);
         _;
     }
 
