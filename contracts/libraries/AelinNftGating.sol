@@ -142,7 +142,7 @@ library AelinNftGating {
             if (NftCheck.supports1155(_collectionAddress)) {
                 require(
                     nftCollectionRules.purchaseAmount == 0,
-                    "purchase amount in nft collection rules must be set to 0 (unlimited) for erc1155 contracts"
+                    "purchase amt must be 0 for 1155"
                 );
                 for (uint256 j; j < _tokenIds.length; ++j) {
                     require(_data.nftId[_collectionAddress][_tokenIds[j]], "tokenId not in the pool");

@@ -281,10 +281,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256[] memory _tokenIds,
         NftCollectionRules memory _nftCollectionRules
     ) internal view {
-        require(
-            _nftCollectionRules.purchaseAmount == 0,
-            "purchase amount in nft collection rules must be set to 0 (unlimited) for erc1155 contracts"
-        );
+        require(_nftCollectionRules.purchaseAmount == 0, "purchase amt must be 0 for 1155");
 
         for (uint256 i; i < _tokenIds.length; ++i) {
             require(nftId[_collectionAddress][_tokenIds[i]], "tokenId not in the pool");

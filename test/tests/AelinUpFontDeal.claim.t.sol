@@ -58,7 +58,6 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules721 = getERC721Collection();
         AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = getPunksCollection();
-        //AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunksPerToken = getPunksCollection();
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules1155 = getERC1155Collection();
 
         dealAddressNoDeallocationNoDeposit = upFrontDealFactory.createUpFrontDeal(

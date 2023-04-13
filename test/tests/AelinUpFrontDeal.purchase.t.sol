@@ -726,7 +726,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         nftPurchaseList[0].tokenIds = tokenIdsArray;
         MockERC1155(collection1155_1).mint(user1, 1, 100, "");
         MockERC1155(collection1155_1).mint(user1, 2, 100, "");
-        vm.expectRevert("purchase amount in nft collection rules must be set to 0 (unlimited) for erc1155 contracts");
+        vm.expectRevert("purchase amt must be 0 for 1155");
         AelinUpFrontDeal(dealAddressNftGating1155v2).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         vm.stopPrank();
     }
