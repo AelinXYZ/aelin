@@ -80,8 +80,9 @@ interface IVestAMM {
     }
 
     struct RemoveSingle {
+        uint8 lpScheduleIndex;
+        uint8 singleRewardIndex;
         address token;
-        address holder;
     }
 
     event AcceptVestDeal(address indexed depositor, uint256 depositTokenAmount, uint8 vestingScheduleIndex);
@@ -113,7 +114,8 @@ interface IVestAMM {
     event ClaimedToken(address indexed lpToken, address indexed owner, uint256 claimableAmount, ClaimType claimType);
 
     event SingleRemoved(
-        uint8 index,
+        uint8 singleIndex,
+        uint8 lpIndex,
         address indexed token,
         uint256 tokenTotal,
         uint256 mainHolderRefund,
