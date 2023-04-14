@@ -328,6 +328,23 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         vm.stopPrank();
     }
 
+    function test_CreateUpFrontDeal_RevertWhen_1155CollectionRulesPurchaseAmtNotZero() public {
+        vm.startPrank(dealCreatorAddress);
+
+        AelinAllowList.InitData memory allowListEmpty;
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRules1155 = getERC1155Collection();
+
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRules = new AelinNftGating.NftCollectionRules[](1);
+
+        nftCollectionRules[0] = nftCollectionRules1155[0];
+        nftCollectionRules[0].purchaseAmount = 1; //Not zero
+
+        vm.expectRevert("purchase amt must be 0 for 1155");
+        upFrontDealFactory.createUpFrontDeal(getDealData(), getDealConfig(), nftCollectionRules, allowListEmpty);
+
+        vm.stopPrank();
+    }
+
     function test_CreateUpFrontDeal_RevertWhen_UsePunksAnd1155() public {
         vm.startPrank(dealCreatorAddress);
 

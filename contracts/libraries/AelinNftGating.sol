@@ -56,6 +56,7 @@ library AelinNftGating {
             else if (NftCheck.supports1155(_nftCollectionRules[0].collectionAddress)) {
                 for (uint256 i; i < _nftCollectionRules.length; ++i) {
                     require(NftCheck.supports1155(_nftCollectionRules[i].collectionAddress), "can only contain 1155");
+                    require(_nftCollectionRules[i].purchaseAmount == 0, "purchase amt must be 0 for 1155");
                     _data.nftCollectionDetails[_nftCollectionRules[i].collectionAddress] = _nftCollectionRules[i];
 
                     for (uint256 j; j < _nftCollectionRules[i].tokenIds.length; ++j) {
@@ -140,10 +141,6 @@ library AelinNftGating {
                 }
             }
             if (NftCheck.supports1155(_collectionAddress)) {
-                require(
-                    nftCollectionRules.purchaseAmount == 0,
-                    "purchase amt must be 0 for 1155"
-                );
                 for (uint256 j; j < _tokenIds.length; ++j) {
                     require(_data.nftId[_collectionAddress][_tokenIds[j]], "tokenId not in the pool");
                     require(

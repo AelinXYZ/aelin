@@ -261,6 +261,30 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
         pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
     }
 
+    function test_Initialize_RevertWhen_1155CollectionRulesPurchaseAmtNotZero() public {
+        address[] memory allowListAddressesEmpty;
+        uint256[] memory allowListAmountsEmpty;
+
+        IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](1);
+        nftCollectionRules[0].collectionAddress = address(collection1155_1);
+        nftCollectionRules[0].purchaseAmount = 1; //Not zero
+
+        IAelinPool.PoolData memory poolData = getPoolData({
+            purchaseTokenCap: 1e35,
+            duration: 10 days,
+            sponsorFee: 2e18,
+            purchaseDuration: 1 days,
+            allowListAddresses: allowListAddressesEmpty,
+            allowListAmounts: allowListAmountsEmpty,
+            nftCollectionRules: nftCollectionRules
+        });
+
+        AelinPool pool = new AelinPool();
+        AelinFeeEscrow escrow = new AelinFeeEscrow();
+        vm.expectRevert("purchase amt must be 0 for 1155");
+        pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
+    }
+
     function test_Initialize_RevertWhen_CollectionIncompatible() public {
         address[] memory allowListAddressesEmpty;
         uint256[] memory allowListAmountsEmpty;

@@ -150,6 +150,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
             else if (NftCheck.supports1155(nftCollectionRules[0].collectionAddress)) {
                 for (uint256 i; i < nftCollectionRules.length; ++i) {
                     require(NftCheck.supports1155(nftCollectionRules[i].collectionAddress), "can only contain 1155");
+                    require(nftCollectionRules[i].purchaseAmount == 0, "purchase amt must be 0 for 1155");
                     nftCollectionDetails[nftCollectionRules[i].collectionAddress] = nftCollectionRules[i];
 
                     for (uint256 j; j < nftCollectionRules[i].tokenIds.length; ++j) {
@@ -281,8 +282,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256[] memory _tokenIds,
         NftCollectionRules memory _nftCollectionRules
     ) internal view {
-        require(_nftCollectionRules.purchaseAmount == 0, "purchase amt must be 0 for 1155");
-
         for (uint256 i; i < _tokenIds.length; ++i) {
             require(nftId[_collectionAddress][_tokenIds[i]], "tokenId not in the pool");
             require(
