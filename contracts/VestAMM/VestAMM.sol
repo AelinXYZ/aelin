@@ -146,35 +146,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         }
     }
 
-    // TODO create a view that tells you what arguments to pass as a single rewards holder to this method
-    // when you go to deposit a single reward, maybe we loop through each of the 5 vesting schedules
-    // and then we also loop through each of the 8 single rewards.
-    // we have the main LP vesting schedules
-    // we hae an array of single rewards tied to each schedule.
-    // we need to track all deposits and who sent them
-    // we need to restrict deposits to the right single holder or the main holder
-    // later on, we need to reimburse the single holder or the main holder if there are tokens left
-    // we have up to 41 deposits to track. 8 single rewards per bucket and 5 buckets. plus the base asset
-    // mapping(uint8 => bool) public finalizedDeposit;
-    // mapping(address => mapping(uint8 => uint256)) public holderDeposits;
-    // 41 bits where each bit says 1 if deposited and 0 if not deposited
-    // the first bit is for the base asset
-    // 1 + lp index * 8 + index in the single rewards array + 1
-    // 1 + 0 + 3 + 1 = 5
-    // [1[1,2,<<3>>,4,5,6,7,8],2,3,4,5[1,2,3,4,5,6,<<7>>,8]]
-    // 1 + 4 * 8 + 6 + 1 = 40
-    // [1[1,2,3,4,5,6,7,8],2,3,4,5[1,2,3,4,5,6,<<7>>,8]]
-    // when you fund the single deposit you pass in the value 1 to 41 which will tell us which token you are funding
-    // you can get the value off a view function or something we can add below
-
-    // check when base + all single deposits are finalized
-    // deposit single
-    // add single
-    // remove single
-    // be able to claim with NFT
-    // reimburse if extra single left
-    // up to 4 LP buckets and each bucket has up to 6 rewards so there are 24 possible locations for a single reward
-
     function depositSingle(DepositToken[] calldata _depositTokens) external depositIncomplete dealOpen {
         for (uint i = 0; i < _depositTokens.length; i++) {
             SingleVestingSchedule singleVestingSchedule = vAmmInfo
@@ -470,77 +441,51 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     function claimableTokens(
         uint256 _tokenId,
         ClaimType _claimType,
-        uint8 _vestingScheduleIndex,
         uint8 _singleRewardsIndex
     ) public view returns (uint256) {
         if (lpDepositTime == 0) {
             return 0;
         }
-        // struct VestVestingToken {
-        //     uint256 amountDeposited;
-        //     uint256 lastClaimedAt;
-        //     uint256[] lastClaimedAtRewardList;
-        //     uint8 vestingScheduleIndex;
-        // }
         VestVestingToken memory schedule = vestingDetails[_tokenId];
         uint256 precisionAdjustedClaimable;
+
+        LPVestingSchedule lpVestingSchedule = vAmmInfo.vestingSchedules[schedule.vestingScheduleIndex];
 
         uint256 lastClaimedAt = _claimType == ClaimType.Single
             ? schedule.lastClaimedAtRewardList[_singleRewardsIndex]
             : schedule.lastClaimedAt;
 
-        // address rewardToken;
-        // uint256 rewardTokenTotal;
-        // SingleVestingSchedule[] vestingSchedules;
-        // address singleHolder;
-        // either going to read it off the singleRewards stu
         uint256 vestingCliffPeriod = _claimType == ClaimType.Single
-            ? singleRewards[_singleRewardsIndex].vestingSchedules[schedule.vestingScheduleIndex].vestingCliffPeriod
-            : vAmmInfo.vestingSchedules[schedule.vestingScheduleIndex].vestingCliffPeriod;
+            ? lpVestingSchedule.singleVestingSchedules[_singleRewardsIndex].vestingCliffPeriod
+            : lpVestingSchedule.vestingCliffPeriod;
 
         uint256 vestingPeriod = _claimType == ClaimType.Single
-            ? singleRewards[_singleRewardsIndex].vestingSchedules[schedule.vestingScheduleIndex].vestingPeriod
-            : vAmmInfo.vestingSchedules[schedule.vestingScheduleIndex].vestingPeriod;
+            ? lpVestingSchedule.singleVestingSchedules[_singleRewardsIndex].vestingPeriod
+            : lpVestingSchedule.vestingPeriod;
 
         uint256 vestingCliff = lpDepositTime + vestingCliffPeriod;
         uint256 vestingExpiry = vestingCliff + vestingPeriod;
-
-        // claiming logic outline:
-        // the logic for claiming is this you have the lpDepositWindow is when everything starts
-        // then you have the vesting period cliff, then you have the vesting period.
-        // you can start vesting at the end of the cliff
-        // if the vesting period cliff is set to 0, you can start vesting right away.
-        // if the vesting period is also 0 you can vest everything
-
-        // struct SingleRewardConfig {
-        //     address rewardToken;
-        //     uint256 rewardTokenTotal;
-        //     SingleVestingSchedule[] vestingSchedules;
-        //     address singleHolder;
-        // }
-        // struct SingleVestingSchedule {
-        //     VestingSchedule vestingSchedule;
-        //     uint8 vestingScheduleIndex;
-        //     uint256 totalTokens;
-        // }
-
         uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
-        uint256 minTime = block.timestamp < lpDepositTime ? lpDepositTime : block.timestamp;
 
-        if (lastClaimedAt < maxTime) {
-            // uint8 investmentTokenDecimals = IERC20Decimals(ammData.investmentToken).decimals();
-            uint256 tokensClaimable = 0;
-            // uint256 tokensClaimable = _claimType == ClaimType.Single
-            //     ? singleRewards[_singleRewardsIndex].schedules[schedule.vestingScheduleIndex]. ((schedule.amountDeposited) / depositedPerVestSchedule[_vestingScheduleIndex]) // 10% of the bucket *
-            //         ((maxTime - minTime) / vestingPeriod) // 50% of the vesting period
-            //     : 0;
+        if (lastClaimedAt < maxTime && block.timestamp > vestingCliff) {
+            uint256 minTime = lastClaimedAt == 0 ? vestingCliff : lastClaimedAt;
+            // TODO we have to reduce the total amounts after LP if not enough funds were raised
+            uint256 totalShare = _claimType == ClaimType.Single
+                ? (lpVestingSchedule.singleVestingSchedules[_singleRewardsIndex].totalSingleTokens *
+                    schedule.amountDeposited) / depositedPerVestSchedule[schedule.vestingScheduleIndex]
+                : (lpVestingSchedule.totalBaseTokens * schedule.amountDeposited) /
+                    depositedPerVestSchedule[schedule.vestingScheduleIndex];
+            uint256 claimableAmount = vestingPeriod == 0 ? totalShare : (totalShare * (maxTime - minTime)) / vestingPeriod;
+            address claimToken = _claimType == ClaimType.Single
+                ? lpVestingSchedule.singleVestingSchedules[_singleRewardsIndex].token
+                : ammData.baseAsset;
 
             // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
             // although it will generally never happen as solidity rounds down so there should always be a little bit left
-            precisionAdjustedClaimable = tokensClaimable > IERC20(lpToken).balanceOf(address(this))
-                ? IERC20(lpToken).balanceOf(address(this))
+            precisionAdjustedClaimable = tokensClaimable > IERC20(claimToken).balanceOf(address(this))
+                ? IERC20(claimToken).balanceOf(address(this))
                 : tokensClaimable;
-        } else if (maxTime == minTime && vestingPeriod == 0) {}
+        }
         return precisionAdjustedClaimable;
     }
 
@@ -580,6 +525,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         _claimTokens(_tokenId, ClaimType.Single, _claimIndex);
     }
 
+    // TODO work on _claimTokens to work with updated claimableTokens method
     function _claimTokens(
         uint256 _tokenId,
         ClaimType _claimType,
@@ -652,34 +598,25 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         uint256 _amount,
         uint8 _vestingScheduleIndex
     ) internal {
-        mintVestingToken(msg.sender, depositTokenAmount, _vestingScheduleIndex);
-        // NOTE there is maybe a better way to do this
-        uint256[] singleRewardTimestamps;
-        for (uint i = 0; i < singleRewards.length; i++) {
-            singleRewardTimestamps[i] = depositExpiry;
-        }
-        // we have to track up to 11 vesting schedules in a single NFT
-        singleRewards[_singleRewards[i].singleHolder][_singleRewards[i].rewardToken] = _singleRewards[i];
-        // we need to track when you claimed each single sided reward separately
-        // and also when you last claimed the base asset
-        // [ts1, ts2, ts3, ts4]
-        // ts1 tied to singleRewards[0]
-        // singleRewards[_singleRewards[i].singleHolder][_singleRewards[i].rewardToken] = _singleRewards[i];
-        _mintVestingToken(_to, _amount, depositExpiry, singleRewardTimestamps, _vestingScheduleIndex);
+        uint256[] memory singleRewardTimestamps = new uint256[](
+            vAmmInfo.lpVestingSchedules[_vestingScheduleIndex].singleVestingSchedules.length
+        );
+        _mintVestingToken(_to, _amount, 0, singleRewardTimestamps, _vestingScheduleIndex);
     }
 
     function singleRewardsToDeposit(address _holder) external view returns (rewardsToDeposit) {
         DepositToken[] rewardsToDeposit;
         for (uint i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
             for (uint j = 0; j < vAmmInfo.lpVestingSchedules[i].singleVestingSchedules; j++) {
-                if (_holder == vAmmInfo.lpVestingSchedules[i].singleVestingSchedules[j].singleHolder) {
+                address singleHolder = vAmmInfo.lpVestingSchedules[i].singleVestingSchedules[j].singleHolder;
+                if (_holder == vAmmInfo.mainHolder || _holder == singleHolder) {
+                    uint256 amountDeposited = holderDeposits[vAmmInfo.mainHolder][i][j] + holderDeposits[singleHolder][i][j];
                     rewardsToDeposit.push(
                         DepositToken(
                             i,
                             j,
                             vAmmInfo.lpVestingSchedules[i].singleVestingSchedules[j].rewardToken,
-                            // TODO reduce this by the amount that has already been deposited
-                            vAmmInfo.lpVestingSchedules[i].singleVestingSchedules[j].totalTokens
+                            vAmmInfo.lpVestingSchedules[i].singleVestingSchedules[j].totalTokens - amountDeposited
                         )
                     );
                 }
