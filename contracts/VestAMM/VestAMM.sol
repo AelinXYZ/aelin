@@ -18,7 +18,7 @@ import "./interfaces/IVestAMM.sol";
 import "./interfaces/IVestAMMLibrary.sol";
 import "contracts/interfaces/balancer/IBalancerPool.sol";
 
-import "contracts/libraries/AelinValidation.sol";
+import "contracts/libraries/validation/VestAMMValidation.sol";
 
 // we will have a modified staking rewards contract that reads the balances of each investor in the locked LP alongside which bucket they are in
 // so you can distribute protocol fees to locked LPs and also do highly targeted rewards just to specific buckets if you want
@@ -97,7 +97,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // TODO do a require check to make sure the pool exists if they are doing a liquidity growth
         if (!_vAmmInfo.hasLaunchPhase) {
             // we need to pass in data to check if the pool exists. ammData is a placeholder but not the right argument
-            require(_ammData.ammLibrary.checkPoolExists(ammData), "pool does not exist");
+            Validate.poolExists(_ammData.ammLibrary.checkPoolExists(ammData), ammData.poolAddress); // NOTE: Check if poolAddress is required if hasLaunchPhase is false
             investmentTokenPerBase = _ammData.ammLibrary.getPriceRatio(_ammData.investmentToken, _ammData.baseAsset);
         }
         // LP vesting schedule array up to 4 buckets
@@ -133,10 +133,10 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // if yes, store it in `nftCollectionDetails` and `nftId` and emit respective events for 721 and 1155
         AelinNftGating.initialize(_dealAccess.nftCollectionRules, nftGating);
 
-        require(!(allowList.hasAllowList && nftGating.hasNftList), "cant have allow list & nft");
-        require(!(allowList.hasAllowList && _dealAccess.merkleRoot != 0), "cant have allow list & merkle");
-        require(!(nftGating.hasNftList && _dealAccess.merkleRoot != 0), "cant have nft & merkle");
-        require(!(bytes(_dealAccess.ipfsHash).length == 0 && _dealAccess.merkleRoot != 0), "merkle needs ipfs hash");
+        Validate.allowListAndNftListNotAllowed(nftGating.hasNftList && _dealAccess.merkleRoot != 0);
+        Validate.allowListAndMerkleNotAllowed(allowList.hasAllowList && nftGating.hasNftList);
+        Validate.nftListAndMerkleNotAllowed(nftGating.hasNftList && _dealAccess.merkleRoot != 0);
+        Validate.hasIPFSHash(bytes(_dealAccess.ipfsHash).length == 0 && _dealAccess.merkleRoot != 0);
     }
 
     function setDepositComplete() internal {
@@ -153,11 +153,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             SingleVestingSchedule singleVestingSchedule = vAmmInfo
                 .lpVestingSchedules[_depositTokens[i].vestingScheduleIndex]
                 .singleVestingSchedules[_depositTokens[i].singleRewardIndex];
-            require(
-                msg.sender == vAmmInfo.mainHolder || singleVestingSchedule.singleHolder == msg.sender,
-                "not the right holder"
-            );
-            require(_depositTokens[i].token == singleVestingSchedule.rewardToken, "not the right token");
+            Validate.holderDepositSingle(vAmmInfo.mainHolder, singleVestingSchedule.singleHolder);
+            Validate.depositSingleToken(_depositTokens[i].token, singleVestingSchedule.rewardToken, i);
+
             require(IERC20(_depositTokens[i].token).balanceOf(msg.sender) > _depositTokens[i].amount, "not enough balance");
             require(!singleVestingSchedule.finalizedDeposit, "deposit already finalized");
             // check deposit is not finalized here
@@ -558,28 +556,26 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     function _validateSchedules(LPVestingSchedule[] _vestingSchedules) internal {
-        require(_vestingSchedules.length <= MAX_LP_VESTING_SCHEDULES, "too many vesting periods");
+        Validate.maxVestingPeriods(MAX_LP_VESTING_SCHEDULES, _vestingSchedules.length);
         for (uint256 i; i < _vestingSchedules.length; ++i) {
             Validate.vestingCliff(1825 days, _vestingSchedules[i].schedule.vestingCliffPeriod);
             Validate.vestingPeriod(1825 days, _vestingSchedules[i].schedule.vestingPeriod);
-            require(0 < _vestingSchedules[i].totalTokens, "allocate tokens to schedule");
-            require(0 == _vestingSchedules[i].claimed, "claimed must start at 0");
-            Validate.investorShare(100 * 10**18, _vestingSchedules[i].investorLPShare);
-            require(0 <= _vestingSchedules[i].investorLPShare, "min 0% to investor");
-            require(_vestingSchedules[i].singleVestingSchedules.length <= MAX_SINGLE_REWARDS, "too many single rewards");
+            Validate.investorShare(100 * 10**18, 0, _vestingSchedules[i].investorLPShare);
+            Validate.hasTotalBaseTokens(_vestingSchedules[i].totalBaseTokens);
+            Validate.nothingClaimed(_vestingSchedules[i].claimed);
+            Validate.maxSingleRewards(MAX_SINGLE_REWARDS, _vestingSchedules[i].singleVestingSchedules.length);
             _validateSingleVestingSched(_vestingSchedules[i].singleVestingSchedules);
         }
     }
 
     function _validateSingleVestingSched(SingleVestingSchedule[] _singleVestingSchedules) internal {
         for (uint256 i; i < _singleVestingSchedules.length; ++i) {
-            require(1825 days >= _singleVestingSchedules[i].vestingCliffPeriod, "max 5 year cliff");
-            require(1825 days >= _singleVestingSchedules[i].vestingPeriod, "max 5 year vesting");
-
-            require(_singleVestingSchedules[i].totalTokens > 0, "need tokens as rewards");
-            require(_singleVestingSchedules[i].claimed == 0, "amount claimed must be 0");
-            require(_singleVestingSchedules[i].singleHolder != address(0), "cant pass null address");
-            require(!_singleVestingSchedules[i].finalizedDeposit, "finalizedDeposit must be false");
+            Validate.singleVestingCliff(1825 days, _singleVestingSchedules[i].vestingCliffPeriod, i);
+            Validate.singleVestingPeriod(1825 days, _singleVestingSchedules[i].vestingPeriod, i);
+            Validate.hasTotalSingleTokens(_singleVestingSchedules[i].totalSingleToken, i);
+            Validate.singleNothingClaimed(_singleVestingSchedules[i].claimed, i);
+            Validate.singleHolderNotNull(_singleVestingSchedules[i].singleHolder, i);
+            Validate.depositNotFinalized(_singleVestingSchedules[i].finalizedDeposit, i);
         }
     }
 
@@ -633,7 +629,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     modifier onlyHolder() {
-        Validate.callerIsHolder(msg.sender);
+        Validate.callerIsHolder(vAmmInfo.mainHolder, msg.sender);
         _;
     }
 
@@ -648,19 +644,18 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     modifier dealCancelled() {
-        Validate.vammIsCancelled(isCancelled, lpDepositTime, lpFundingExpiry);
+        Validate.isCancelled(isCancelled, lpDepositTime, lpFundingExpiry);
         _;
     }
 
     modifier lpFundingWindow() {
-        Validate.vammInFundingWindow(isCancelled, depositComplete, depositExpiry ,lpFundingExpiry);
+        Validate.inFundingWindow(isCancelled, depositComplete, depositExpiry, lpFundingExpiry);
         _;
     }
 
     modifier acceptDealOpen() {
-        require(!isCancelled, "deal is cancelled");
+        Validate.inDepositWindow(isCancelled, depositComplete, depositExpiry);
         // TODO double check < vs <= matches everywhere
-        require(depositComplete && block.timestamp <= depositExpiry, "not in deposit window");
         _;
     }
 
@@ -685,7 +680,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     modifier lock() {
-        require(!locked, "locked");
+        Validate.isUnlocked(locked);
         locked = true;
         _;
         locked = false;
