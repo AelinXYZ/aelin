@@ -1316,6 +1316,10 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         emit AcceptDeal(user2, purchaseCollection2, purchaseCollection2, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseCollection2);
 
+        // user2 can't reuse the same tokens if they want to purchase again
+        vm.expectRevert("tokenId already used");
+        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseCollection2);
+
         // case 3: [collection1] user2 comes back and max out their allocation (purchaseAmountPerToken = true)
         nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
         tokenIdsArray = new uint256[](2);
@@ -1422,6 +1426,10 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         vm.expectEmit(true, false, false, true);
         emit AcceptDeal(user1, purchaseAmount, purchaseAmount, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
+
+        // user1 can't reuse the same tokens if they want to purchase again
+        vm.expectRevert("tokenId already used");
+        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
         vm.stopPrank();
 
         // user2 tries to buy all the allocation
@@ -1434,6 +1442,10 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         poolSharesAmount = (purchaseCollection * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
         vm.expectEmit(true, false, false, true);
         emit AcceptDeal(user2, purchaseCollection, purchaseCollection, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseCollection);
+
+        // user2 can't reuse the same tokens if they want to purchase again
+        vm.expectRevert("tokenId already used");
         AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseCollection);
         vm.stopPrank();
 

@@ -76,7 +76,7 @@
 		"@nomiclabs/hardhat-ethers": "2.0.2",
 		"@nomiclabs/hardhat-etherscan": "3.0.1",
 		"@nomiclabs/hardhat-waffle": "2.0.3",
-		"@openzeppelin/contracts": "^4.8.2",
+		"@openzeppelin/contracts": "^4.5.0",
 		"@openzeppelin/legacy-contracts": "npm:@openzeppelin/contracts@3.4.2",
 		"@synthetixio/optimism-networks": "2.56.3",
 		"@typechain/ethers-v5": "7.0.1",
@@ -86,7 +86,6 @@
 		"@typescript-eslint/eslint-plugin": "4.29.2",
 		"@typescript-eslint/parser": "4.29.2",
 		"chai": "4.3.4",
-		"date-fns": "^2.29.3",
 		"dotenv": "16.0.0",
 		"eslint": "7.32.0",
 		"eslint-config-prettier": "8.3.0",
@@ -99,7 +98,6 @@
 		"hardhat-cannon": "1.1.9",
 		"hardhat-gas-reporter": "1.0.4",
 		"hardhat-interact": "0.2.0",
-		"json2csv": "^6.0.0-alpha.2",
 		"jsonfile": "^6.1.0",
 		"keccak256": "1.0.3",
 		"lodash": "4.17.21",
@@ -112,6 +110,8 @@
 		"ts-node": "10.2.1",
 		"typechain": "5.1.2",
 		"typescript": "4.3.5",
-		"whatwg-url": "^11.0.0"
+		"whatwg-url": "^11.0.0",
+		"date-fns": "^2.29.3",
+		"json2csv": "^6.0.0-alpha.2"
 	}
 }
