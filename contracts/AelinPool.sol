@@ -49,8 +49,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     mapping(address => uint256) public allowList;
     // collectionAddress -> NftCollectionRules struct
     mapping(address => NftCollectionRules) public nftCollectionDetails;
-    // collectionAddress -> walletAddress -> bool
-    mapping(address => mapping(address => bool)) public nftWalletUsedForPurchase;
     // collectionAddress -> tokenId -> bool
     /**
      * @dev For 721, it is used for blacklisting the tokenId of a collection
@@ -144,11 +142,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
                         "can only contain 721"
                     );
                     nftCollectionDetails[nftCollectionRules[i].collectionAddress] = nftCollectionRules[i];
-                    emit PoolWith721(
-                        nftCollectionRules[i].collectionAddress,
-                        nftCollectionRules[i].purchaseAmount,
-                        nftCollectionRules[i].purchaseAmountPerToken
-                    );
+                    emit PoolWith721(nftCollectionRules[i].collectionAddress, nftCollectionRules[i].purchaseAmount);
                 }
                 hasNftList = true;
             }
@@ -156,6 +150,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
             else if (NftCheck.supports1155(nftCollectionRules[0].collectionAddress)) {
                 for (uint256 i; i < nftCollectionRules.length; ++i) {
                     require(NftCheck.supports1155(nftCollectionRules[i].collectionAddress), "can only contain 1155");
+                    require(nftCollectionRules[i].purchaseAmount == 0, "purchase amt must be 0 for 1155");
                     nftCollectionDetails[nftCollectionRules[i].collectionAddress] = nftCollectionRules[i];
 
                     for (uint256 j; j < nftCollectionRules[i].tokenIds.length; ++j) {
@@ -164,7 +159,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
                     emit PoolWith1155(
                         nftCollectionRules[i].collectionAddress,
                         nftCollectionRules[i].purchaseAmount,
-                        nftCollectionRules[i].purchaseAmountPerToken,
                         nftCollectionRules[i].tokenIds,
                         nftCollectionRules[i].minTokensEligible
                     );
@@ -238,14 +232,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
             require(collectionAddress != address(0), "collection should not be null");
             require(nftCollectionRules.collectionAddress == collectionAddress, "collection not in the pool");
 
-            if (nftCollectionRules.purchaseAmountPerToken) {
+            if (nftCollectionRules.purchaseAmount > 0) {
                 maxPurchaseTokenAmount += nftCollectionRules.purchaseAmount * tokenIds.length;
-            }
-
-            if (!nftCollectionRules.purchaseAmountPerToken && nftCollectionRules.purchaseAmount > 0) {
-                require(!nftWalletUsedForPurchase[collectionAddress][msg.sender], "wallet already used for nft set");
-                nftWalletUsedForPurchase[collectionAddress][msg.sender] = true;
-                maxPurchaseTokenAmount += nftCollectionRules.purchaseAmount;
             }
 
             if (nftCollectionRules.purchaseAmount == 0) {
@@ -693,11 +681,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256 holderFundingDuration
     );
     event AllowlistAddress(address indexed purchaser, uint256 allowlistAmount);
-    event PoolWith721(address indexed collectionAddress, uint256 purchaseAmount, bool purchaseAmountPerToken);
+    event PoolWith721(address indexed collectionAddress, uint256 purchaseAmount);
     event PoolWith1155(
         address indexed collectionAddress,
         uint256 purchaseAmount,
-        bool purchaseAmountPerToken,
         uint256[] tokenIds,
         uint256[] minTokensEligible
     );

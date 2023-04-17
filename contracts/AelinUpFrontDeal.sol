@@ -524,17 +524,15 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
      * @param _collection NFT collection address to get the collection details for
      * @return uint256 purchase amount, if 0 then unlimited purchase
      * @return address collection address used for configuration
-     * @return bool if true then purchase amount is per token, if false then purchase amount is per user
      * @return uint256[] for ERC1155, included token IDs for this collection
      * @return uint256[] for ERC1155, min number of tokens required for participating
      */
     function getNftCollectionDetails(
         address _collection
-    ) public view returns (uint256, address, bool, uint256[] memory, uint256[] memory) {
+    ) public view returns (uint256, address, uint256[] memory, uint256[] memory) {
         return (
             nftGating.nftCollectionDetails[_collection].purchaseAmount,
             nftGating.nftCollectionDetails[_collection].collectionAddress,
-            nftGating.nftCollectionDetails[_collection].purchaseAmountPerToken,
             nftGating.nftCollectionDetails[_collection].tokenIds,
             nftGating.nftCollectionDetails[_collection].minTokensEligible
         );
@@ -543,22 +541,12 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     /**
      * @dev returns various details about the NFT gating storage
      * @param _collection NFT collection address to check
-     * @param _wallet user address to check
      * @param _nftId if _collection is ERC721 or CryptoPunks check if this ID has been used, if ERC1155 check if this ID is included
-     * @return bool true if the _wallet has already been used to claim this _collection
      * @return bool if _collection is ERC721 or CryptoPunks true if this ID has been used, if ERC1155 true if this ID is included
      * @return bool returns hasNftList, true if this deal has a valid NFT gating list
      */
-    function getNftGatingDetails(
-        address _collection,
-        address _wallet,
-        uint256 _nftId
-    ) public view returns (bool, bool, bool) {
-        return (
-            nftGating.nftWalletUsedForPurchase[_collection][_wallet],
-            nftGating.nftId[_collection][_nftId],
-            nftGating.hasNftList
-        );
+    function getNftGatingDetails(address _collection, uint256 _nftId) public view returns (bool, bool) {
+        return (nftGating.nftId[_collection][_nftId], nftGating.hasNftList);
     }
 
     /**
