@@ -31,12 +31,15 @@ import "contracts/libraries/validation/VestAMMValidation.sol";
 contract VestAMM is AelinVestingToken, IVestAMM {
     using SafeERC20 for IERC20;
 
+    //  - we create the pool with the given ratios and tokens (only for liquidity launch)
+    //  - we deposit the LP tokens
+    //  - we have to track the amount of tokens we deposited vs the amount we allocated per main bucket (up to 4)
+
     uint256 constant BASE = 100 * 10**18;
     uint256 constant VEST_ASSET_FEE = 1 * 10**18;
     uint256 constant VEST_SWAP_FEE = 20 * 10**18;
     uint256 public depositExpiry;
     uint256 public lpFundingExpiry;
-    uint256 public lpDepositTime;
     uint256 public totalLPClaimed;
     uint256 public holderTokenTotal;
     uint256 public maxInvTokens;
@@ -72,7 +75,10 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     bool private baseComplete;
     bool public isCancelled;
 
+    // TODO save the LP token address when we create liquidity that we are holding which must be used when investors are claiming LP tokens
     address public lpToken;
+    uint256 public lpDepositTime;
+    uint256 public globalTotalLPTokens;
 
     /**
      * @dev initializes the contract configuration, called from the factory contract when creating a new Up Front Deal
@@ -231,7 +237,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             SingleVestingSchedule singleVestingSchedule = lpVestingSchedule.singleVestingSchedules[
                 _removeSingleList[i].singleRewardIndex
             ];
-
             Validate.singleHolder(vAmmInfo.mainHolder, singleVestingSchedule.singleHolder, i);
             uint256 mainHolderAmount = holderDeposits[vAmmInfo.mainHolder][_removeSingleList[i].vestingScheduleIndex][
                 _removeSingleList[i].singleRewardIndex
@@ -295,31 +300,37 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         address baseAsset = ammData.baseAsset;
 
         uint256 balanceBeforeTransfer = IERC20(baseAsset).balanceOf(address(this));
-        IERC20(baseAsset).safeTransferFrom(msg.sender, address(this), baseAssetAmount);
+        IERC20(baseAsset).safeTransferFrom(msg.sender, address(this), holderTokenTotal);
         uint256 balanceAfterTransfer = IERC20(baseAsset).balanceOf(address(this));
         uint256 amountPostTransfer = balanceAfterTransfer - balanceBeforeTransfer;
         amountBaseDeposited += amountPostTransfer;
         emit DepositPoolToken(baseAsset, msg.sender, amountPostTransfer);
-        if (amountBaseDeposited >= ammData.baseAssetAmount) {
+        if (amountBaseDeposited >= holderTokenTotal) {
             baseComplete = true;
         }
 
         setDepositComplete();
     }
 
-    // TODO circle back to this method
-    function withdrawExcessFunding(bool _isBase, uint256 _singleIndex) external {
-        // TODO emit any events?
-        // TODO store baseAccepted under acceptDeal probably
-        if (_isBase && holderDeposits[msg.sender][baseAsset] > (ammData.baseAssetAmount - baseAccepted)) {
-            Validate.mainHolder(vAmmInfo.mainHolder);
-            uint256 excessAmount = holderDeposits[msg.sender][baseAsset] - (ammData.baseAssetAmount - baseAccepted);
+    function withdrawAllExcessFunding() external {
+        for (uint i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
+            withdrawExcessFunding(i);
+        }
+    }
+
+    function withdrawExcessFunding(uint256 _vestingScheduleIndex) external {
+        LPVestingSchedule lpVestingSchedule = vAmmInfo.vestingSchedules[schedule.vestingScheduleIndex];
+        if (vAmmInfo.holder == msg.sender) {
+            uint256 excessAmount = lpVestingSchedule.totalBaseTokens -
+                ((lpVestingSchedule.totalBaseTokens * depositedPerVestSchedule[_vestingScheduleIndex]) /
+                    maxInvTokensPerVestSchedule[_vestingScheduleIndex]);
             IERC20(ammData.baseAsset).safeTransferFrom(address(this), msg.sender, excessAmount);
-        } else {
-            Validate.singleHolder(vAmmInfo.mainHolder, singleRewards[_singleIndex].singleHolder, _singleIndex);
-            // TODO deleted amountClaimed from single rewards. maybe add back if needed. tbd
-            uint256 excessAmount = holderDeposits[msg.sender][singleRewards[_singleIndex].token] -
-                (singleRewards[_singleIndex].rewardTokenTotal - singleRewards[_singleIndex].amountClaimed);
+        }
+        for (uint i = 0; i < lpVestingSchedule.singleVestingSchedules.length; i++) {
+            Validate.singleHolder(vAmmInfo.mainHolder, lpVestingSchedule.singleVestingSchedules[i].singleHolder, i);
+            uint256 excessAmount = lpVestingSchedule.singleVestingSchedules[i].totalSingleTokens -
+                ((lpVestingSchedule.singleVestingSchedules[i].totalSingleTokens *
+                    depositedPerVestSchedule[_vestingScheduleIndex]) / maxInvTokensPerVestSchedule[_vestingScheduleIndex]);
             IERC20(singleRewards[_singleIndex].token).safeTransferFrom(address(this), msg.sender, excessAmount);
         }
     }
@@ -362,6 +373,70 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         emit AcceptVestDeal(msg.sender, depositTokenAmount, _vestingScheduleIndex);
     }
 
+    // phase 0 is deposit all tokens from holders (no deadlines). mostly done
+    // phase 1 is deposit investment tokens from depositors (deposit expiry). mostly done
+    // phase 2 is deposit LP tokens to finalize the deal. TODO.
+    // phase 2 NOTE: Liquidity Launch Pools and Liquidity Growth Pools
+    //
+    //  - we create the pool with the given ratios and tokens (only for liquidity launch)
+    //  - we deposit the LP tokens
+    //  - we set the amount of LP tokens deposited
+    //  - we set the time when the LP tokens were deposited
+    //
+    //  - e.g.you have 3 buckets with 10, 20 and 30 ABC tokens each with longer vesting schedules than the previous bucket
+    //    in addition to the ABC there is OP single sided rewards of 10, 20 and 30 for each bucket as well
+    //    ABC is raising at a price of 10 sUSD so you have 100 sUSD, 200 sUSD and 300 sUSD as the max amount of investment tokens per bucket
+    //    so if bucket 1 only fills up 50%, bucket 2 fills up 75% and bucket 3 fills to the cap
+    //    assuming this is a liquidity launch for ABC then the logic is when we go to deposit LP tokens
+    //    first we will create the pool, then we will deposit 5 ABC (50% * 10) from bucket 1, 15 ABC from bucket 2 (75% * 20), and 30 ABC from bucket 3 (100% * 30)
+    //    in total this is 5 + 15 + 30 = 50 AELIN. and we also raised 500 sUSD. so we are going to LP 50 AELIN/500 sUSD and we need to
+    //    note the address of the LP tokens we get back as well as how many LP tokens we get back and the time when we deposited (save to storage)
+    //
+    //  - the more complicated phase is a liquidity growth phase
+    //  - in this growth phase the prices are shifting
+    //  - price at start of pool is 10 sUSD per ABC
+    //  - e.g.you have 3 buckets with 10, 20 and 30 ABC tokens each fills up 50%, 75%, and 100% based on the price at the start of the pool
+    //  - the price of ABC between the start of the pool and the time we LP is irrelevant.
+    //  - we only care about the price when the pool starts as well as the price when we go to LP
+    //  - if the price of ABC goes down to $5 then...
+    //    - the maximum amount of sUSD we can accept is $50, $100, $150
+    //    - but there is $50, $150 and $300 in each bucket. this was the maximum amount based on the starting price
+    //    - 2 issues. first
+    //    - NOTE: since the price went down investors are happy because they get more ABC tokens for the same amount of sUSD
+    //    - NOTE we might want to let the protocol deposit extra tokens on their side in order to use the full amount of sUSD
+    //      - for bucket 1 if the price is 5 sUSD now even though the price was $10 and we only filled up half the pool we
+    //      - actually have enough ABC to match all the sUSD now 50 sUSD/ 10 ABC. now the investors get double the amount of ABC. there is no problem
+    //      - for bucket 3 if the price 5 sUSD the total 300/ 60 ABC is the max but we only have 30 ABC in the contract.
+    //      - ideally the protocol can decide to deposit an extra 30 ABC here or we can force them to only take half the sUSD and return the rest
+    //      - option 1 is you take 150/30 or you add more ABC and do 300/60. TBD
+    //  - if the price of ABC stays flat at $10 then the logic is exact same as a liquidity launch (will basically never happen)...
+    //    - the maximum amount of sUSD we can accept is $100, $200, $300
+    //  - if the price of ABC goes up to $20 then...
+    //    - the maximum amount of sUSD we can accept is $100, $200, $300
+    //    - however the amounts in the pool are $50, $150 and $300
+    //    - for bucket 1 we want to LP (50 sUSD/ 2.5 ABC).
+    //         if the price was $10 the investors would have had more ABC in their LP. 50 sUSD/ 5 ABC
+    //         so they will get at least 5 ABC tokens as a reward (LP or single sided)
+    //         however when the price goes up they get less than 5 ABC. so we give them the extra as single sided rewards
+    //         the math for this is:
+    //         total allocation to bucket 1 (10 ABC) - (percent of bucket 1 empty (50%) * total allocation to bucket 1 (10 ABC)) = 10 - 5 = 5 ABC - the amount of ABC in the LP (2.5) = 5 - 2.5 = 2.5 AELIN single sided rewards
+    //         2.5 ABC will be added as single rewards for this bucket. 5 ABC will go back to the protocol
+    //    - for bucket 2 we want to LP (150 sUSD/ 7.5 ABC).
+    //         if the price was $10 the investors would have had more ABC in their LP. 150 sUSD/ 15 ABC
+    //         so they will get at least 15 ABC tokens as a reward (LP or single sided) and 5 ABC tokens are going back to the protocol
+    //         however when the price goes up they get less than 15 ABC. so we give them the extra as single sided rewards
+    //         the math for this is:
+    //         total allocation to bucket 2 (20 ABC) - (percent of bucket 1 empty (25%) * total allocation to bucket 1 (20 ABC)) = 20 - 5 = 15 ABC - the amount of ABC in the LP (7.5) = 15 - 7.5 = 7.5 AELIN single sided rewards
+    //         7.5 ABC will be added as single rewards for this bucket. 5 ABC will go back to the protocol
+    //    - for bucket 3 we want to LP (300 sUSD/ 15 ABC).
+    //         if the price was $10 the investors would have had more ABC in their LP. 300 sUSD/ 30 ABC
+    //         so they will get at least 30 ABC tokens as a reward (LP or single sided) and 0 ABC tokens are going back to the protocol since the bucket is full
+    //         however when the price goes up they get less than 30 ABC. so we give them the extra as single sided rewards
+    //         the math for this is:
+    //         total allocation to bucket 3 (30 ABC) - (percent of bucket 1 empty (0%) * total allocation to bucket 1 (30 ABC)) = 30 - 0 = 30 ABC - the amount of ABC in the LP (15) = 30 - 15 = 15 AELIN single sided rewards
+    //         7.5 ABC will be added as single rewards for this bucket. 5 ABC will go back to the protocol
+    // phase 3 is just claiming. mostly done
+    // also phase 3/ phase 4 is VestAMMMultiRewards.sol where only the mainHolder can emit new rewards to locked LPs. TODO.
     // to create the pool and deposit assets after phase 0 ends
     // TODO create a struct here that should cover every AMM. If needed to support more add a second struct
     function createInitialLiquidity(IBalancerPool.CreateNewPool _createPool, bytes memory _userData)
@@ -461,15 +536,27 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         if (lastClaimedAt < maxTime && block.timestamp > vestingCliff) {
             uint256 minTime = lastClaimedAt == 0 ? vestingCliff : lastClaimedAt;
             // TODO we have to reduce the total amounts after LP if not enough funds were raised
+            // NOTE using totalSingleTokens assumes that the main vesting schedule bucket tied to
+            // these single sided rewards has been completely filled. However, if a bucket in only
+            // half filled by investors then half the single sided rewards should go back to the
+            // holder that deposited them. this is the next big piece of logic to work on.
+            // e.g. 4 main vesting buckets. each bucket has 100 AELIN. the price of AELIN is 1000 sUSD.
+            // bucket 2 gets 50K sUSD deposited only but the other buckets all get 100K sUSD. in this
+            // example buckets 1,3,4 are working properly with this example. However, for bucket 2 the
+            // holders (main + single holder) can take back half of their rewards both in AELIN as well
+            // as single sided rewards. in this case the totalSingleTokens should only be half the amount.
+            // all this logic can be handled in the create liquidity methods.
+            // NOTE that using the totalBaseTokens is in fact incorrect. we should instead be using LP units
+            // the LP units will be tracked during create liquidity.
             uint256 totalShare = _claimType == ClaimType.Single
                 ? (lpVestingSchedule.singleVestingSchedules[_singleRewardsIndex].totalSingleTokens *
                     schedule.amountDeposited) / depositedPerVestSchedule[schedule.vestingScheduleIndex]
-                : (lpVestingSchedule.totalBaseTokens * schedule.amountDeposited) /
+                : (lpVestingSchedule.totalLPTokens * schedule.amountDeposited) /
                     depositedPerVestSchedule[schedule.vestingScheduleIndex];
             uint256 claimableAmount = vestingPeriod == 0 ? totalShare : (totalShare * (maxTime - minTime)) / vestingPeriod;
             address claimToken = _claimType == ClaimType.Single
                 ? lpVestingSchedule.singleVestingSchedules[_singleRewardsIndex].token
-                : ammData.baseAsset;
+                : lpToken;
 
             // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
             // although it will generally never happen as solidity rounds down so there should always be a little bit left
@@ -483,7 +570,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     /**
      * @dev allows a user to claim their all their vested tokens across a single NFT
      */
-    function claimAllTokens(uint256 _tokenId) external {
+    function claimAllTokensSingleNFT(uint256 _tokenId) external {
         claimLPTokens(_tokenId);
         VestVestingToken memory schedule = vestingDetails[_tokenId];
         LPVestingSchedule lpVestingSchedule = vAmmInfo.vestingSchedules[schedule.vestingScheduleIndex];
@@ -495,9 +582,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     /**
      * @dev allows a user to claim their all their vested tokens across many NFTs
      */
-    function claimManyNFTs(uint256[] _tokenIds) external {
+    function claimAllTokensManyNFTs(uint256[] _tokenIds) external {
         for (uint256 i; i < _tokenIds.length; i++) {
-            claimAllTokens(_tokenIds[i]);
+            claimAllTokensSingleNFT(_tokenIds[i]);
         }
     }
 
@@ -529,15 +616,15 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         VestVestingToken memory schedule = vestingDetails[_tokenId];
         address claimToken = _claimType == ClaimType.Single
             ? lpVestingSchedule.singleVestingSchedules[_singleRewardsIndex].token
-            : ammData.baseAsset;
-        if (_claimType == ClaimType.LP) {
-            vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
-            totalLPClaimed += claimableAmount;
-            lpClaimedPerVestSchedule[schedule.vestingScheduleIndex] += claimableAmount;
-        } else {
+            : lpToken;
+        if (_claimType == ClaimType.Single) {
             vestingDetails[_tokenId].lastClaimedAtRewardList[_singleRewardsIndex] = block.timestamp;
             singleClaimedPerVestSchedule[schedule.vestingScheduleIndex][_singleRewardsIndex] += claimableAmount;
             totalSingleClaimed[claimToken] += claimableAmount;
+        } else {
+            vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
+            totalLPClaimed += claimableAmount;
+            lpClaimedPerVestSchedule[schedule.vestingScheduleIndex] += claimableAmount;
         }
         // TODO indicate to the VestAMMMultiRewards staking rewards contract that
         // a withdraw has occured and they now have less funds locked
@@ -566,6 +653,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             Validate.vestingPeriod(1825 days, _vestingSchedules[i].schedule.vestingPeriod, i);
             Validate.investorShare(100 * 10**18, 0, _vestingSchedules[i].investorLPShare, i);
             Validate.hasTotalBaseTokens(_vestingSchedules[i].totalBaseTokens, i);
+            Validate.lpNotZero(_vestingSchedules[i].totalLPTokens, i);
             Validate.nothingClaimed(_vestingSchedules[i].claimed, i);
             Validate.maxSingleRewards(MAX_SINGLE_REWARDS, _vestingSchedules[i].singleVestingSchedules.length, i);
             _validateSingleVestingSched(_vestingSchedules[i].singleVestingSchedules);

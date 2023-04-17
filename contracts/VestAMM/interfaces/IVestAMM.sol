@@ -30,6 +30,8 @@ interface IVestAMM {
         uint256 vestingPeriod;
         uint256 vestingCliffPeriod;
         uint256 totalBaseTokens;
+        // TODO add validation this is set to 0
+        uint256 totalLPTokens;
         uint256 claimed;
         bool finalizedDeposit;
         uint8 investorLPShare; // 0 - 100
@@ -40,7 +42,6 @@ interface IVestAMM {
         address ammLibrary; // could be null if no liquidity yet
         address investmentToken;
         address baseAsset;
-        uint256 baseAssetAmount;
     }
 
     struct FundingLimits {

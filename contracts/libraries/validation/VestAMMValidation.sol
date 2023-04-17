@@ -24,6 +24,7 @@ library Validate {
     error TooManyVestingPeriods(uint256 allowed, uint256 actual);
     error AMMPoolDoesNotExist(address poolAddress);
     error ClaimedNotZero(uint256 index);
+    error TotalLPNotZero(uint256 totalLPTokens, uint256 index);
     error AllowListAndNFTListNotAllowed();
     error AllowListAndMerkleNotAllowed();
     error NFTListAndMerkleNotAllowed();
@@ -192,6 +193,12 @@ library Validate {
     function hasTotalSingleTokens(uint256 _totalBaseTokens, uint256 _index) external pure {
         if (_totalBaseTokens == 0) {
             revert SingleTokensNotAllocated({index: _index});
+        }
+    }
+
+    function lpNotZero(uint256 _totalLPTokens, uint256 _index) external pure {
+        if (_totalLPTokens > 0) {
+            revert TotalLPNotZero({totalLPTokens: _totalLPTokens, index: _index});
         }
     }
 

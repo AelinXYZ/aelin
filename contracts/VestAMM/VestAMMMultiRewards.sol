@@ -451,6 +451,10 @@ contract VestAMMMultiRewards is ReentrancyGuard, Pausable {
 
     /* ========== CONSTRUCTOR ========== */
 
+    // TODO make sure the protocol creating the vest amm instance is the owner of this contract
+    // this is important because only the owner can add rewards. so the protocol is responsible
+    // for distributing any additional rewards to LPs while they are locked in addition to any
+    // rewards in the vAMM single sided rewards and the potentially extra LP tokens investors get
     constructor(address _owner) public Owned(_owner) {}
 
     function addReward(
