@@ -153,11 +153,11 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             SingleVestingSchedule singleVestingSchedule = vAmmInfo
                 .lpVestingSchedules[_depositTokens[i].vestingScheduleIndex]
                 .singleVestingSchedules[_depositTokens[i].singleRewardIndex];
-            Validate.holderDepositSingle(vAmmInfo.mainHolder, singleVestingSchedule.singleHolder);
-            Validate.depositSingleToken(_depositTokens[i].token, singleVestingSchedule.rewardToken, i);
+            Validate.singleHolder(vAmmInfo.mainHolder, singleVestingSchedule.singleHolder, i);
+            Validate.singleToken(_depositTokens[i].token, singleVestingSchedule.rewardToken, i);
+            Valida.singleTokenBalance(_depositTokens[i].amount, IERC20(_depositTokens[i].token).balanceOf(msg.sender), i);
+            Validate.signleDepositNotFinalized(singleVestingSchedule.finalizedDeposit, i);
 
-            require(IERC20(_depositTokens[i].token).balanceOf(msg.sender) > _depositTokens[i].amount, "not enough balance");
-            require(!singleVestingSchedule.finalizedDeposit, "deposit already finalized");
             // check deposit is not finalized here
             uint256 balanceBeforeTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
             IERC20(_depositTokens[i].token).safeTransferFrom(msg.sender, address(this), _depositTokens[i].amount);
@@ -213,11 +213,11 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         depositIncomplete
         dealOpen
     {
-        require(_lpVestingIndexList.length == _newSingleRewards.length, "arrays must be same length");
+        Validate.lpVestingAndSingleArrayLength(_lpVestingIndexList.length, _newSingleRewards.length);
         _validateSingleVestingSched(_newSingleRewards);
         for (uint8 i = 0; i < _lpVestingIndexList.length; i++) {
             LPVestingSchedule lpVestingSchedule = vAmmInfo.lpVestingSchedules[_lpVestingIndexList[i]];
-            require(lpVestingSchedule.singleVestingSchedules.length < MAX_SINGLE_REWARDS, "too many rewards already");
+            Validae.maxSingleRewards(MAX_SINGLE_REWARDS, lpVestingSchedule.singleVestingSchedules.length, i);
             lpVestingSchedule.singleVestingSchedules[lpVestingSchedule.singleVestingSchedules.length] = _newSingleRewards[i];
         }
     }
@@ -229,10 +229,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
                 _removeSingleList[i].singleRewardIndex
             ];
 
-            require(
-                msg.sender == vAmmInfo.mainHolder || singleVestingSchedule.singleHolder == msg.sender,
-                "not the right holder"
-            );
+            Validate.singleHolder(vAmmInfo.mainHolder, singleVestingSchedule.singleHolder, i);
             uint256 mainHolderAmount = holderDeposits[vAmmInfo.mainHolder][_removeSingleList[i].vestingScheduleIndex][
                 _removeSingleList[i].singleRewardIndex
             ];
@@ -291,7 +288,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     function depositBase() external onlyHolder depositIncomplete dealOpen {
-        require(!baseComplete, "already deposited base asset");
+        Validate.baseDepositNotCompleted(baseComplete);
         address baseAsset = ammData.baseAsset;
 
         uint256 balanceBeforeTransfer = IERC20(baseAsset).balanceOf(address(this));
@@ -312,14 +309,11 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // TODO emit any events?
         // TODO store baseAccepted under acceptDeal probably
         if (_isBase && holderDeposits[msg.sender][baseAsset] > (ammData.baseAssetAmount - baseAccepted)) {
-            require(msg.sender == vAmmInfo.mainHolder, "not the right holder");
+            Validate.mainHolder(vAmmInfo.mainHolder);
             uint256 excessAmount = holderDeposits[msg.sender][baseAsset] - (ammData.baseAssetAmount - baseAccepted);
             IERC20(ammData.baseAsset).safeTransferFrom(address(this), msg.sender, excessAmount);
         } else {
-            require(
-                msg.sender == vAmmInfo.mainHolder || singleRewards[_singleIndex].holder == msg.sender,
-                "not the right holder"
-            );
+            Validate.singleHolder(vAmmInfo.mainHolder, singleRewards[_singleIndex].singleHolder, _singleIndex);
             // TODO deleted amountClaimed from single rewards. maybe add back if needed. tbd
             uint256 excessAmount = holderDeposits[msg.sender][singleRewards[_singleIndex].token] -
                 (singleRewards[_singleIndex].rewardTokenTotal - singleRewards[_singleIndex].amountClaimed);
@@ -335,13 +329,12 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     ) external lock acceptDealOpen vestingScheduleOpen(_vestingScheduleIndex, _investmentTokenAmount) {
         // TODO how to check if an array item is empty in solidity.
         // it says access to a non-existing index will throw an exception. lets test this.
-        require(!!vAmmInfo.vestingSchedule[_vestingScheduleIndex], "vesting schedule doesnt exist");
-        address investmentToken = ammContract.investmentToken;
-        require(IERC20(investmentToken).balanceOf(msg.sender) >= _investmentTokenAmount, "balance too low");
+        Validate.vestingScheduleExists(!!vAmmInfo.vestingSchedule[_vestingScheduleIndex], _vestingScheduleIndex);
+        Validate.investmentTokenBalance(_investmentTokenAmount, IERC20(ammContract.investmentToken).balanceOf(msg.sender));
         if (nftGating.hasNftList || _nftPurchaseList.length > 0) {
             AelinNftGating.purchaseDealTokensWithNft(_nftPurchaseList, nftGating, _investmentTokenAmount);
         } else if (allowList.hasAllowList) {
-            require(_investmentTokenAmount <= allowList.amountPerAddress[msg.sender], "more than allocation");
+            Validate.allocation(allowList.amountPerAddress[msg.sender], _investmentTokenAmount);
             allowList.amountPerAddress[msg.sender] -= _investmentTokenAmount;
         } else if (dealAccess.merkleRoot != 0) {
             MerkleTree.purchaseMerkleAmount(_merkleData, trackClaimed, _investmentTokenAmount, dealAccess.merkleRoot);
@@ -373,7 +366,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         onlyHolder
         lpFundingWindow
     {
-        require(vAMMInfo.hasLiquidityLaunch, "only for new liquidity");
+        validate.notLiquidityLaunch(vAmmInfo.hasLiquidityLaunch);
         // NOTE for this method we are going to want to pass in a lot of the arguments from
         // data stored in the contract. it won't be a pure pass through like we have now
         // at this stage in the development process
@@ -383,7 +376,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     // to create the pool and deposit assets after phase 0 ends
     function createLiquidity(IBalancerPool.AddLiquidity _addLiquidity) external onlyHolder lpFundingWindow {
-        require(!vAMMInfo.hasLiquidityLaunche, "only for existing liquidity");
+        Validate.isLiquidityLaunch(vAmmInfo.hasLiquidityLaunch);
         IVestAMMLibrary(ammData.ammLibrary).addLiquidity(_addLiquidity);
         finalizeVesting();
     }
@@ -415,7 +408,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     // NOTE maybe this is a public function so we can call it internally when
     // they claim if they haven't yet withdrawn their deallocated amount
     function depositorDeallocWithdraw(uint256[] _tokenIds) external {
-        require(depositComplete && block.timestamp > lpFundingExpiry, "not time to withdraw");
+        Validate.withdrawAllowed(_depositComplete, _lpFundingExpiry);
         for (uint256 i; i < _tokenIds.length; i++) {
             VestVestingToken memory schedule = vestingDetails[_tokenId];
             // TODO need to calculate and save this number during LP submission
@@ -531,10 +524,10 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         ClaimType _claimType,
         uint256 _claimIndex
     ) internal {
-        require(ownerOf(_tokenId) == msg.sender, "must be owner to claim");
+        Validate.owner(ownerOf(_tokenId));
         // TODO double check this doesn't error if there are no single sided rewards
         uint256 claimableAmount = claimableTokens(_tokenId, _claimType, _claimIndex);
-        require(claimableAmount > 0, "no lp tokens ready to claim");
+        Validate.claimBalance(claimableAmount);
         if (_claimType == ClaimType.LP) {
             vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
             totalLPClaimed += claimableAmount;
@@ -558,12 +551,12 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     function _validateSchedules(LPVestingSchedule[] _vestingSchedules) internal {
         Validate.maxVestingPeriods(MAX_LP_VESTING_SCHEDULES, _vestingSchedules.length);
         for (uint256 i; i < _vestingSchedules.length; ++i) {
-            Validate.vestingCliff(1825 days, _vestingSchedules[i].schedule.vestingCliffPeriod);
-            Validate.vestingPeriod(1825 days, _vestingSchedules[i].schedule.vestingPeriod);
-            Validate.investorShare(100 * 10**18, 0, _vestingSchedules[i].investorLPShare);
-            Validate.hasTotalBaseTokens(_vestingSchedules[i].totalBaseTokens);
-            Validate.nothingClaimed(_vestingSchedules[i].claimed);
-            Validate.maxSingleRewards(MAX_SINGLE_REWARDS, _vestingSchedules[i].singleVestingSchedules.length);
+            Validate.vestingCliff(1825 days, _vestingSchedules[i].schedule.vestingCliffPeriod, i);
+            Validate.vestingPeriod(1825 days, _vestingSchedules[i].schedule.vestingPeriod, i);
+            Validate.investorShare(100 * 10**18, 0, _vestingSchedules[i].investorLPShare, i);
+            Validate.hasTotalBaseTokens(_vestingSchedules[i].totalBaseTokens, i);
+            Validate.nothingClaimed(_vestingSchedules[i].claimed, i);
+            Validate.maxSingleRewards(MAX_SINGLE_REWARDS, _vestingSchedules[i].singleVestingSchedules.length, i);
             _validateSingleVestingSched(_vestingSchedules[i].singleVestingSchedules);
         }
     }
@@ -639,7 +632,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     modifier dealOpen() {
-        require(!isCancelled, "deal is cancelled");
+        Validate.daelIsOpen(!isCancelled);
         _;
     }
 
@@ -670,11 +663,12 @@ contract VestAMM is AelinVestingToken, IVestAMM {
                 break;
             }
         }
-        require(
-            depositedPerVestSchedule[_vestingScheduleIndex] + _investmentTokenAmount <=
-                maxInvTokensPerVestSchedule[_vestingScheduleIndex] ||
-                (otherBucketsFull && vAmmInfo.deallocation == Deallocation.Proportional),
-            "purchased more than total"
+        Validate.purchaseAmount(
+            depositedPerVestSchedule[_vestingScheduleIndex],
+            maxInvTokensPerVestSchedule[_vestingScheduleIndex],
+            _investmentTokenAmount,
+            otherBucketsFull,
+            vAmmInfo.deallocation == Deallocation.Proportional
         );
         _;
     }
