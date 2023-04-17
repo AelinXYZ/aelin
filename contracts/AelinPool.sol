@@ -49,7 +49,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     mapping(address => uint256) public allowList;
     // collectionAddress -> NftCollectionRules struct
     mapping(address => NftCollectionRules) public nftCollectionDetails;
-    // collectionAddress -> tokenId -> bool
+
     /**
      * @dev For 721, it is used for blacklisting the tokenId of a collection
      * and for 1155, it is used for identifying the eligible tokenIds for
@@ -226,6 +226,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
             NftPurchaseList memory nftPurchaseList = _nftPurchaseList[i];
             address collectionAddress = nftPurchaseList.collectionAddress;
             uint256[] memory tokenIds = nftPurchaseList.tokenIds;
+
+            require(collectionAddress != address(0), "collection should not be null");
 
             NftCollectionRules memory nftCollectionRules = nftCollectionDetails[collectionAddress];
             require(nftCollectionRules.collectionAddress == collectionAddress, "collection not in the pool");
