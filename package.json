@@ -67,7 +67,8 @@
 		"node-fetch": "2.6.7",
 		"lodash": "4.17.21",
 		"yargs-parser": "5.0.1",
-		"ethereumjs-abi": "0.6.8"
+		"ethereumjs-abi": "0.6.8",
+		"flat": "5.0.2"
 	},
 	"devDependencies": {
 		"@eth-optimism/contracts": "0.3.4",
