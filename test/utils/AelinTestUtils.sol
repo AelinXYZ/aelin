@@ -251,10 +251,8 @@ contract AelinTestUtils is Test {
 
         nftCollectionRules721[0].collectionAddress = address(collection721_1);
         nftCollectionRules721[0].purchaseAmount = 1e20;
-        nftCollectionRules721[0].purchaseAmountPerToken = true;
         nftCollectionRules721[1].collectionAddress = address(collection721_2);
         nftCollectionRules721[1].purchaseAmount = 1e22;
-        nftCollectionRules721[1].purchaseAmountPerToken = false;
 
         return nftCollectionRules721;
     }
@@ -263,17 +261,16 @@ contract AelinTestUtils is Test {
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules1155 = new AelinNftGating.NftCollectionRules[](2);
 
         nftCollectionRules1155[0].collectionAddress = address(collection1155_1);
-        nftCollectionRules1155[0].purchaseAmount = 1e20;
-        nftCollectionRules1155[0].purchaseAmountPerToken = true;
+        nftCollectionRules1155[0].purchaseAmount = 0;
         nftCollectionRules1155[0].tokenIds = new uint256[](2);
         nftCollectionRules1155[0].minTokensEligible = new uint256[](2);
         nftCollectionRules1155[0].tokenIds[0] = 1;
         nftCollectionRules1155[0].tokenIds[1] = 2;
         nftCollectionRules1155[0].minTokensEligible[0] = 10;
         nftCollectionRules1155[0].minTokensEligible[1] = 20;
+
         nftCollectionRules1155[1].collectionAddress = address(collection1155_2);
-        nftCollectionRules1155[1].purchaseAmount = 1e22;
-        nftCollectionRules1155[1].purchaseAmountPerToken = false;
+        nftCollectionRules1155[1].purchaseAmount = 0;
         nftCollectionRules1155[1].tokenIds = new uint256[](2);
         nftCollectionRules1155[1].minTokensEligible = new uint256[](2);
         nftCollectionRules1155[1].tokenIds[0] = 10;
@@ -284,12 +281,11 @@ contract AelinTestUtils is Test {
         return nftCollectionRules1155;
     }
 
-    function getPunksCollection(bool _purchaseIsPerToken) public view returns (AelinNftGating.NftCollectionRules[] memory) {
+    function getPunksCollection() public view returns (AelinNftGating.NftCollectionRules[] memory) {
         AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = new AelinNftGating.NftCollectionRules[](1);
 
         nftCollectionRulesPunks[0].collectionAddress = address(punks);
         nftCollectionRulesPunks[0].purchaseAmount = 1e22;
-        nftCollectionRulesPunks[0].purchaseAmountPerToken = _purchaseIsPerToken;
 
         return nftCollectionRulesPunks;
     }
@@ -420,13 +416,10 @@ contract AelinTestUtils is Test {
             address(collection721_3)
         ];
         uint256 pseudoRandom;
-        bool pperToken;
         for (uint256 i; i < 3; ++i) {
             pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp, i))) % 100_000_000;
-            pperToken = pseudoRandom % 2 == 0;
             nftCollectionRules[i].collectionAddress = collectionsAddresses[i];
             nftCollectionRules[i].purchaseAmount = pseudoRandom;
-            nftCollectionRules[i].purchaseAmountPerToken = pperToken;
         }
         return nftCollectionRules;
     }
@@ -438,14 +431,9 @@ contract AelinTestUtils is Test {
             address(collection1155_2),
             address(collection1155_3)
         ];
-        uint256 pseudoRandom;
-        bool pperToken;
         for (uint256 i; i < 3; ++i) {
-            pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp, i))) % 100_000_000;
-            pperToken = pseudoRandom % 2 == 0;
             nftCollectionRules[i].collectionAddress = collectionsAddresses[i];
-            nftCollectionRules[i].purchaseAmount = pseudoRandom;
-            nftCollectionRules[i].purchaseAmountPerToken = pperToken;
+            nftCollectionRules[i].purchaseAmount = 0;
 
             nftCollectionRules[i].tokenIds = new uint256[](2);
             nftCollectionRules[i].tokenIds[0] = 1;

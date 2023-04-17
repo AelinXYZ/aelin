@@ -117,7 +117,6 @@ contract AelinPoolMiscTest is Test, AelinTestUtils {
             poolVars.nftCollectionRules = getNft1155CollectionRules();
             poolVars.nftCollectionRules[0].collectionAddress = address(collection1155_1);
             poolVars.nftCollectionRules[0].purchaseAmount = 0;
-            poolVars.nftCollectionRules[0].purchaseAmountPerToken = false;
             poolVars.nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
             poolVars.nftPurchaseList[0].collectionAddress = address(collection1155_1);
             poolVars.nftPurchaseList[0].tokenIds = new uint256[](1);
