@@ -44,6 +44,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     uint8 private numVestingSchedules;
     mapping(uint8 => uint256) public maxInvTokensPerVestSchedule;
     mapping(uint8 => uint256) public depositedPerVestSchedule;
+    mapping(uint8 => uint256) public lpClaimedPerVestSchedule;
+    mapping(uint8 => mapping(uint8 => uint256)) public singleClaimedPerVestSchedule;
+    mapping(address => uint256) totalSingleClaimed;
     mapping(uint8 => bool) public isVestingScheduleFull;
     mapping(address => mapping(uint8 => mapping(uint8 => uint256))) public holderDeposits;
     uint8 private singleRewardsComplete;
@@ -426,11 +429,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // we need to send X% of those fees to the Aelin Fee Module
     }
 
-    // logic
-    // you have LP tokens which may or may not be on vesting schedules to claim
-    // you have single sided reward tokens which may or may not be on vesting schedules to claim
-    // single rewards has an index [UNI, OP, SNX] within that index there are sub arrays of vesting schedule
-    // base rewards there is only a sub array of vesting schedules
     function claimableTokens(
         uint256 _tokenId,
         ClaimType _claimType,
@@ -487,7 +485,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
      */
     function claimAllTokens(uint256 _tokenId) external {
         claimLPTokens(_tokenId);
-        for (uint256 i; i < singleRewards.length; i++) {
+        VestVestingToken memory schedule = vestingDetails[_tokenId];
+        LPVestingSchedule lpVestingSchedule = vAmmInfo.vestingSchedules[schedule.vestingScheduleIndex];
+        for (uint256 i; i < lpVestingSchedule.singleVestingSchedules.length; i++) {
             claimRewardToken(_tokenId, i);
         }
     }
@@ -514,32 +514,43 @@ contract VestAMM is AelinVestingToken, IVestAMM {
      * @dev allows a user to claim their single sided reward tokens or a partial amount
      * of their single sided reward tokens once they have vested according to the schedule
      */
-    function claimRewardToken(uint256 _tokenId, uint256 _claimIndex) external {
-        _claimTokens(_tokenId, ClaimType.Single, _claimIndex);
+    function claimRewardToken(uint256 _tokenId, uint256 _singleRewardsIndex) external {
+        _claimTokens(_tokenId, ClaimType.Single, _singleRewardsIndex);
     }
 
-    // TODO work on _claimTokens to work with updated claimableTokens method
     function _claimTokens(
         uint256 _tokenId,
         ClaimType _claimType,
-        uint256 _claimIndex
+        uint8 _singleRewardsIndex
     ) internal {
         Validate.owner(ownerOf(_tokenId));
-        // TODO double check this doesn't error if there are no single sided rewards
-        uint256 claimableAmount = claimableTokens(_tokenId, _claimType, _claimIndex);
-        Validate.claimBalance(claimableAmount);
+        uint256 claimableAmount = claimableTokens(_tokenId, _claimType, _singleRewardsIndex);
+        Validate.hasClaimBalance(claimableAmount);
+        VestVestingToken memory schedule = vestingDetails[_tokenId];
+        address claimToken = _claimType == ClaimType.Single
+            ? lpVestingSchedule.singleVestingSchedules[_singleRewardsIndex].token
+            : ammData.baseAsset;
         if (_claimType == ClaimType.LP) {
             vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
             totalLPClaimed += claimableAmount;
+            lpClaimedPerVestSchedule[schedule.vestingScheduleIndex] += claimableAmount;
         } else {
-            vestingDetails[_tokenId].lastClaimedAtRewardList[_claimIndex] = block.timestamp;
-            // TODO like we do for the LP positions, track totals for each single reward type claimed
-            // in a mapping we can query from UI
+            vestingDetails[_tokenId].lastClaimedAtRewardList[_singleRewardsIndex] = block.timestamp;
+            singleClaimedPerVestSchedule[schedule.vestingScheduleIndex][_singleRewardsIndex] += claimableAmount;
+            totalSingleClaimed[claimToken] += claimableAmount;
         }
+        // TODO indicate to the VestAMMMultiRewards staking rewards contract that
+        // a withdraw has occured and they now have less funds locked
         // VestAMMMultiRewards.withdraw(depositTokenAmount);
-        address claimToken = _claimType == ClaimType.LP ? lpToken : singleRewards[_claimIndex].token;
         IERC20(claimToken).safeTransfer(msg.sender, claimableAmount);
-        emit ClaimedToken(claimToken, msg.sender, claimableAmount, _claimType);
+        emit ClaimedToken(
+            claimToken,
+            msg.sender,
+            claimableAmount,
+            _claimType,
+            schedule.vestingScheduleIndex,
+            _singleRewardsIndex
+        );
     }
 
     function sendFeesToAelin(address _token, uint256 _amount) external {

@@ -111,7 +111,14 @@ interface IVestAMM {
 
     event DepositComplete(uint256 depositExpiry, uint256 lpFundingExpiry);
 
-    event ClaimedToken(address indexed lpToken, address indexed owner, uint256 claimableAmount, ClaimType claimType);
+    event ClaimedToken(
+        address indexed lpToken,
+        address indexed owner,
+        uint256 claimableAmount,
+        ClaimType claimType,
+        uint8 vestingScheduleIndex,
+        uint8 singleRewardsIndex
+    );
 
     event SingleRemoved(
         uint8 singleIndex,
