@@ -7,11 +7,21 @@ import "../interfaces/ICryptoPunks.sol";
 library AelinNftGating {
     address constant CRYPTO_PUNKS = address(0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB);
 
+    // A struct that allows specific token Id ranges to be specified in a 721 collection
+    // Range is inclusive of beginning and ending token Ids
+    struct IdRange {
+        uint256 begin;
+        uint256 end;
+    }
+
     // collectionAddress should be unique, otherwise will override
     struct NftCollectionRules {
         // if 0, then unlimited purchase
         uint256 purchaseAmount;
         address collectionAddress;
+        // An array of Id Ranges for gating specific nfts in unique erc721 collections (e.g. POAP)
+        IdRange[] idRanges;
+        // both variables below are only applicable for 1155
         uint256[] tokenIds;
         // min number of tokens required for participating
         uint256[] minTokensEligible;
@@ -47,6 +57,17 @@ library AelinNftGating {
                             NftCheck.supports721(_nftCollectionRules[i].collectionAddress),
                         "can only contain 721"
                     );
+
+                    uint256 rangesLength = _nftCollectionRules[i].idRanges.length;
+                    require(rangesLength <= 10, "max of ten id ranges");
+
+                    for (uint256 j; j < rangesLength; j++) {
+                        require(
+                            _nftCollectionRules[i].idRanges[j].begin <= _nftCollectionRules[i].idRanges[j].end,
+                            "begin greater than end"
+                        );
+                    }
+
                     _data.nftCollectionDetails[_nftCollectionRules[i].collectionAddress] = _nftCollectionRules[i];
                     emit PoolWith721(_nftCollectionRules[i].collectionAddress, _nftCollectionRules[i].purchaseAmount);
                 }
@@ -84,8 +105,7 @@ library AelinNftGating {
      *
      * Scenarios:
      * 1. each wallet holding a qualified NFT to deposit an unlimited amount of purchase tokens
-     * 2. certain amount of purchase tokens per wallet regardless of the number of qualified NFTs held
-     * 3. certain amount of Investment tokens per qualified NFT held
+     * 2. certain amount of Investment tokens per qualified NFT held
      * @param _nftPurchaseList nft collection address and token ids to use for purchase
      * @param _data contract storage data for nft gating passed by reference
      * @param _purchaseTokenAmount amount to purchase with, must not exceed max allowable from collection rules
@@ -135,6 +155,10 @@ library AelinNftGating {
             if (NftCheck.supports721(_collectionAddress)) {
                 for (uint256 j; j < _tokenIds.length; ++j) {
                     require(IERC721(_collectionAddress).ownerOf(_tokenIds[j]) == msg.sender, "has to be the token owner");
+                    //If there are no ranges then no need to check whether token Id is within them
+                    if (nftCollectionRules.idRanges.length > 0) {
+                        require(isTokenIdInRange(_tokenIds[j], nftCollectionRules.idRanges), "tokenId not in range");
+                    }
                     require(!_data.nftId[_collectionAddress][_tokenIds[j]], "tokenId already used");
                     _data.nftId[_collectionAddress][_tokenIds[j]] = true;
                     emit BlacklistNFT(_collectionAddress, _tokenIds[j]);
@@ -166,6 +190,17 @@ library AelinNftGating {
         require(_purchaseTokenAmount <= maxPurchaseTokenAmount, "purchase amount greater than max allocation");
 
         return (maxPurchaseTokenAmount);
+    }
+
+    //Used to test whether a token Id is in a collection Rule set of ranges
+    //Perhaps make this public if it's useful elsewhere?
+    function isTokenIdInRange(uint256 _tokenId, IdRange[] memory idRanges) internal pure returns (bool) {
+        for (uint256 i; i < idRanges.length; i++) {
+            if (_tokenId >= idRanges[i].begin && _tokenId <= idRanges[i].end) {
+                return true;
+            }
+        }
+        return false;
     }
 
     event PoolWith721(address indexed collectionAddress, uint256 purchaseAmount);

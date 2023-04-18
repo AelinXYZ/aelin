@@ -127,7 +127,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
             hasAllowList = true;
         }
 
-        NftCollectionRules[] memory nftCollectionRules = _poolData.nftCollectionRules;
+        NftCollectionRules[] calldata nftCollectionRules = _poolData.nftCollectionRules;
 
         if (nftCollectionRules.length > 0) {
             // if the first address supports punks or 721, the entire pool only supports 721 or punks
@@ -141,6 +141,17 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
                             NftCheck.supports721(nftCollectionRules[i].collectionAddress),
                         "can only contain 721"
                     );
+
+                    uint256 rangesLength = nftCollectionRules[i].idRanges.length;
+                    require(rangesLength <= 10, "max of ten id ranges");
+
+                    for (uint256 j; j < rangesLength; j++) {
+                        require(
+                            nftCollectionRules[i].idRanges[j].begin <= nftCollectionRules[i].idRanges[j].end,
+                            "begin greater than end"
+                        );
+                    }
+
                     nftCollectionDetails[nftCollectionRules[i].collectionAddress] = nftCollectionRules[i];
                     emit PoolWith721(nftCollectionRules[i].collectionAddress, nftCollectionRules[i].purchaseAmount);
                 }
@@ -209,8 +220,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
      *
      * Scenarios:
      * 1. each wallet holding a qualified NFT to deposit an unlimited amount of purchase tokens
-     * 2. certain amount of purchase tokens per wallet regardless of the number of qualified NFTs held
-     * 3. certain amount of Investment tokens per qualified NFT held
+     * 2. certain amount of Investment tokens per qualified NFT held
      */
 
     function purchasePoolTokensWithNft(
@@ -241,6 +251,12 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
             }
 
             if (NftCheck.supports721(collectionAddress)) {
+                //If there are no ranges then no need to check whether token Id is within them
+                if (nftCollectionRules.idRanges.length > 0) {
+                    for (uint256 j; j < tokenIds.length; j++) {
+                        require(isTokenIdInRange(tokenIds[j], nftCollectionRules.idRanges), "tokenId not in range");
+                    }
+                }
                 _blackListCheck721(collectionAddress, tokenIds);
             }
             if (NftCheck.supports1155(collectionAddress)) {
@@ -268,6 +284,15 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
 
         _mint(msg.sender, purchaseTokenAmount);
         emit PurchasePoolToken(msg.sender, purchaseTokenAmount);
+    }
+
+    function isTokenIdInRange(uint256 _tokenId, IdRange[] memory idRanges) internal pure returns (bool) {
+        for (uint256 i; i < idRanges.length; i++) {
+            if (_tokenId >= idRanges[i].begin && _tokenId <= idRanges[i].end) {
+                return true;
+            }
+        }
+        return false;
     }
 
     function _blackListCheck721(address _collectionAddress, uint256[] memory _tokenIds) internal {

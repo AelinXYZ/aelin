@@ -257,6 +257,18 @@ contract AelinTestUtils is Test {
         return nftCollectionRules721;
     }
 
+    function getERC721IdRanges() public pure returns (AelinNftGating.IdRange[] memory) {
+        AelinNftGating.IdRange[] memory idRanges = new AelinNftGating.IdRange[](2);
+
+        idRanges[0].begin = 1;
+        idRanges[0].end = 2;
+
+        idRanges[1].begin = 1e20;
+        idRanges[1].end = 1e21;
+
+        return idRanges;
+    }
+
     function getERC1155Collection() public view returns (AelinNftGating.NftCollectionRules[] memory) {
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules1155 = new AelinNftGating.NftCollectionRules[](2);
 
@@ -415,11 +427,19 @@ contract AelinTestUtils is Test {
             address(collection721_2),
             address(collection721_3)
         ];
+
+        IAelinPool.IdRange[] memory idRanges = new IAelinPool.IdRange[](2);
+        idRanges[0].begin = 1;
+        idRanges[0].end = 2;
+        idRanges[1].begin = 1e20;
+        idRanges[1].end = 1e21;
+
         uint256 pseudoRandom;
         for (uint256 i; i < 3; ++i) {
             pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp, i))) % 100_000_000;
             nftCollectionRules[i].collectionAddress = collectionsAddresses[i];
             nftCollectionRules[i].purchaseAmount = pseudoRandom;
+            nftCollectionRules[i].idRanges = idRanges;
         }
         return nftCollectionRules;
     }

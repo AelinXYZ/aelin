@@ -476,7 +476,7 @@ contract AelinPoolPurchaseTest is Test, AelinTestUtils {
         vm.stopPrank();
     }
 
-    function testFuzz_PurchasePoolTokensWithNft_RevertWhen_ERC720TokenIdAlreadyUsed(
+    function testFuzz_PurchasePoolTokensWithNft_RevertWhen_ERC721TokenIdAlreadyUsed(
         uint256 _purchaseTokenCap,
         uint256 _poolDuration,
         uint256 _sponsorFee,
@@ -526,6 +526,54 @@ contract AelinPoolPurchaseTest is Test, AelinTestUtils {
         vm.startPrank(user2);
         purchaseToken.approve(address(pool), _purchaseTokenAmount);
         vm.expectRevert("tokenId already used");
+        pool.purchasePoolTokensWithNft(nftPurchaseList, _purchaseTokenAmount);
+        vm.stopPrank();
+    }
+
+    function testFuzz_PurchasePoolTokensWithNft_RevertWhen_ERC721TokenIdNotInRange(
+        uint256 _purchaseTokenCap,
+        uint256 _poolDuration,
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration,
+        uint256 _purchaseTokenAmount
+    ) public {
+        vm.assume(_sponsorFee <= MAX_SPONSOR_FEE);
+        vm.assume(_purchaseDuration >= 30 minutes && _purchaseDuration <= 30 days);
+        vm.assume(_poolDuration <= 365 days);
+        vm.assume(_purchaseTokenAmount > 0 && _purchaseTokenAmount < _purchaseTokenCap);
+
+        address[] memory allowListAddressesEmpty;
+        uint256[] memory allowListAmountsEmpty;
+
+        IAelinPool.NftCollectionRules[] memory nftCollectionRules = getNft721CollectionRules();
+        nftCollectionRules[0].collectionAddress = address(collection721_1);
+        nftCollectionRules[0].purchaseAmount = _purchaseTokenAmount;
+
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collection721_1);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 10; //not in range
+
+        IAelinPool.PoolData memory poolData = getPoolData({
+            purchaseTokenCap: _purchaseTokenCap,
+            duration: _poolDuration,
+            sponsorFee: _sponsorFee,
+            purchaseDuration: _purchaseDuration,
+            allowListAddresses: allowListAddressesEmpty,
+            allowListAmounts: allowListAmountsEmpty,
+            nftCollectionRules: nftCollectionRules
+        });
+
+        AelinPool pool = new AelinPool();
+        AelinFeeEscrow escrow = new AelinFeeEscrow();
+        pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
+        vm.assume(_purchaseTokenAmount <= _purchaseTokenCap - pool.totalSupply());
+
+        // Assert
+        vm.startPrank(user1);
+        MockERC721(collection721_1).mint(user1, 1);
+        purchaseToken.approve(address(pool), _purchaseTokenAmount);
+        vm.expectRevert("tokenId not in range");
         pool.purchasePoolTokensWithNft(nftPurchaseList, _purchaseTokenAmount);
         vm.stopPrank();
     }
@@ -739,7 +787,7 @@ contract AelinPoolPurchaseTest is Test, AelinTestUtils {
         IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
         nftPurchaseList[0].collectionAddress = address(collection721_1);
         nftPurchaseList[0].tokenIds = new uint256[](1);
-        nftPurchaseList[0].tokenIds[0] = 1;
+        nftPurchaseList[0].tokenIds[0] = 1; // Is in Id Range
 
         IAelinPool.PoolData memory poolData = getPoolData({
             purchaseTokenCap: _purchaseTokenCap,
