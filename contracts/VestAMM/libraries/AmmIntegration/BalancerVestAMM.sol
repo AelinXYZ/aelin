@@ -10,7 +10,9 @@ import {IAsset} from "contracts/interfaces/balancer/IAsset.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract BalancerVestAMM {
+// TODO import BaseLibrary properly
+
+contract BalancerVestAMM is BaseLibrary {
     IWeightedPoolFactory internal immutable weightedPoolFactory;
     IVault internal immutable balancerVault;
 
@@ -40,10 +42,15 @@ contract BalancerVestAMM {
             );
     }
 
-    function deployPool(IBalancerPool.CreateNewPool calldata _newPool, bytes memory _userData) public {
+    // TODO fix the first argument
+    function deployPool(InitData calldata _createArgs, DepositData storage _self) public {
+        // TODO parse _createArgs which will be used for ever
         address poolAddress = createPool(_newPool);
         bytes32 poolId = IBalancerPool(poolAddress).getPoolId();
         addLiquidity(poolId, _userData);
+        _self.lpToken = poolAddress;
+        _self.lpTokenAmount = IERC20(poolAddress).balanceOf(address(this));
+        _self.lpDepositTime = block.timestamp;
     }
 
     /**
