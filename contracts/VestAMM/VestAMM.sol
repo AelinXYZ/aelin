@@ -462,6 +462,18 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     function createLiquidity(IBalancerPool.AddLiquidity _addLiquidity) external onlyHolder lpFundingWindow {
         Validate.notLiquidityLaunch(vAmmInfo.hasLiquidityLaunch);
         // liquidity growth is going to be more complex than liquidity launch since the price will shift
+        // the pool has already been created so no need for that first
+        // first we need to determine if the price ratio between the two assets have changed since we
+        // created the vAMM. we read this initial price off the pool in the initialize function
+        // if the price goes up, down or stays the same the logic will change
+        // 1. if the price stays the same
+        // we need to capture what the LP token that we used is and save the address and amount of LP tokens we get back
+        // we also need to capture the timestamp of the block when we LP'd
+        // NOTE that we need to figure out within each bucket if the bucket is not full
+        // then we need to refund the single sided rewards and protocol tokens for that bucket based on how much was not filled
+        // 2. if the price goes up
+        //
+        // 3. if the price goes down
         //
         IVestAMMLibrary(ammData.ammLibrary).addLiquidity(_addLiquidity);
         finalizeVesting();
