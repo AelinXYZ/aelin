@@ -310,43 +310,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         setDepositComplete();
     }
 
-    // TODO make sure the timestamp restrictions are set properly on these methods
-    function withdrawAllExcessFunding() external {
-        for (uint i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
-            withdrawExcessFunding(i);
-        }
-    }
-
-    // TODO make each holder withdraw their own separately or keep it like this???
-    function withdrawExcessFunding(uint256 _vestingScheduleIndex) external lpComplete {
-        LPVestingSchedule lpVestingSchedule = vAmmInfo.vestingSchedules[schedule.vestingScheduleIndex];
-        uint256 excessBaseAmount = lpVestingSchedule.totalBaseTokens -
-            ((lpVestingSchedule.totalBaseTokens * depositedPerVestSchedule[_vestingScheduleIndex]) /
-                maxInvTokensPerVestSchedule[_vestingScheduleIndex]);
-        IERC20(ammData.baseAsset).safeTransferFrom(address(this), vAmmInfo.holder, excessBaseAmount);
-
-        for (uint i = 0; i < lpVestingSchedule.singleVestingSchedules.length; i++) {
-            SingleVestingSchedule singleVestingSchedule = lpVestingSchedule.singleVestingSchedules[i];
-            Validate.singleHolder(vAmmInfo.mainHolder, singleVestingSchedule.singleHolder, i);
-
-            uint256 mainHolderAmount = holderDeposits[vAmmInfo.mainHolder][_vestingScheduleIndex][i];
-            uint256 singleHolderAmount = holderDeposits[singleVestingSchedule.singleHolder][_vestingScheduleIndex][i];
-
-            uint256 excessAmount = singleVestingSchedule.totalSingleTokens -
-                ((singleVestingSchedule.totalSingleTokens * depositedPerVestSchedule[_vestingScheduleIndex]) /
-                    maxInvTokensPerVestSchedule[_vestingScheduleIndex]);
-            // TODO be careful of precision errors here
-            uint256 excessAmountMain = (excessAmount * mainHolderAmount) / (mainHolderAmount + singleHolderAmount);
-            uint256 excessAmountSingle = (excessAmount * singleHolderAmount) / (mainHolderAmount + singleHolderAmount);
-            IERC20(singleRewards[_singleIndex].token).safeTransferFrom(address(this), vAmmInfo.mainHolder, excessAmountMain);
-            IERC20(singleRewards[_singleIndex].token).safeTransferFrom(
-                address(this),
-                singleVestingSchedule.singleHolder,
-                excessAmountSingle
-            );
-        }
-    }
-
     function acceptDeal(
         AelinNftGating.NftPurchaseList[] calldata _nftPurchaseList,
         MerkleTree.UpFrontMerkleData calldata _merkleData,
@@ -528,6 +491,43 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             // so a pool trying to raise 1M sUSD but only get 500K sUSD means that we need to pro-rate the fee
             uint256 feeAmount = (_singleRewards[i].rewardTokenTotal * VEST_ASSET_FEE) / 1e18;
             sendFeesToAelin(_singleRewards[i].token, feeAmount);
+        }
+    }
+
+    // TODO make sure the timestamp restrictions are set properly on these methods
+    function withdrawAllExcessFunding() external {
+        for (uint i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
+            withdrawExcessFunding(i);
+        }
+    }
+
+    // TODO make each holder withdraw their own separately or keep it like this???
+    function withdrawExcessFunding(uint256 _vestingScheduleIndex) external lpComplete {
+        LPVestingSchedule lpVestingSchedule = vAmmInfo.vestingSchedules[schedule.vestingScheduleIndex];
+        uint256 excessBaseAmount = lpVestingSchedule.totalBaseTokens -
+            ((lpVestingSchedule.totalBaseTokens * depositedPerVestSchedule[_vestingScheduleIndex]) /
+                maxInvTokensPerVestSchedule[_vestingScheduleIndex]);
+        IERC20(ammData.baseAsset).safeTransferFrom(address(this), vAmmInfo.holder, excessBaseAmount);
+
+        for (uint i = 0; i < lpVestingSchedule.singleVestingSchedules.length; i++) {
+            SingleVestingSchedule singleVestingSchedule = lpVestingSchedule.singleVestingSchedules[i];
+            Validate.singleHolder(vAmmInfo.mainHolder, singleVestingSchedule.singleHolder, i);
+
+            uint256 mainHolderAmount = holderDeposits[vAmmInfo.mainHolder][_vestingScheduleIndex][i];
+            uint256 singleHolderAmount = holderDeposits[singleVestingSchedule.singleHolder][_vestingScheduleIndex][i];
+
+            uint256 excessAmount = singleVestingSchedule.totalSingleTokens -
+                ((singleVestingSchedule.totalSingleTokens * depositedPerVestSchedule[_vestingScheduleIndex]) /
+                    maxInvTokensPerVestSchedule[_vestingScheduleIndex]);
+            // TODO be careful of precision errors here
+            uint256 excessAmountMain = (excessAmount * mainHolderAmount) / (mainHolderAmount + singleHolderAmount);
+            uint256 excessAmountSingle = (excessAmount * singleHolderAmount) / (mainHolderAmount + singleHolderAmount);
+            IERC20(singleRewards[_singleIndex].token).safeTransferFrom(address(this), vAmmInfo.mainHolder, excessAmountMain);
+            IERC20(singleRewards[_singleIndex].token).safeTransferFrom(
+                address(this),
+                singleVestingSchedule.singleHolder,
+                excessAmountSingle
+            );
         }
     }
 
