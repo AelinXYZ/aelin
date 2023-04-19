@@ -472,9 +472,16 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // NOTE that we need to figure out within each bucket if the bucket is not full
         // then we need to refund the single sided rewards and protocol tokens for that bucket based on how much was not filled
         // 2. if the price goes up
-        //
+        // we need to LP the maximum amount of ABC tokens that we can against the available investment tokens
+        // whatever is left of ABC tokens in a given bucket over needs to be given as single sided rewards to that
+        // specific bucket NOTE that if a bucket is not full we need to also make sure the protocol can take their tokens
+        // back and only the portion of the extra will be given as single sided rewards. we need some math for this.
+        // basically we take how many protocol tokens you would get if the price never shifted to see what amount goes
+        // back to the protocol and what amount goes to single sided rewards.
         // 3. if the price goes down
-        //
+        // we need to add a view that tells the holder how many extra tokens they can deposit to make up for the difference
+        // they can invest from 0 extra up to that full amount. this gives the sUSD investors more ABC tokens vs the price
+        // at initilization.
         IVestAMMLibrary(ammData.ammLibrary).addLiquidity(_addLiquidity);
         finalizeVesting();
     }
