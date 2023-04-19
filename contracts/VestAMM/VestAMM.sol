@@ -444,17 +444,25 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         onlyHolder
         lpFundingWindow
     {
-        validate.notLiquidityLaunch(vAmmInfo.hasLiquidityLaunch);
-        // NOTE for this method we are going to want to pass in a lot of the arguments from
-        // data stored in the contract. it won't be a pure pass through like we have now
-        // at this stage in the development process
+        validate.isLiquidityLaunch(vAmmInfo.hasLiquidityLaunch);
+        // NOTE here are the steps that need to happen in a liquidity launch step by step
+        // first you create the pool
+        // then you deposit the right amount of (sUSD/ABC). the price is fixed
+        // so its all the protocol tokens against just either the max investment tokens
+        // across all buckets or the total amount deposited, whichever is smaller
+        // we need to capture what the LP token that we used is and save the address and amount of LP tokens we get back
+        // we also need to capture the timestamp of the block when we LP'd
+        // NOTE that we need to figure out within each bucket if the bucket is not full
+        // then we need to refund the single sided rewards and protocol tokens for that bucket based on how much was not filled
         IVestAMMLibrary(ammData.ammLibrary).deployPool(_createPool, _userData);
         finalizeVesting();
     }
 
     // to create the pool and deposit assets after phase 0 ends
     function createLiquidity(IBalancerPool.AddLiquidity _addLiquidity) external onlyHolder lpFundingWindow {
-        Validate.isLiquidityLaunch(vAmmInfo.hasLiquidityLaunch);
+        Validate.notLiquidityLaunch(vAmmInfo.hasLiquidityLaunch);
+        // liquidity growth is going to be more complex than liquidity launch since the price will shift
+        //
         IVestAMMLibrary(ammData.ammLibrary).addLiquidity(_addLiquidity);
         finalizeVesting();
     }
