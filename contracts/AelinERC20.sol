@@ -2,6 +2,7 @@
 pragma solidity 0.8.6;
 
 import {ERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 interface IERC20Decimals {
     function decimals() external view returns (uint8);
@@ -11,7 +12,7 @@ interface IERC20Decimals {
  * @dev a standard ERC20 contract that is extended with a few methods
  * described in detail below
  */
-contract AelinERC20 is ERC20 {
+contract AelinERC20 is ERC20, ReentrancyGuard {
     bool setInfo;
     /**
      * @dev Due to the constructor being empty for the MinimalProxy architecture we need
@@ -58,18 +59,6 @@ contract AelinERC20 is ERC20 {
         setInfo = true;
         emit AelinToken(_name, _symbol, _decimals);
         return true;
-    }
-
-    /**
-     * @dev Add this to prevent reentrancy attacks on purchasePoolTokens and depositUnderlying
-     * source: https://quantstamp.com/blog/how-the-dforce-hacker-used-reentrancy-to-steal-25-million
-     * uniswap implementation: https://github.com/Uniswap/v2-core/blob/master/contracts/UniswapV2Pair.sol#L31-L36
-     */
-    modifier lock() {
-        require(!locked, "AelinV1: LOCKED");
-        locked = true;
-        _;
-        locked = false;
     }
 
     event AelinToken(string name, string symbol, uint8 decimals);

@@ -30,7 +30,9 @@ library MerkleTree {
         require(merkleData.amount >= _purchaseTokenAmount, "purchasing more than allowance");
 
         // Verify the merkle proof.
-        bytes32 node = keccak256(abi.encodePacked(merkleData.index, merkleData.account, merkleData.amount));
+        bytes32 node = keccak256(
+            bytes.concat(keccak256(abi.encode(merkleData.index, merkleData.account, merkleData.amount)))
+        );
         require(MerkleProof.verify(merkleData.merkleProof, merkleRoot, node), "MerkleTree.sol: Invalid proof.");
 
         // Mark it claimed and send the token.
