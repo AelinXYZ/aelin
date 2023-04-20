@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+pragma solidity 0.8.19;
 
 import "./MinimalProxyFactory.sol";
 import "./AelinUpFrontDeal.sol";
@@ -14,11 +14,7 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
     address public immutable AELIN_ESCROW_LOGIC;
     address public immutable AELIN_TREASURY;
 
-    constructor(
-        address _aelinUpFrontDeal,
-        address _aelinEscrow,
-        address _aelinTreasury
-    ) {
+    constructor(address _aelinUpFrontDeal, address _aelinEscrow, address _aelinTreasury) {
         require(_aelinUpFrontDeal != address(0), "cant pass null deal address");
         require(_aelinTreasury != address(0), "cant pass null treasury address");
         require(_aelinEscrow != address(0), "cant pass null escrow address");

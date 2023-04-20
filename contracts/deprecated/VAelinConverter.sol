@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+pragma solidity 0.8.19;
 
-import "../Owned.sol";
+import "./Owned.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -40,7 +40,7 @@ contract VAelinConverter is Owned {
 
         IERC20(AELIN).transfer(beneficiary, IERC20(AELIN).balanceOf(address(this)));
 
-        selfdestruct(beneficiary);
+        // selfdestruct(beneficiary);
     }
 
     event Converted(address sender, uint256 aelinReceived);

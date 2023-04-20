@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.6;
+pragma solidity 0.8.19;
 
 import "./interfaces/IMerkleDistributor.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -56,6 +56,6 @@ contract MerkleDistributor is Owned, Pausable, IMerkleDistributor {
 
         IERC20(token).transfer(beneficiary, IERC20(token).balanceOf(address(this)));
 
-        selfdestruct(beneficiary);
+        // selfdestruct(beneficiary);
     }
 }
