@@ -51,6 +51,8 @@ async function getStakersPerBlock(block, network, pool) {
 			}
 		}
 	`;
+
+	// eslint-disable-next-line no-constant-condition
 	while (true) {
 		const result = await request(GRAPH_URL[network], query, { first, skip });
 		const stakers = result[`${poolName}Stakers`];
@@ -76,6 +78,8 @@ async function getStakers(network, pool) {
 			}
 		}
 	`;
+
+	// eslint-disable-next-line no-constant-condition
 	while (true) {
 		const result = await request(GRAPH_URL[network], query, { first, skip });
 		const stakers = result[`${poolName}Stakers`];
@@ -124,7 +128,7 @@ async function fetchAndProcessStakers(network, pool) {
 
 async function main() {
 	// Processing Optimism Pool 1
-	// await fetchAndProcessStakers('optimism', 1);
+	await fetchAndProcessStakers('optimism', 1);
 	// Processing Optimism Pool 2
 	// await fetchAndProcessStakers('optimism', 2);
 	// Processing Ethereum Pool 2

@@ -32,7 +32,6 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
     AelinFeeEscrow public aelinFeeEscrow;
 
     bool public depositComplete;
-    mapping(address => uint256) public amountVested;
 
     Timeline public openRedemption;
     Timeline public proRataRedemption;
@@ -77,7 +76,7 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
          * calculates the amount of underlying deal tokens you get per wrapped deal token accepted
          */
         underlyingPerDealExchangeRate = (_dealData.underlyingDealTokenTotal * 1e18) / maxTotalSupply;
-        emit SetHolder(_dealData.holder);
+        emit HolderAccepted(_dealData.holder);
     }
 
     /**
@@ -180,9 +179,10 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
                 (maxTime > vestingCliffExpiry && minTime <= vestingExpiry) ||
                 (maxTime == vestingCliffExpiry && vestingPeriod == 0)
             ) {
-                uint256 underlyingClaimable = vestingPeriod == 0
+                uint256 claimableAmount = vestingPeriod == 0
                     ? schedule.share
                     : (schedule.share * (maxTime - minTime)) / vestingPeriod;
+                uint256 underlyingClaimable = (underlyingPerDealExchangeRate * claimableAmount) / 1e18;
 
                 // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
                 // although it will generally never happen as solidity rounds down so there should always be a little bit left
@@ -195,23 +195,38 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
         return precisionAdjustedUnderlyingClaimable;
     }
 
+    function claimUnderlyingMultipleEntries(uint256[] memory _indices) external returns (uint256) {
+        uint256 totalClaimed;
+        for (uint256 i = 0; i < _indices.length; i++) {
+            totalClaimed += _claimUnderlyingTokens(msg.sender, _indices[i]);
+        }
+        return totalClaimed;
+    }
+
     /**
      * @dev allows a user to claim their underlying deal tokens or a partial amount
      * of their underlying tokens once they have vested according to the schedule
      * created by the sponsor
      */
-    function claimUnderlyingTokens(uint256 _tokenId) external {
-        _claimUnderlyingTokens(msg.sender, _tokenId);
+    function claimUnderlyingTokens(uint256 _tokenId) external returns (uint256) {
+        return _claimUnderlyingTokens(msg.sender, _tokenId);
     }
 
-    function _claimUnderlyingTokens(address _owner, uint256 _tokenId) internal {
+    function _claimUnderlyingTokens(address _owner, uint256 _tokenId) internal returns (uint256) {
         require(ownerOf(_tokenId) == _owner, "must be owner to claim");
         uint256 claimableAmount = claimableUnderlyingTokens(_tokenId);
-        require(claimableAmount > 0, "no underlying ready to claim");
-        vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
+        if (claimableAmount == 0) {
+            return 0;
+        }
+        if (block.timestamp >= vestingExpiry) {
+            _burnVestingToken(_tokenId);
+        } else {
+            vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
+        }
         totalUnderlyingClaimed += claimableAmount;
         IERC20(underlyingDealToken).safeTransfer(_owner, claimableAmount);
-        emit ClaimedUnderlyingDealToken(underlyingDealToken, _owner, claimableAmount);
+        emit ClaimedUnderlyingDealToken(_owner, _tokenId, underlyingDealToken, claimableAmount);
+        return claimableAmount;
     }
 
     /**
@@ -239,12 +254,13 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
     function setHolder(address _holder) external onlyHolder {
         require(_holder != address(0), "holder cant be null");
         futureHolder = _holder;
+        emit HolderSet(_holder);
     }
 
     function acceptHolder() external {
         require(msg.sender == futureHolder, "only future holder can access");
         holder = futureHolder;
-        emit SetHolder(futureHolder);
+        emit HolderAccepted(futureHolder);
     }
 
     modifier initOnce() {

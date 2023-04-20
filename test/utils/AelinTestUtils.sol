@@ -9,7 +9,6 @@ import {IAelinPool} from "contracts/interfaces/IAelinPool.sol";
 import {IAelinUpFrontDeal} from "contracts/interfaces/IAelinUpFrontDeal.sol";
 import {MerkleTree} from "../../contracts/libraries/MerkleTree.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
-import {MockERC20CustomDecimals} from "../mocks/MockERC20CustomDecimals.sol";
 import {MockERC721} from "../mocks/MockERC721.sol";
 import {MockERC1155} from "../mocks/MockERC1155.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -31,9 +30,9 @@ contract AelinTestUtils is Test {
     address user3 = address(0x1339);
     address user4 = address(0x1340);
 
-    MockERC20 public underlyingDealToken = new MockERC20("MockDeal", "MD");
-    MockERC20CustomDecimals public underlyingDealTokenLowDecimals = new MockERC20CustomDecimals("MockDeal", "MD", 2);
-    MockERC20 public purchaseToken = new MockERC20("MockPurchase", "MP");
+    MockERC20 public underlyingDealToken = new MockERC20("MockDeal", "MD", 18);
+    MockERC20 public underlyingDealTokenLowDecimals = new MockERC20("MockDeal", "MD", 2);
+    MockERC20 public purchaseToken = new MockERC20("MockPurchase", "MP", 6);
 
     MockERC721 public collection721_1 = new MockERC721("TestCollection", "TC");
     MockERC721 public collection721_2 = new MockERC721("TestCollection", "TC");
@@ -66,8 +65,8 @@ contract AelinTestUtils is Test {
         uint8 underlyingTokenDecimals;
     }
 
-    function getCustomToken(uint8 _decimals) public returns (MockERC20CustomDecimals) {
-        return new MockERC20CustomDecimals("CustomMockERC20", "CMT", _decimals);
+    function getCustomToken(uint8 _decimals) public returns (MockERC20) {
+        return new MockERC20("CustomMockERC20", "CMT", _decimals);
     }
 
     function getFuzzDealData(
@@ -79,8 +78,8 @@ contract AelinTestUtils is Test {
         string memory _ipfsHash,
         bytes32 _merkleRoot
     ) public returns (IAelinUpFrontDeal.UpFrontDealData memory) {
-        MockERC20CustomDecimals customUnderlyingDealToken = getCustomToken(_underlyingTokenDecimals);
-        MockERC20CustomDecimals customPurchaseToken = getCustomToken(_purchaseTokenDecimals);
+        MockERC20 customUnderlyingDealToken = getCustomToken(_underlyingTokenDecimals);
+        MockERC20 customPurchaseToken = getCustomToken(_purchaseTokenDecimals);
         return
             IAelinUpFrontDeal.UpFrontDealData({
                 name: "Fuzz DEAL",
@@ -252,10 +251,8 @@ contract AelinTestUtils is Test {
 
         nftCollectionRules721[0].collectionAddress = address(collection721_1);
         nftCollectionRules721[0].purchaseAmount = 1e20;
-        nftCollectionRules721[0].purchaseAmountPerToken = true;
         nftCollectionRules721[1].collectionAddress = address(collection721_2);
         nftCollectionRules721[1].purchaseAmount = 1e22;
-        nftCollectionRules721[1].purchaseAmountPerToken = false;
 
         return nftCollectionRules721;
     }
@@ -264,17 +261,16 @@ contract AelinTestUtils is Test {
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules1155 = new AelinNftGating.NftCollectionRules[](2);
 
         nftCollectionRules1155[0].collectionAddress = address(collection1155_1);
-        nftCollectionRules1155[0].purchaseAmount = 1e20;
-        nftCollectionRules1155[0].purchaseAmountPerToken = true;
+        nftCollectionRules1155[0].purchaseAmount = 0;
         nftCollectionRules1155[0].tokenIds = new uint256[](2);
         nftCollectionRules1155[0].minTokensEligible = new uint256[](2);
         nftCollectionRules1155[0].tokenIds[0] = 1;
         nftCollectionRules1155[0].tokenIds[1] = 2;
         nftCollectionRules1155[0].minTokensEligible[0] = 10;
         nftCollectionRules1155[0].minTokensEligible[1] = 20;
+
         nftCollectionRules1155[1].collectionAddress = address(collection1155_2);
-        nftCollectionRules1155[1].purchaseAmount = 1e22;
-        nftCollectionRules1155[1].purchaseAmountPerToken = false;
+        nftCollectionRules1155[1].purchaseAmount = 0;
         nftCollectionRules1155[1].tokenIds = new uint256[](2);
         nftCollectionRules1155[1].minTokensEligible = new uint256[](2);
         nftCollectionRules1155[1].tokenIds[0] = 10;
@@ -285,12 +281,11 @@ contract AelinTestUtils is Test {
         return nftCollectionRules1155;
     }
 
-    function getPunksCollection(bool _purchaseIsPerToken) public view returns (AelinNftGating.NftCollectionRules[] memory) {
+    function getPunksCollection() public view returns (AelinNftGating.NftCollectionRules[] memory) {
         AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = new AelinNftGating.NftCollectionRules[](1);
 
         nftCollectionRulesPunks[0].collectionAddress = address(punks);
         nftCollectionRulesPunks[0].purchaseAmount = 1e22;
-        nftCollectionRulesPunks[0].purchaseAmountPerToken = _purchaseIsPerToken;
 
         return nftCollectionRulesPunks;
     }
@@ -421,13 +416,10 @@ contract AelinTestUtils is Test {
             address(collection721_3)
         ];
         uint256 pseudoRandom;
-        bool pperToken;
         for (uint256 i; i < 3; ++i) {
             pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp, i))) % 100_000_000;
-            pperToken = pseudoRandom % 2 == 0;
             nftCollectionRules[i].collectionAddress = collectionsAddresses[i];
             nftCollectionRules[i].purchaseAmount = pseudoRandom;
-            nftCollectionRules[i].purchaseAmountPerToken = pperToken;
         }
         return nftCollectionRules;
     }
@@ -439,14 +431,9 @@ contract AelinTestUtils is Test {
             address(collection1155_2),
             address(collection1155_3)
         ];
-        uint256 pseudoRandom;
-        bool pperToken;
         for (uint256 i; i < 3; ++i) {
-            pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp, i))) % 100_000_000;
-            pperToken = pseudoRandom % 2 == 0;
             nftCollectionRules[i].collectionAddress = collectionsAddresses[i];
-            nftCollectionRules[i].purchaseAmount = pseudoRandom;
-            nftCollectionRules[i].purchaseAmountPerToken = pperToken;
+            nftCollectionRules[i].purchaseAmount = 0;
 
             nftCollectionRules[i].tokenIds = new uint256[](2);
             nftCollectionRules[i].tokenIds[0] = 1;

@@ -397,33 +397,42 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
             uint256 aelinFeeAmt = (totalSold * AELIN_FEE) / BASE;
             IERC20(_underlyingDealToken).safeTransfer(address(aelinFeeEscrow), aelinFeeAmt);
 
-            emit FeeEscrowClaimed(aelinEscrowStorageProxy, _underlyingDealToken, aelinFeeAmt);
+            emit FeeEscrowClaim(aelinEscrowStorageProxy, _underlyingDealToken, aelinFeeAmt);
         }
     }
 
-    function claimUnderlyingMultipleEntries(uint256[] memory _indices) external {
+    function claimUnderlyingMultipleEntries(uint256[] memory _indices) external returns (uint256) {
+        uint256 totalClaimed;
         for (uint256 i = 0; i < _indices.length; i++) {
-            _claimUnderlying(msg.sender, _indices[i]);
+            totalClaimed += _claimUnderlying(msg.sender, _indices[i]);
         }
+        return totalClaimed;
     }
 
     /**
      * @dev ERC721 deal token holder calls after the purchasing period to claim underlying deal tokens
      * amount based on the vesting schedule
      */
-    function claimUnderlying(uint256 _tokenId) external {
-        _claimUnderlying(msg.sender, _tokenId);
+    function claimUnderlying(uint256 _tokenId) external returns (uint256) {
+        return _claimUnderlying(msg.sender, _tokenId);
     }
 
-    function _claimUnderlying(address _owner, uint256 _tokenId) internal {
+    function _claimUnderlying(address _owner, uint256 _tokenId) internal returns (uint256) {
         require(ownerOf(_tokenId) == _owner, "must be owner to claim");
         uint256 claimableAmount = claimableUnderlyingTokens(_tokenId);
-        require(claimableAmount > 0, "no underlying ready to claim");
+        if (claimableAmount == 0) {
+            return 0;
+        }
+        if (block.timestamp >= vestingExpiry) {
+            _burnVestingToken(_tokenId);
+        } else {
+            vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
+        }
         address _underlyingDealToken = dealData.underlyingDealToken;
-        vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
         totalUnderlyingClaimed += claimableAmount;
         IERC20(_underlyingDealToken).safeTransfer(_owner, claimableAmount);
-        emit ClaimedUnderlyingDealToken(_owner, _underlyingDealToken, claimableAmount);
+        emit ClaimedUnderlyingDealToken(_owner, _tokenId, _underlyingDealToken, claimableAmount);
+        return claimableAmount;
     }
 
     /**
@@ -465,7 +474,9 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
      * @param _holder address to swap the holder role
      */
     function setHolder(address _holder) external onlyHolder {
+        require(_holder != address(0), "holder cant be null");
         futureHolder = _holder;
+        emit HolderSet(_holder);
     }
 
     /**
@@ -474,7 +485,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     function acceptHolder() external {
         require(msg.sender == futureHolder, "only future holder can access");
         dealData.holder = futureHolder;
-        emit SetHolder(futureHolder);
+        emit HolderAccepted(futureHolder);
     }
 
     /**
@@ -513,17 +524,15 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
      * @param _collection NFT collection address to get the collection details for
      * @return uint256 purchase amount, if 0 then unlimited purchase
      * @return address collection address used for configuration
-     * @return bool if true then purchase amount is per token, if false then purchase amount is per user
      * @return uint256[] for ERC1155, included token IDs for this collection
      * @return uint256[] for ERC1155, min number of tokens required for participating
      */
     function getNftCollectionDetails(
         address _collection
-    ) public view returns (uint256, address, bool, uint256[] memory, uint256[] memory) {
+    ) public view returns (uint256, address, uint256[] memory, uint256[] memory) {
         return (
             nftGating.nftCollectionDetails[_collection].purchaseAmount,
             nftGating.nftCollectionDetails[_collection].collectionAddress,
-            nftGating.nftCollectionDetails[_collection].purchaseAmountPerToken,
             nftGating.nftCollectionDetails[_collection].tokenIds,
             nftGating.nftCollectionDetails[_collection].minTokensEligible
         );
@@ -532,22 +541,12 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     /**
      * @dev returns various details about the NFT gating storage
      * @param _collection NFT collection address to check
-     * @param _wallet user address to check
      * @param _nftId if _collection is ERC721 or CryptoPunks check if this ID has been used, if ERC1155 check if this ID is included
-     * @return bool true if the _wallet has already been used to claim this _collection
      * @return bool if _collection is ERC721 or CryptoPunks true if this ID has been used, if ERC1155 true if this ID is included
      * @return bool returns hasNftList, true if this deal has a valid NFT gating list
      */
-    function getNftGatingDetails(
-        address _collection,
-        address _wallet,
-        uint256 _nftId
-    ) public view returns (bool, bool, bool) {
-        return (
-            nftGating.nftWalletUsedForPurchase[_collection][_wallet],
-            nftGating.nftId[_collection][_nftId],
-            nftGating.hasNftList
-        );
+    function getNftGatingDetails(address _collection, uint256 _nftId) public view returns (bool, bool) {
+        return (nftGating.nftId[_collection][_nftId], nftGating.hasNftList);
     }
 
     /**

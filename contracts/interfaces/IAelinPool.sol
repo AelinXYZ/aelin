@@ -20,9 +20,6 @@ interface IAelinPool {
         // if 0, then unlimited purchase
         uint256 purchaseAmount;
         address collectionAddress;
-        // if true, then `purchaseAmount` is per token
-        // else `purchaseAmount` is per account regardless of the NFTs held
-        bool purchaseAmountPerToken;
         // both variables below are only applicable for 1155
         uint256[] tokenIds;
         // min number of tokens required for participating

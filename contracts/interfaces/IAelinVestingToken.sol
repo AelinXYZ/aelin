@@ -8,4 +8,8 @@ interface IAelinVestingToken {
     }
 
     event VestingTokenMinted(address indexed user, uint256 indexed tokenId, uint256 amount, uint256 lastClaimedAt);
+
+    event VestingTokenBurned(uint256 indexed tokenId);
+
+    event VestingShareTransferred(address indexed from, address indexed to, uint256 indexed tokenId, uint256 amount);
 }
