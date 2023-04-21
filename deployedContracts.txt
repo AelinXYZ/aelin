@@ -34,6 +34,10 @@ v5
 ╟────────────────────┼────────────────────────────────────────────╢
 ║ upFrontDealFactory │ 0x97EfdB29C0D6daCDc0BB334Cc227AE03A1a7c01E ║
 
+v6 just has a new upFrontDealLogic contract and a new factory contract
+UpFrontDeal:0x3618938a8734f05eb16B8c0C0c4186088b1e4B0E
+AelinNftGating:0x7096e34e27688b7db4a1dab0146531e5b0cec5a2
+UpFrontDealFactory:0x82bccfa913db473147e5274c7821bc13ffbabe17
 
 Optimism:
 AelinTokenV1 (deprecated from first Aelin pool) - 0x04432a6fd94e8bC8559d10AC1D98f15Cd9C08363
@@ -112,7 +116,7 @@ AelinPoolFactory - 0xf73869004CfbEfba49d56931cb871Da53258Bc8f (latest)
 AelinToken - 0xca21a836936Dd9D46772E8fCB1284A7A3AE13fd2
 VirtualAelinToken - 0xb7ABB959Def630d1402F202b8BC31BbaCBcDafBA
 
-Goerli: 
+Goerli:
 AelinDeal - 0xBE68F3E4B5CEbaAB155582a4220cDf8E439861A5 (latest)
 AelinPool - 0xE46d449924A74D3155B2605E12399D22401f16E4 (latest)
 AelinPoolFactory - 0xCA4d64B67486867a9E867D0E38E1F1e99B718EEb (latest)
