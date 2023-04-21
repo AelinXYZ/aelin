@@ -24,17 +24,10 @@ contract VestAMMDealFactory is IVestAMM {
     }
 
     // MAJOR TODO list
-    // TODO finish cancel vest AMM logic
-    // TODO finish remove and add single with the new rewards setup
-    // TODO finish claiming logic with the new rewards setup
-    // TODO integrate first 2 AMMs in a way that works for both Curve and Balancer
     // TODO add in a curve multi rewards contract to the VestAMM so that you can distribute protocol fees to holders
-    // NOTE can we do this without any restrictions on the amount of rewards tokens since it loops through an array
     // TODO write initial tests that checks the ability to start a vAMM and deposit base and single reward tokens to start the acceptDeal window
     // TODO triple check all arguments start with _, casing is correct. well commented in the natspec format, etc
-    // TODO create a pool and add liquidity on Balancer
     // TODO finish the create liquidity methods on the vest amm contracts
-    // TODO finish the claiming logic and make the math is all correct
     // TODO finish the fee claiming of swap fees and figure out how to integrated it
     // TODO finish the withdraw methods like depositorWithdraw and depositorDeallocWithdraw which will handle edge cases such as deallocation or when the deal is cancelled
     // or when someone puts too many funds into a contract

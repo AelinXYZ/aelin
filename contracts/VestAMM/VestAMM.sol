@@ -105,7 +105,11 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         if (!_vAmmInfo.hasLaunchPhase) {
             // we need to pass in data to check if the pool exists. ammData is a placeholder but not the right argument
             Validate.poolExists(_ammData.ammLibrary.checkPoolExists(ammData), ammData.poolAddress); // NOTE: Check if poolAddress is required if hasLaunchPhase is false
-            investmentTokenPerBase = _ammData.ammLibrary.getPriceRatio(_ammData.investmentToken, _ammData.baseAsset);
+            investmentTokenPerBase = _ammData.ammLibrary.getPriceRatio(
+                _ammData.poolAddress,
+                _ammData.investmentToken,
+                _ammData.baseToken
+            );
         }
         // LP vesting schedule array up to 4 buckets
         // each bucket will have a token total in the protocol tokens
@@ -125,7 +129,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             // and only allow each bucket to fill up to the max
             maxInvTokensPerVestSchedule[i] =
                 (vAmmInfo.lpVestingSchedules[i].totalBaseTokens * invPerBase) /
-                10**IERC20(ammData.baseAsset).decimals();
+                10**IERC20(ammData.baseToken).decimals();
             // NOTE is this needed?
             maxInvTokens += maxInvTokensPerVestSchedule[i];
         }
@@ -205,7 +209,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             }
         }
         if (amountBaseDeposited > 0) {
-            IERC20(baseAsset).safeTransferFrom(address(this), vAmmInfo.mainHolder, amountBaseDeposited);
+            IERC20(baseToken).safeTransferFrom(address(this), vAmmInfo.mainHolder, amountBaseDeposited);
         }
         cancelVestAMM();
     }
@@ -295,14 +299,14 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     function depositBase() external onlyHolder depositIncomplete dealOpen {
         Validate.baseDepositNotCompleted(baseComplete);
-        address baseAsset = ammData.baseAsset;
+        address baseToken = ammData.baseToken;
 
-        uint256 balanceBeforeTransfer = IERC20(baseAsset).balanceOf(address(this));
-        IERC20(baseAsset).safeTransferFrom(msg.sender, address(this), holderTokenTotal);
-        uint256 balanceAfterTransfer = IERC20(baseAsset).balanceOf(address(this));
+        uint256 balanceBeforeTransfer = IERC20(baseToken).balanceOf(address(this));
+        IERC20(baseToken).safeTransferFrom(msg.sender, address(this), holderTokenTotal);
+        uint256 balanceAfterTransfer = IERC20(baseToken).balanceOf(address(this));
         uint256 amountPostTransfer = balanceAfterTransfer - balanceBeforeTransfer;
         amountBaseDeposited += amountPostTransfer;
-        emit DepositPoolToken(baseAsset, msg.sender, amountPostTransfer);
+        emit DepositPoolToken(baseToken, msg.sender, amountPostTransfer);
         if (amountBaseDeposited >= holderTokenTotal) {
             baseComplete = true;
         }
@@ -348,90 +352,50 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         emit AcceptVestDeal(msg.sender, depositTokenAmount, _vestingScheduleIndex);
     }
 
-    // phase 0 is deposit all tokens from holders (no deadlines). mostly done
-    // phase 1 is deposit investment tokens from depositors (deposit expiry). mostly done
-    // phase 2 is deposit LP tokens to finalize the deal. TODO.
-    // phase 2 NOTE: Liquidity Launch Pools and Liquidity Growth Pools
-    //
-    //  - we create the pool with the given ratios and tokens (only for liquidity launch)
-    //  - we deposit the LP tokens
-    //  - we set the amount of LP tokens deposited
-    //  - we set the time when the LP tokens were deposited
-    //
-    //  - e.g.you have 3 buckets with 10, 20 and 30 ABC tokens each with longer vesting schedules than the previous bucket
-    //    in addition to the ABC there is OP single sided rewards of 10, 20 and 30 for each bucket as well
-    //    ABC is raising at a price of 10 sUSD so you have 100 sUSD, 200 sUSD and 300 sUSD as the max amount of investment tokens per bucket
-    //    so if bucket 1 only fills up 50%, bucket 2 fills up 75% and bucket 3 fills to the cap
-    //    assuming this is a liquidity launch for ABC then the logic is when we go to deposit LP tokens
-    //    first we will create the pool, then we will deposit 5 ABC (50% * 10) from bucket 1, 15 ABC from bucket 2 (75% * 20), and 30 ABC from bucket 3 (100% * 30)
-    //    in total this is 5 + 15 + 30 = 50 AELIN. and we also raised 500 sUSD. so we are going to LP 50 AELIN/500 sUSD and we need to
-    //    note the address of the LP tokens we get back as well as how many LP tokens we get back and the time when we deposited (save to storage)
-    //
-    //  - the more complicated phase is a liquidity growth phase
-    //  - in this growth phase the prices are shifting
-    //  - price at start of pool is 10 sUSD per ABC
-    //  - e.g.you have 3 buckets with 10, 20 and 30 ABC tokens each fills up 50%, 75%, and 100% based on the price at the start of the pool
-    //  - the price of ABC between the start of the pool and the time we LP is irrelevant.
-    //  - we only care about the price when the pool starts as well as the price when we go to LP
-    //  - if the price of ABC goes down to $5 then...
-    //    - the maximum amount of sUSD we can accept is $50, $100, $150
-    //    - but there is $50, $150 and $300 in each bucket. this was the maximum amount based on the starting price
-    //    - 2 issues. first
-    //    - NOTE: since the price went down investors are happy because they get more ABC tokens for the same amount of sUSD
-    //    - NOTE we might want to let the protocol deposit extra tokens on their side in order to use the full amount of sUSD
-    //      - for bucket 1 if the price is 5 sUSD now even though the price was $10 and we only filled up half the pool we
-    //      - actually have enough ABC to match all the sUSD now 50 sUSD/ 10 ABC. now the investors get double the amount of ABC. there is no problem
-    //      - for bucket 3 if the price 5 sUSD the total 300/ 60 ABC is the max but we only have 30 ABC in the contract.
-    //      - ideally the protocol can decide to deposit an extra 30 ABC here or we can force them to only take half the sUSD and return the rest
-    //      - option 1 is you take 150/30 or you add more ABC and do 300/60. TBD
-    //  - if the price of ABC stays flat at $10 then the logic is exact same as a liquidity launch (will basically never happen)...
-    //    - the maximum amount of sUSD we can accept is $100, $200, $300
-    //  - if the price of ABC goes up to $20 then...
-    //    - the maximum amount of sUSD we can accept is $100, $200, $300
-    //    - however the amounts in the pool are $50, $150 and $300
-    //    - for bucket 1 we want to LP (50 sUSD/ 2.5 ABC).
-    //         if the price was $10 the investors would have had more ABC in their LP. 50 sUSD/ 5 ABC
-    //         so they will get at least 5 ABC tokens as a reward (LP or single sided)
-    //         however when the price goes up they get less than 5 ABC. so we give them the extra as single sided rewards
-    //         the math for this is:
-    //         total allocation to bucket 1 (10 ABC) - (percent of bucket 1 empty (50%) * total allocation to bucket 1 (10 ABC)) = 10 - 5 = 5 ABC - the amount of ABC in the LP (2.5) = 5 - 2.5 = 2.5 AELIN single sided rewards
-    //         2.5 ABC will be added as single rewards for this bucket. 5 ABC will go back to the protocol
-    //    - for bucket 2 we want to LP (150 sUSD/ 7.5 ABC).
-    //         if the price was $10 the investors would have had more ABC in their LP. 150 sUSD/ 15 ABC
-    //         so they will get at least 15 ABC tokens as a reward (LP or single sided) and 5 ABC tokens are going back to the protocol
-    //         however when the price goes up they get less than 15 ABC. so we give them the extra as single sided rewards
-    //         the math for this is:
-    //         total allocation to bucket 2 (20 ABC) - (percent of bucket 1 empty (25%) * total allocation to bucket 1 (20 ABC)) = 20 - 5 = 15 ABC - the amount of ABC in the LP (7.5) = 15 - 7.5 = 7.5 AELIN single sided rewards
-    //         7.5 ABC will be added as single rewards for this bucket. 5 ABC will go back to the protocol
-    //    - for bucket 3 we want to LP (300 sUSD/ 15 ABC).
-    //         if the price was $10 the investors would have had more ABC in their LP. 300 sUSD/ 30 ABC
-    //         so they will get at least 30 ABC tokens as a reward (LP or single sided) and 0 ABC tokens are going back to the protocol since the bucket is full
-    //         however when the price goes up they get less than 30 ABC. so we give them the extra as single sided rewards
-    //         the math for this is:
-    //         total allocation to bucket 3 (30 ABC) - (percent of bucket 1 empty (0%) * total allocation to bucket 1 (30 ABC)) = 30 - 0 = 30 ABC - the amount of ABC in the LP (15) = 30 - 15 = 15 AELIN single sided rewards
-    //         7.5 ABC will be added as single rewards for this bucket. 5 ABC will go back to the protocol
-    // phase 3 is just claiming. mostly done
-    // also phase 3/ phase 4 is VestAMMMultiRewards.sol where only the mainHolder can emit new rewards to locked LPs. TODO.
-    // to create the pool and deposit assets after phase 0 ends
-    // TODO create a struct here that should cover every AMM. If needed to support more add a second struct
     function createInitialLiquidity() external onlyHolder lpFundingWindow {
         validate.isLiquidityLaunch(vAmmInfo.hasLiquidityLaunch);
-        // NOTE here are the steps that need to happen in a liquidity launch step by step
-        // first you create the pool (in library)
-        // then you deposit the right amount of (sUSD/ABC). the price is fixed
-        // so its all the protocol tokens or just as much as can be paired against the number of investment tokens
-        // across all buckets or the total amount deposited, whichever is smaller
-        // we need to capture what the LP token that we used is and save the address and amount of LP tokens we get back
-        // we also need to capture the timestamp of the block when we LP'd
-        // NOTE that we need to figure out within each bucket if the bucket is not full
-        // then we need to refund the single sided rewards and protocol tokens for that bucket based on how much was not filled
-        // e.g. bucket 1 is 100 ABC and the price is 10 sUSD totalling 1000 sUSD
-        // but the bucket only gets 600 sUSD instead of 1000, then each holder gets back 40%
-        // deploy pool needs to create the pool and deposit the LP tokens and it needs to give us back a few things
-        // TODO fix the first argument to use a new variable that combines the fields we have already stored related to the pool
+
         DeployPool deployPool = createDeployPool();
-        IVestAMMLibrary(ammData.ammLibrary).deployPool(deployPool, depositData);
-        // TODO stop using this twice. we can refactor
+        poolAddress = IVestAMMLibrary(ammData.ammLibrary).deployPool(deployPool);
+        // NOTE we can do this inside create add liquidity maybe instead where we calculate the fees
+        // basically what we need is to determine exactly how much we are going to LP and then take out 1% for fees and track that
+        AddLiquidity addLiquidity = createAddLiquidity();
+        (numInvTokensInLP, numBaseTokensInLP, numInvTokensFee, numBaseTokensFee) = IVestAMMLibrary(ammData.ammLibrary)
+            .addInitialLiquidity(addLiquidity);
+        saveDepositData(poolAddress);
+        calcLPTokensPerSchedule();
+        aelinFees(numInvTokensFee, numBaseTokensFee);
+    }
+
+    // to create the pool and deposit assets after phase 0 ends
+    function createLiquidity(uint256 _extraBaseTokens) external onlyHolder lpFundingWindow {
+        Validate.notLiquidityLaunch(vAmmInfo.hasLiquidityLaunch);
+        // If the price starts at 10 sUSD/ ABC and goes up to 20 sUSD per ABC then we need to add the extra ABC as single sided rewards
+        // or if the price goes down to 5 sUSD / ABC we need to let the protocol add more tokens if they want
+        uint256 currentRaio = _ammData.ammLibrary.getPriceRatio(
+            ammData.poolAddress,
+            ammData.investmentToken,
+            ammData.baseToken
+        );
+        if (currentRatio > investmentTokenPerBase) {
+            // TODO add more single sided rewards from the base tokens
+        } else if (currentRatio < investmentTokenPerBase) {
+            // TODO let the holder pass in more _extraBaseTokens to LP
+        }
+        AddLiquidity addLiquidity = createAddLiquidity();
+        (numInvTokensInLP, numBaseTokensInLP, numInvTokensFee, numBaseTokensFee) = IVestAMMLibrary(ammData.ammLibrary)
+            .addLiquidity(addLiquidity);
+        saveDepositData();
+        calcLPTokensPerSchedule();
+
+        aelinFees(numInvTokensFee, numBaseTokensFee);
+    }
+
+    function saveDepositData(address _poolAddress) internal {
+        depositData = DepositData(_poolAddress, IERC20(_poolAddress).balanceOf(address(this)), block.timestamp);
+    }
+
+    function calcLPTokensPerSchedule() internal {
         uint256 totalInvestmentTokenAmount = totalDeposited < maxInvTokens ? totalDeposited : maxInvTokens;
         for (uint i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
             uint256 scheduleInvestmentTotal = depositedPerVestSchedule[i] > maxInvTokensPerVestSchedule[i]
@@ -439,7 +403,16 @@ contract VestAMM is AelinVestingToken, IVestAMM {
                 : depositedPerVestSchedule[i];
             lpTokenAmountPerSchedule[i] = (depositData.lpTokenAmount * scheduleInvestmentTotal) / totalInvestmentTokenAmount;
         }
-        finalizeVesting();
+    }
+
+    function createAddLiquidity() internal returns (AddLiquidity) {
+        // TODO add in the other variables needed to deploy a pool and return these values
+        uint256 investmentTokenAmount = totalDeposited < maxInvTokens ? totalDeposited : maxInvTokens;
+        uint256 baseTokenAmount = totalDeposited < maxInvTokens
+            ? (holderTokenTotal * totalDeposited) / maxInvTokens
+            : holderTokenTotal;
+
+        return AddLiquidity(investmentTokenAmount, baseTokenAmount);
     }
 
     function createDeployPool() internal returns (DeployPool) {
@@ -452,45 +425,26 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         return DeployPool(investmentTokenAmount, baseTokenAmount);
     }
 
-    // to create the pool and deposit assets after phase 0 ends
-    function createLiquidity(IBalancerPool.AddLiquidity _addLiquidity) external onlyHolder lpFundingWindow {
-        Validate.notLiquidityLaunch(vAmmInfo.hasLiquidityLaunch);
-        // liquidity growth is going to be more complex than liquidity launch since the price will shift
-        // the pool has already been created so no need for that first
-        // first we need to determine if the price ratio between the two assets have changed since we
-        // created the vAMM. we read this initial price off the pool in the initialize function
-        // if the price goes up, down or stays the same the logic will change
-        // 1. if the price stays the same
-        // we need to capture what the LP token that we used is and save the address and amount of LP tokens we get back
-        // we also need to capture the timestamp of the block when we LP'd
-        // NOTE that we need to figure out within each bucket if the bucket is not full
-        // then we need to refund the single sided rewards and protocol tokens for that bucket based on how much was not filled
-        // 2. if the price goes up
-        // we need to LP the maximum amount of ABC tokens that we can against the available investment tokens
-        // whatever is left of ABC tokens in a given bucket over needs to be given as single sided rewards to that
-        // specific bucket NOTE that if a bucket is not full we need to also make sure the protocol can take their tokens
-        // back and only the portion of the extra will be given as single sided rewards. we need some math for this.
-        // basically we take how many protocol tokens you would get if the price never shifted to see what amount goes
-        // back to the protocol and what amount goes to single sided rewards.
-        // 3. if the price goes down
-        // we need to add a view that tells the holder how many extra tokens they can deposit to make up for the difference
-        // they can invest from 0 extra up to that full amount. this gives the sUSD investors more ABC tokens vs the price
-        // at initilization.
-        IVestAMMLibrary(ammData.ammLibrary).addLiquidity(_addLiquidity);
-        finalizeVesting();
-    }
+    function aelinFees(uint256 _invTokenFeeAmt, uint256 _baseTokenFeeAmt) internal {
+        // the fees that we are taking here are 1% of all single sided rewards &
+        // 1% of the base and inv tokens that will be paired
+        sendFeesToAelin(ammData.baseToken, _baseTokenFeeAmt);
+        sendFeesToAelin(ammData.investmentAsset, _baseTokenFeeAmt);
+        for (uint8 i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
+            LPVestingSchedule lpVestingSchedule = vAmmInfo.lpVestingSchedules[i];
+            // TODO don't make 24 transactions. can be improved. the problem with this code is say
+            // there are 4 buckets each with 6 rewards and all 6 rewards are the same token
+            // instead of doing 24 transfers plus the base and investment tokens = 26 transfers
+            // we can do 8 transfers by combining all the single sided rewards that are the same across scheduless
+            for (uint8 j = 0; j < lpVestingSchedule.singleVestingSchedules.length; j++) {
+                SingleVestingSchedule singleVestingSchedule = lpVestingSchedule.singleVestingSchedules[j];
 
-    function finalizeVesting() internal {
-        lpDepositTime = block.timestamp;
-        // 20% fee of all trading fees from the LP tokens. this gets taken out later
-        // 1% fee for assets going through VestAMM
-        sendFeesToAelin(ammData.baseAsset, feeAmount);
-        for (uint256 i; i < _singleRewards.length; i++) {
-            // NOTE this assumes all the reward tokens were claimed
-            // we need to update this so that it calculates the share of investment token vs the actual raise
-            // so a pool trying to raise 1M sUSD but only get 500K sUSD means that we need to pro-rate the fee
-            uint256 feeAmount = (_singleRewards[i].rewardTokenTotal * VEST_ASSET_FEE) / 1e18;
-            sendFeesToAelin(_singleRewards[i].token, feeAmount);
+                uint256 singleRewardsUsed = ((singleVestingSchedule.totalSingleTokens *
+                    depositedPerVestSchedule[_vestingScheduleIndex]) / maxInvTokensPerVestSchedule[_vestingScheduleIndex]);
+
+                uint256 feeAmount = (singleRewardsUsed * VEST_ASSET_FEE) / 1e18;
+                sendFeesToAelin(_singleRewards[i].token, feeAmount);
+            }
         }
     }
 
@@ -507,7 +461,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         uint256 excessBaseAmount = lpVestingSchedule.totalBaseTokens -
             ((lpVestingSchedule.totalBaseTokens * depositedPerVestSchedule[_vestingScheduleIndex]) /
                 maxInvTokensPerVestSchedule[_vestingScheduleIndex]);
-        IERC20(ammData.baseAsset).safeTransferFrom(address(this), vAmmInfo.holder, excessBaseAmount);
+        IERC20(ammData.baseToken).safeTransferFrom(address(this), vAmmInfo.holder, excessBaseAmount);
 
         for (uint i = 0; i < lpVestingSchedule.singleVestingSchedules.length; i++) {
             SingleVestingSchedule singleVestingSchedule = lpVestingSchedule.singleVestingSchedules[i];
@@ -558,8 +512,27 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     // collect the fees from AMMs and send them to the Fee Module
     function collectAllFees(uint256 tokenId) public returns (uint256 amount0, uint256 amount1) {
-        // we have to call the AMM to check the amount of fees generated since the last time we did this
-        // we need to send X% of those fees to the Aelin Fee Module
+        // what we need the library to do:
+        // 1. be able to reinvest 80% of fees if the fees are held separate from the LP tokens
+        // 2. calculate the number of fees generated since a specific point in time for a LP position
+        // 3. remove the 20% of AELIN protocol fees from the LP position
+        // NOTE outside of the library we will send fees that have been removed to the Aelin Fee Module
+        //
+        // we deposit the LP tokens and this contract owns them. what we need to do is have a method which calculates
+        // how much in fees have been generated by the LP position since we last checked. we need to a) send 20% of these
+        // fees to Aelin and b) reinvest the other 80% back into the LP position for locked LPs. Most AMMs will auto-reinvest
+        // the fees but some like Uniswap and others will actually not auto reinvest. we will need to use the same libraries for each AMM
+        // to handle the logic differently based on how they track fees.
+        // To properly account for fees and take them there are a couple of things we need to do
+        // when an investor goes to claim their tokens I dont think they should transfer fees, but we should have them
+        // account for how many fees have been generated and set them aside
+        // imagine we have 100 LP tokens with 10 ABC/ 100sUSD inside earning 20% interest annually.
+        // so AELIN will take 4% = .2 * .2 of the fees and the investors will take the other 16% = .2 * .8
+        // each time a person goes to claim they will make sure that 20% of ALL the fees generated are set aside for AELIN
+        // in addition, they will make sure that the other fees are reinvested as necessary
+        // Every once and a while there will be a public function that needs to be called in order to send fees to the Aelin Fee Module
+        // alternatively we could make the users pay for the transfer
+        // probably its ok to also have a public function that sends whatever fees have been accumulated to AELIN
     }
 
     function claimableTokens(
@@ -691,7 +664,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     function sendFeesToAelin(address _token, uint256 _amount) external {
-        IERC20(_token).approve(aelinFeeModule, _amount);
         AelinFeeModule(aelinFeeModule).sendFees(_token, _amount);
         emit SentFees(_token, _amount);
     }

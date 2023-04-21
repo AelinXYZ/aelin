@@ -2,17 +2,17 @@
 pragma solidity 0.8.6;
 pragma experimental ABIEncoderV2;
 
+import "forge-std/console.sol";
+
 import {WeightedPoolUserData} from "@balancer-labs/v2-interfaces/contracts/pool-weighted/WeightedPoolUserData.sol";
-import {IWeightedPoolFactory} from "contracts/interfaces/balancer/IWeightedPoolFactory.sol";
-import {IVault} from "contracts/interfaces/balancer/IVault.sol";
-import {IBalancerPool} from "contracts/interfaces/balancer/IBalancerPool.sol";
-import {IAsset} from "contracts/interfaces/balancer/IAsset.sol";
-
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "contracts/VestAMM/interfaces/balancer/IWeightedPoolFactory.sol";
+import "contracts/VestAMM/interfaces/balancer/IVault.sol";
+import "contracts/VestAMM/interfaces/balancer/IBalancerPool.sol";
+import "contracts/VestAMM/interfaces/balancer/IAsset.sol";
+import "contracts/VestAMM/interfaces/IVestAMMLibrary.sol";
 
-// TODO import BaseLibrary properly
-
-contract BalancerVestAMM is BaseLibrary {
+contract BalancerVestAMM {
     IWeightedPoolFactory internal immutable weightedPoolFactory;
     IVault internal immutable balancerVault;
 
@@ -24,7 +24,15 @@ contract BalancerVestAMM is BaseLibrary {
         weightedPoolFactory = IWeightedPoolFactory(weightedPoolFactoryAddress);
     }
 
-    function createPool(IBalancerPool.CreateNewPool calldata _newPool) public returns (address) {
+    // NOTE: This function will be called frop VestAMM contract to create a new
+    // balancer pool and add liquidity to it for the first time
+    function deployPool(IVestAMMLibrary.DeployPool calldata _deployPool) public returns (address) {
+        IBalancerPool.CreateNewPool memory newPoolParsed = _parseNewPoolParams(_deployPool);
+
+        return _createPool(newPoolParsed);
+    }
+
+    function _createPool(IBalancerPool.CreateNewPool memory _newPool) internal returns (address) {
         // Approve Balancer vault to spend tokens
         for (uint256 i; i < _newPool.tokens.length; i++) {
             _newPool.tokens[i].approve(address(balancerVault), type(uint256).max);
@@ -42,25 +50,50 @@ contract BalancerVestAMM is BaseLibrary {
             );
     }
 
-    // TODO fix the first argument
-    function deployPool(InitData calldata _createArgs, DepositData storage _self) public {
-        // TODO parse _createArgs which will be used for ever
-        address poolAddress = createPool(_newPool);
-        bytes32 poolId = IBalancerPool(poolAddress).getPoolId();
-        addLiquidity(poolId, _userData);
-        _self.lpToken = poolAddress;
-        _self.lpTokenAmount = IERC20(poolAddress).balanceOf(address(this));
-        _self.lpDepositTime = block.timestamp;
+    function _parseNewPoolParams(IVestAMMLibrary.DeployPool calldata _deployPool)
+        internal
+        pure
+        returns (IBalancerPool.DeployPool memory)
+    {
+        return
+            IBalancerPool.CreateNewPool({
+                name: _deployPool.name,
+                symbol: _deployPool.symbol,
+                tokens: _deployPool.tokens,
+                weights: _deployPool.normalizedWeights,
+                rateProviders: _deployPool.rateProviders,
+                swapFeePercentage: _deployPool.swapFeePercentage
+            });
     }
 
-    /**
-     * This function demonstrates how to initialize a pool as the first liquidity provider
-     * So the pool already exists and we're just adding the initial liquidity
-     */
-    function addLiquidity(bytes32 _poolId, bytes memory _userData) public {
+    function addInitialLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData)
+        external
+        returns (uint256, uint256)
+    {
+        _addLiquidity(_addLiquidityData.poolAddress, _addLiquidityData.tokensAmtsIn, true);
+    }
+
+    function addLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData) external returns (uint256, uint256) {
+        _addLiquidity(_addLiquidityData.poolAddress, _addLiquidityData.tokensAmtsIn, false);
+    }
+
+    function _addLiquidity(
+        address _poolAddress,
+        uint256[] calldata _tokensAmtsIn,
+        bool _initialLiquidity
+    ) internal {
+        bytes32 poolId = IBalancerPool(_poolAddress).getPoolId();
+
         // Some pools can change which tokens they hold so we need to tell the Vault what we expect to be adding.
         // This prevents us from thinking we're adding 100 DAI but end up adding 100 BTC!
-        (IERC20[] memory tokens, , ) = balancerVault.getPoolTokens(_poolId);
+        (IERC20[] memory tokens, , ) = balancerVault.getPoolTokens(poolId);
+
+        // NOTE: Since this contract is not an approved relayer (https://github.com/balancer/balancer-v2-monorepo/blob/e3fb9a51e5d66ed7bdcf97ddfd5eced1ee40f8fe/pkg/interfaces/contracts/vault/IVault.sol#L348)
+        // We need to pull the tokens from the sender into this contract before we can add liquidity.
+        // TODO: check possible attack vectors
+        for (uint256 i; i < tokens.length; i++) {
+            tokens[i].transferFrom(msg.sender, address(this), _tokensAmtsIn[i]);
+        }
 
         IAsset[] memory assets = _convertERC20sToAssets(tokens);
 
@@ -78,37 +111,43 @@ contract BalancerVestAMM is BaseLibrary {
         // In this case, then there will be balance in the vault
         bool fromInternalBalance = false;
 
-        // We need to create a JoinPoolRequest to tell the pool how we we want to add liquidity
+        //NOTE: This is the maximum amount of BPT we want to receive. We set it to the max value so we can receive as much as possible
+        uint256 maxBpTAmountOut = type(uint256).max;
+
+        // NOTE: When adding liquidity for the second time we need to specify the minimum amount of BPT we want to receive
+        uint256 minBpTAmtOut = 0;
+
+        WeightedPoolUserData.JoinKind joinKind = WeightedPoolUserData.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT;
+
+        if (_initialLiquidity) {
+            joinKind = WeightedPoolUserData.JoinKind.INIT;
+        }
+
+        bytes memory userData = abi.encode(joinKind, _tokensAmtsIn, _initialLiquidity ? maxBpTAmountOut : minBpTAmtOut);
+
         IVault.JoinPoolRequest memory request = IVault.JoinPoolRequest({
             assets: assets,
             maxAmountsIn: maxAmountsIn,
-            userData: _userData,
+            userData: userData,
             fromInternalBalance: fromInternalBalance
         });
 
-        // We can tell the vault where to take tokens from and where to send BPT to
-        // If you don't have permission to take the sender's tokens then the transaction will revert.
-        // Here we're using tokens held on this contract to provide liquidity and forward the BPT to msg.sender.
-        // This means that the caller of this function will be the owner of the BPT (vAMM)
+        // Here we're using tokens held on this contract to provide liquidity and also revceive the BPT tokens
+        // This means that the caller of this function will be won't the owner of the BPT
         address sender = address(this);
-        address recipient = address(this); //msg.sender;
+        address recipient = address(this);
 
-        balancerVault.joinPool(_poolId, sender, recipient, request);
+        balancerVault.joinPool(poolId, sender, recipient, request);
     }
 
-    /**
-     * This function demonstrates how to remove liquidity from a pool
-     */
-    function removeLiquidity(
-        bytes32 _poolId,
-        bytes memory _userData,
-        uint256 _bptAmountIn
-    ) public {
-        // First approve Vault to use vAMM LP tokens
-        (address poolAddress, ) = balancerVault.getPool(_poolId);
-        IERC20(poolAddress).approve(address(balancerVault), _bptAmountIn);
+    function removeLiquidity(IVestAMMLibrary.RemoveLiquidity calldata _removeLiquidityData) external {
+        bytes32 poolId = IBalancerPool(_removeLiquidityData.poolAddress).getPoolId();
 
-        (IERC20[] memory tokens, , ) = balancerVault.getPoolTokens(_poolId);
+        // First approve Vault to use vAMM LP tokens
+        (address poolAddress, ) = balancerVault.getPool(poolId);
+        IERC20(poolAddress).approve(address(balancerVault), _removeLiquidityData.lpTokenAmtIn);
+
+        (IERC20[] memory tokens, , ) = balancerVault.getPoolTokens(poolId);
 
         // Here we're giving the minimum amounts of each token we'll accept as an output
         // For simplicity we're setting this to all zeros
@@ -117,17 +156,30 @@ contract BalancerVestAMM is BaseLibrary {
         // We can ask the Vault to keep the tokens we receive in our internal balance to save gas
         bool toInternalBalance = false;
 
+        bytes memory userData = abi.encode(
+            WeightedPoolUserData.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT,
+            _removeLiquidityData.lpTokenAmtIn
+        );
+
         // As we're exiting the pool we need to make an ExitPoolRequest instead
         IVault.ExitPoolRequest memory request = IVault.ExitPoolRequest({
             assets: _convertERC20sToAssets(tokens),
             minAmountsOut: minAmountsOut,
-            userData: _userData,
+            userData: userData,
             toInternalBalance: toInternalBalance
         });
 
         address sender = address(this);
         address payable recipient = payable(msg.sender);
-        balancerVault.exitPool(_poolId, sender, recipient, request);
+        balancerVault.exitPool(poolId, sender, recipient, request);
+    }
+
+    function checkPoolExists(bytes32 _poolId) external view returns (bool) {
+        try balancerVault.getPool(_poolId) {
+            return true;
+        } catch {
+            return false;
+        }
     }
 
     /**

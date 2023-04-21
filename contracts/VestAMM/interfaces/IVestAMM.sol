@@ -41,12 +41,28 @@ interface IVestAMM {
     struct AmmData {
         address ammLibrary; // could be null if no liquidity yet
         address investmentToken;
-        address baseAsset;
+        address baseToken;
     }
 
     struct FundingLimits {
         uint256 lower;
         uint256 upper;
+    }
+
+    struct DepositData {
+        uint256 lpDepositTime;
+        address lpToken;
+        uint256 lpTokenAmount;
+        mapping(uint8 => uint256) lpTokenAmountPerSchedule;
+    }
+    struct DeployPool {
+        uint256 investmentTokenAmount;
+        uint256 baseTokenAmount;
+    }
+
+    struct AddLiquidity {
+        uint256 investmentTokenAmount;
+        uint256 baseTokenAmount;
     }
 
     struct VAmmInfo {
