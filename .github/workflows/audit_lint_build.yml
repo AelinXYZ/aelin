@@ -16,6 +16,20 @@ jobs:
           cache: "yarn"
       - run: yarn install --immutable --immutable-cache --check-cache
 
+  lint:
+    needs: audit
+    # run only on audit success or audit skipped
+    if: always() && (needs.audit.result == 'success' || needs.audit.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          cache: "yarn"
+      - run: yarn install --immutable --immutable-cache --check-cache
+      - run: yarn lint
+
   # lint:
   #   needs: audit
   #   # run only on audit success or audit skipped
