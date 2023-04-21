@@ -1685,6 +1685,92 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         assertTrue(hasNftList);
     }
 
+    function test_AcceptDeal_ERC721IdRanges_Multiple() public {
+        // user setup
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressNftGating721IdRanges).dealConfig();
+
+        MockERC721(collection721_1).mint(user1, 1e20);
+        MockERC721(collection721_1).mint(user1, 1e20 + 1);
+        MockERC721(collection721_1).mint(user1, 1e20 + 2);
+
+        uint256 totalPoolShares;
+        uint256 poolSharesAmount;
+
+        // nft gating setup
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        uint256[] memory tokenIdsArray = new uint256[](3);
+        // we get the allocation for each collection
+        (uint256 purchaseCollection1, , , , ) = AelinUpFrontDeal(dealAddressNftGating721IdRanges).getNftCollectionDetails(
+            address(collection721_1)
+        );
+
+        // checks pre-purchase
+        bool NftIdUsed;
+        bool hasNftList;
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721IdRanges).getNftGatingDetails(
+            address(collection721_1),
+            1e20
+        );
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721IdRanges).getNftGatingDetails(
+            address(collection721_1),
+            1e20 + 1
+        );
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721IdRanges).getNftGatingDetails(
+            address(collection721_1),
+            1e20 + 2
+        );
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+
+        vm.startPrank(user1);
+
+        //Three NFTs in range, so 3 times the allocation
+        poolSharesAmount = ((3 * purchaseCollection1) * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        totalPoolShares = poolSharesAmount;
+        vm.assume(poolSharesAmount > 0);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating721IdRanges), type(uint256).max);
+        tokenIdsArray[0] = 1e20;
+        tokenIdsArray[1] = 1e20 + 1;
+        tokenIdsArray[2] = 1e20 + 2;
+        nftPurchaseList[0].collectionAddress = address(collection721_1);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user1, (3 * purchaseCollection1), (3 * purchaseCollection1), poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressNftGating721IdRanges).acceptDeal(
+            nftPurchaseList,
+            merkleDataEmpty,
+            (3 * purchaseCollection1)
+        );
+        vm.stopPrank();
+
+        //checks post-purchase
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721IdRanges).getNftGatingDetails(
+            address(collection721_1),
+            1e20
+        );
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721IdRanges).getNftGatingDetails(
+            address(collection721_1),
+            1e20 + 1
+        );
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721IdRanges).getNftGatingDetails(
+            address(collection721_1),
+            1e20 + 2
+        );
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+    }
+
     function test_AcceptDeal_MerkleAllowance() public {
         AelinAllowList.InitData memory allowListInitEmpty;
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;

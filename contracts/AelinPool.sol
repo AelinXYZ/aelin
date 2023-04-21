@@ -13,6 +13,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     uint256 constant BASE = 100 * 10 ** 18;
     uint256 constant MAX_SPONSOR_FEE = 15 * 10 ** 18;
     uint256 constant AELIN_FEE = 2 * 10 ** 18;
+    uint256 constant ID_RANGES_MAX_LENGTH = 10;
     uint8 constant MAX_DEALS = 5;
 
     uint8 public numberOfDeals;
@@ -143,7 +144,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
                     );
 
                     uint256 rangesLength = nftCollectionRules[i].idRanges.length;
-                    require(rangesLength <= 10, "max of ten id ranges");
+                    require(rangesLength <= ID_RANGES_MAX_LENGTH, "too many ranges");
 
                     for (uint256 j; j < rangesLength; j++) {
                         require(

@@ -334,7 +334,7 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
 
         AelinPool pool = new AelinPool();
         AelinFeeEscrow escrow = new AelinFeeEscrow();
-        vm.expectRevert("max of ten id ranges");
+        vm.expectRevert("too many ranges");
         pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
     }
 

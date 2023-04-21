@@ -6,6 +6,7 @@ import "../interfaces/ICryptoPunks.sol";
 
 library AelinNftGating {
     address constant CRYPTO_PUNKS = address(0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB);
+    uint256 constant ID_RANGES_MAX_LENGTH = 10;
 
     // A struct that allows specific token Id ranges to be specified in a 721 collection
     // Range is inclusive of beginning and ending token Ids
@@ -59,7 +60,7 @@ library AelinNftGating {
                     );
 
                     uint256 rangesLength = _nftCollectionRules[i].idRanges.length;
-                    require(rangesLength <= 10, "max of ten id ranges");
+                    require(rangesLength <= ID_RANGES_MAX_LENGTH, "too many ranges");
 
                     for (uint256 j; j < rangesLength; j++) {
                         require(
@@ -158,6 +159,8 @@ library AelinNftGating {
                     //If there are no ranges then no need to check whether token Id is within them
                     if (nftCollectionRules.idRanges.length > 0) {
                         require(isTokenIdInRange(_tokenIds[j], nftCollectionRules.idRanges), "tokenId not in range");
+
+                        //Some logic in here about range purchase amount limits
                     }
                     require(!_data.nftId[_collectionAddress][_tokenIds[j]], "tokenId already used");
                     _data.nftId[_collectionAddress][_tokenIds[j]] = true;

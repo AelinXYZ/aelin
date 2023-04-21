@@ -489,7 +489,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
 
         nftCollectionRules721[0].idRanges = idRanges;
 
-        vm.expectRevert("max of ten id ranges");
+        vm.expectRevert("too many ranges");
         upFrontDealFactory.createUpFrontDeal(getDealData(), getDealConfig(), nftCollectionRules721, allowListEmpty);
         vm.stopPrank();
     }
@@ -913,16 +913,15 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         (, , , tempBool) = AelinUpFrontDeal(dealAddressNftGating721).getAllowList(address(0));
         assertFalse(tempBool);
         // test nft gating
-        AelinNftGating.IdRange[] memory idRanges;
         uint256[] memory tempUintArray1;
         uint256[] memory tempUintArray2;
         (, tempBool) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(0), 0);
         assertTrue(tempBool);
-        (tempUint, tempAddress, idRanges, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating721)
+        (tempUint, tempAddress, , tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating721)
             .getNftCollectionDetails(address(collection721_1));
         assertEq(tempUint, 1e20);
         assertEq(tempAddress, address(collection721_1));
-        (tempUint, tempAddress, idRanges, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating721)
+        (tempUint, tempAddress, , tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating721)
             .getNftCollectionDetails(address(collection721_2));
         assertEq(tempUint, 1e22);
         assertEq(tempAddress, address(collection721_2));
