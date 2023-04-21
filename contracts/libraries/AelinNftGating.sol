@@ -150,8 +150,6 @@ library AelinNftGating {
                     //If there are no ranges then no need to check whether token Id is within them
                     if (nftCollectionRules.idRanges.length > 0) {
                         require(isTokenIdInRange(_tokenIds[j], nftCollectionRules.idRanges), "tokenId not in range");
-
-                        //Some logic in here about range purchase amount limits
                     }
                     require(!_data.nftId[_collectionAddress][_tokenIds[j]], "tokenId already used");
                     _data.nftId[_collectionAddress][_tokenIds[j]] = true;
