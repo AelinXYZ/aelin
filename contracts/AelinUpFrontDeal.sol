@@ -543,8 +543,8 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     /**
      * @dev returns various details about the NFT gating storage
      * @param _collection NFT collection address to check
-     * @param _nftId if _collection is ERC721 or CryptoPunks check if this ID has been used, if ERC1155 check if this ID is included
-     * @return bool if _collection is ERC721 or CryptoPunks true if this ID has been used, if ERC1155 true if this ID is included
+     * @param _nftId if _collection is ERC721 check if this ID has been used, if ERC1155 check if this ID is included
+     * @return bool if _collection is ERC721 true if this ID has been used, if ERC1155 true if this ID is included
      * @return bool returns hasNftList, true if this deal has a valid NFT gating list
      */
     function getNftGatingDetails(address _collection, uint256 _nftId) public view returns (bool, bool) {

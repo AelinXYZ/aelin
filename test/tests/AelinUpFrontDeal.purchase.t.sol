@@ -12,7 +12,6 @@ import {IAelinUpFrontDeal} from "contracts/interfaces/IAelinUpFrontDeal.sol";
 import {MockERC1155} from "../mocks/MockERC1155.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockERC721} from "../mocks/MockERC721.sol";
-import {MockPunks} from "../mocks/MockPunks.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {MerkleTree} from "contracts/libraries/MerkleTree.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -29,8 +28,6 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
     address dealAddressAllowList;
     address dealAddressNftGating721;
     address dealAddressNftGating1155;
-    address dealAddressNftGatingPunks;
-    address dealAddressNftGatingPunksPerToken;
     address dealAddressNftGating721IdRanges;
 
     function setUp() public {
@@ -48,7 +45,6 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         IAelinUpFrontDeal.UpFrontDealConfig memory dealConfigAllowDeallocation = getDealConfigAllowDeallocation();
 
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules721 = getERC721Collection();
-        AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = getPunksCollection();
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules1155 = getERC1155Collection();
 
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules721IdRanges = getERC721Collection();
@@ -96,13 +92,6 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
             allowListEmpty
         );
 
-        dealAddressNftGatingPunks = upFrontDealFactory.createUpFrontDeal(
-            dealData,
-            dealConfig,
-            nftCollectionRulesPunks,
-            allowListEmpty
-        );
-
         dealAddressNftGating1155 = upFrontDealFactory.createUpFrontDeal(
             dealData,
             dealConfig,
@@ -135,9 +124,6 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
 
         underlyingDealToken.approve(address(dealAddressNftGating721), type(uint256).max);
         AelinUpFrontDeal(dealAddressNftGating721).depositUnderlyingTokens(1e35);
-
-        underlyingDealToken.approve(address(dealAddressNftGatingPunks), type(uint256).max);
-        AelinUpFrontDeal(dealAddressNftGatingPunks).depositUnderlyingTokens(1e35);
 
         underlyingDealToken.approve(address(dealAddressNftGating1155), type(uint256).max);
         AelinUpFrontDeal(dealAddressNftGating1155).depositUnderlyingTokens(1e35);
@@ -581,7 +567,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
     function testFuzz_AcceptDeal_RevertWhen_CollectionNotSupported(uint256 _purchaseAmount) public {
         vm.startPrank(user1);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](2);
-        nftPurchaseList[0].collectionAddress = punks;
+        nftPurchaseList[0].collectionAddress = address(420);
         deal(address(purchaseToken), user1, type(uint256).max);
         purchaseToken.approve(address(dealAddressNftGating721), type(uint256).max);
         vm.expectRevert("collection not in the pool");
@@ -682,60 +668,6 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         vm.startPrank(user1);
         vm.expectRevert("purchase amount greater than max allocation");
         AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
-        vm.stopPrank();
-    }
-
-    function testFuzz_AcceptDeal_RevertWhen_NotPunkOwner(uint256 _purchaseAmount) public {
-        vm.startPrank(user1);
-        deal(address(purchaseToken), user1, type(uint256).max);
-        purchaseToken.approve(address(dealAddressNftGatingPunks), type(uint256).max);
-
-        // Since punks address is hardcoded we need to cheat and link the Mock contract to the address
-        bytes memory punksContractCode = address(collectionPunks).code;
-        vm.etch(punks, punksContractCode);
-        uint256[] memory tokenIdsArray = new uint256[](2);
-        // We mint some punks to another user
-        MockPunks(punks).mint(user2, 1);
-        MockPunks(punks).mint(user2, 2);
-        tokenIdsArray[0] = 1;
-        tokenIdsArray[1] = 2;
-        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
-        nftPurchaseList[0].collectionAddress = address(punks);
-        nftPurchaseList[0].tokenIds = tokenIdsArray;
-
-        // We mint the tokens to another user
-        vm.expectRevert("not the owner");
-        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
-        vm.stopPrank();
-    }
-
-    function test_AcceptDeal_RevertWhen_PunkAlreadyUsed() public {
-        vm.startPrank(user1);
-        deal(address(purchaseToken), user1, type(uint256).max);
-        purchaseToken.approve(address(dealAddressNftGatingPunks), type(uint256).max);
-
-        uint256 purchaseAmount = 1e18;
-        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
-        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressNftGating721).dealConfig();
-        uint256 poolSharesAmount = (purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
-
-        // Since punks address is hardcoded we need to cheat and link the Mock contract to the address
-        bytes memory punksContractCode = address(collectionPunks).code;
-        vm.etch(punks, punksContractCode);
-        uint256[] memory tokenIdsArray = new uint256[](2);
-        MockPunks(punks).mint(user1, 1);
-        MockPunks(punks).mint(user1, 2);
-        tokenIdsArray[0] = 1;
-        tokenIdsArray[1] = 2;
-        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
-        nftPurchaseList[0].collectionAddress = address(punks);
-        nftPurchaseList[0].tokenIds = tokenIdsArray;
-
-        vm.expectEmit(true, false, false, true);
-        emit AcceptDeal(user1, purchaseAmount, purchaseAmount, poolSharesAmount, poolSharesAmount);
-        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
-        vm.expectRevert("tokenId already used");
-        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
         vm.stopPrank();
     }
 
@@ -1408,98 +1340,6 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
         (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(collection721_2), 3);
-        assertTrue(NftIdUsed);
-        assertTrue(hasNftList);
-    }
-
-    function test_AcceptDeal_Punks() public {
-        // since punks address is hardcoded we need to cheat and link the Mock contract to the address
-        bytes memory punksContractCode = address(collectionPunks).code;
-        vm.etch(punks, punksContractCode);
-
-        // nft gating setup
-        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
-        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressNftGatingPunks).dealConfig();
-        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
-        uint256[] memory tokenIdsArray = new uint256[](2);
-        // we get the allocation for each collection
-        (uint256 purchaseCollection, , , , ) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftCollectionDetails(
-            address(punks)
-        );
-
-        // we mint some punks
-        MockPunks(punks).mint(user1, 1);
-        MockPunks(punks).mint(user1, 2);
-        MockPunks(punks).mint(user2, 3);
-        MockPunks(punks).mint(user2, 4);
-
-        // checks pre-purchase
-        bool NftIdUsed;
-        bool hasNftList;
-        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(punks), 1);
-        assertFalse(NftIdUsed);
-        assertTrue(hasNftList);
-        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(punks), 2);
-        assertFalse(NftIdUsed);
-        assertTrue(hasNftList);
-        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(punks), 3);
-        assertFalse(NftIdUsed);
-        assertTrue(hasNftList);
-        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(punks), 4);
-        assertFalse(NftIdUsed);
-        assertTrue(hasNftList);
-
-        // user1 tries to invest double the allocated amount because they own 2 punks, but fails
-        vm.startPrank(user1);
-        deal(address(purchaseToken), user1, type(uint256).max);
-        purchaseToken.approve(address(dealAddressNftGatingPunks), type(uint256).max);
-        tokenIdsArray[0] = 1;
-        tokenIdsArray[1] = 2;
-        nftPurchaseList[0].collectionAddress = address(punks);
-        nftPurchaseList[0].tokenIds = tokenIdsArray;
-        vm.expectRevert("purchase amount greater than max allocation");
-        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, (7 * purchaseCollection));
-
-        // user1 now purchases half of the allocation
-        uint256 purchaseAmount = purchaseCollection / 2;
-        uint256 poolSharesAmount = (purchaseAmount * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
-        vm.expectEmit(true, false, false, true);
-        emit AcceptDeal(user1, purchaseAmount, purchaseAmount, poolSharesAmount, poolSharesAmount);
-        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
-
-        // user1 can't reuse the same tokens if they want to purchase again
-        vm.expectRevert("tokenId already used");
-        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseAmount);
-        vm.stopPrank();
-
-        // user2 tries to buy all the allocation
-        vm.startPrank(user2);
-        deal(address(purchaseToken), user2, type(uint256).max);
-        purchaseToken.approve(address(dealAddressNftGatingPunks), type(uint256).max);
-        tokenIdsArray[0] = 3;
-        tokenIdsArray[1] = 4;
-        nftPurchaseList[0].tokenIds = tokenIdsArray;
-        poolSharesAmount = (purchaseCollection * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
-        vm.expectEmit(true, false, false, true);
-        emit AcceptDeal(user2, purchaseCollection, purchaseCollection, poolSharesAmount, poolSharesAmount);
-        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseCollection);
-
-        // user2 can't reuse the same tokens if they want to purchase again
-        vm.expectRevert("tokenId already used");
-        AelinUpFrontDeal(dealAddressNftGatingPunks).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseCollection);
-        vm.stopPrank();
-
-        //checks post-purchase
-        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(punks), 1);
-        assertTrue(NftIdUsed);
-        assertTrue(hasNftList);
-        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(punks), 2);
-        assertTrue(NftIdUsed);
-        assertTrue(hasNftList);
-        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(punks), 3);
-        assertTrue(NftIdUsed);
-        assertTrue(hasNftList);
-        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(punks), 4);
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
     }

@@ -2,10 +2,8 @@
 pragma solidity 0.8.6;
 
 import "./NftCheck.sol";
-import "../interfaces/ICryptoPunks.sol";
 
 library AelinNftGating {
-    address constant CRYPTO_PUNKS = address(0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB);
     uint256 constant ID_RANGES_MAX_LENGTH = 10;
 
     // A struct that allows specific token Id ranges to be specified in a 721 collection
@@ -48,14 +46,10 @@ library AelinNftGating {
     function initialize(NftCollectionRules[] calldata _nftCollectionRules, NftGatingData storage _data) external {
         if (_nftCollectionRules.length > 0) {
             // if the first address supports punks or 721, the entire pool only supports 721 or punks
-            if (
-                _nftCollectionRules[0].collectionAddress == CRYPTO_PUNKS ||
-                NftCheck.supports721(_nftCollectionRules[0].collectionAddress)
-            ) {
+            if (NftCheck.supports721(_nftCollectionRules[0].collectionAddress)) {
                 for (uint256 i; i < _nftCollectionRules.length; ++i) {
                     require(
-                        _nftCollectionRules[i].collectionAddress == CRYPTO_PUNKS ||
-                            NftCheck.supports721(_nftCollectionRules[i].collectionAddress),
+                        NftCheck.supports721(_nftCollectionRules[i].collectionAddress),
                         "can only contain 721"
                     );
 
@@ -133,7 +127,7 @@ library AelinNftGating {
             require(nftCollectionRules.collectionAddress == _collectionAddress, "collection not in the pool");
 
             if (nftCollectionRules.purchaseAmount > 0) {
-                if (NftCheck.supports721(_collectionAddress) || _collectionAddress == CRYPTO_PUNKS) {
+                if (NftCheck.supports721(_collectionAddress)) {
                     unchecked {
                         uint256 collectionAllowance = nftCollectionRules.purchaseAmount * _tokenIds.length;
                         // if there is an overflow of the pervious calculation, allow the max purchase token amount
@@ -175,17 +169,6 @@ library AelinNftGating {
                             nftCollectionRules.minTokensEligible[j],
                         "erc1155 balance too low"
                     );
-                }
-            }
-            if (_collectionAddress == CRYPTO_PUNKS) {
-                for (uint256 j; j < _tokenIds.length; ++j) {
-                    require(
-                        ICryptoPunks(_collectionAddress).punkIndexToAddress(_tokenIds[j]) == msg.sender,
-                        "not the owner"
-                    );
-                    require(!_data.nftId[_collectionAddress][_tokenIds[j]], "tokenId already used");
-                    _data.nftId[_collectionAddress][_tokenIds[j]] = true;
-                    emit BlacklistNFT(_collectionAddress, _tokenIds[j]);
                 }
             }
         }

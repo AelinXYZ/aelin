@@ -11,7 +11,6 @@ import {IAelinDeal} from "contracts/interfaces/IAelinDeal.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockERC721} from "../mocks/MockERC721.sol";
 import {MockERC1155} from "../mocks/MockERC1155.sol";
-import {MockPunks} from "../mocks/MockPunks.sol";
 
 contract AelinPoolMiscTest is Test, AelinTestUtils {
     address public poolAddress;
@@ -60,7 +59,6 @@ contract AelinPoolMiscTest is Test, AelinTestUtils {
     enum PoolVarsNftCollection {
         ERC721,
         ERC1155,
-        PUNKS,
         NONE
     }
 

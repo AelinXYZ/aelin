@@ -4,12 +4,10 @@ pragma solidity 0.8.6;
 import "./AelinERC20.sol";
 import "./AelinDeal.sol";
 import "./interfaces/IAelinPool.sol";
-import "./interfaces/ICryptoPunks.sol";
 import "./libraries/NftCheck.sol";
 
 contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     using SafeERC20 for IERC20;
-    address constant CRYPTO_PUNKS = address(0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB);
     uint256 constant BASE = 100 * 10 ** 18;
     uint256 constant MAX_SPONSOR_FEE = 15 * 10 ** 18;
     uint256 constant AELIN_FEE = 2 * 10 ** 18;
@@ -131,15 +129,11 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         NftCollectionRules[] calldata nftCollectionRules = _poolData.nftCollectionRules;
 
         if (nftCollectionRules.length > 0) {
-            // if the first address supports punks or 721, the entire pool only supports 721 or punks
-            if (
-                nftCollectionRules[0].collectionAddress == CRYPTO_PUNKS ||
-                NftCheck.supports721(nftCollectionRules[0].collectionAddress)
-            ) {
+            // if the first address supports 721, the entire pool only supports 721
+            if (NftCheck.supports721(nftCollectionRules[0].collectionAddress)) {
                 for (uint256 i; i < nftCollectionRules.length; ++i) {
                     require(
-                        nftCollectionRules[i].collectionAddress == CRYPTO_PUNKS ||
-                            NftCheck.supports721(nftCollectionRules[i].collectionAddress),
+                        NftCheck.supports721(nftCollectionRules[i].collectionAddress),
                         "can only contain 721"
                     );
 
@@ -263,9 +257,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
             if (NftCheck.supports1155(collectionAddress)) {
                 _eligibilityCheck1155(collectionAddress, tokenIds, nftCollectionRules);
             }
-            if (collectionAddress == CRYPTO_PUNKS) {
-                _blackListCheckPunks(collectionAddress, tokenIds);
-            }
         }
 
         require(_purchaseTokenAmount <= maxPurchaseTokenAmount, "purchase amount should be less the max allocation");
@@ -316,15 +307,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
                 IERC1155(_collectionAddress).balanceOf(msg.sender, _tokenIds[i]) >= _nftCollectionRules.minTokensEligible[i],
                 "erc1155 balance too low"
             );
-        }
-    }
-
-    function _blackListCheckPunks(address _punksAddress, uint256[] memory _tokenIds) internal {
-        for (uint256 i; i < _tokenIds.length; ++i) {
-            require(ICryptoPunks(_punksAddress).punkIndexToAddress(_tokenIds[i]) == msg.sender, "not the owner");
-            require(!nftId[_punksAddress][_tokenIds[i]], "tokenId already used");
-            nftId[_punksAddress][_tokenIds[i]] = true;
-            emit BlacklistNFT(_punksAddress, _tokenIds[i]);
         }
     }
 

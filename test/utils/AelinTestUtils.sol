@@ -12,11 +12,9 @@ import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockERC721} from "../mocks/MockERC721.sol";
 import {MockERC1155} from "../mocks/MockERC1155.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import {MockPunks} from "../mocks/MockPunks.sol";
 
 contract AelinTestUtils is Test {
     address public aelinTreasury = address(0xfdbdb06109CD25c7F485221774f5f96148F1e235);
-    address public punks = address(0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB);
 
     uint256 constant BASE = 100 * 10 ** 18;
     uint256 constant MAX_SPONSOR_FEE = 15 * 10 ** 18;
@@ -41,7 +39,6 @@ contract AelinTestUtils is Test {
     MockERC1155 public collection1155_1 = new MockERC1155("");
     MockERC1155 public collection1155_2 = new MockERC1155("");
     MockERC1155 public collection1155_3 = new MockERC1155("");
-    MockPunks public collectionPunks = new MockPunks();
 
     AelinNftGating.NftCollectionRules[] public nftCollectionRulesEmpty;
 
@@ -291,15 +288,6 @@ contract AelinTestUtils is Test {
         nftCollectionRules1155[1].minTokensEligible[1] = 2000;
 
         return nftCollectionRules1155;
-    }
-
-    function getPunksCollection() public view returns (AelinNftGating.NftCollectionRules[] memory) {
-        AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = new AelinNftGating.NftCollectionRules[](1);
-
-        nftCollectionRulesPunks[0].collectionAddress = address(punks);
-        nftCollectionRulesPunks[0].purchaseAmount = 1e22;
-
-        return nftCollectionRulesPunks;
     }
 
     function setupAndAcceptDealNoDeallocation(address _dealAddress, uint256 _purchaseAmount, address _user) public {
