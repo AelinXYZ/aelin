@@ -45,13 +45,10 @@ library AelinNftGating {
      */
     function initialize(NftCollectionRules[] calldata _nftCollectionRules, NftGatingData storage _data) external {
         if (_nftCollectionRules.length > 0) {
-            // if the first address supports punks or 721, the entire pool only supports 721 or punks
+            // if the first address supports 721, the entire pool only supports 721
             if (NftCheck.supports721(_nftCollectionRules[0].collectionAddress)) {
                 for (uint256 i; i < _nftCollectionRules.length; ++i) {
-                    require(
-                        NftCheck.supports721(_nftCollectionRules[i].collectionAddress),
-                        "can only contain 721"
-                    );
+                    require(NftCheck.supports721(_nftCollectionRules[i].collectionAddress), "can only contain 721");
 
                     uint256 rangesLength = _nftCollectionRules[i].idRanges.length;
                     require(rangesLength <= ID_RANGES_MAX_LENGTH, "too many ranges");
