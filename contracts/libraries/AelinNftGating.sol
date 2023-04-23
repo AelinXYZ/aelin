@@ -11,6 +11,9 @@ library AelinNftGating {
     struct IdRange {
         uint256 begin;
         uint256 end;
+        // Used to specify a purchase limit for tokens in a specific ranges
+        // If zero, then ignore and defer to purchaseAmount in collection Rules
+        uint256 rangeAmount;
     }
 
     // collectionAddress should be unique, otherwise will override
@@ -108,80 +111,119 @@ library AelinNftGating {
         NftGatingData storage _data,
         uint256 _purchaseTokenAmount
     ) external returns (uint256) {
+        uint256 collectionLength = _nftPurchaseList.length;
+
         require(_data.hasNftList, "pool does not have an NFT list");
-        require(_nftPurchaseList.length > 0, "must provide purchase list");
+        require(collectionLength > 0, "must provide purchase list");
 
-        uint256 maxPurchaseTokenAmount;
+        //An array of arrays that correspond to the max purchase amount for each (collection, tokenId) pairing
+        uint256[][] memory maxPurchaseTokenAmounts = new uint256[][](collectionLength);
 
-        for (uint256 i; i < _nftPurchaseList.length; ++i) {
-            NftPurchaseList memory nftPurchaseList = _nftPurchaseList[i];
-            address _collectionAddress = nftPurchaseList.collectionAddress;
-            uint256[] memory _tokenIds = nftPurchaseList.tokenIds;
+        NftPurchaseList memory nftPurchaseList;
+        address _collectionAddress;
+        uint256[] memory _tokenIds;
+        NftCollectionRules memory nftCollectionRules;
 
-            NftCollectionRules memory nftCollectionRules = _data.nftCollectionDetails[_collectionAddress];
+        //Iterate over the collections
+        for (uint256 i; i < collectionLength; ++i) {
+            nftPurchaseList = _nftPurchaseList[i];
+            _collectionAddress = nftPurchaseList.collectionAddress;
+            _tokenIds = nftPurchaseList.tokenIds;
+            nftCollectionRules = _data.nftCollectionDetails[_collectionAddress];
+
+            uint256 tokenIdsLength = _tokenIds.length;
+            //Dummy array used for this iteration token ids
+            //Must be re-declared here each loop because the length may vary
+            uint256[] memory maxPurchaseTokensAmountForCollection = new uint256[](tokenIdsLength);
 
             require(_collectionAddress != address(0), "collection should not be null");
             require(nftCollectionRules.collectionAddress == _collectionAddress, "collection not in the pool");
 
-            if (nftCollectionRules.purchaseAmount > 0) {
+            //Iterate over the token ids
+            for (uint256 j; j < tokenIdsLength; ++j) {
                 if (NftCheck.supports721(_collectionAddress)) {
-                    unchecked {
-                        uint256 collectionAllowance = nftCollectionRules.purchaseAmount * _tokenIds.length;
-                        // if there is an overflow of the pervious calculation, allow the max purchase token amount
-                        if (collectionAllowance / nftCollectionRules.purchaseAmount != _tokenIds.length) {
-                            maxPurchaseTokenAmount = type(uint256).max;
+                    require(IERC721(_collectionAddress).ownerOf(_tokenIds[j]) == msg.sender, "has to be the token owner");
+                    // If there are no ranges then no need to check whether token Id is within them
+                    // Or whether there are any rangeAmounts
+                    if (nftCollectionRules.idRanges.length > 0) {
+                        //Gets a boolean for whether token Id is in range and what the range amount is if there is one
+                        (bool isTokenIdInRange, uint256 rangeAmountForTokenId) = getRangeData(
+                            _tokenIds[j],
+                            nftCollectionRules.idRanges
+                        );
+                        require(isTokenIdInRange, "tokenId not in range");
+
+                        //if there's a range amount for this token id, then set that as the max for its element
+                        if (rangeAmountForTokenId != 0) {
+                            maxPurchaseTokensAmountForCollection[j] = rangeAmountForTokenId;
                         } else {
-                            maxPurchaseTokenAmount += collectionAllowance;
-                            if (maxPurchaseTokenAmount < collectionAllowance) {
-                                maxPurchaseTokenAmount = type(uint256).max;
+                            //Otherwise defer to purchaseAmount
+                            if (nftCollectionRules.purchaseAmount == 0) {
+                                maxPurchaseTokensAmountForCollection[j] = type(uint256).max;
+                            } else {
+                                maxPurchaseTokensAmountForCollection[j] = nftCollectionRules.purchaseAmount;
                             }
                         }
+                    } else {
+                        if (nftCollectionRules.purchaseAmount == 0) {
+                            maxPurchaseTokensAmountForCollection[j] = type(uint256).max;
+                        } else {
+                            maxPurchaseTokensAmountForCollection[j] = nftCollectionRules.purchaseAmount;
+                        }
                     }
-                }
-            }
 
-            if (nftCollectionRules.purchaseAmount == 0) {
-                maxPurchaseTokenAmount = type(uint256).max;
-            }
-
-            if (NftCheck.supports721(_collectionAddress)) {
-                for (uint256 j; j < _tokenIds.length; ++j) {
-                    require(IERC721(_collectionAddress).ownerOf(_tokenIds[j]) == msg.sender, "has to be the token owner");
-                    //If there are no ranges then no need to check whether token Id is within them
-                    if (nftCollectionRules.idRanges.length > 0) {
-                        require(isTokenIdInRange(_tokenIds[j], nftCollectionRules.idRanges), "tokenId not in range");
-                    }
                     require(!_data.nftId[_collectionAddress][_tokenIds[j]], "tokenId already used");
                     _data.nftId[_collectionAddress][_tokenIds[j]] = true;
                     emit BlacklistNFT(_collectionAddress, _tokenIds[j]);
                 }
-            }
-            if (NftCheck.supports1155(_collectionAddress)) {
-                for (uint256 j; j < _tokenIds.length; ++j) {
+
+                if (NftCheck.supports1155(_collectionAddress)) {
                     require(_data.nftId[_collectionAddress][_tokenIds[j]], "tokenId not in the pool");
                     require(
                         IERC1155(_collectionAddress).balanceOf(msg.sender, _tokenIds[j]) >=
                             nftCollectionRules.minTokensEligible[j],
                         "erc1155 balance too low"
                     );
+
+                    //All 1155s are allowed unlimited purchases per token Id
+                    maxPurchaseTokensAmountForCollection[j] = type(uint256).max;
                 }
             }
+            maxPurchaseTokenAmounts[i] = maxPurchaseTokensAmountForCollection;
         }
 
+        uint256 maxPurchaseTokenAmount = getMaxPurchaseTokenAmount(maxPurchaseTokenAmounts);
         require(_purchaseTokenAmount <= maxPurchaseTokenAmount, "purchase amount greater than max allocation");
 
         return (maxPurchaseTokenAmount);
     }
 
-    //Used to test whether a token Id is in a collection Rule set of ranges
-    //Perhaps make this public if it's useful elsewhere?
-    function isTokenIdInRange(uint256 _tokenId, IdRange[] memory idRanges) internal pure returns (bool) {
-        for (uint256 i; i < idRanges.length; i++) {
-            if (_tokenId >= idRanges[i].begin && _tokenId <= idRanges[i].end) {
-                return true;
+    function getMaxPurchaseTokenAmount(uint256[][] memory maxPurchaseTokenAmounts) internal pure returns (uint256) {
+        uint256 collectionLength = maxPurchaseTokenAmounts.length;
+        uint256 tokenIdsPerCollectionLength;
+        uint256 runningTotal;
+
+        for (uint256 i; i < collectionLength; i++) {
+            tokenIdsPerCollectionLength = maxPurchaseTokenAmounts[i].length;
+            for (uint256 j; j < tokenIdsPerCollectionLength; j++) {
+                if (maxPurchaseTokenAmounts[i][j] == type(uint256).max) {
+                    //If there are any unlimited purchase amounts then return max
+                    return type(uint256).max;
+                } else {
+                    runningTotal += maxPurchaseTokenAmounts[i][j];
+                }
             }
         }
-        return false;
+        return runningTotal;
+    }
+
+    function getRangeData(uint256 _tokenId, IdRange[] memory _idRanges) internal pure returns (bool, uint256) {
+        for (uint256 i; i < _idRanges.length; i++) {
+            if (_tokenId >= _idRanges[i].begin && _tokenId <= _idRanges[i].end) {
+                return (true, _idRanges[i].rangeAmount);
+            }
+        }
+        return (false, 0);
     }
 
     event PoolWith721(address indexed collectionAddress, uint256 purchaseAmount);

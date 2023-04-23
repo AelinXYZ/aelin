@@ -255,13 +255,17 @@ contract AelinTestUtils is Test {
     }
 
     function getERC721IdRanges() public pure returns (AelinNftGating.IdRange[] memory) {
-        AelinNftGating.IdRange[] memory idRanges = new AelinNftGating.IdRange[](2);
+        AelinNftGating.IdRange[] memory idRanges = new AelinNftGating.IdRange[](3);
 
         idRanges[0].begin = 1;
         idRanges[0].end = 2;
 
         idRanges[1].begin = 1e20;
         idRanges[1].end = 1e21;
+
+        idRanges[2].begin = 4;
+        idRanges[2].end = 5;
+        idRanges[2].rangeAmount = 100;
 
         return idRanges;
     }
@@ -416,11 +420,15 @@ contract AelinTestUtils is Test {
             address(collection721_3)
         ];
 
-        IAelinPool.IdRange[] memory idRanges = new IAelinPool.IdRange[](2);
+        IAelinPool.IdRange[] memory idRanges = new IAelinPool.IdRange[](3);
         idRanges[0].begin = 1;
         idRanges[0].end = 2;
         idRanges[1].begin = 1e20;
         idRanges[1].end = 1e21;
+
+        idRanges[2].begin = 4;
+        idRanges[2].end = 5;
+        idRanges[2].rangeAmount = 100;
 
         uint256 pseudoRandom;
         for (uint256 i; i < 3; ++i) {

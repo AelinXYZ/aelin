@@ -570,7 +570,7 @@ contract AelinPoolPurchaseTest is Test, AelinTestUtils {
 
         // Assert
         vm.startPrank(user1);
-        MockERC721(collection721_1).mint(user1, 1);
+        MockERC721(collection721_1).mint(user1, 10);
         purchaseToken.approve(address(pool), _purchaseTokenAmount);
         vm.expectRevert("tokenId not in range");
         pool.purchasePoolTokensWithNft(nftPurchaseList, _purchaseTokenAmount);
@@ -713,6 +713,62 @@ contract AelinPoolPurchaseTest is Test, AelinTestUtils {
         vm.startPrank(user1);
         purchaseToken.approve(address(pool), _purchaseTokenAmount);
         MockERC721(collection721_1).mint(user1, 1);
+        emit PurchasePoolToken(user1, _purchaseTokenAmount);
+        pool.purchasePoolTokensWithNft(nftPurchaseList, _purchaseTokenAmount);
+
+        assertEq(pool.balanceOf(user1), _purchaseTokenAmount, "user got correct amount of pool tokens");
+        vm.stopPrank();
+    }
+
+    function testFuzz_PurchasePoolTokensWithNft_PoolERC721_With_IdRanges_RangeAmounts(
+        uint256 _purchaseTokenCap,
+        uint256 _poolDuration,
+        uint256 _sponsorFee,
+        uint256 _purchaseDuration
+    ) public {
+        vm.assume(_sponsorFee <= MAX_SPONSOR_FEE);
+        vm.assume(_purchaseDuration >= 30 minutes && _purchaseDuration <= 30 days);
+        vm.assume(_poolDuration <= 365 days);
+        vm.assume(_purchaseTokenCap > 0);
+
+        uint256 _purchaseTokenAmount = 100;
+
+        address[] memory allowListAddressesEmpty;
+        uint256[] memory allowListAmountsEmpty;
+
+        IAelinPool.NftCollectionRules[] memory nftCollectionRules = getNft721CollectionRules();
+        nftCollectionRules[0].purchaseAmount = 0;
+
+        IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
+        nftPurchaseList[0].collectionAddress = address(collection721_1);
+        nftPurchaseList[0].tokenIds = new uint256[](1);
+        nftPurchaseList[0].tokenIds[0] = 4; // Is in Id Range with range amount of 100
+
+        IAelinPool.PoolData memory poolData = getPoolData({
+            purchaseTokenCap: _purchaseTokenCap,
+            duration: _poolDuration,
+            sponsorFee: _sponsorFee,
+            purchaseDuration: _purchaseDuration,
+            allowListAddresses: allowListAddressesEmpty,
+            allowListAmounts: allowListAmountsEmpty,
+            nftCollectionRules: nftCollectionRules
+        });
+
+        AelinPool pool = new AelinPool();
+        AelinFeeEscrow escrow = new AelinFeeEscrow();
+        pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
+        vm.assume(_purchaseTokenAmount <= _purchaseTokenCap - pool.totalSupply());
+
+        // Assert
+        vm.startPrank(user1);
+        purchaseToken.approve(address(pool), _purchaseTokenAmount);
+        MockERC721(collection721_1).mint(user1, 4);
+
+        //Should fail as rangeAmount exists for this range
+        vm.expectRevert("purchase amount should be less the max allocation");
+        pool.purchasePoolTokensWithNft(nftPurchaseList, _purchaseTokenAmount + 1);
+
+        //Should succeed
         emit PurchasePoolToken(user1, _purchaseTokenAmount);
         pool.purchasePoolTokensWithNft(nftPurchaseList, _purchaseTokenAmount);
 

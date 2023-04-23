@@ -632,14 +632,14 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         deal(address(purchaseToken), user1, type(uint256).max);
         purchaseToken.approve(address(dealAddressNftGating721IdRanges), type(uint256).max);
         uint256[] memory tokenIdsArray = new uint256[](2);
-        tokenIdsArray[0] = 4;
-        tokenIdsArray[1] = 5;
+        tokenIdsArray[0] = 14;
+        tokenIdsArray[1] = 15;
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
         nftPurchaseList[0].collectionAddress = address(collection721_1);
         nftPurchaseList[0].tokenIds = tokenIdsArray;
-        //These token Ids aren't in the range specified by the collection rules [1,2] and [1e20,1e21]
-        MockERC721(collection721_1).mint(user1, 4);
-        MockERC721(collection721_1).mint(user1, 5);
+        //These token Ids aren't in the range specified by the collection rules
+        MockERC721(collection721_1).mint(user1, 14);
+        MockERC721(collection721_1).mint(user1, 15);
         vm.expectRevert("tokenId not in range");
         AelinUpFrontDeal(dealAddressNftGating721IdRanges).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
         vm.stopPrank();
@@ -1505,6 +1505,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
 
         //Second token Id in range should succeed
         tokenIdsArray[1] = 2;
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
         vm.expectEmit(true, false, false, true);
         emit AcceptDeal(user1, purchaseCollection1, purchaseCollection1, poolSharesAmount, poolSharesAmount);
         AelinUpFrontDeal(dealAddressNftGating721IdRanges).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseCollection1);
@@ -1606,6 +1607,68 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721IdRanges).getNftGatingDetails(
             address(collection721_1),
             1e20 + 2
+        );
+        assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+    }
+
+    function test_AcceptDeal_ERC721IdRanges_RangeAmounts() public {
+        // user setup
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressNftGating721IdRanges).dealConfig();
+
+        MockERC721(collection721_1).mint(user1, 4);
+
+        uint256 totalPoolShares;
+        uint256 poolSharesAmount;
+
+        // nft gating setup
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        uint256[] memory tokenIdsArray = new uint256[](1);
+        
+        //he rangeAmount set in ranges collection rules
+        uint256 purchaseCollection1 = 100;
+
+        // checks pre-purchase
+        bool NftIdUsed;
+        bool hasNftList;
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721IdRanges).getNftGatingDetails(
+            address(collection721_1),
+            4
+        );
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+
+        vm.startPrank(user1);
+
+        poolSharesAmount = (purchaseCollection1 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        totalPoolShares = poolSharesAmount;
+        vm.assume(poolSharesAmount > 0);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating721IdRanges), type(uint256).max);
+        tokenIdsArray[0] = 4;
+        nftPurchaseList[0].collectionAddress = address(collection721_1);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+
+        //Purchase above amountRange per token id, so should fail 
+        //rangeAmount overrides purchaseAmount because the token Id is in a range that has a rangeAmount value > 0
+        vm.expectRevert("purchase amount greater than max allocation");
+        AelinUpFrontDeal(dealAddressNftGating721IdRanges).acceptDeal(
+            nftPurchaseList,
+            merkleDataEmpty,
+            purchaseCollection1 + 1
+        );
+
+        //Just at amountRange should succeed
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user1, purchaseCollection1, purchaseCollection1, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressNftGating721IdRanges).acceptDeal(nftPurchaseList, merkleDataEmpty, purchaseCollection1);
+        vm.stopPrank();
+
+        //checks post-purchase
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721IdRanges).getNftGatingDetails(
+            address(collection721_1),
+            4
         );
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
