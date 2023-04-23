@@ -551,7 +551,7 @@ contract AelinPoolPurchaseTest is Test, AelinTestUtils {
         IAelinPool.NftPurchaseList[] memory nftPurchaseList = new IAelinPool.NftPurchaseList[](1);
         nftPurchaseList[0].collectionAddress = address(collection721_1);
         nftPurchaseList[0].tokenIds = new uint256[](1);
-        nftPurchaseList[0].tokenIds[0] = 10; //not in range
+        nftPurchaseList[0].tokenIds[0] = 11; //not in range
 
         IAelinPool.PoolData memory poolData = getPoolData({
             purchaseTokenCap: _purchaseTokenCap,
@@ -570,7 +570,7 @@ contract AelinPoolPurchaseTest is Test, AelinTestUtils {
 
         // Assert
         vm.startPrank(user1);
-        MockERC721(collection721_1).mint(user1, 10);
+        MockERC721(collection721_1).mint(user1, 11);
         purchaseToken.approve(address(pool), _purchaseTokenAmount);
         vm.expectRevert("tokenId not in range");
         pool.purchasePoolTokensWithNft(nftPurchaseList, _purchaseTokenAmount);

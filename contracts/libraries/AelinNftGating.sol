@@ -111,44 +111,45 @@ library AelinNftGating {
         NftGatingData storage _data,
         uint256 _purchaseTokenAmount
     ) external returns (uint256) {
-        uint256 collectionLength = _nftPurchaseList.length;
+        uint256 nftPurchaseListLength = _nftPurchaseList.length;
 
         require(_data.hasNftList, "pool does not have an NFT list");
-        require(collectionLength > 0, "must provide purchase list");
+        require(nftPurchaseListLength > 0, "must provide purchase list");
 
         //An array of arrays that correspond to the max purchase amount for each (collection, tokenId) pairing
-        uint256[][] memory maxPurchaseTokenAmounts = new uint256[][](collectionLength);
+        uint256[][] memory maxPurchaseTokenAmounts = new uint256[][](nftPurchaseListLength);
 
         NftPurchaseList memory nftPurchaseList;
-        address _collectionAddress;
-        uint256[] memory _tokenIds;
+        address collectionAddress;
+        uint256[] memory tokenIds;
+        uint256 tokenIdsLength;
         NftCollectionRules memory nftCollectionRules;
 
         //Iterate over the collections
-        for (uint256 i; i < collectionLength; ++i) {
+        for (uint256 i; i < nftPurchaseListLength; ++i) {
             nftPurchaseList = _nftPurchaseList[i];
-            _collectionAddress = nftPurchaseList.collectionAddress;
-            _tokenIds = nftPurchaseList.tokenIds;
-            nftCollectionRules = _data.nftCollectionDetails[_collectionAddress];
+            collectionAddress = nftPurchaseList.collectionAddress;
+            tokenIds = nftPurchaseList.tokenIds;
+            tokenIdsLength = tokenIds.length;
+            nftCollectionRules = _data.nftCollectionDetails[collectionAddress];
 
-            uint256 tokenIdsLength = _tokenIds.length;
-            //Dummy array used for this iteration token ids
+            //Dummy array used for this iteration of token ids
             //Must be re-declared here each loop because the length may vary
             uint256[] memory maxPurchaseTokensAmountForCollection = new uint256[](tokenIdsLength);
 
-            require(_collectionAddress != address(0), "collection should not be null");
-            require(nftCollectionRules.collectionAddress == _collectionAddress, "collection not in the pool");
+            require(collectionAddress != address(0), "collection should not be null");
+            require(nftCollectionRules.collectionAddress == collectionAddress, "collection not in the pool");
 
             //Iterate over the token ids
             for (uint256 j; j < tokenIdsLength; ++j) {
-                if (NftCheck.supports721(_collectionAddress)) {
-                    require(IERC721(_collectionAddress).ownerOf(_tokenIds[j]) == msg.sender, "has to be the token owner");
+                if (NftCheck.supports721(collectionAddress)) {
+                    require(IERC721(collectionAddress).ownerOf(tokenIds[j]) == msg.sender, "has to be the token owner");
                     // If there are no ranges then no need to check whether token Id is within them
                     // Or whether there are any rangeAmounts
                     if (nftCollectionRules.idRanges.length > 0) {
                         //Gets a boolean for whether token Id is in range and what the range amount is if there is one
                         (bool isTokenIdInRange, uint256 rangeAmountForTokenId) = getRangeData(
-                            _tokenIds[j],
+                            tokenIds[j],
                             nftCollectionRules.idRanges
                         );
                         require(isTokenIdInRange, "tokenId not in range");
@@ -172,15 +173,15 @@ library AelinNftGating {
                         }
                     }
 
-                    require(!_data.nftId[_collectionAddress][_tokenIds[j]], "tokenId already used");
-                    _data.nftId[_collectionAddress][_tokenIds[j]] = true;
-                    emit BlacklistNFT(_collectionAddress, _tokenIds[j]);
+                    require(!_data.nftId[collectionAddress][tokenIds[j]], "tokenId already used");
+                    _data.nftId[collectionAddress][tokenIds[j]] = true;
+                    emit BlacklistNFT(collectionAddress, tokenIds[j]);
                 }
 
-                if (NftCheck.supports1155(_collectionAddress)) {
-                    require(_data.nftId[_collectionAddress][_tokenIds[j]], "tokenId not in the pool");
+                if (NftCheck.supports1155(collectionAddress)) {
+                    require(_data.nftId[collectionAddress][tokenIds[j]], "tokenId not in the pool");
                     require(
-                        IERC1155(_collectionAddress).balanceOf(msg.sender, _tokenIds[j]) >=
+                        IERC1155(collectionAddress).balanceOf(msg.sender, tokenIds[j]) >=
                             nftCollectionRules.minTokensEligible[j],
                         "erc1155 balance too low"
                     );
