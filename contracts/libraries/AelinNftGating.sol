@@ -144,6 +144,7 @@ library AelinNftGating {
             for (uint256 j; j < tokenIdsLength; ++j) {
                 if (NftCheck.supports721(collectionAddress)) {
                     require(IERC721(collectionAddress).ownerOf(tokenIds[j]) == msg.sender, "has to be the token owner");
+
                     // If there are no ranges then no need to check whether token Id is within them
                     // Or whether there are any rangeAmounts
                     if (nftCollectionRules.idRanges.length > 0) {
@@ -176,9 +177,8 @@ library AelinNftGating {
                     require(!_data.nftId[collectionAddress][tokenIds[j]], "tokenId already used");
                     _data.nftId[collectionAddress][tokenIds[j]] = true;
                     emit BlacklistNFT(collectionAddress, tokenIds[j]);
-                }
-
-                if (NftCheck.supports1155(collectionAddress)) {
+                } else {
+                    //Must otherwise be an 1155 given initialise function
                     require(_data.nftId[collectionAddress][tokenIds[j]], "tokenId not in the pool");
                     require(
                         IERC1155(collectionAddress).balanceOf(msg.sender, tokenIds[j]) >=
@@ -203,6 +203,7 @@ library AelinNftGating {
         uint256 collectionLength = maxPurchaseTokenAmounts.length;
         uint256 tokenIdsPerCollectionLength;
         uint256 runningTotal;
+        uint256 runningTotalLag;
 
         for (uint256 i; i < collectionLength; i++) {
             tokenIdsPerCollectionLength = maxPurchaseTokenAmounts[i].length;
@@ -212,6 +213,13 @@ library AelinNftGating {
                     return type(uint256).max;
                 } else {
                     runningTotal += maxPurchaseTokenAmounts[i][j];
+
+                    //In case of overflow
+                    if (runningTotal <= runningTotalLag) {
+                        return type(uint256).max;
+                    } else {
+                        runningTotalLag = runningTotal;
+                    }
                 }
             }
         }
