@@ -85,6 +85,7 @@ library CurveLibrary {
         return (_addLiquidityData.amountsIn[0], _addLiquidityData.amountsIn[1], 0, 0);
     }
 
+
     function removeLiquidity(IVestAMMLibrary.AddLiquidity calldata _removeLiquidityData) external {
         ICurvePool curvePool = ICurvePool(_removeLiquidityData.pool);
 
