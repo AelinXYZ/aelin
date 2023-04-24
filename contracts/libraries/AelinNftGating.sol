@@ -116,14 +116,15 @@ library AelinNftGating {
         require(_data.hasNftList, "pool does not have an NFT list");
         require(nftPurchaseListLength > 0, "must provide purchase list");
 
-        //An array of arrays that correspond to the max purchase amount for each (collection, tokenId) pairing
-        uint256[][] memory maxPurchaseTokenAmounts = new uint256[][](nftPurchaseListLength);
-
+        //Values re-declared each loop
         NftPurchaseList memory nftPurchaseList;
         address collectionAddress;
         uint256[] memory tokenIds;
         uint256 tokenIdsLength;
         NftCollectionRules memory nftCollectionRules;
+
+        //The running total for 721 tokens
+        uint256 maxPurchaseTokenAmount;
 
         //Iterate over the collections
         for (uint256 i; i < nftPurchaseListLength; ++i) {
@@ -132,10 +133,6 @@ library AelinNftGating {
             tokenIds = nftPurchaseList.tokenIds;
             tokenIdsLength = tokenIds.length;
             nftCollectionRules = _data.nftCollectionDetails[collectionAddress];
-
-            //Dummy array used for this iteration of token ids
-            //Must be re-declared here each loop because the length may vary
-            uint256[] memory maxPurchaseTokensAmountForCollection = new uint256[](tokenIdsLength);
 
             require(collectionAddress != address(0), "collection should not be null");
             require(nftCollectionRules.collectionAddress == collectionAddress, "collection not in the pool");
@@ -148,29 +145,37 @@ library AelinNftGating {
                     // If there are no ranges then no need to check whether token Id is within them
                     // Or whether there are any rangeAmounts
                     if (nftCollectionRules.idRanges.length > 0) {
-                        //Gets a boolean for whether token Id is in range and what the range amount is if there is one
                         (bool isTokenIdInRange, uint256 rangeAmountForTokenId) = getRangeData(
                             tokenIds[j],
                             nftCollectionRules.idRanges
                         );
                         require(isTokenIdInRange, "tokenId not in range");
 
-                        //if there's a range amount for this token id, then set that as the max for its element
+                        //if there's a range amount for this token id, increment the running total
                         if (rangeAmountForTokenId != 0) {
-                            maxPurchaseTokensAmountForCollection[j] = rangeAmountForTokenId;
+                            maxPurchaseTokenAmount = incrementMaxPurchaseTokenAmounts(
+                                maxPurchaseTokenAmount,
+                                rangeAmountForTokenId
+                            );
                         } else {
                             //Otherwise defer to purchaseAmount
                             if (nftCollectionRules.purchaseAmount == 0) {
-                                maxPurchaseTokensAmountForCollection[j] = type(uint256).max;
+                                maxPurchaseTokenAmount = type(uint256).max;
                             } else {
-                                maxPurchaseTokensAmountForCollection[j] = nftCollectionRules.purchaseAmount;
+                                maxPurchaseTokenAmount = incrementMaxPurchaseTokenAmounts(
+                                    maxPurchaseTokenAmount,
+                                    nftCollectionRules.purchaseAmount
+                                );
                             }
                         }
                     } else {
                         if (nftCollectionRules.purchaseAmount == 0) {
-                            maxPurchaseTokensAmountForCollection[j] = type(uint256).max;
+                            maxPurchaseTokenAmount = type(uint256).max;
                         } else {
-                            maxPurchaseTokensAmountForCollection[j] = nftCollectionRules.purchaseAmount;
+                            maxPurchaseTokenAmount = incrementMaxPurchaseTokenAmounts(
+                                maxPurchaseTokenAmount,
+                                nftCollectionRules.purchaseAmount
+                            );
                         }
                     }
 
@@ -185,45 +190,31 @@ library AelinNftGating {
                             nftCollectionRules.minTokensEligible[j],
                         "erc1155 balance too low"
                     );
-
-                    //All 1155s are allowed unlimited purchases per token Id
-                    maxPurchaseTokensAmountForCollection[j] = type(uint256).max;
                 }
             }
-            maxPurchaseTokenAmounts[i] = maxPurchaseTokensAmountForCollection;
         }
 
-        uint256 maxPurchaseTokenAmount = getMaxPurchaseTokenAmount(maxPurchaseTokenAmounts);
-        require(_purchaseTokenAmount <= maxPurchaseTokenAmount, "purchase amount greater than max allocation");
+        //Only need to check this for 721 collections because 1155s have to have unlimited purchases per token Id
+        if (NftCheck.supports721(collectionAddress)) {
+            require(_purchaseTokenAmount <= maxPurchaseTokenAmount, "purchase amount greater than max allocation");
+        }
 
         return (maxPurchaseTokenAmount);
     }
 
-    function getMaxPurchaseTokenAmount(uint256[][] memory maxPurchaseTokenAmounts) internal pure returns (uint256) {
-        uint256 collectionLength = maxPurchaseTokenAmounts.length;
-        uint256 tokenIdsPerCollectionLength;
-        uint256 runningTotal;
-        uint256 runningTotalLag;
+    function incrementMaxPurchaseTokenAmounts(uint256 _currentMax, uint256 _increment) internal pure returns (uint256) {
+        if (_currentMax == type(uint256).max) {
+            return _currentMax;
+        } else {
+            uint256 newMax = _currentMax + _increment;
 
-        for (uint256 i; i < collectionLength; i++) {
-            tokenIdsPerCollectionLength = maxPurchaseTokenAmounts[i].length;
-            for (uint256 j; j < tokenIdsPerCollectionLength; j++) {
-                if (maxPurchaseTokenAmounts[i][j] == type(uint256).max) {
-                    //If there are any unlimited purchase amounts then return max
-                    return type(uint256).max;
-                } else {
-                    runningTotal += maxPurchaseTokenAmounts[i][j];
-
-                    //In case of overflow
-                    if (runningTotal <= runningTotalLag) {
-                        return type(uint256).max;
-                    } else {
-                        runningTotalLag = runningTotal;
-                    }
-                }
+            //Overflow
+            if (newMax <= _currentMax) {
+                return type(uint256).max;
+            } else {
+                return newMax;
             }
         }
-        return runningTotal;
     }
 
     function getRangeData(uint256 _tokenId, IdRange[] memory _idRanges) internal pure returns (bool, uint256) {

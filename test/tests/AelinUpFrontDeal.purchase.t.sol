@@ -324,6 +324,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
 
     function testFuzz_SetHolder(address _futureHolder) public {
         vm.assume(_futureHolder != dealHolderAddress);
+        vm.assume(_futureHolder != address(0));
         vm.startPrank(dealHolderAddress);
         address temHolderAddress;
 
@@ -1775,7 +1776,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         totalPoolShares += poolSharesAmount;
         vm.assume(poolSharesAmount > 0);
 
-        //Should suceed - purchase amount superceded rangeAmount from first token Id
+        //Should succeed - purchase amount superceded rangeAmount from first token Id
         vm.expectEmit(true, false, false, true);
         emit AcceptDeal(user1, totalAllocationB, totalAllocationA + totalAllocationB, poolSharesAmount, totalPoolShares);
         AelinUpFrontDeal(dealAddressNftGating721IdRanges).acceptDeal(nftPurchaseListB, merkleDataEmpty, totalAllocationB);

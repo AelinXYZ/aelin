@@ -473,9 +473,9 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
         uint256 _allowListLength
     ) public {
         vm.assume(_sponsorFee <= MAX_SPONSOR_FEE);
-        vm.assume(_purchaseDuration >= 30 minutes && _purchaseDuration <= 30 days);
+        _purchaseDuration = bound(_purchaseDuration, 30 minutes, 30 days);
         vm.assume(_poolDuration <= 365 days);
-        vm.assume(_allowListLength < 100 && _allowListLength > 0); // Otherwise will run out of gas
+        _allowListLength = bound(_allowListLength, 1, 99); //quicker than vm.assuming an upper and lower bound
 
         address[] memory allowListAddresses = getAllowListAddresses(_allowListLength);
         uint256[] memory allowListAmounts = getAllowListAmounts(_allowListLength);
