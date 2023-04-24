@@ -2,8 +2,6 @@
 pragma solidity 0.8.6;
 pragma experimental ABIEncoderV2;
 
-import "forge-std/console.sol";
-
 import {WeightedPoolUserData} from "@balancer-labs/v2-interfaces/contracts/pool-weighted/WeightedPoolUserData.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "contracts/VestAMM/interfaces/balancer/IWeightedPoolFactory.sol";
@@ -12,17 +10,10 @@ import "contracts/VestAMM/interfaces/balancer/IBalancerPool.sol";
 import "contracts/VestAMM/interfaces/balancer/IAsset.sol";
 import "contracts/VestAMM/interfaces/IVestAMMLibrary.sol";
 
-contract BalancerVestAMM {
-    IWeightedPoolFactory internal immutable weightedPoolFactory;
-    IVault internal immutable balancerVault;
-
-    address vaultAddress = address(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
-    address weightedPoolFactoryAddress = address(0x5Dd94Da3644DDD055fcf6B3E1aa310Bb7801EB8b);
-
-    constructor() {
-        balancerVault = IVault(vaultAddress);
-        weightedPoolFactory = IWeightedPoolFactory(weightedPoolFactoryAddress);
-    }
+library BalancerVestAMM {
+    IWeightedPoolFactory internal immutable weightedPoolFactory =
+        IWeightedPoolFactory(address(0x5Dd94Da3644DDD055fcf6B3E1aa310Bb7801EB8b));
+    IVault internal immutable balancerVault = IVault(address(0xBA12222222228d8Ba445958a75a0704d566BF2C8));
 
     // NOTE: This function will be called frop VestAMM contract to create a new
     // balancer pool and add liquidity to it for the first time
@@ -68,20 +59,41 @@ contract BalancerVestAMM {
 
     function addInitialLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData)
         external
-        returns (uint256, uint256)
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
     {
-        _addLiquidity(_addLiquidityData.poolAddress, _addLiquidityData.tokensAmtsIn, true);
+        return _addLiquidity(_addLiquidityData.poolAddress, _addLiquidityData.tokensAmtsIn, true);
     }
 
-    function addLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData) external returns (uint256, uint256) {
-        _addLiquidity(_addLiquidityData.poolAddress, _addLiquidityData.tokensAmtsIn, false);
+    function addLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData)
+        external
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return _addLiquidity(_addLiquidityData.poolAddress, _addLiquidityData.tokensAmtsIn, false);
     }
 
     function _addLiquidity(
         address _poolAddress,
         uint256[] calldata _tokensAmtsIn,
         bool _initialLiquidity
-    ) internal {
+    )
+        internal
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
         bytes32 poolId = IBalancerPool(_poolAddress).getPoolId();
 
         // Some pools can change which tokens they hold so we need to tell the Vault what we expect to be adding.
@@ -138,6 +150,9 @@ contract BalancerVestAMM {
         address recipient = address(this);
 
         balancerVault.joinPool(poolId, sender, recipient, request);
+
+        // TODO: should return (numInvTokensInLP, numBaseTokensInLP, numInvTokensFee, numBaseTokensFee)
+        return (_tokensAmtsIn[0], _tokensAmtsIn[1], 0, 0);
     }
 
     function removeLiquidity(IVestAMMLibrary.RemoveLiquidity calldata _removeLiquidityData) external {

@@ -42,9 +42,13 @@ interface IVestAMMLibrary {
     }
 
     struct AddLiquidity {
-        IERC20[] tokens;
-        uint256[] amounts;
-        uint256 poolAmountOut;
+        address poolAddress;
+        uint256[] tokensAmtsIn;
+    }
+
+    struct RemoveLiquidity {
+        address poolAddress;
+        uint256 lpTokenAmtIn;
     }
 
     // deploy pool also adds liquidity?

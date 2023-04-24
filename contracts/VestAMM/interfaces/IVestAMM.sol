@@ -75,6 +75,12 @@ interface IVestAMM {
         Deallocation deallocation;
         LPVestingSchedule[] lpVestingSchedules;
         FundingLimits fundingLimits;
+        // NOTE: Since the only way to check if a pool exists in Balancer
+        // is to call balancerVault.getPool(bytes32 poolId) we need to pass in
+        // a bytes32 poolId property. Ideally we would pass a poolAddress (easier to get)
+        // but as a workaround we could ALLWAYS convert poolAddress to bytes32 on 
+        // client-side and handle that in solidity.
+        bytes32 poolId;
     }
 
     struct MigrationRules {

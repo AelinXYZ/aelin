@@ -61,4 +61,12 @@ interface IVault {
         bytes userData;
         bool toInternalBalance;
     }
+
+    function setRelayerApproval(
+        address sender,
+        address relayer,
+        bool approved
+    ) external;
+
+    function hasApprovedRelayer(address user, address relayer) external view returns (bool);
 }
