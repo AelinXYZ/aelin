@@ -63,29 +63,28 @@ library CurveLibrary {
     }
 
     function addInitialLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData) external returns(uint256, uint256, uint256, uint256) {
-        ICurvePool curvePool = ICurvePool(_addLiquidityData.pool);
-        
-        uint256 lpTokens = curvePool.add_liquidity(
-            _addLiquidityData.amountsIn,
-            0 // NOTE: on initial liquidity add, this is allways 0
-        );
-
-        // TODO: should return (numInvTokensInLP, numBaseTokensInLP, numInvTokensFee, numBaseTokensFee)
-        return (_addLiquidityData.amountsIn[0], _addLiquidityData.amountsIn[1], 0, 0);
+        return _addLiquidity(_addLiquidityData, 0);
     }
 
     function addLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData) external returns(uint256, uint256, uint256, uint256) {
-        ICurvePool curvePool = ICurvePool(_addLiquidityData.pool);
+        ICurvePool curvePool = ICurvePool(_addLiquidityData.poolAddress);
         uint256 minLpTokensOut = curvePool.calc_token_amount(_addLiquidityData.amountsIn);
+
+        return _addLiquidity(_addLiquidityData, minLpTokensOut);
+    }
+
+    function _addLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData, uint256 _minLpTokensOut) internal returns(uint256, uint256, uint256, uint256) {
+        ICurvePool curvePool = ICurvePool(_addLiquidityData.poolAddress);
 
         uint256 lpTokens = curvePool.add_liquidity(
             _addLiquityData.amountsIn,
-            minLpTokensOut
+            _minLpTokensOut
         );
 
         // TODO: should return (numInvTokensInLP, numBaseTokensInLP, numInvTokensFee, numBaseTokensFee)
         return (_addLiquidityData.amountsIn[0], _addLiquidityData.amountsIn[1], 0, 0);
     }
+
 
     function removeLiquidity(IVestAMMLibrary.AddLiquidity calldata _removeLiquidityData) external {
         ICurvePool curvePool = ICurvePool(_removeLiquidityData.pool);
