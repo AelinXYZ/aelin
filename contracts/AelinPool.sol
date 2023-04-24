@@ -261,7 +261,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
 
                         //if there's a range amount for this token id, then set that as the max for its element
                         if (rangeAmountForTokenId != 0) {
-                            maxPurchaseTokenAmount = incrementMaxPurchaseTokenAmounts(
+                            maxPurchaseTokenAmount = incrementMaxPurchaseTokenAmount(
                                 maxPurchaseTokenAmount,
                                 rangeAmountForTokenId
                             );
@@ -270,7 +270,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
                             if (nftCollectionRules.purchaseAmount == 0) {
                                 maxPurchaseTokenAmount = type(uint256).max;
                             } else {
-                                maxPurchaseTokenAmount = incrementMaxPurchaseTokenAmounts(
+                                maxPurchaseTokenAmount = incrementMaxPurchaseTokenAmount(
                                     maxPurchaseTokenAmount,
                                     nftCollectionRules.purchaseAmount
                                 );
@@ -280,7 +280,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
                         if (nftCollectionRules.purchaseAmount == 0) {
                             maxPurchaseTokenAmount = type(uint256).max;
                         } else {
-                            maxPurchaseTokenAmount = incrementMaxPurchaseTokenAmounts(
+                            maxPurchaseTokenAmount = incrementMaxPurchaseTokenAmount(
                                 maxPurchaseTokenAmount,
                                 nftCollectionRules.purchaseAmount
                             );
@@ -323,7 +323,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         emit PurchasePoolToken(msg.sender, purchaseTokenAmount);
     }
 
-    function incrementMaxPurchaseTokenAmounts(uint256 _currentMax, uint256 _increment) internal pure returns (uint256) {
+    function incrementMaxPurchaseTokenAmount(uint256 _currentMax, uint256 _increment) internal pure returns (uint256) {
         if (_currentMax == type(uint256).max) {
             return _currentMax;
         } else {

@@ -116,7 +116,6 @@ library AelinNftGating {
         require(_data.hasNftList, "pool does not have an NFT list");
         require(nftPurchaseListLength > 0, "must provide purchase list");
 
-        //Values re-declared each loop
         NftPurchaseList memory nftPurchaseList;
         address collectionAddress;
         uint256[] memory tokenIds;
@@ -153,7 +152,7 @@ library AelinNftGating {
 
                         //if there's a range amount for this token id, increment the running total
                         if (rangeAmountForTokenId != 0) {
-                            maxPurchaseTokenAmount = incrementMaxPurchaseTokenAmounts(
+                            maxPurchaseTokenAmount = incrementMaxPurchaseTokenAmount(
                                 maxPurchaseTokenAmount,
                                 rangeAmountForTokenId
                             );
@@ -162,7 +161,7 @@ library AelinNftGating {
                             if (nftCollectionRules.purchaseAmount == 0) {
                                 maxPurchaseTokenAmount = type(uint256).max;
                             } else {
-                                maxPurchaseTokenAmount = incrementMaxPurchaseTokenAmounts(
+                                maxPurchaseTokenAmount = incrementMaxPurchaseTokenAmount(
                                     maxPurchaseTokenAmount,
                                     nftCollectionRules.purchaseAmount
                                 );
@@ -172,7 +171,7 @@ library AelinNftGating {
                         if (nftCollectionRules.purchaseAmount == 0) {
                             maxPurchaseTokenAmount = type(uint256).max;
                         } else {
-                            maxPurchaseTokenAmount = incrementMaxPurchaseTokenAmounts(
+                            maxPurchaseTokenAmount = incrementMaxPurchaseTokenAmount(
                                 maxPurchaseTokenAmount,
                                 nftCollectionRules.purchaseAmount
                             );
@@ -194,15 +193,16 @@ library AelinNftGating {
             }
         }
 
-        //Only need to check this for 721 collections because 1155s have to have unlimited purchases per token Id
         if (NftCheck.supports721(collectionAddress)) {
+            //Only need to check this for 721 collections because 1155s have to have unlimited purchases per token Id
             require(_purchaseTokenAmount <= maxPurchaseTokenAmount, "purchase amount greater than max allocation");
+            return maxPurchaseTokenAmount;
+        } else {
+            return type(uint256).max;
         }
-
-        return (maxPurchaseTokenAmount);
     }
 
-    function incrementMaxPurchaseTokenAmounts(uint256 _currentMax, uint256 _increment) internal pure returns (uint256) {
+    function incrementMaxPurchaseTokenAmount(uint256 _currentMax, uint256 _increment) internal pure returns (uint256) {
         if (_currentMax == type(uint256).max) {
             return _currentMax;
         } else {
