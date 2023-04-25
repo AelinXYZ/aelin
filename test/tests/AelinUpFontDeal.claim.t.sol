@@ -205,7 +205,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         vm.stopPrank();
 
         // Avoid "purchase amount too small"
-        vm.assume(_purchaseAmount > _dealVars.purchaseTokenPerDealToken / (10**_dealVars.underlyingTokenDecimals));
+        vm.assume(_purchaseAmount > _dealVars.purchaseTokenPerDealToken / (10 ** _dealVars.underlyingTokenDecimals));
 
         return fuzzed;
     }
@@ -269,7 +269,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         deal(address(fuzzed.dealData.purchaseToken), user1, type(uint256).max);
         MockERC20(fuzzed.dealData.purchaseToken).approve(address(fuzzed.upFrontDeal), type(uint256).max);
 
-        uint256 poolSharesAmount = (_purchaseAmount * 10**dealVars.underlyingTokenDecimals) /
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** dealVars.underlyingTokenDecimals) /
             dealVars.purchaseTokenPerDealToken;
 
         vm.expectEmit(true, true, true, true);
@@ -315,7 +315,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         FuzzedUpFrontDeal memory fuzzed = getUpFrontDealFuzzed(_purchaseAmount, false, dealVars);
 
-        uint256 poolSharesAmount = (_purchaseAmount * 10**dealVars.underlyingTokenDecimals) /
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** dealVars.underlyingTokenDecimals) /
             dealVars.purchaseTokenPerDealToken;
 
         vm.assume(_purchaseAmount > dealVars.purchaseRaiseMinimum);
@@ -951,7 +951,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         FuzzedUpFrontDeal memory fuzzed = getUpFrontDealFuzzed(_purchaseAmount, false, dealVars);
 
-        uint256 poolSharesAmount = (_purchaseAmount * 10**dealVars.underlyingTokenDecimals) /
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** dealVars.underlyingTokenDecimals) /
             dealVars.purchaseTokenPerDealToken;
 
         vm.assume(_purchaseAmount > dealVars.purchaseRaiseMinimum);
@@ -1008,7 +1008,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         FuzzedUpFrontDeal memory fuzzed = getUpFrontDealFuzzed(_purchaseAmount, false, dealVars);
 
-        uint256 poolSharesAmount = (_purchaseAmount * 10**dealVars.underlyingTokenDecimals) /
+        uint256 poolSharesAmount = (_purchaseAmount * 10 ** dealVars.underlyingTokenDecimals) /
             dealVars.purchaseTokenPerDealToken;
 
         vm.assume(_purchaseAmount > dealVars.purchaseRaiseMinimum);

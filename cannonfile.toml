@@ -1,5 +1,5 @@
-name = "aelincannon"
-description = "Deploy Aelin factory contracts using Cannon"
+name = "aelin-contracts"
+description = "Deploy Aelin contracts using Cannon"
 version = "0.0.1"
 keywords = ["aelin", "cannon"]
 
