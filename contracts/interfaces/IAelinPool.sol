@@ -36,6 +36,5 @@ interface IAelinPool {
     struct IdRange {
         uint256 begin;
         uint256 end;
-        uint256 rangeAmount;
     }
 }

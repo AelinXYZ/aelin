@@ -264,10 +264,8 @@ contract AelinTestUtils is Test {
 
         idRanges[2].begin = 4;
         idRanges[2].end = 5;
-        idRanges[2].rangeAmount = 100;
         idRanges[3].begin = 6;
         idRanges[3].end = 10;
-        idRanges[3].rangeAmount = 1000;
 
         return idRanges;
     }
@@ -430,10 +428,8 @@ contract AelinTestUtils is Test {
 
         idRanges[2].begin = 4;
         idRanges[2].end = 5;
-        idRanges[2].rangeAmount = 100;
         idRanges[3].begin = 6;
         idRanges[3].end = 10;
-        idRanges[3].rangeAmount = 1000;
 
         uint256 pseudoRandom;
         for (uint256 i; i < 3; ++i) {

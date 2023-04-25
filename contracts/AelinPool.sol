@@ -225,7 +225,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         require(block.timestamp < purchaseExpiry, "not in purchase window");
         require(nftPurchaseListLength > 0, "must provide purchase list");
 
-        //Values re-declared each loop
         NftPurchaseList memory nftPurchaseList;
         address collectionAddress;
         uint256[] memory tokenIds;
@@ -250,47 +249,17 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
             for (uint256 j; j < tokenIdsLength; ++j) {
                 if (NftCheck.supports721(collectionAddress)) {
                     require(IERC721(collectionAddress).ownerOf(tokenIds[j]) == msg.sender, "has to be the token owner");
-                    // If there are no ranges then no need to check whether token Id is within them
-                    // Or whether there are any rangeAmounts
-                    if (nftCollectionRules.idRanges.length > 0) {
-                        (bool isTokenIdInRange, uint256 rangeAmountForTokenId) = getRangeData(
-                            tokenIds[j],
-                            nftCollectionRules.idRanges
-                        );
-                        require(isTokenIdInRange, "tokenId not in range");
 
-                        //if there's a range amount for this token id, then set that as the max for its element
-                        if (rangeAmountForTokenId != 0) {
-                            maxPurchaseTokenAmount = incrementMaxPurchaseTokenAmount(
-                                maxPurchaseTokenAmount,
-                                rangeAmountForTokenId
-                            );
-                        } else {
-                            //Otherwise defer to purchaseAmount
-                            if (nftCollectionRules.purchaseAmount == 0) {
-                                maxPurchaseTokenAmount = type(uint256).max;
-                            } else {
-                                maxPurchaseTokenAmount = incrementMaxPurchaseTokenAmount(
-                                    maxPurchaseTokenAmount,
-                                    nftCollectionRules.purchaseAmount
-                                );
-                            }
-                        }
-                    } else {
-                        if (nftCollectionRules.purchaseAmount == 0) {
-                            maxPurchaseTokenAmount = type(uint256).max;
-                        } else {
-                            maxPurchaseTokenAmount = incrementMaxPurchaseTokenAmount(
-                                maxPurchaseTokenAmount,
-                                nftCollectionRules.purchaseAmount
-                            );
-                        }
+                    // If there are no ranges then no need to check whether token Id is within them
+                    if (nftCollectionRules.idRanges.length > 0) {
+                        require(isTokenIdInRange(tokenIds[j], nftCollectionRules.idRanges), "tokenId not in range");
                     }
 
                     require(!nftId[collectionAddress][tokenIds[j]], "tokenId already used");
                     nftId[collectionAddress][tokenIds[j]] = true;
                     emit BlacklistNFT(collectionAddress, tokenIds[j]);
                 } else {
+                    //Must otherwise be an 1155 given initialise function
                     require(nftId[collectionAddress][tokenIds[j]], "tokenId not in the pool");
                     require(
                         IERC1155(collectionAddress).balanceOf(msg.sender, tokenIds[j]) >=
@@ -299,12 +268,28 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
                     );
                 }
             }
+
+            if (nftCollectionRules.purchaseAmount > 0 && maxPurchaseTokenAmount != type(uint256).max) {
+                unchecked {
+                    uint256 collectionAllowance = nftCollectionRules.purchaseAmount * tokenIdsLength;
+                    // if there is an overflow of the previous calculation, allow the max purchase token amount
+                    if (collectionAllowance / nftCollectionRules.purchaseAmount != tokenIdsLength) {
+                        maxPurchaseTokenAmount = type(uint256).max;
+                    } else {
+                        maxPurchaseTokenAmount += collectionAllowance;
+                        if (maxPurchaseTokenAmount < collectionAllowance) {
+                            maxPurchaseTokenAmount = type(uint256).max;
+                        }
+                    }
+                }
+            }
+
+            if (nftCollectionRules.purchaseAmount == 0) {
+                maxPurchaseTokenAmount = type(uint256).max;
+            }
         }
 
-        //Only need to check this for 721 collections because 1155s have to have unlimited purchases per token Id
-        if (NftCheck.supports721(collectionAddress)) {
-            require(_purchaseTokenAmount <= maxPurchaseTokenAmount, "purchase amount should be less the max allocation");
-        }
+        require(_purchaseTokenAmount <= maxPurchaseTokenAmount, "purchase amount should be less the max allocation");
 
         uint256 amountBefore = IERC20(purchaseToken).balanceOf(address(this));
         IERC20(purchaseToken).safeTransferFrom(msg.sender, address(this), _purchaseTokenAmount);
@@ -323,28 +308,13 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         emit PurchasePoolToken(msg.sender, purchaseTokenAmount);
     }
 
-    function incrementMaxPurchaseTokenAmount(uint256 _currentMax, uint256 _increment) internal pure returns (uint256) {
-        if (_currentMax == type(uint256).max) {
-            return _currentMax;
-        } else {
-            uint256 newMax = _currentMax + _increment;
-
-            //Overflow
-            if (newMax <= _currentMax) {
-                return type(uint256).max;
-            } else {
-                return newMax;
-            }
-        }
-    }
-
-    function getRangeData(uint256 _tokenId, IdRange[] memory _idRanges) internal pure returns (bool, uint256) {
+    function isTokenIdInRange(uint256 _tokenId, IdRange[] memory _idRanges) internal pure returns (bool) {
         for (uint256 i; i < _idRanges.length; i++) {
             if (_tokenId >= _idRanges[i].begin && _tokenId <= _idRanges[i].end) {
-                return (true, _idRanges[i].rangeAmount);
+                return true;
             }
         }
-        return (false, 0);
+        return false;
     }
 
     function _blackListCheck721(address _collectionAddress, uint256[] memory _tokenIds) internal {
