@@ -10,6 +10,7 @@ function removeAfter18Decimals(value) {
 	return match ? match[1] : value;
 }
 
+// eslint-disable-next-line no-unused-vars
 const generateSourceData = () => {
 	let distributionArray = [];
 	rawDistribution.forEach((d, i) => {
