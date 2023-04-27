@@ -221,21 +221,21 @@ contract MerkleFeeDistributorTest is Test {
         assertEq(MockERC20(token4).balanceOf(deployer), 0);
 
         vm.startPrank(deployer);
-        // vm.expectEmit(true, true, false, true);
-        // emit Withdrawn(deployer, token1, MockERC20(token1).balanceOf(address(feeDistributor)));
-        // vm.expectEmit(true, true, false, true);
-        // emit Withdrawn(deployer, token2, MockERC20(token2).balanceOf(address(feeDistributor)));
-        // vm.expectEmit(true, true, false, true);
-        // emit Withdrawn(deployer, token3, MockERC20(token3).balanceOf(address(feeDistributor)));
-        // vm.expectEmit(true, true, false, true);
-        // emit Withdrawn(deployer, token4, MockERC20(token4).balanceOf(address(feeDistributor)));
+        vm.expectEmit(true, true, false, true);
+        emit Withdrawn(deployer, token1, MockERC20(token1).balanceOf(address(feeDistributor)));
+        vm.expectEmit(true, true, false, true);
+        emit Withdrawn(deployer, token2, MockERC20(token2).balanceOf(address(feeDistributor)));
+        vm.expectEmit(true, true, false, true);
+        emit Withdrawn(deployer, token3, MockERC20(token3).balanceOf(address(feeDistributor)));
+        vm.expectEmit(true, true, false, true);
+        emit Withdrawn(deployer, token4, MockERC20(token4).balanceOf(address(feeDistributor)));
         feeDistributor.withdraw();
         vm.stopPrank();
 
-        // assertEq(MockERC20(token1).balanceOf(deployer), feeDistributor.TOKEN1_AMOUNT());
-        // assertEq(MockERC20(token2).balanceOf(deployer), feeDistributor.TOKEN2_AMOUNT());
-        // assertEq(MockERC20(token3).balanceOf(deployer), feeDistributor.TOKEN3_AMOUNT());
-        // assertEq(MockERC20(token4).balanceOf(deployer), feeDistributor.TOKEN4_AMOUNT());
+        assertEq(MockERC20(token1).balanceOf(deployer), feeDistributor.TOKEN1_AMOUNT());
+        assertEq(MockERC20(token2).balanceOf(deployer), feeDistributor.TOKEN2_AMOUNT());
+        assertEq(MockERC20(token3).balanceOf(deployer), feeDistributor.TOKEN3_AMOUNT());
+        assertEq(MockERC20(token4).balanceOf(deployer), feeDistributor.TOKEN4_AMOUNT());
     }
 
     function test_Withdraw_AfterClaims() public {
