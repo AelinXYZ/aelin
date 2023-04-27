@@ -105,6 +105,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         if (!_vAmmInfo.hasLaunchPhase) {
             // we need to pass in data to check if the pool exists. ammData is a placeholder but not the right argument
             Validate.poolExists(_ammData.ammLibrary.checkPoolExists(ammData), ammData.poolAddress); // NOTE: Check if poolAddress is required if hasLaunchPhase is false
+            // initial price ratio between the two assets
             investmentTokenPerBase = _ammData.ammLibrary.getPriceRatio(
                 _ammData.poolAddress,
                 _ammData.investmentToken,
@@ -127,10 +128,10 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             // our logic for deallocation will be that all the schedules need to be full before you can
             // over allocate to any single bucket. BUT the protocol can choose to not allow deallocation
             // and only allow each bucket to fill up to the max
+            // NOTE the invPerBase variable is in the investment token decimal format
             maxInvTokensPerVestSchedule[i] =
                 (vAmmInfo.lpVestingSchedules[i].totalBaseTokens * invPerBase) /
                 10**IERC20(ammData.baseToken).decimals();
-            // NOTE is this needed?
             maxInvTokens += maxInvTokensPerVestSchedule[i];
         }
 
@@ -205,14 +206,20 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     // NOTE could this be a gas issue. Should we take in an array for this function so it can be
     // called multiple times so it doesn't need to do so much work at once.
     // there are up to 4 buckets and up to 6 rewards per bucket so could be 24 loops
+    // TODO get rid of loops and pass in an array of vesting schedule and single rewards
+    // NOTE this example below is more like javascript but shows the general idea
+    // [{ 1: [1,2,3], 2: [2,3] }] by passing this in you are refunding the 1,2, and 3 index of single rewards for lp vesting bucket 1
+    // as well as the 2 and 3 single reward index for vesting bucket 2. if someone wants to do all 24 at once they can just pass in the whole array
     function cancelAndRefundVestAMM() external onlyHolder depositIncomplete {
+        // TODO maybe put this in another function like refundBase and the below logic can be in a method refundSingle or something
+        // NOTE we are splitting this because removeSingle is complex and expensive to call
+        if (amountBaseDeposited > 0) {
+            IERC20(baseToken).safeTransferFrom(address(this), vAmmInfo.mainHolder, amountBaseDeposited);
+        }
         for (uint8 i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
             for (uint8 j = 0; j < vAmmInfo.lpVestingSchedules[i].singleVestingSchedules; j++) {
                 removeSingle(RemoveSingle(i, j, vAmmInfo.lpVestingSchedules[i].singleVestingSchedules[j].token));
             }
-        }
-        if (amountBaseDeposited > 0) {
-            IERC20(baseToken).safeTransferFrom(address(this), vAmmInfo.mainHolder, amountBaseDeposited);
         }
         cancelVestAMM();
     }
@@ -349,7 +356,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             isVestingScheduleFull[_vestingScheduleIndex] = true;
         }
         totalDeposited += depositTokenAmount;
-        // NOTE do we want to give a stake boost to longer schedules? not important for v1
+        // stake your virtual token so the rewards distribution contract can track all the investors
         VestAMMMultiRewards.stake(depositTokenAmount);
         mintVestingToken(msg.sender, depositTokenAmount, _vestingScheduleIndex);
 
@@ -364,8 +371,10 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // NOTE we can do this inside create add liquidity maybe instead where we calculate the fees
         // basically what we need is to determine exactly how much we are going to LP and then take out 1% for fees and track that
         AddLiquidity addLiquidity = createAddLiquidity();
-        (numInvTokensInLP, numBaseTokensInLP, numInvTokensFee, numBaseTokensFee) = IVestAMMLibrary(ammData.ammLibrary)
-            .addInitialLiquidity(addLiquidity);
+        // NOTE so imagine we have 100 ABC against 1000 sUSD that we are goign to LP into Balancer
+        // in reality we are taking a 1% fee of these tokens before we LP. So we will end up LP'ing 99 ABC against 990 sUSD
+        // and the fee will be 1 ABC against 10 sUSD
+        (numInvTokensFee, numBaseTokensFee) = IVestAMMLibrary(ammData.ammLibrary).addInitialLiquidity(addLiquidity);
         saveDepositData(poolAddress);
         calcLPTokensPerSchedule();
         aelinFees(numInvTokensFee, numBaseTokensFee);
@@ -391,7 +400,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             .addLiquidity(addLiquidity);
         saveDepositData(ammData.poolAddress);
         calcLPTokensPerSchedule();
-
         aelinFees(numInvTokensFee, numBaseTokensFee);
     }
 
@@ -399,6 +407,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         depositData = DepositData(_poolAddress, IERC20(_poolAddress).balanceOf(address(this)), block.timestamp);
     }
 
+    // TODO review this logic
     function calcLPTokensPerSchedule() internal {
         uint256 totalInvestmentTokenAmount = totalDeposited < maxInvTokens ? totalDeposited : maxInvTokens;
         for (uint i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
@@ -429,22 +438,20 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         return DeployPool(investmentTokenAmount, baseTokenAmount);
     }
 
-    // NOTE that we might just want to separate the fees here instead of doing a transfer
-    // there could be up to 26 transfers in this single transaction. Maybe the first time
-    // someone claims a single reward it sends those fees to Aelin instead of sending the
-    // fees all in one transaction which is going to be way too expensive.
-    // this function gives you an idea of what it will look like to capture those fees though.
     function aelinFees(uint256 _invTokenFeeAmt, uint256 _baseTokenFeeAmt) internal {
-        // the fees that we are taking here are 1% of all single sided rewards &
-        // 1% of the base and inv tokens that will be paired
         sendFeesToAelin(ammData.baseToken, _baseTokenFeeAmt);
         sendFeesToAelin(ammData.investmentAsset, _baseTokenFeeAmt);
+
+        // NOTE we need to DELETE!!!! this part and figure out a more efficient way of sending single
+        // sided rewards to the AelinFeeModule. In addition to 1% of the tokens used to LP (base + investment)
+        // we are also taking 1% of each single sided reward
+        // BUT instead of sending them all here which could be up to 24 transfers which happen at the end
+        // of a lot of add liquidity logic
+        // NOTE instead of sending the single fees here what we can do is when an investor goes to claim their rewards
+        // we check if the fees have been sent yet and if not, we send the fees. So the first investor to claim any single
+        // rewards tokens will also pay to transfer all the fees to Aelin. After that no one else has to pay.
         for (uint8 i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
             LPVestingSchedule lpVestingSchedule = vAmmInfo.lpVestingSchedules[i];
-            // TODO don't make 24 transactions. can be improved. the problem with this code is say
-            // there are 4 buckets each with 6 rewards and all 6 rewards are the same token
-            // instead of doing 24 transfers plus the base and investment tokens = 26 transfers
-            // we can do 8 transfers by combining all the single sided rewards that are the same across scheduless
             for (uint8 j = 0; j < lpVestingSchedule.singleVestingSchedules.length; j++) {
                 SingleVestingSchedule singleVestingSchedule = lpVestingSchedule.singleVestingSchedules[j];
 
@@ -485,18 +492,28 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             // TODO be careful of precision errors here
             uint256 excessAmountMain = (excessAmount * mainHolderAmount) / (mainHolderAmount + singleHolderAmount);
             uint256 excessAmountSingle = (excessAmount * singleHolderAmount) / (mainHolderAmount + singleHolderAmount);
-            IERC20(singleRewards[_singleIndex].token).safeTransferFrom(address(this), vAmmInfo.mainHolder, excessAmountMain);
-            IERC20(singleRewards[_singleIndex].token).safeTransferFrom(
-                address(this),
-                singleVestingSchedule.singleHolder,
-                excessAmountSingle
-            );
+            if (excessAmountMain > 0) {
+                IERC20(singleRewards[_singleIndex].token).safeTransferFrom(
+                    address(this),
+                    vAmmInfo.mainHolder,
+                    excessAmountMain
+                );
+            }
+            if (excessAmountSingle > 0) {
+                IERC20(singleRewards[_singleIndex].token).safeTransferFrom(
+                    address(this),
+                    singleVestingSchedule.singleHolder,
+                    excessAmountSingle
+                );
+            }
         }
     }
 
     // for when the lp is not funded in time
     function depositorWithdraw(uint256[] _tokenIds) external depositWindowEnded {
         for (uint256 i; i < _tokenIds.length; i++) {
+            // NOTE make sure this properly tests ownership during testing
+            Validate.owner(ownerOf(_tokenIds[i]));
             VestVestingToken memory schedule = vestingDetails[_tokenId];
             IERC20(investmentToken).safeTransferFrom(address(this), msg.sender, schedule.amountDeposited);
             // NOTE any reason to burn the NFT?
@@ -505,8 +522,13 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     // withdraw deallocated
-    // NOTE maybe this is a public function so we can call it internally when
-    // they claim if they haven't yet withdrawn their deallocated amount
+    // NOTE this function is when all the buckets are full and one or more
+    // buckets have overflown. the excess amount in the bucket needs to be
+    // proportionally returned to all investors in the pool. each investor
+    // can reclaim their excess investment tokens by calling this method in that case
+    // if the excess is too small it will be FCFS for the tiny amount of excess
+    // NOTE we have to be very careful with precision and not to let them remove more than the
+    // amount of excess in a bucket
     function depositorDeallocWithdraw(uint256[] _tokenIds) external {
         Validate.withdrawAllowed(_depositComplete, _lpFundingExpiry);
         for (uint256 i; i < _tokenIds.length; i++) {
@@ -661,7 +683,15 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         }
         // TODO indicate to the VestAMMMultiRewards staking rewards contract that
         // a withdraw has occured and they now have less funds locked
-        // VestAMMMultiRewards.withdraw(depositTokenAmount);
+        // the difficulty here is when you go to stake them you are using investment tokens
+        // when you go to withdraw you are using LP units so they are not the same.
+        if (claimType == ClaimType.LP) {
+            // TODO implement this logic to calculate the % of LP tokens you are withdrawing
+            // since the rewards contract knows the % you invested they want to know the % you
+            // are removing even though they are in different token formats. going in you have investment tokens
+            // going out you have LP tokens
+            VestAMMMultiRewards.withdraw(claimableAmount, depositData.lpTokenAmount);
+        }
         IERC20(claimToken).safeTransfer(msg.sender, claimableAmount);
         emit ClaimedToken(
             claimToken,
@@ -674,6 +704,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     function sendFeesToAelin(address _token, uint256 _amount) external {
+        // NOTE you don't just transfer fees to the AelinFeeModule because you need to track
+        // which period they came in for AELIN stakers to be able to claim correctly from the AelinFeeModule
         AelinFeeModule(aelinFeeModule).sendFees(_token, _amount);
         emit SentFees(_token, _amount);
     }
@@ -792,6 +824,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     modifier vestingScheduleOpen(uint8 _vestingScheduleIndex, uint256 _investmentTokenAmount) {
         bool otherBucketsFull = true;
+        // NOTE the logic we are using here is all buckets need to be full before you can over allocate
+        // on any bucket. if any bucket is open you must fill that bucket before you can overflow any other bucket that
+        // is already full
         for (uint8 i; i < numVestingSchedules.length; i++) {
             if (i == _vestingScheduleIndex) {
                 continue;

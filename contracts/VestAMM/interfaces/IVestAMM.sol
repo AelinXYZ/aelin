@@ -53,7 +53,6 @@ interface IVestAMM {
         uint256 lpDepositTime;
         address lpToken;
         uint256 lpTokenAmount;
-        mapping(uint8 => uint256) lpTokenAmountPerSchedule;
     }
     struct DeployPool {
         uint256 investmentTokenAmount;
@@ -78,7 +77,7 @@ interface IVestAMM {
         // NOTE: Since the only way to check if a pool exists in Balancer
         // is to call balancerVault.getPool(bytes32 poolId) we need to pass in
         // a bytes32 poolId property. Ideally we would pass a poolAddress (easier to get)
-        // but as a workaround we could ALLWAYS convert poolAddress to bytes32 on 
+        // but as a workaround we could ALLWAYS convert poolAddress to bytes32 on
         // client-side and handle that in solidity.
         bytes32 poolId;
     }
