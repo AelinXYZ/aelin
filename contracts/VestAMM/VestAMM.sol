@@ -310,6 +310,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     function depositBase() external onlyHolder depositIncomplete dealOpen {
         Validate.baseDepositNotCompleted(baseComplete);
         address baseToken = ammData.baseToken;
+        // TODO add new validation for the base amount that they have enough
+        Validate.baseTokenBalance(holderTokenTotal, IERC20(baseToken).balanceOf(msg.sender));
 
         uint256 balanceBeforeTransfer = IERC20(baseToken).balanceOf(address(this));
         IERC20(baseToken).safeTransferFrom(msg.sender, address(this), holderTokenTotal);
@@ -381,6 +383,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     // to create the pool and deposit assets after phase 0 ends
+    // TODO add a view that calculates max extra base tokens and have a wrapper around that is called createLiquidityMax
+    // which calls the view and passes in the max value to this method
     function createLiquidity(uint256 _extraBaseTokens) external onlyHolder lpFundingWindow {
         Validate.notLiquidityLaunch(vAmmInfo.hasLiquidityLaunch);
         // If the price starts at 10 sUSD/ ABC and goes up to 20 sUSD per ABC then we need to add the extra ABC as single sided rewards
@@ -390,14 +394,51 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             ammData.investmentToken,
             ammData.baseToken
         );
+        LiquidityRatio liquidityRatio = createLiquidityRatio();
+        (
+            numInvTokensInLP, // example 1: 1000 sUSD (price up); example 2: 1000 sUSD (price down)
+            numBaseTokensInLP, // example 1: 50 ABC (price up); example 2: 200 ABC (price down)
+            initialNumInvTokensInLP, // 1000 sUSD
+            initialNumBaseTokensInLP, // 100 ABC
+
+        ) = IVestAMMLibrary(ammData.ammLibrary).getLiquidityRatios(liquidityRatio);
+        // NOTE the initial price was 10 sUSD per ABC and the total in LP is 100 ABC to 1000 sUSD if the price doesn't change
+        // NOTE if the price is the same then nothing changes and it should look just like a launch
         if (currentRatio > investmentTokenPerBase) {
+            // NOTE the price has shifted to 20 sUSD per ABC
+            // instead of doing 100 ABC to 1000 sUSD we are doing 50 ABC to 1000 sUSD
             // TODO add more single sided rewards from the base tokens
+            uint256 excessTokens = initialNumBaseTokensInLP - numBaseTokensInLP;
+            // TODO add another single sided reward with these amounts included spread across every vesting schedule
+            // NOTE be wary of 2 things. we might have to track how full bucket is but maybe not. if you just put it in all the buckets
+            // equally then the protocol can get their excess amount by calling withdrawExcessFunding
+            // the other thing to be wary of is if we have the maximum number of single rewards we are going to add a 7th single sided reward
+            // NOTE that we have to make sure that we override any maximum single rewards settings for this reward
+            // NOTE might need a different function than addSingle() which shares most logic but allows you to add a 7th reward
+            AddLiquidity addLiquidity = createAddLiquidity();
+            (numInvTokensFee, numBaseTokensFee) = IVestAMMLibrary(ammData.ammLibrary).addLiquidity(addLiquidity);
+            // and also allows you to add rewards this late in the process when all the rewards are already locked
         } else if (currentRatio < investmentTokenPerBase) {
-            // TODO let the holder pass in more _extraBaseTokens to LP
+            // NOTE the price has shifted to 5 sUSD per ABC. Now you get  200 - 100
+            uint256 maxExcessBaseTokens = numBaseTokensInLP - initialNumBaseTokensInLP;
+            // TODO add validation
+            require(_excessBaseTokens <= maxExcessBaseTokens, "too many base tokens");
+            Validate.baseTokenBalance(_excessBaseTokens, IERC20(baseToken).balanceOf(msg.sender));
+            uint256 balanceBeforeTransfer = IERC20(baseToken).balanceOf(address(this));
+            IERC20(baseToken).safeTransferFrom(msg.sender, address(this), _excessBaseTokens);
+            uint256 balanceAfterTransfer = IERC20(baseToken).balanceOf(address(this));
+            uint256 excessTransferred = balanceAfterTransfer - balanceBeforeTransfer;
+            // NOTE when we create the new add liquidity struct
+
+            // first we have to deposit those extra tokens and then we
+            // create a new AddLiquidity struct but isntead of using amountBaseDeposited
+            // we use amountBaseDeposited + excessTransferred and we LP with more ABC tokens
+            AddLiquidity addLiquidity = createAddLiquidity();
+            (numInvTokensFee, numBaseTokensFee) = IVestAMMLibrary(ammData.ammLibrary).addLiquidity(addLiquidity);
+            // NOTE an important caveat is that when you add liquidity if they do not add enough excess tokens
+            // then there will be excess sUSD that needs to be returned to investors. they will receive this amount
+            // ideally by just calling the depositorDeallocWithdraw method when there is excess sUSD in a bucket
         }
-        AddLiquidity addLiquidity = createAddLiquidity();
-        (numInvTokensInLP, numBaseTokensInLP, numInvTokensFee, numBaseTokensFee) = IVestAMMLibrary(ammData.ammLibrary)
-            .addLiquidity(addLiquidity);
         saveDepositData(ammData.poolAddress);
         calcLPTokensPerSchedule();
         aelinFees(numInvTokensFee, numBaseTokensFee);
@@ -544,6 +585,15 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     // collect the fees from AMMs and send them to the Fee Module
     function collectAllFees(uint256 tokenId) public returns (uint256 amount0, uint256 amount1) {
+        // you have 50 LP tokens owned by our contract for one year
+        // a few ways an AMM might implement swap fees.
+        // method 1: they put the swap fees separate from the LP tokens
+        // method 2: the underlying value of the LP tokens grows with the swap fees but you also get impermanent loss.
+        // possible method 3: the number of LP tokens increase to 55 LP tokens
+        // There 2 times when we want to capture fees
+        // first instance is when someone goes to claim their LP tokens. Only when they are claiming LP tokens, not single sided rewards
+        // second is we have a public function that anyone can call at any time to claim all the fees generated and to maybe reinvest the user fees if necessary
+        //
         // what we need the library to do:
         // 1. be able to reinvest 80% of fees if the fees are held separate from the LP tokens
         // 2. calculate the number of fees generated since a specific point in time for a LP position
@@ -565,6 +615,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // Every once and a while there will be a public function that needs to be called in order to send fees to the Aelin Fee Module
         // alternatively we could make the users pay for the transfer
         // probably its ok to also have a public function that sends whatever fees have been accumulated to AELIN
+        // NOTE will collect the fees and then call the method sendAelinFees(amounts...)
     }
 
     function claimableTokens(
@@ -666,6 +717,12 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         uint8 _singleRewardsIndex
     ) internal {
         Validate.owner(ownerOf(_tokenId));
+        if (claimType == ClaimType.LP) {
+            // TODO claim fees for the protocol. this fee amount should be the global total for all LP tokens
+            // we want to know how many fees ALL the LP tokens have earned since the last time someone claimed
+            // or since we called a public function which captures the fees
+            collectAllFees();
+        }
         uint256 claimableAmount = claimableTokens(_tokenId, _claimType, _singleRewardsIndex);
         Validate.hasClaimBalance(claimableAmount);
         VestVestingToken memory schedule = vestingDetails[_tokenId];
