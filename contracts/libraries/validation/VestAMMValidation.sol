@@ -7,7 +7,7 @@ library Validate {
     error CallerNotHolder(address holder, address caller);
     error DepositCompleted();
     error VestAMMCancelled();
-    error VestAMMNotCancelled(bool isCancelled, uint256 lpDepositTime, uint256 lpFundingExpiry);
+    error DepositWindowEnded(uint256 lpFundingExpiry);
     error VestAMMNotInFundingWindow(bool depositCompleted, bool beforeDepositExpiry, bool afterLpFundingExpiry);
     error VestAMMNotInDepositWindow(bool depositCompleted, bool afterDepositExpiry);
     error VestingCliffTooLong(uint256 allowed, uint256 actual, uint256 index);
@@ -100,17 +100,9 @@ library Validate {
         }
     }
 
-    function isCancelled(
-        bool _isCancelled,
-        uint256 _lpDepositTime,
-        uint256 _lpFundingExpiry
-    ) external view {
-        if (!_isCancelled && (_lpDepositTime > 0 || block.timestamp <= _lpFundingExpiry)) {
-            revert VestAMMNotCancelled({
-                isCancelled: _isCancelled,
-                lpDepositTime: _lpDepositTime,
-                lpFundingExpiry: _lpFundingExpiry
-            });
+    function depositWindowEnded(uint256 _lpDepositTime, uint256 _lpFundingExpiry) external view {
+        if (_lpDepositTime == 0 && block.timestamp > _lpFundingExpiry) {
+            revert DepositWindowEnded({lpFundingExpiry: _lpFundingExpiry});
         }
     }
 

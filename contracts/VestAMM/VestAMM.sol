@@ -202,6 +202,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         setDepositComplete();
     }
 
+    // NOTE could this be a gas issue. Should we take in an array for this function so it can be
+    // called multiple times so it doesn't need to do so much work at once.
+    // there are up to 4 buckets and up to 6 rewards per bucket so could be 24 loops
     function cancelAndRefundVestAMM() external onlyHolder depositIncomplete {
         for (uint8 i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
             for (uint8 j = 0; j < vAmmInfo.lpVestingSchedules[i].singleVestingSchedules; j++) {
@@ -346,7 +349,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             isVestingScheduleFull[_vestingScheduleIndex] = true;
         }
         totalDeposited += depositTokenAmount;
-        // VestAMMMultiRewards.stake(depositTokenAmount);
+        // NOTE do we want to give a stake boost to longer schedules? not important for v1
+        VestAMMMultiRewards.stake(depositTokenAmount);
         mintVestingToken(msg.sender, depositTokenAmount, _vestingScheduleIndex);
 
         emit AcceptVestDeal(msg.sender, depositTokenAmount, _vestingScheduleIndex);
@@ -385,7 +389,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         AddLiquidity addLiquidity = createAddLiquidity();
         (numInvTokensInLP, numBaseTokensInLP, numInvTokensFee, numBaseTokensFee) = IVestAMMLibrary(ammData.ammLibrary)
             .addLiquidity(addLiquidity);
-        saveDepositData();
+        saveDepositData(ammData.poolAddress);
         calcLPTokensPerSchedule();
 
         aelinFees(numInvTokensFee, numBaseTokensFee);
@@ -425,6 +429,11 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         return DeployPool(investmentTokenAmount, baseTokenAmount);
     }
 
+    // NOTE that we might just want to separate the fees here instead of doing a transfer
+    // there could be up to 26 transfers in this single transaction. Maybe the first time
+    // someone claims a single reward it sends those fees to Aelin instead of sending the
+    // fees all in one transaction which is going to be way too expensive.
+    // this function gives you an idea of what it will look like to capture those fees though.
     function aelinFees(uint256 _invTokenFeeAmt, uint256 _baseTokenFeeAmt) internal {
         // the fees that we are taking here are 1% of all single sided rewards &
         // 1% of the base and inv tokens that will be paired
@@ -485,11 +494,12 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         }
     }
 
-    // for when the deal is cancelled
-    function depositorWithdraw(uint256[] _tokenIds) external dealCancelled {
+    // for when the lp is not funded in time
+    function depositorWithdraw(uint256[] _tokenIds) external depositWindowEnded {
         for (uint256 i; i < _tokenIds.length; i++) {
             VestVestingToken memory schedule = vestingDetails[_tokenId];
             IERC20(investmentToken).safeTransferFrom(address(this), msg.sender, schedule.amountDeposited);
+            // NOTE any reason to burn the NFT?
             emit Withdraw(msg.sender, schedule.amountDeposited);
         }
     }
@@ -757,8 +767,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         _;
     }
 
-    modifier dealCancelled() {
-        Validate.isCancelled(isCancelled, lpDepositTime, lpFundingExpiry);
+    modifier depositWindowEnded() {
+        Validate.depositWindowEnded(lpDepositTime, lpFundingExpiry);
         _;
     }
 
