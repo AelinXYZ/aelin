@@ -9,17 +9,19 @@ import {MockERC20} from "../mocks/MockERC20.sol";
 contract MerkleFeeDistributorTest is Test {
     MerkleFeeDistributor public feeDistributor;
 
-    address public token1 = address(0x529860f2063986D4F939188ed9c77486830fF12F);
+    address public token1 = address(0x9eEcF010Bb8dc68A1a8783721E458f0917D0d7aa);
     MockERC20 public mockToken1 = new MockERC20("Token1", "T1", 18);
 
-    address public token2 = address(0xCbb835dBDaA27Ffd431FfE1dA532C3C839EDdE34);
+    address public token2 = address(0x920Cf626a271321C151D027030D5d08aF699456b);
     MockERC20 public mockToken2 = new MockERC20("Token2", "T2", 18);
 
-    address public token3 = address(0x5b1fE44986205A155B32dE49C9EA784E9947360b);
+    address public token3 = address(0xED9353Dc0f12aC1E2F8120D60a4ACaa89a901F41);
     MockERC20 public mockToken3 = new MockERC20("Token3", "T3", 18);
 
-    address public token4 = address(0x04169810d7d2BE328B8dc3B25cd9A11d2B48472F);
+    address public token4 = address(0x61BAADcF22d2565B0F471b291C475db5555e0b76);
     MockERC20 public mockToken4 = new MockERC20("Token4", "T4", 18);
+
+    MockERC20 public mockToken5 = new MockERC20("Token5", "T5", 18);
 
     address public immutable deployer = address(0x123);
     address public immutable user1 = address(0x1111111111111111111111111111111111111111);
@@ -51,10 +53,10 @@ contract MerkleFeeDistributorTest is Test {
         vm.etch(token4, mockTokenCode);
 
         // we transfer the tokens to the contract
-        deal(address(token1), address(feeDistributor), 7519488153e16);
-        deal(address(token2), address(feeDistributor), 31337e16);
-        deal(address(token3), address(feeDistributor), 204743e16);
-        deal(address(token4), address(feeDistributor), 1684e16);
+        deal(address(token1), address(feeDistributor), 7519488153057938939527000);
+        deal(address(token2), address(feeDistributor), 313372999999999999999);
+        deal(address(token3), address(feeDistributor), 2047430070280000000000);
+        deal(address(token4), address(feeDistributor), 16846242936861671899);
     }
 
     function test_CreateInstance() public {
@@ -199,22 +201,17 @@ contract MerkleFeeDistributorTest is Test {
         assertEq(MockERC20(token2).balanceOf(user3), claimableToken2);
         assertEq(MockERC20(token3).balanceOf(user3), claimableToken3);
         assertEq(MockERC20(token4).balanceOf(user3), claimableToken4);
-
-        assertEq(MockERC20(token1).balanceOf(address(feeDistributor)), 0);
-        assertEq(MockERC20(token2).balanceOf(address(feeDistributor)), 0);
-        assertEq(MockERC20(token3).balanceOf(address(feeDistributor)), 0);
-        assertEq(MockERC20(token4).balanceOf(address(feeDistributor)), 0);
     }
 
-    function testFuzz_Withdraw_RevertWhen_NotOwner(address _user) public {
+    function testFuzz_WithdrawAll_RevertWhen_NotOwner(address _user) public {
         vm.assume(_user != deployer);
         vm.startPrank(_user);
         vm.expectRevert("Ownable: caller is not the owner");
-        feeDistributor.withdraw();
+        feeDistributor.withdrawAll();
         vm.stopPrank();
     }
 
-    function test_Withdraw_NoClaims() public {
+    function test_WithdrawAll_NoClaims() public {
         assertEq(MockERC20(token1).balanceOf(deployer), 0);
         assertEq(MockERC20(token2).balanceOf(deployer), 0);
         assertEq(MockERC20(token3).balanceOf(deployer), 0);
@@ -229,7 +226,101 @@ contract MerkleFeeDistributorTest is Test {
         emit Withdrawn(deployer, token3, MockERC20(token3).balanceOf(address(feeDistributor)));
         vm.expectEmit(true, true, false, true);
         emit Withdrawn(deployer, token4, MockERC20(token4).balanceOf(address(feeDistributor)));
-        feeDistributor.withdraw();
+        feeDistributor.withdrawAll();
+        vm.stopPrank();
+
+        assertEq(MockERC20(token1).balanceOf(deployer), feeDistributor.TOKEN1_AMOUNT());
+        assertEq(MockERC20(token2).balanceOf(deployer), feeDistributor.TOKEN2_AMOUNT());
+        assertEq(MockERC20(token3).balanceOf(deployer), feeDistributor.TOKEN3_AMOUNT());
+        assertEq(MockERC20(token4).balanceOf(deployer), feeDistributor.TOKEN4_AMOUNT());
+    }
+
+    function test_WithdrawAll_AfterClaims() public {
+        assertEq(MockERC20(token1).balanceOf(deployer), 0);
+        assertEq(MockERC20(token2).balanceOf(deployer), 0);
+        assertEq(MockERC20(token3).balanceOf(deployer), 0);
+        assertEq(MockERC20(token4).balanceOf(deployer), 0);
+
+        // user 1 claims
+        uint256 share = 500000000000000000;
+        uint256 claimableToken1 = (share * feeDistributor.TOKEN1_AMOUNT()) / 1e18;
+        uint256 claimableToken2 = (share * feeDistributor.TOKEN2_AMOUNT()) / 1e18;
+        uint256 claimableToken3 = (share * feeDistributor.TOKEN3_AMOUNT()) / 1e18;
+        uint256 claimableToken4 = (share * feeDistributor.TOKEN4_AMOUNT()) / 1e18;
+
+        bytes32[] memory merkleProof = new bytes32[](2);
+        merkleProof[0] = 0x0a7e356738486e70683cadf436a6f14789f356637327b190e17ab338af7f0910;
+        merkleProof[1] = 0xac1fe0856a9ea8b0b37641df7cdd623f456573a64be32e4b28bb7bdf48024e48;
+
+        vm.expectEmit(true, false, false, true);
+        emit Transfer(address(feeDistributor), user1, claimableToken1);
+        vm.expectEmit(true, false, false, true);
+        emit Transfer(address(feeDistributor), user1, claimableToken2);
+        vm.expectEmit(true, false, false, true);
+        emit Transfer(address(feeDistributor), user1, claimableToken3);
+        vm.expectEmit(true, false, false, true);
+        emit Transfer(address(feeDistributor), user1, claimableToken4);
+        vm.expectEmit(false, false, false, true);
+        emit Claimed(0, user1, share);
+        feeDistributor.claim(0, user1, share, merkleProof);
+        vm.stopPrank();
+
+        vm.startPrank(deployer);
+        vm.expectEmit(true, true, false, true);
+        emit Withdrawn(deployer, token1, MockERC20(token1).balanceOf(address(feeDistributor)));
+        vm.expectEmit(true, true, false, true);
+        emit Withdrawn(deployer, token2, MockERC20(token2).balanceOf(address(feeDistributor)));
+        vm.expectEmit(true, true, false, true);
+        emit Withdrawn(deployer, token3, MockERC20(token3).balanceOf(address(feeDistributor)));
+        vm.expectEmit(true, true, false, true);
+        emit Withdrawn(deployer, token4, MockERC20(token4).balanceOf(address(feeDistributor)));
+        feeDistributor.withdrawAll();
+        vm.stopPrank();
+
+        assertEq(MockERC20(token1).balanceOf(deployer), feeDistributor.TOKEN1_AMOUNT() - claimableToken1);
+        assertEq(MockERC20(token2).balanceOf(deployer), feeDistributor.TOKEN2_AMOUNT() - claimableToken2);
+        assertEq(MockERC20(token3).balanceOf(deployer), feeDistributor.TOKEN3_AMOUNT() - claimableToken3);
+        assertEq(MockERC20(token4).balanceOf(deployer), feeDistributor.TOKEN4_AMOUNT() - claimableToken4);
+    }
+
+    function testFuzz_Withdraw_RevertWhen_NotOwner(address _user, address _token) public {
+        vm.assume(_user != deployer);
+        vm.startPrank(_user);
+        vm.expectRevert("Ownable: caller is not the owner");
+        feeDistributor.withdraw(_token);
+        vm.stopPrank();
+    }
+
+    function test_Withdraw_RevertWhen_NoBalance() public {
+        vm.startPrank(deployer);
+        vm.expectRevert("balance is zero");
+        feeDistributor.withdraw(address(mockToken5));
+        vm.stopPrank();
+    }
+
+    function test_Withdraw_NoClaims() public {
+        assertEq(MockERC20(token1).balanceOf(deployer), 0);
+        assertEq(MockERC20(token2).balanceOf(deployer), 0);
+        assertEq(MockERC20(token3).balanceOf(deployer), 0);
+        assertEq(MockERC20(token4).balanceOf(deployer), 0);
+
+        vm.startPrank(deployer);
+
+        vm.expectEmit(true, true, false, true);
+        emit Withdrawn(deployer, token1, MockERC20(token1).balanceOf(address(feeDistributor)));
+        feeDistributor.withdraw(token1);
+
+        vm.expectEmit(true, true, false, true);
+        emit Withdrawn(deployer, token2, MockERC20(token2).balanceOf(address(feeDistributor)));
+        feeDistributor.withdraw(token2);
+
+        vm.expectEmit(true, true, false, true);
+        emit Withdrawn(deployer, token3, MockERC20(token3).balanceOf(address(feeDistributor)));
+        feeDistributor.withdraw(token3);
+
+        vm.expectEmit(true, true, false, true);
+        emit Withdrawn(deployer, token4, MockERC20(token4).balanceOf(address(feeDistributor)));
+        feeDistributor.withdraw(token4);
         vm.stopPrank();
 
         assertEq(MockERC20(token1).balanceOf(deployer), feeDistributor.TOKEN1_AMOUNT());
@@ -268,17 +359,22 @@ contract MerkleFeeDistributorTest is Test {
         feeDistributor.claim(0, user1, share, merkleProof);
         vm.stopPrank();
 
-        vm.warp(block.timestamp + 365 days);
         vm.startPrank(deployer);
         vm.expectEmit(true, true, false, true);
         emit Withdrawn(deployer, token1, MockERC20(token1).balanceOf(address(feeDistributor)));
+        feeDistributor.withdraw(token1);
+
         vm.expectEmit(true, true, false, true);
         emit Withdrawn(deployer, token2, MockERC20(token2).balanceOf(address(feeDistributor)));
+        feeDistributor.withdraw(token2);
+
         vm.expectEmit(true, true, false, true);
         emit Withdrawn(deployer, token3, MockERC20(token3).balanceOf(address(feeDistributor)));
+        feeDistributor.withdraw(token3);
+
         vm.expectEmit(true, true, false, true);
         emit Withdrawn(deployer, token4, MockERC20(token4).balanceOf(address(feeDistributor)));
-        feeDistributor.withdraw();
+        feeDistributor.withdraw(token4);
         vm.stopPrank();
 
         assertEq(MockERC20(token1).balanceOf(deployer), feeDistributor.TOKEN1_AMOUNT() - claimableToken1);

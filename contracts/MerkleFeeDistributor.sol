@@ -12,17 +12,17 @@ contract MerkleFeeDistributor is Ownable, IMerkleFeeDistributor {
     uint256 public immutable BASE = 1e18;
 
     // vSEY
-    address public immutable TOKEN1 = address(0x529860f2063986D4F939188ed9c77486830fF12F);
-    uint256 public immutable TOKEN1_AMOUNT = 7519488153e16;
+    address public immutable TOKEN1 = address(0x9eEcF010Bb8dc68A1a8783721E458f0917D0d7aa);
+    uint256 public immutable TOKEN1_AMOUNT = 7519488153057938939527000;
     // KWENTA
-    address public immutable TOKEN2 = address(0xCbb835dBDaA27Ffd431FfE1dA532C3C839EDdE34);
-    uint256 public immutable TOKEN2_AMOUNT = 31337e16;
+    address public immutable TOKEN2 = address(0x920Cf626a271321C151D027030D5d08aF699456b);
+    uint256 public immutable TOKEN2_AMOUNT = 313372999999999999999;
     // vHECO
-    address public immutable TOKEN3 = address(0x5b1fE44986205A155B32dE49C9EA784E9947360b);
-    uint256 public immutable TOKEN3_AMOUNT = 204743e16;
+    address public immutable TOKEN3 = address(0xED9353Dc0f12aC1E2F8120D60a4ACaa89a901F41);
+    uint256 public immutable TOKEN3_AMOUNT = 2047430070280000000000;
     // AELIN
-    address public immutable TOKEN4 = address(0x04169810d7d2BE328B8dc3B25cd9A11d2B48472F);
-    uint256 public immutable TOKEN4_AMOUNT = 1684e16;
+    address public immutable TOKEN4 = address(0x61BAADcF22d2565B0F471b291C475db5555e0b76);
+    uint256 public immutable TOKEN4_AMOUNT = 16846242936861671899;
 
     bytes32 public immutable override merkleRoot;
 
@@ -72,7 +72,7 @@ contract MerkleFeeDistributor is Ownable, IMerkleFeeDistributor {
         emit Claimed(_index, _account, _share);
     }
 
-    function withdraw() public onlyOwner {
+    function withdrawAll() public onlyOwner {
         emit Withdrawn(owner(), TOKEN1, IERC20(TOKEN1).balanceOf(address(this)));
         IERC20(TOKEN1).safeTransfer(owner(), IERC20(TOKEN1).balanceOf(address(this)));
 
@@ -84,6 +84,14 @@ contract MerkleFeeDistributor is Ownable, IMerkleFeeDistributor {
 
         emit Withdrawn(owner(), TOKEN4, IERC20(TOKEN4).balanceOf(address(this)));
         IERC20(TOKEN4).safeTransfer(owner(), IERC20(TOKEN4).balanceOf(address(this)));
+    }
+
+    function withdraw(address _token) public onlyOwner {
+        uint256 tokenBalance = IERC20(_token).balanceOf(address(this));
+        require(tokenBalance > 0, "balance is zero");
+
+        emit Withdrawn(owner(), _token, tokenBalance);
+        IERC20(_token).safeTransfer(owner(), tokenBalance);
     }
 
     event Withdrawn(address indexed to, address indexed token, uint256 amount);
