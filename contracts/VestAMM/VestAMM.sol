@@ -97,21 +97,25 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         aelinFeeModule = _aelinFeeModule;
         // TODO work on the rewards logic
         // TODO research the limit of how many rewards tokens you can distribute
+        // TODO emit the multi rewards distributor contract address
         vestAmmMultiRewards = new VestAMMMultiRewards(address(this));
 
         // TODO if we are doing a liquidity growth round we need to read the prices of the assets
         // from onchain here and set the current price as the median price
         // TODO do a require check to make sure the pool exists if they are doing a liquidity growth
+        // TODO research how to solve a new pool where liquidity exists elsewhere
         if (!_vAmmInfo.hasLaunchPhase) {
             // we need to pass in data to check if the pool exists. ammData is a placeholder but not the right argument
             Validate.poolExists(_ammData.ammLibrary.checkPoolExists(ammData), ammData.poolAddress); // NOTE: Check if poolAddress is required if hasLaunchPhase is false
             // initial price ratio between the two assets
+            // TODO slippage check
             investmentTokenPerBase = _ammData.ammLibrary.getPriceRatio(
                 _ammData.poolAddress,
                 _ammData.investmentToken,
                 _ammData.baseToken
             );
         }
+        // TODO if its a launch make sure pool doesn't exist for certain AMMs
         // LP vesting schedule array up to 4 buckets
         // each bucket will have a token total in the protocol tokens
         // this loop calculates the maximum number of investment tokens that will be accepted
@@ -120,7 +124,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         uint256 invPerBase = _vAmmInfo.hasLaunchPhase ? _vAmmInfo.investmentPerBase : investmentTokenPerBase;
 
         numVestingSchedules = vAmmInfo.lpVestingSchedules.length;
-        for (uint i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
+        for (uint i = 0; i < numVestingSchedules; i++) {
             numSingleRewards += vAmmInfo.lpVestingSchedules[i].singleVestingSchedules.length;
             holderTokenTotal += vAmmInfo.lpVestingSchedules[i].totalBaseTokens;
             // the maximum number of investment tokens investors can deposit per vesting schedule
@@ -483,7 +487,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         sendFeesToAelin(ammData.baseToken, _baseTokenFeeAmt);
         sendFeesToAelin(ammData.investmentAsset, _baseTokenFeeAmt);
 
-        // NOTE we need to DELETE!!!! this part and figure out a more efficient way of sending single
+        // NOTE we need to DELETE or we just make it an admin call!!!! this part and figure out a more efficient way of sending single
         // sided rewards to the AelinFeeModule. In addition to 1% of the tokens used to LP (base + investment)
         // we are also taking 1% of each single sided reward
         // BUT instead of sending them all here which could be up to 24 transfers which happen at the end

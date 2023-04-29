@@ -24,6 +24,7 @@ contract VestAMMDealFactory is IVestAMM {
     }
 
     // TODO list
+    // TODO add a function to libraries which allows us to collect external rewards e.g. Balancer weekly rewards and distributes them to holders via the Multi Rewards Distributor we are adding
     // TODO add in a curve multi rewards contract to the VestAMM so that you can distribute protocol fees to holders
     // NOTE that instead of staking token you will simply fake stake the number of investment tokens that you accepted the deal with
     // TODO write initial tests that checks the ability to start a vAMM and deposit base and single reward tokens to start the acceptDeal window

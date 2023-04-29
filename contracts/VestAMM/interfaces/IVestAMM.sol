@@ -44,11 +44,6 @@ interface IVestAMM {
         address baseToken;
     }
 
-    struct FundingLimits {
-        uint256 lower;
-        uint256 upper;
-    }
-
     struct DepositData {
         uint256 lpDepositTime;
         address lpToken;
@@ -66,14 +61,13 @@ interface IVestAMM {
 
     struct VAmmInfo {
         bool hasLaunchPhase;
-        bool isPriceFixed;
+        // TODO use this as a slippage parameter when the pool already exists
         uint256 investmentPerBase;
         uint256 depositWindow;
         uint256 lpFundingWindow;
         address mainHolder;
         Deallocation deallocation;
         LPVestingSchedule[] lpVestingSchedules;
-        FundingLimits fundingLimits;
         // NOTE: Since the only way to check if a pool exists in Balancer
         // is to call balancerVault.getPool(bytes32 poolId) we need to pass in
         // a bytes32 poolId property. Ideally we would pass a poolAddress (easier to get)
