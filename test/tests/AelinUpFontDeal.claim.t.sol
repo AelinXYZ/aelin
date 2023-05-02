@@ -14,7 +14,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {MockERC1155} from "../mocks/MockERC1155.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockERC721} from "../mocks/MockERC721.sol";
-import {MockPunks} from "../mocks/MockPunks.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {MerkleTree} from "contracts/libraries/MerkleTree.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -31,7 +30,6 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
     address dealAddressAllowList;
     address dealAddressNftGating721;
     address dealAddressNftGating1155;
-    address dealAddressNftGatingPunks;
     address dealAddressNoVestingPeriod;
     address dealAddressLowDecimals;
 
@@ -56,7 +54,6 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         dealDataLowDecimals.underlyingDealToken = address(underlyingDealTokenLowDecimals);
 
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules721 = getERC721Collection();
-        AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = getPunksCollection();
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules1155 = getERC1155Collection();
 
         dealAddressNoDeallocationNoDeposit = upFrontDealFactory.createUpFrontDeal(
@@ -98,13 +95,6 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
             dealData,
             dealConfig,
             nftCollectionRules721,
-            allowListEmpty
-        );
-
-        dealAddressNftGatingPunks = upFrontDealFactory.createUpFrontDeal(
-            dealData,
-            dealConfig,
-            nftCollectionRulesPunks,
             allowListEmpty
         );
 
@@ -155,9 +145,6 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         underlyingDealToken.approve(address(dealAddressNftGating721), type(uint256).max);
         AelinUpFrontDeal(dealAddressNftGating721).depositUnderlyingTokens(1e35);
-
-        underlyingDealToken.approve(address(dealAddressNftGatingPunks), type(uint256).max);
-        AelinUpFrontDeal(dealAddressNftGatingPunks).depositUnderlyingTokens(1e35);
 
         underlyingDealToken.approve(address(dealAddressNftGating1155), type(uint256).max);
         AelinUpFrontDeal(dealAddressNftGating1155).depositUnderlyingTokens(1e35);

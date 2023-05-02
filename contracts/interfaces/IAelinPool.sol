@@ -20,6 +20,8 @@ interface IAelinPool {
         // if 0, then unlimited purchase
         uint256 purchaseAmount;
         address collectionAddress;
+        // An array of Id Ranges for gating specific nfts in unique erc721 collections (e.g. POAP)
+        IdRange[] idRanges;
         // both variables below are only applicable for 1155
         uint256[] tokenIds;
         // min number of tokens required for participating
@@ -29,5 +31,10 @@ interface IAelinPool {
     struct NftPurchaseList {
         address collectionAddress;
         uint256[] tokenIds;
+    }
+
+    struct IdRange {
+        uint256 begin;
+        uint256 end;
     }
 }

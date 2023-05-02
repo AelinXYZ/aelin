@@ -38,7 +38,6 @@ contract AelinPoolFactoryTest is Test, AelinTestUtils {
     enum PoolVarsNftCollection {
         ERC721,
         ERC1155,
-        PUNKS,
         NONE
     }
 
