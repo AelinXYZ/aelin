@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+pragma solidity 0.8.19;
 
 import "./NftCheck.sol";
 
@@ -170,7 +170,7 @@ library AelinNftGating {
                         }
                     }
                 }
-            } 
+            }
 
             if (nftCollectionRules.purchaseAmount == 0) {
                 maxPurchaseTokenAmount = type(uint256).max;
