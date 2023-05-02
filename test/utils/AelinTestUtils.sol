@@ -42,6 +42,8 @@ contract AelinTestUtils is Test {
 
     AelinNftGating.NftCollectionRules[] public nftCollectionRulesEmpty;
 
+    AelinNftGating.NftPurchaseList[] public nftPurchaseListEmpty;
+
     MerkleTree.UpFrontMerkleData public merkleDataEmpty;
 
     struct FuzzedUpFrontDeal {

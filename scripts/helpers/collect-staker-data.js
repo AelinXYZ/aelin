@@ -259,6 +259,7 @@ async function main() {
 	console.log('totalScore', totalScore);
 
 	// NOTE this matches the contract amount of vAELIN exactly
+	// eslint-disable-next-line
 	const DISTRIBUTION_AMOUNT = 765306122448979591836;
 	const POST_FLOOR_DISTRIBUTION_AMOUNT = DISTRIBUTION_AMOUNT - totalFloorDistribution;
 

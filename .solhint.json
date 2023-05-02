@@ -1,0 +1,27 @@
+{
+	"extends": ["solhint:recommended"],
+	"plugins": ["numcast"],
+	"rules": {
+		"not-rely-on-time": "off",
+		"avoid-low-level-calls": "off",
+		"compiler-version": ["error", "^0.8.0"],
+		"contract-name-camelcase": "off",
+		"func-visibility": [
+			"error",
+			{
+				"ignoreConstructors": true
+			}
+		],
+		"no-complex-fallback": "off",
+		"no-inline-assembly": "off",
+		"private-vars-leading-underscore": "off",
+		"reason-string": [
+			"error",
+			{
+				"maxLength": 32
+			}
+		],
+		"numcast/safe-cast": "error",
+		"no-global-import": "off"
+	}
+}
