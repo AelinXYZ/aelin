@@ -141,6 +141,29 @@ AelinDeal - https://polygonscan.com/address/0x3da77794534c072ded3014ca139390b704
 AelinPool - https://polygonscan.com/address/0x864f82ddb6850dd480936ffa104bdaf3a1ca8afd
 AelinPoolFactory - https://polygonscan.com/address/0xbf7c0fd0d31bc377f861d11d4aac15296c0405b6
 
+zkSync goerli
+╔════════════════════╤════════════════════════════════════════════╗
+║ poolLogic          │ 0xb371F493dea0cf0aC6cCe242212C87af3d7CD21c ║
+╟────────────────────┼────────────────────────────────────────────╢
+║ dealLogic          │ 0xcf059C17F1686Dd3dB1747AB1d218aFFc00Fe8C4 ║
+╟────────────────────┼────────────────────────────────────────────╢
+║ aelinEscrowLogic   │ 0x8be25a2be14EB90083886dA118a3D2a5871b7466 ║
+╟────────────────────┼────────────────────────────────────────────╢
+║ poolFactory        │ 0xaC7d17b88C8bD48DAD63ABcB5A318b4dE7a83D57 ║
+╟────────────────────┼────────────────────────────────────────────╢
+║ aelinAllowList     │ 0x9A55aF3701CCFe9192B367c514178652cAcaAFA1 ║
+╟────────────────────┼────────────────────────────────────────────╢
+║ aelinNftGating     │ 0xB4284b6819B6d16aF26E4DC91Bc7eb831C407794 ║
+╟────────────────────┼────────────────────────────────────────────╢
+║ nftCheck           │ 0x25855b3E23c770F1EffC17BfB1bBb111eeD668b5 ║
+╟────────────────────┼────────────────────────────────────────────╢
+║ merkleTree         │ 0x5B2Bf8155940d741a85f924154CD4Deb6693B61e ║
+╟────────────────────┼────────────────────────────────────────────╢
+║ upFrontDealLogic   │ 0xef795183F28E3e160fdDcDBFA836d7bD99E927Ba ║
+╟────────────────────┼────────────────────────────────────────────╢
+║ upFrontDealFactory │ 0x5632f65AEe95757926D7c9b6d514944BE005a485 ║
+╚════════════════════╧════════════════════════════════════════════╝
+
 
 Aelin Multisigs:
 - Ethereum: https://gnosis-safe.io/app/eth:0x51b0332E1b3349bcF01689E63e34d8859595e376/home

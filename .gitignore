@@ -1,6 +1,8 @@
 node_modules
 cache
 artifacts
+artifacts-zk
+cache-zk
 .DS_Store
 build
 typechain

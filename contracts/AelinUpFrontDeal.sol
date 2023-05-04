@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import "./AelinVestingToken.sol";
-import "./MinimalProxyFactory.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import {AelinDeal} from "./AelinDeal.sol";
-import {AelinPool} from "./AelinPool.sol";
+import {AelinVestingToken} from "./AelinVestingToken.sol";
 import {AelinFeeEscrow} from "./AelinFeeEscrow.sol";
+import {MinimalProxyFactory} from "./MinimalProxyFactory.sol";
 import {IAelinUpFrontDeal} from "./interfaces/IAelinUpFrontDeal.sol";
 import {IERC20Extended} from "./interfaces/IERC20Extended.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./libraries/AelinNftGating.sol";
 import "./libraries/AelinAllowList.sol";
 import "./libraries/MerkleTree.sol";
