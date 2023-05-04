@@ -30,7 +30,7 @@ interface IVestAMMLibrary {
         // symbol of the pool
         string symbol;
         // NOTE these are the 2 tokens we are using
-        IERC20[] tokens;
+        address[] tokens;
         // this is where you put the ratio between the 2 tokens
         uint256[] normalizedWeights;
         // not sure what this is
@@ -44,11 +44,13 @@ interface IVestAMMLibrary {
     struct AddLiquidity {
         address poolAddress;
         uint256[] tokensAmtsIn;
+        address[] tokens;
     }
 
     struct RemoveLiquidity {
         address poolAddress;
         uint256 lpTokenAmtIn;
+        address[] tokens;
     }
 
     // deploy pool also adds liquidity?
