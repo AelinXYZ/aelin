@@ -102,14 +102,18 @@ contract AelinTestUtils is Test {
         uint256 _vestingCliffPeriod,
         bool _allowDeallocation
     ) public pure returns (IAelinUpFrontDeal.UpFrontDealConfig memory) {
+        IAelinUpFrontDeal.VestingSchedule[] memory vestingSchedules = new IAelinUpFrontDeal.VestingSchedule[](1);
+
+        vestingSchedules[0].purchaseTokenPerDealToken = _purchaseTokenPerDealToken;
+        vestingSchedules[0].vestingCliffPeriod = _vestingCliffPeriod;
+        vestingSchedules[0].vestingPeriod = _vestingPeriod;
+
         return
             IAelinUpFrontDeal.UpFrontDealConfig({
                 underlyingDealTokenTotal: _underlyingDealTokenTotal,
-                purchaseTokenPerDealToken: _purchaseTokenPerDealToken,
                 purchaseRaiseMinimum: _purchaseRaiseMinimum,
                 purchaseDuration: _purchaseDuration,
-                vestingPeriod: _vestingPeriod,
-                vestingCliffPeriod: _vestingCliffPeriod,
+                vestingSchedules: vestingSchedules,
                 allowDeallocation: _allowDeallocation
             });
     }
@@ -204,27 +208,35 @@ contract AelinTestUtils is Test {
     }
 
     function getDealConfigAllowDeallocation() public pure returns (IAelinUpFrontDeal.UpFrontDealConfig memory) {
+        IAelinUpFrontDeal.VestingSchedule[] memory vestingSchedules = new IAelinUpFrontDeal.VestingSchedule[](1);
+
+        vestingSchedules[0].purchaseTokenPerDealToken = 3e18;
+        vestingSchedules[0].vestingCliffPeriod = 60 days;
+        vestingSchedules[0].vestingPeriod = 365 days;
+
         return
             IAelinUpFrontDeal.UpFrontDealConfig({
                 underlyingDealTokenTotal: 1e35,
-                purchaseTokenPerDealToken: 3e18,
                 purchaseRaiseMinimum: 0,
                 purchaseDuration: 10 days,
-                vestingPeriod: 365 days,
-                vestingCliffPeriod: 60 days,
+                vestingSchedules: vestingSchedules,
                 allowDeallocation: true
             });
     }
 
     function getDealConfig() public pure returns (IAelinUpFrontDeal.UpFrontDealConfig memory) {
+        IAelinUpFrontDeal.VestingSchedule[] memory vestingSchedules = new IAelinUpFrontDeal.VestingSchedule[](1);
+
+        vestingSchedules[0].purchaseTokenPerDealToken = 3e18;
+        vestingSchedules[0].vestingCliffPeriod = 60 days;
+        vestingSchedules[0].vestingPeriod = 365 days;
+
         return
             IAelinUpFrontDeal.UpFrontDealConfig({
                 underlyingDealTokenTotal: 1e35,
-                purchaseTokenPerDealToken: 3e18,
                 purchaseRaiseMinimum: 1e28,
                 purchaseDuration: 10 days,
-                vestingPeriod: 365 days,
-                vestingCliffPeriod: 60 days,
+                vestingSchedules: vestingSchedules,
                 allowDeallocation: false
             });
     }
@@ -298,15 +310,8 @@ contract AelinTestUtils is Test {
 
     function setupAndAcceptDealNoDeallocation(address _dealAddress, uint256 _purchaseAmount, address _user) public {
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
-        (
-            uint256 underlyingDealTokenTotal,
-            uint256 purchaseTokenPerDealToken,
-            uint256 purchaseRaiseMinimum,
-            ,
-            ,
-            ,
-
-        ) = AelinUpFrontDeal(_dealAddress).dealConfig();
+        (uint256 underlyingDealTokenTotal, uint256 purchaseRaiseMinimum, , ) = AelinUpFrontDeal(_dealAddress).dealConfig();
+        (uint256 purchaseTokenPerDealToken, , ) = AelinUpFrontDeal(_dealAddress).getVestingScheduleDetails(0);
         vm.assume(_purchaseAmount > purchaseRaiseMinimum);
         (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
@@ -318,7 +323,7 @@ contract AelinTestUtils is Test {
         deal(address(purchaseToken), _user, type(uint256).max);
         purchaseToken.approve(_dealAddress, type(uint256).max);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
-        AelinUpFrontDeal(_dealAddress).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        AelinUpFrontDeal(_dealAddress).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount, 0);
     }
 
     function setupAndAcceptDealWithDeallocation(
@@ -328,8 +333,8 @@ contract AelinTestUtils is Test {
         bool isOverSubscribed
     ) public returns (uint256) {
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
-        (uint256 underlyingDealTokenTotal, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(_dealAddress)
-            .dealConfig();
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(_dealAddress).dealConfig();
+        (uint256 purchaseTokenPerDealToken, , ) = AelinUpFrontDeal(_dealAddress).getVestingScheduleDetails(0);
         (bool success, ) = SafeMath.tryMul(_purchaseAmount, 10 ** underlyingTokenDecimals);
         vm.assume(success);
         (success, ) = SafeMath.tryMul(_purchaseAmount, underlyingDealTokenTotal);
@@ -346,7 +351,7 @@ contract AelinTestUtils is Test {
         deal(address(purchaseToken), _user, type(uint256).max);
         purchaseToken.approve(address(_dealAddress), type(uint256).max);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
-        AelinUpFrontDeal(_dealAddress).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
+        AelinUpFrontDeal(_dealAddress).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount, 0);
         return (underlyingDealTokenTotal);
     }
 
@@ -354,7 +359,7 @@ contract AelinTestUtils is Test {
         // purchase period is now over
         reachPurchaseExpiry(_dealAddress);
         // purchaser claim
-        AelinUpFrontDeal(_dealAddress).purchaserClaim();
+        AelinUpFrontDeal(_dealAddress).purchaserClaim(0);
     }
 
     function reachPurchaseExpiry(address _dealAddress) public {
@@ -362,11 +367,11 @@ contract AelinTestUtils is Test {
     }
 
     function reachVestingCliffExpiry(address _dealAddress) public {
-        vm.warp(AelinUpFrontDeal(_dealAddress).vestingCliffExpiry() + 1 days);
+        vm.warp(AelinUpFrontDeal(_dealAddress).vestingCliffExpiries(0) + 1 days);
     }
 
     function reachVestingPeriod(address _dealAddress) public {
-        vm.warp(AelinUpFrontDeal(_dealAddress).vestingCliffExpiry() + 1 days);
+        vm.warp(AelinUpFrontDeal(_dealAddress).vestingCliffExpiries(0) + 1 days);
     }
 
     function makeAddr(uint256 num) internal returns (address addr) {

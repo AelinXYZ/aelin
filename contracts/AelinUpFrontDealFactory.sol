@@ -57,11 +57,9 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
         emit CreateUpFrontDealConfig(
             upFrontDealAddress,
             _dealConfig.underlyingDealTokenTotal,
-            _dealConfig.purchaseTokenPerDealToken,
             _dealConfig.purchaseRaiseMinimum,
             _dealConfig.purchaseDuration,
-            _dealConfig.vestingPeriod,
-            _dealConfig.vestingCliffPeriod,
+            _dealConfig.vestingSchedules,
             _dealConfig.allowDeallocation
         );
     }
