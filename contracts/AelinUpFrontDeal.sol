@@ -431,14 +431,6 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
         }
     }
 
-    function claimUnderlyingMultipleEntries(uint256[] memory _indices, uint256 _vestingIndex) external returns (uint256) {
-        uint256 totalClaimed;
-        for (uint256 i = 0; i < _indices.length; i++) {
-            totalClaimed += _claimUnderlying(msg.sender, _indices[i], _vestingIndex);
-        }
-        return totalClaimed;
-    }
-
     /**
      * @dev ERC721 deal token holder calls after the purchasing period to claim underlying deal tokens
      * amount based on the vesting schedule
@@ -447,6 +439,24 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
      */
     function claimUnderlying(uint256 _tokenId, uint256 _vestingIndex) external returns (uint256) {
         return _claimUnderlying(msg.sender, _tokenId, _vestingIndex);
+    }
+
+    /**
+     * @dev claims every vesting schedule specified for each token Id specified
+     * @param _tokenIds the token ID to check the quantity of claimable underlying tokens
+     * @param _vestingIndices the vesting index schedule for which to claim from
+     */
+    function claimUnderlyingMultipleEntries(
+        uint256[] memory _tokenIds,
+        uint256[] memory _vestingIndices
+    ) external returns (uint256) {
+        uint256 totalClaimed;
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            for (uint256 j = 0; j < _vestingIndices.length; j++) {
+                totalClaimed += _claimUnderlying(msg.sender, _tokenIds[i], _vestingIndices[j]);
+            }
+        }
+        return totalClaimed;
     }
 
     function _claimUnderlying(address _owner, uint256 _tokenId, uint256 _vestingIndex) internal returns (uint256) {
@@ -474,15 +484,15 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
      * @param _vestingIndex the vesting index schedule for which to claim from
      */
     function claimableUnderlyingTokens(uint256 _tokenId, uint256 _vestingIndex) public view returns (uint256) {
-        VestingDetails memory schedule = vestingDetails[_tokenId];
+        VestingDetails memory details = vestingDetails[_tokenId];
         uint256 precisionAdjustedUnderlyingClaimable;
 
-        if (schedule.lastClaimedAt > 0) {
+        if (details.lastClaimedAt > 0) {
             uint256 maxTime = block.timestamp > vestingExpiries[_vestingIndex]
                 ? vestingExpiries[_vestingIndex]
                 : block.timestamp;
-            uint256 minTime = schedule.lastClaimedAt > vestingCliffExpiries[_vestingIndex]
-                ? schedule.lastClaimedAt
+            uint256 minTime = details.lastClaimedAt > vestingCliffExpiries[_vestingIndex]
+                ? details.lastClaimedAt
                 : vestingCliffExpiries[_vestingIndex];
             uint256 vestingPeriod = dealConfig.vestingSchedules[_vestingIndex].vestingPeriod;
 
@@ -491,8 +501,8 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
                 (maxTime == vestingCliffExpiries[_vestingIndex] && vestingPeriod == 0)
             ) {
                 uint256 underlyingClaimable = vestingPeriod == 0
-                    ? schedule.share
-                    : (schedule.share * (maxTime - minTime)) / vestingPeriod;
+                    ? details.share
+                    : (details.share * (maxTime - minTime)) / vestingPeriod;
 
                 // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
                 // although it will generally never happen as solidity rounds down so there should always be a little bit left
