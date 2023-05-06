@@ -1462,11 +1462,16 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user1), 2);
 
         // user2 tries claiming and it reverts
-        uint256[] memory indices = new uint256[](2);
-        indices[0] = vestingTokenId;
-        indices[1] = vestingTokenId - 1;
+        // TokenIds
+        uint256[] memory tokenIds = new uint256[](2);
+        tokenIds[0] = vestingTokenId;
+        tokenIds[1] = vestingTokenId - 1;
+        // Vesting Indices
+        uint256[] memory vestingIndices = new uint256[](1);
+        vestingIndices[0] = 0;
+
         vm.expectRevert("must be owner to claim");
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlyingMultipleEntries(indices, 0);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlyingMultipleEntries(tokenIds, vestingIndices);
         vm.expectRevert("must be owner to claim");
         AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId, 0);
         vm.stopPrank();
@@ -1480,7 +1485,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         emit ClaimedUnderlyingDealToken(user1, vestingTokenId - 1, address(underlyingDealToken), share1);
         vm.expectEmit(true, false, false, true);
         emit ClaimedUnderlyingDealToken(user1, vestingTokenId, address(underlyingDealToken), share2);
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlyingMultipleEntries(indices, 0);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlyingMultipleEntries(tokenIds, vestingIndices);
         assertEq(underlyingDealToken.balanceOf(user1), share1 + share2);
 
         // user1 attempts claiming more the next day but it reverts
@@ -1489,7 +1494,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimableUnderlyingTokens(vestingTokenId - 1, 0), 0);
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimableUnderlyingTokens(vestingTokenId, 0), 0);
         vm.expectRevert("ERC721: invalid token ID");
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlyingMultipleEntries(indices, 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlyingMultipleEntries(tokenIds, vestingIndices), 0);
         vm.stopPrank();
     }
 
