@@ -7,6 +7,7 @@ error BalanceTooLow();
 error AmountTooLow();
 error Unauthorized();
 error AwaitingDeposit();
+error AlreadyDeposited();
 
 contract AelinTokenSwapper {
     // Initial token supply set to 10M tokens as stated in AELIP-50
@@ -26,6 +27,7 @@ contract AelinTokenSwapper {
     }
 
     function depositTokens() external {
+        if (deposited == true) revert AlreadyDeposited();
         if (msg.sender != aelinTreasury) revert Unauthorized();
         if (IERC20(aelinToken).balanceOf(msg.sender) < TOKEN_SUPPLY) revert BalanceTooLow();
         IERC20(aelinToken).transferFrom(msg.sender, address(this), TOKEN_SUPPLY);

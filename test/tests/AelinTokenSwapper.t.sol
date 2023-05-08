@@ -22,6 +22,7 @@ contract AelinTokenSwapperTest is Test, AelinTestUtils {
     error AmountTooLow();
     error Unauthorized();
     error AwaitingDeposit();
+    error AlreadyDeposited();
 
     event TokenDeposited(address indexed sender, address indexed receiver, uint256 amount);
     event TokenSwapped(address indexed sender, uint256 depositAmount, uint256 swapAmount);
@@ -90,6 +91,11 @@ contract AelinTokenSwapperTest is Test, AelinTestUtils {
         assertEq(newToken.balanceOf(aelinTreasury), 0);
         assertEq(newToken.balanceOf(address(aelinTokenSwapper)), TOKEN_SUPPLY);
         assertEq(aelinTokenSwapper.deposited(), true);
+
+        // we make sure we can't deposit twice
+        vm.expectRevert(AlreadyDeposited.selector);
+        aelinTokenSwapper.depositTokens();
+
         vm.stopPrank();
     }
 
