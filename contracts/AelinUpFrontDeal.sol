@@ -441,12 +441,12 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
 
     /**
      * @dev claims every vesting schedule specified for each token Id specified
-     * @param _tokenIds the token ID to check the quantity of claimable underlying tokens
+     * @param _indices the token ID to check the quantity of claimable underlying tokens
      */
-    function claimUnderlyingMultipleEntries(uint256[] memory _tokenIds) external returns (uint256) {
+    function claimUnderlyingMultipleEntries(uint256[] memory _indices) external returns (uint256) {
         uint256 totalClaimed;
-        for (uint256 i = 0; i < _tokenIds.length; i++) {
-            totalClaimed += _claimUnderlying(msg.sender, _tokenIds[i]);
+        for (uint256 i = 0; i < _indices.length; i++) {
+            totalClaimed += _claimUnderlying(msg.sender, _indices[i]);
         }
         return totalClaimed;
     }
