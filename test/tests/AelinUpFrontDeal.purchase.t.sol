@@ -29,6 +29,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
     address dealAddressNftGating721;
     address dealAddressNftGating1155;
     address dealAddressNftGating721IdRanges;
+    address dealAddressMultipleVestingSchedules;
 
     function setUp() public {
         AelinAllowList.InitData memory allowListEmpty;
@@ -43,6 +44,8 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         IAelinUpFrontDeal.UpFrontDealData memory dealData = getDealData();
         IAelinUpFrontDeal.UpFrontDealConfig memory dealConfig = getDealConfig();
         IAelinUpFrontDeal.UpFrontDealConfig memory dealConfigAllowDeallocation = getDealConfigAllowDeallocation();
+        IAelinUpFrontDeal.UpFrontDealConfig
+            memory dealConfigMultipleVestingSchedules = getDealConfigMultipleVestingSchedules();
 
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules721 = getERC721Collection();
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules1155 = getERC1155Collection();
@@ -106,6 +109,13 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
             allowListEmpty
         );
 
+        dealAddressMultipleVestingSchedules = upFrontDealFactory.createUpFrontDeal(
+            dealData,
+            dealConfigMultipleVestingSchedules,
+            nftCollectionRulesEmpty,
+            allowListEmpty
+        );
+
         vm.stopPrank();
         vm.startPrank(dealHolderAddress);
 
@@ -131,12 +141,15 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         underlyingDealToken.approve(address(dealAddressNftGating721IdRanges), type(uint256).max);
         AelinUpFrontDeal(dealAddressNftGating721IdRanges).depositUnderlyingTokens(1e35);
 
+        underlyingDealToken.approve(address(dealAddressMultipleVestingSchedules), type(uint256).max);
+        AelinUpFrontDeal(dealAddressMultipleVestingSchedules).depositUnderlyingTokens(1e35);
+
         vm.stopPrank();
     }
 
     /*//////////////////////////////////////////////////////////////
-											depositUnderlyingTokens()
-		//////////////////////////////////////////////////////////////*/
+						depositUnderlyingTokens()
+	//////////////////////////////////////////////////////////////*/
 
     function testFuzz_DepositUnderlyingTokens_RevertWhen_NotHolder(address _testAddress, uint256 _depositAmount) public {
         vm.assume(_testAddress != dealHolderAddress);
@@ -348,8 +361,8 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
     }
 
     /*//////////////////////////////////////////////////////////////
-													vouch()
-		//////////////////////////////////////////////////////////////*/
+						        vouch()
+	//////////////////////////////////////////////////////////////*/
 
     function testFuzz_Vouch(address _attestant) public {
         vm.startPrank(_attestant);
@@ -360,8 +373,8 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
     }
 
     /*//////////////////////////////////////////////////////////////
-													disavow()
-		//////////////////////////////////////////////////////////////*/
+							    disavow()
+	//////////////////////////////////////////////////////////////*/
 
     function testFuzz_Disavow(address _attestant) public {
         vm.startPrank(_attestant);
@@ -372,8 +385,8 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
     }
 
     /*//////////////////////////////////////////////////////////////
-													withdrawExcess()
-		//////////////////////////////////////////////////////////////*/
+							withdrawExcess()
+	//////////////////////////////////////////////////////////////*/
 
     function testFuzz_WithdrawExcess_RevertWhen_NotHolder(address _initiator) public {
         vm.assume(_initiator != dealHolderAddress);
@@ -414,7 +427,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
     }
 
     /*//////////////////////////////////////////////////////////////
-                                  acceptDeal()
+                                acceptDeal()
     //////////////////////////////////////////////////////////////*/
 
     function testFuzz_AcceptDeal_RevertWhen_DepositIncomplete(address _user, uint256 _purchaseAmount) public {
@@ -1653,6 +1666,70 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         );
         assertTrue(NftIdUsed);
         assertTrue(hasNftList);
+    }
+
+    function testFuzz_AcceptDeal_MultipleVestingSchedules(uint256 _purchaseAmount1, uint256 _purchaseAmount2) public {
+        vm.assume(_purchaseAmount1 > 0);
+        vm.assume(_purchaseAmount2 > 0);
+
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+
+        (uint256 underlyingDealTokenTotal, , , ) = AelinUpFrontDeal(dealAddressMultipleVestingSchedules).dealConfig();
+        (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(dealAddressMultipleVestingSchedules)
+            .getVestingScheduleDetails(0);
+        (uint256 purchaseTokenPerDealToken2, , ) = AelinUpFrontDeal(dealAddressMultipleVestingSchedules)
+            .getVestingScheduleDetails(1);
+
+        uint256 raiseAmount1 = (underlyingDealTokenTotal * purchaseTokenPerDealToken1) / 10 ** underlyingTokenDecimals;
+        vm.assume(_purchaseAmount1 <= raiseAmount1);
+        uint256 raiseAmount2 = (underlyingDealTokenTotal * purchaseTokenPerDealToken2) / 10 ** underlyingTokenDecimals;
+        vm.assume(_purchaseAmount2 <= raiseAmount2);
+
+        uint256 poolSharesAmount1 = (_purchaseAmount1 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+        vm.assume(poolSharesAmount1 > 0);
+        uint256 poolSharesAmount2 = (_purchaseAmount2 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken2;
+        vm.assume(poolSharesAmount2 > 0);
+
+        //Accept deal with first vesting schedule and price
+        vm.startPrank(user1);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressMultipleVestingSchedules), type(uint256).max);
+
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user1, 0, _purchaseAmount1, _purchaseAmount1, poolSharesAmount1, poolSharesAmount1);
+        AelinUpFrontDeal(dealAddressMultipleVestingSchedules).acceptDeal(
+            nftPurchaseList,
+            merkleDataEmpty,
+            _purchaseAmount1,
+            0
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleVestingSchedules).totalPoolShares(), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleVestingSchedules).poolSharesPerUser(user1, 0), poolSharesAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleVestingSchedules).totalPurchasingAccepted(), _purchaseAmount1);
+        assertEq(AelinUpFrontDeal(dealAddressMultipleVestingSchedules).purchaseTokensPerUser(user1, 0), _purchaseAmount1);
+
+        //Then second with different schedule and price
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user1, 1, _purchaseAmount2, _purchaseAmount2, poolSharesAmount2, poolSharesAmount2);
+        AelinUpFrontDeal(dealAddressMultipleVestingSchedules).acceptDeal(
+            nftPurchaseList,
+            merkleDataEmpty,
+            _purchaseAmount2,
+            1
+        );
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleVestingSchedules).totalPoolShares(),
+            poolSharesAmount1 + poolSharesAmount2
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleVestingSchedules).poolSharesPerUser(user1, 1), poolSharesAmount2);
+        assertEq(
+            AelinUpFrontDeal(dealAddressMultipleVestingSchedules).totalPurchasingAccepted(),
+            _purchaseAmount1 + _purchaseAmount2
+        );
+        assertEq(AelinUpFrontDeal(dealAddressMultipleVestingSchedules).purchaseTokensPerUser(user1, 1), _purchaseAmount2);
+
+        vm.stopPrank();
     }
 
     function test_AcceptDeal_MerkleAllowance() public {

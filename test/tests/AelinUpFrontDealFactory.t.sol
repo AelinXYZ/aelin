@@ -154,6 +154,10 @@ contract AelinUpFronDealFactoryTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         return boundedVars;
     }
 
+    /*//////////////////////////////////////////////////////////////
+                            tests
+    //////////////////////////////////////////////////////////////*/
+
     function testFuzz_AelinUpFrontDealFactory_RevertWhen_AelinDealLogicAddressNull(
         uint256 _sponsorFee,
         uint256 _underlyingDealTokenTotal,
