@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import "forge-std/console.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "contracts/VestAMM/interfaces/IVestAMMLibrary.sol";
 import "contracts/VestAMM/interfaces/IVestAMM.sol";
@@ -114,7 +113,7 @@ library CurveVestAMM {
         }
 
         uint256[2] memory tokensAmtsIn = [_addLiquidityData.tokensAmtsIn[0], _addLiquidityData.tokensAmtsIn[1]];
-        uint256 lpTokens = curvePool.add_liquidity(tokensAmtsIn, _minLpTokensOut);
+        curvePool.add_liquidity(tokensAmtsIn, _minLpTokensOut);
 
         // TODO: should return (numInvTokensInLP, numBaseTokensInLP, numInvTokensFee, numBaseTokensFee)
         return (_addLiquidityData.tokensAmtsIn[0], _addLiquidityData.tokensAmtsIn[1], 0, 0);

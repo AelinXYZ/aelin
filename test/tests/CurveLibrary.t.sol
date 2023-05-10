@@ -65,7 +65,7 @@ contract CurveLibraryTest is Test {
         IVestAMMLibrary.CreateNewPool newPoolData;
     }
 
-    function getPoolData() public returns (PoolData memory) {
+    function getPoolData() public view returns (PoolData memory) {
         PoolData memory data;
 
         address[] memory coins = new address[](2);
@@ -113,7 +113,7 @@ contract CurveLibraryTest is Test {
         address poolAddress,
         address investmentToken,
         address baseToken
-    ) public returns (IVestAMM.VAmmInfo memory) {
+    ) public pure returns (IVestAMM.VAmmInfo memory) {
         IVestAMM.AmmData memory ammData = IVestAMM.AmmData(address(0), investmentToken, baseToken);
 
         IVestAMM.SingleVestingSchedule[] memory single = new IVestAMM.SingleVestingSchedule[](1);
@@ -169,7 +169,6 @@ contract CurveLibraryTest is Test {
         // Create Pool
         address pool = curveLibrary.deployPool(data.newPoolData);
 
-        address[2] memory tokens = [aelinToken, daiToken];
         IERC20 lpToken = IERC20(ICurvePool(pool).token());
 
         IERC20(aelinToken).approve(address(curveLibrary), type(uint256).max);
@@ -180,8 +179,6 @@ contract CurveLibraryTest is Test {
         uint256[] memory amountsIn = new uint256[](2);
         amountsIn[0] = 0.5 ether;
         amountsIn[1] = 0.25 ether;
-
-        ICurvePool curvePool = ICurvePool(pool);
 
         IVestAMMLibrary.AddLiquidity memory addLiquidityData = IVestAMMLibrary.AddLiquidity(pool, amountsIn, data.coins);
 

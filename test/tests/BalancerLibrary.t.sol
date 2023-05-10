@@ -52,9 +52,9 @@ contract DerivedBalancerVestAMM {
 
 contract BalancerLibraryTest is Test {
     uint256 mainnetFork;
-    IERC20 Aelin = IERC20(address(0xa9C125BF4C8bB26f299c00969532B66732b1F758));
-    IERC20 Dai = IERC20(address(0x6B175474E89094C44Da98b954EedeAC495271d0F));
-    address user = address(0xA6B49397ce21bb62200e914F41BF371E5940Bb41);
+    address aelinToken = address(0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9);
+    address daiToken = address(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+    address user = address(0x000137);
 
     struct BalancerPoolData {
         string name;
@@ -79,8 +79,8 @@ contract BalancerLibraryTest is Test {
         IRateProvider[] memory rateProviders = new IRateProvider[](2);
         uint256[] memory normalizedWeights = new uint256[](2);
 
-        tokens[0] = address(Dai);
-        tokens[1] = address(Aelin);
+        tokens[0] = daiToken;
+        tokens[1] = aelinToken;
         rateProviders[0] = IRateProvider(address(0));
         rateProviders[1] = IRateProvider(address(0));
         normalizedWeights[0] = 500000000000000000;
@@ -175,6 +175,9 @@ contract BalancerLibraryTest is Test {
         vm.selectFork(mainnetFork);
         vm.startPrank(user);
 
+        deal(aelinToken, user, 1 ether);
+        deal(daiToken, user, 1 ether);
+
         /* DEPLOY POOL */
         BalancerPoolData memory data = getBalancerTestData();
 
@@ -236,6 +239,9 @@ contract BalancerLibraryTest is Test {
     function test_checkPoolExists() public {
         vm.selectFork(mainnetFork);
         vm.startPrank(user);
+
+        deal(aelinToken, user, 1 ether);
+        deal(daiToken, user, 1 ether);
 
         /* DEPLOY POOL */
         BalancerPoolData memory data = getBalancerTestData();
