@@ -8,10 +8,10 @@ contract AelinVestingToken is AelinERC721, IAelinVestingToken {
     mapping(uint256 => VestingDetails) public vestingDetails;
     uint256 public tokenCount;
 
-    function _mintVestingToken(address _to, uint256 _amount, uint256 _timestamp) internal {
+    function _mintVestingToken(address _to, uint256 _amount, uint256 _timestamp, uint256 _vestingIndex) internal {
         _mint(_to, tokenCount);
-        vestingDetails[tokenCount] = VestingDetails(_amount, _timestamp);
-        emit VestingTokenMinted(_to, tokenCount, _amount, _timestamp);
+        vestingDetails[tokenCount] = VestingDetails(_amount, _timestamp, _vestingIndex);
+        emit VestingTokenMinted(_to, tokenCount, _amount, _timestamp, _vestingIndex);
         tokenCount += 1;
     }
 
@@ -26,8 +26,8 @@ contract AelinVestingToken is AelinERC721, IAelinVestingToken {
         VestingDetails memory schedule = vestingDetails[_tokenId];
         require(_shareAmount > 0, "share amount should be > 0");
         require(_shareAmount < schedule.share, "amout gt than current share");
-        vestingDetails[_tokenId] = VestingDetails(schedule.share - _shareAmount, schedule.lastClaimedAt);
-        _mintVestingToken(_to, _shareAmount, schedule.lastClaimedAt);
+        vestingDetails[_tokenId] = VestingDetails(schedule.share - _shareAmount, schedule.lastClaimedAt, schedule.vestingIndex);
+        _mintVestingToken(_to, _shareAmount, schedule.lastClaimedAt, schedule.vestingIndex);
         emit VestingShareTransferred(msg.sender, _to, _tokenId, _shareAmount);
     }
 

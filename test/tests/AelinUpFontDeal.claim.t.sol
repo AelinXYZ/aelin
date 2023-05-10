@@ -340,7 +340,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         uint256 adjustedShareAmountForUser = ((BASE - AELIN_FEE - dealVars.sponsorFee) * poolSharesAmount) / BASE;
         uint256 tokenCount = fuzzed.upFrontDeal.tokenCount();
         vm.expectEmit(true, true, true, true);
-        emit VestingTokenMinted(user1, tokenCount, adjustedShareAmountForUser, dealVars.purchaseDuration + 1);
+        emit VestingTokenMinted(user1, tokenCount, adjustedShareAmountForUser, dealVars.purchaseDuration + 1, 0);
         vm.expectEmit(true, false, false, true);
         emit ClaimDealTokens(user1, adjustedShareAmountForUser, 0);
         fuzzed.upFrontDeal.purchaserClaim(0);
@@ -410,7 +410,8 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
             user1,
             AelinUpFrontDeal(dealAddressAllowDeallocation).tokenCount(),
             adjustedShareAmountForUser1,
-            AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry()
+            AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry(),
+            0
         );
         vm.expectEmit(true, false, false, true);
         emit ClaimDealTokens(user1, adjustedShareAmountForUser1, refundAmount);
@@ -442,7 +443,8 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
             user2,
             AelinUpFrontDeal(dealAddressAllowDeallocation).tokenCount(),
             adjustedShareAmountForUser2,
-            AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry()
+            AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry(),
+            0
         );
         vm.expectEmit(true, false, false, true);
         emit ClaimDealTokens(user2, adjustedShareAmountForUser2, refundAmount);
@@ -462,14 +464,14 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         // checks if user1 got their vesting token
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).balanceOf(user1), 1);
         assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(0), user1);
-        (uint256 userShare, uint256 lastClaimedAt) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(0);
+        (uint256 userShare, uint256 lastClaimedAt, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(0);
         assertEq(userShare, adjustedShareAmountForUser1);
         assertEq(lastClaimedAt, AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry());
 
         // checks if user2 got their vesting token
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).balanceOf(user2), 1);
         assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(1), user2);
-        (userShare, lastClaimedAt) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(1);
+        (userShare, lastClaimedAt, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(1);
         assertEq(userShare, adjustedShareAmountForUser2);
         assertEq(lastClaimedAt, AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry());
     }
@@ -481,9 +483,9 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
     function testFuzz_SponsorClaim_RevertWhen_NotInWindow(address _user) public {
         vm.startPrank(_user);
         vm.expectRevert("underlying deposit incomplete");
-        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).sponsorClaim();
+        AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).sponsorClaim(0);
         vm.expectRevert("purchase period not over");
-        AelinUpFrontDeal(dealAddressNoDeallocation).sponsorClaim();
+        AelinUpFrontDeal(dealAddressNoDeallocation).sponsorClaim(0);
         vm.stopPrank();
     }
 
@@ -508,13 +510,13 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         // user tries to call sponsorClaim() and it reverts
         vm.expectRevert("does not pass min raise");
-        AelinUpFrontDeal(dealAddressNoDeallocation).sponsorClaim();
+        AelinUpFrontDeal(dealAddressNoDeallocation).sponsorClaim(0);
         vm.stopPrank();
 
         // sponsor tries to call sponsorClaim() and it reverts
         vm.startPrank(dealCreatorAddress);
         vm.expectRevert("does not pass min raise");
-        AelinUpFrontDeal(dealAddressNoDeallocation).sponsorClaim();
+        AelinUpFrontDeal(dealAddressNoDeallocation).sponsorClaim(0);
         vm.stopPrank();
     }
 
@@ -528,7 +530,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         // user tries to call sponsorClaim() and it reverts
         vm.expectRevert("must be sponsor");
-        AelinUpFrontDeal(dealAddressAllowDeallocation).sponsorClaim();
+        AelinUpFrontDeal(dealAddressAllowDeallocation).sponsorClaim(0);
         vm.stopPrank();
     }
 
@@ -542,11 +544,11 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         // sponsor now claims
         vm.startPrank(dealCreatorAddress);
-        AelinUpFrontDeal(dealAddressAllowDeallocation).sponsorClaim();
+        AelinUpFrontDeal(dealAddressAllowDeallocation).sponsorClaim(0);
 
         // sponsor tries to claim again and it fails
         vm.expectRevert("sponsor already claimed");
-        AelinUpFrontDeal(dealAddressAllowDeallocation).sponsorClaim();
+        AelinUpFrontDeal(dealAddressAllowDeallocation).sponsorClaim(0);
         vm.stopPrank();
     }
 
@@ -568,10 +570,10 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         uint256 totalSold = AelinUpFrontDeal(dealAddressNoDeallocation).totalPoolShares();
         uint256 shareAmount = (totalSold * sponsorFee) / BASE;
         vm.expectEmit(true, true, false, true);
-        emit VestingTokenMinted(dealCreatorAddress, tokenCount, shareAmount, purchaseExpiry);
+        emit VestingTokenMinted(dealCreatorAddress, tokenCount, shareAmount, purchaseExpiry, 0);
         vm.expectEmit(true, false, false, true);
         emit SponsorClaim(dealCreatorAddress, shareAmount);
-        AelinUpFrontDeal(dealAddressNoDeallocation).sponsorClaim();
+        AelinUpFrontDeal(dealAddressNoDeallocation).sponsorClaim(0);
         vm.stopPrank();
     }
 
@@ -594,12 +596,12 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         uint256 shareAmount = (underlyingDealTokenTotal * sponsorFee) / BASE;
         console.logUint(shareAmount);
         vm.expectEmit(true, true, false, true);
-        emit VestingTokenMinted(dealCreatorAddress, tokenCount, shareAmount, purchaseExpiry);
+        emit VestingTokenMinted(dealCreatorAddress, tokenCount, shareAmount, purchaseExpiry, 0);
         vm.expectEmit(true, false, false, true);
         emit SponsorClaim(dealCreatorAddress, shareAmount);
-        AelinUpFrontDeal(dealAddressAllowDeallocation).sponsorClaim();
+        AelinUpFrontDeal(dealAddressAllowDeallocation).sponsorClaim(0);
         vm.warp(AelinUpFrontDeal(dealAddressAllowDeallocation).vestingExpiries(0));
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(0, 0);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(0);
 
         vm.stopPrank();
     }
@@ -874,8 +876,8 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
     function testFuzz_ClaimableUnderlyingTokens_NotInWindow(uint256 _tokenId) public {
         vm.startPrank(user1);
-        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).claimableUnderlyingTokens(_tokenId, 0), 0);
-        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).claimableUnderlyingTokens(_tokenId, 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).claimableUnderlyingTokens(_tokenId), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).claimableUnderlyingTokens(_tokenId), 0);
         vm.stopPrank();
     }
 
@@ -887,9 +889,9 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         reachVestingPeriod(dealAddressNoDeallocation);
         // user should have something to claim
         assertEq(MockERC721(dealAddressNoDeallocation).ownerOf(vestingTokenId), user1);
-        assertGt(AelinUpFrontDeal(dealAddressNoDeallocation).claimableUnderlyingTokens(vestingTokenId, 0), 0);
+        assertGt(AelinUpFrontDeal(dealAddressNoDeallocation).claimableUnderlyingTokens(vestingTokenId), 0);
         // user doesn't have this token, so it reverts
-        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).claimableUnderlyingTokens(vestingTokenId + 1, 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).claimableUnderlyingTokens(vestingTokenId + 1), 0);
         vm.stopPrank();
     }
 
@@ -900,7 +902,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         purchaserClaim(dealAddressNoDeallocation);
         // user doesn't have anything to claim since vestingCliff is not over yet
         assertEq(MockERC721(dealAddressNoDeallocation).ownerOf(vestingTokenId), user1);
-        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).claimableUnderlyingTokens(vestingTokenId, 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).claimableUnderlyingTokens(vestingTokenId), 0);
         vm.stopPrank();
     }
 
@@ -918,7 +920,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         assertEq(MockERC721(dealAddressNoDeallocation).ownerOf(vestingTokenId), user1);
         vm.warp(purchaseExpiry + _delay);
         // user doesn't have anything to claim since vestingCliff is not over yet
-        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).claimableUnderlyingTokens(vestingTokenId, 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).claimableUnderlyingTokens(vestingTokenId), 0);
         vm.stopPrank();
     }
 
@@ -974,7 +976,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         fuzzed.upFrontDeal.purchaserClaim(0);
         assertEq(MockERC721(address(fuzzed.upFrontDeal)).ownerOf(vestingTokenId), user1);
         uint256 amountToClaim = (shareAmount * (block.timestamp - vestingCliffExpiry)) / dealVars.vestingPeriod;
-        assertEq(fuzzed.upFrontDeal.claimableUnderlyingTokens(vestingTokenId, 0), amountToClaim, "claimableAmount");
+        assertEq(fuzzed.upFrontDeal.claimableUnderlyingTokens(vestingTokenId), amountToClaim, "claimableAmount");
 
         vm.stopPrank();
     }
@@ -1032,7 +1034,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         assertEq(MockERC721(address(fuzzed.upFrontDeal)).ownerOf(vestingTokenId), user1);
         assertEq(
-            fuzzed.upFrontDeal.claimableUnderlyingTokens(vestingTokenId, 0),
+            fuzzed.upFrontDeal.claimableUnderlyingTokens(vestingTokenId),
             adjustedShareAmountForUser,
             "claimableAmount"
         );
@@ -1046,21 +1048,21 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         vm.startPrank(user1);
         // lastClaimedAt is 0
-        assertEq(deal.claimableUnderlyingTokens(0, 0), 0, "claimableAmount before accepting");
+        assertEq(deal.claimableUnderlyingTokens(0), 0, "claimableAmount before accepting");
 
         // lastClaimedAt > 0
         setupAndAcceptDealNoDeallocation(dealAddressNoVestingPeriod, _purchaseAmount, user1);
         purchaserClaim(dealAddressNoVestingPeriod);
 
         // Before vesting cliff expiry
-        assertEq(deal.claimableUnderlyingTokens(0, 0), 0, "claimableAmount before vesting cliff expiry");
+        assertEq(deal.claimableUnderlyingTokens(0), 0, "claimableAmount before vesting cliff expiry");
 
         // After vesting cliff expiry
         vm.warp(vestingCliffExpiry);
 
-        (uint256 share, ) = deal.vestingDetails(0);
+        (uint256 share, , ) = deal.vestingDetails(0);
 
-        assertEq(deal.claimableUnderlyingTokens(0, 0), share, "claimableAmount after vesting cliff expiry => all shares");
+        assertEq(deal.claimableUnderlyingTokens(0), share, "claimableAmount after vesting cliff expiry => all shares");
         vm.stopPrank();
     }
 
@@ -1075,7 +1077,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         purchaserClaim(dealAddressNoDeallocation);
 
         assertEq(MockERC721(dealAddressNoDeallocation).ownerOf(vestingTokenId), user1);
-        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId, 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId), 0);
         vm.stopPrank();
     }
 
@@ -1091,7 +1093,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         vm.startPrank(_user);
         vm.expectRevert("must be owner to claim");
-        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId, 0);
+        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId);
         vm.stopPrank();
     }
 
@@ -1103,19 +1105,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         assertEq(MockERC721(dealAddressNoDeallocation).ownerOf(vestingTokenId), user1);
         vm.expectRevert("ERC721: invalid token ID");
-        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId + 1, 0);
-        vm.stopPrank();
-    }
-
-    function testFuzz_ClaimUnderlying_RevertWhen_IndexOutOfBounds(uint256 _purchaseAmount) public {
-        vm.startPrank(user1);
-        setupAndAcceptDealNoDeallocation(dealAddressNoDeallocation, _purchaseAmount, user1);
-        uint256 vestingTokenId = AelinUpFrontDeal(dealAddressNoDeallocation).tokenCount();
-        purchaserClaim(dealAddressNoDeallocation);
-
-        assertEq(MockERC721(dealAddressNoDeallocation).ownerOf(vestingTokenId), user1);
-        vm.expectRevert("index out of bounds");
-        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId, 1);
+        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId + 1);
         vm.stopPrank();
     }
 
@@ -1132,7 +1122,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         purchaserClaim(dealAddressNoDeallocation);
         assertEq(MockERC721(dealAddressNoDeallocation).ownerOf(vestingTokenId), user1);
         vm.warp(purchaseExpiry + _delay);
-        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId, 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId), 0);
         vm.stopPrank();
     }
 
@@ -1154,12 +1144,12 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         // we are now in the vesting window and user can claim
         vm.warp(vestingCliffExpiry + _delay);
         vm.expectEmit(true, false, false, true);
-        (uint256 shareAmount, uint256 lastClaimedAt) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(
+        (uint256 shareAmount, uint256 lastClaimedAt, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(
             vestingTokenId
         );
         uint256 amountToClaim = (shareAmount * (block.timestamp - vestingCliffExpiry)) / vestingPeriod;
         emit ClaimedUnderlyingDealToken(user1, vestingTokenId, address(underlyingDealToken), amountToClaim);
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId, 0);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId);
 
         // after claim checks
         assertEq(underlyingDealToken.balanceOf(user1), amountToClaim, "underlyingClaimed");
@@ -1171,12 +1161,12 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         // Second claim after vesting period is over
         vm.warp(vestingExpiry + 1 days);
-        (shareAmount, lastClaimedAt) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(vestingTokenId);
+        (shareAmount, lastClaimedAt, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(vestingTokenId);
         assertEq(lastClaimedAt, vestingCliffExpiry + _delay, "lastClaimedAt");
         uint256 amountToClaim2 = (shareAmount * (vestingExpiry - lastClaimedAt)) / vestingPeriod;
         vm.expectEmit(true, false, false, true);
         emit ClaimedUnderlyingDealToken(user1, vestingTokenId, address(underlyingDealToken), amountToClaim2);
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId, 0);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId);
 
         // after claim checks
         assertEq(underlyingDealToken.balanceOf(user1), amountToClaim + amountToClaim2, "underlyingClaimed");
@@ -1189,12 +1179,12 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         // new claim attempt should revert
         vm.warp(vestingExpiry + 2 days);
         assertEq(
-            AelinUpFrontDeal(dealAddressAllowDeallocation).claimableUnderlyingTokens(vestingTokenId, 0),
+            AelinUpFrontDeal(dealAddressAllowDeallocation).claimableUnderlyingTokens(vestingTokenId),
             0,
             "claimableUnderlyingTokens"
         );
         vm.expectRevert("ERC721: invalid token ID");
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId, 0);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId);
 
         vm.stopPrank();
     }
@@ -1217,12 +1207,12 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         // we are now in the vesting window and user can claim
         vm.warp(vestingCliffExpiry + _delay);
         vm.expectEmit(true, false, false, true);
-        (uint256 shareAmount, uint256 lastClaimedAt) = AelinUpFrontDeal(dealAddressNoDeallocation).vestingDetails(
+        (uint256 shareAmount, uint256 lastClaimedAt, ) = AelinUpFrontDeal(dealAddressNoDeallocation).vestingDetails(
             vestingTokenId
         );
         uint256 amountToClaim = (shareAmount * (block.timestamp - vestingCliffExpiry)) / vestingPeriod;
         emit ClaimedUnderlyingDealToken(user1, vestingTokenId, address(underlyingDealToken), amountToClaim);
-        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId, 0);
+        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId);
 
         // after claim checks
         assertEq(underlyingDealToken.balanceOf(user1), amountToClaim, "underlyingClaimed");
@@ -1234,12 +1224,12 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         // Second claim after vesting period is over
         vm.warp(vestingExpiry + 1 days);
-        (shareAmount, lastClaimedAt) = AelinUpFrontDeal(dealAddressNoDeallocation).vestingDetails(vestingTokenId);
+        (shareAmount, lastClaimedAt, ) = AelinUpFrontDeal(dealAddressNoDeallocation).vestingDetails(vestingTokenId);
         assertEq(lastClaimedAt, vestingCliffExpiry + _delay, "lastClaimedAt");
         uint256 amountToClaim2 = (shareAmount * (vestingExpiry - lastClaimedAt)) / vestingPeriod;
         vm.expectEmit(true, false, false, true);
         emit ClaimedUnderlyingDealToken(user1, vestingTokenId, address(underlyingDealToken), amountToClaim2);
-        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId, 0);
+        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId);
 
         // after claim checks
         assertEq(underlyingDealToken.balanceOf(user1), amountToClaim + amountToClaim2, "underlyingClaimed");
@@ -1252,12 +1242,12 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         // new claim attempt should revert
         vm.warp(vestingExpiry + 2 days);
         assertEq(
-            AelinUpFrontDeal(dealAddressNoDeallocation).claimableUnderlyingTokens(vestingTokenId, 0),
+            AelinUpFrontDeal(dealAddressNoDeallocation).claimableUnderlyingTokens(vestingTokenId),
             0,
             "claimableUnderlyingTokens"
         );
         vm.expectRevert("ERC721: invalid token ID");
-        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId, 0);
+        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId);
 
         vm.stopPrank();
     }
@@ -1285,10 +1275,10 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         // we are now in the vesting window and user can claim
         vm.warp(vestingCliffExpiry + _delay);
         vm.expectEmit(true, false, false, true);
-        (uint256 shareAmount, uint256 lastClaimedAt) = deal.vestingDetails(vestingTokenId);
+        (uint256 shareAmount, uint256 lastClaimedAt, ) = deal.vestingDetails(vestingTokenId);
         uint256 amountToClaim = (shareAmount * (block.timestamp - vestingCliffExpiry)) / vestingPeriod;
         emit ClaimedUnderlyingDealToken(user1, vestingTokenId, address(underlyingDealTokenLowDecimals), amountToClaim);
-        deal.claimUnderlying(vestingTokenId, 0);
+        deal.claimUnderlying(vestingTokenId);
 
         // after claim checks
         assertEq(underlyingDealTokenLowDecimals.balanceOf(user1), amountToClaim, "underlyingClaimed");
@@ -1296,12 +1286,12 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         // Second claim after vesting period is over
         vm.warp(vestingExpiry + 1 days);
-        (shareAmount, lastClaimedAt) = deal.vestingDetails(vestingTokenId);
+        (shareAmount, lastClaimedAt, ) = deal.vestingDetails(vestingTokenId);
         assertEq(lastClaimedAt, vestingCliffExpiry + _delay, "lastClaimedAt");
         uint256 amountToClaim2 = (shareAmount * (vestingExpiry - lastClaimedAt)) / vestingPeriod;
         vm.expectEmit(true, false, false, true);
         emit ClaimedUnderlyingDealToken(user1, vestingTokenId, address(underlyingDealTokenLowDecimals), amountToClaim2);
-        deal.claimUnderlying(vestingTokenId, 0);
+        deal.claimUnderlying(vestingTokenId);
 
         // after claim checks
         assertEq(underlyingDealTokenLowDecimals.balanceOf(user1), amountToClaim + amountToClaim2, "underlyingClaimed");
@@ -1309,9 +1299,9 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         // new claim attempt should revert
         vm.warp(vestingExpiry + 2 days);
-        assertEq(deal.claimableUnderlyingTokens(vestingTokenId, 0), 0, "claimableUnderlyingTokens");
+        assertEq(deal.claimableUnderlyingTokens(vestingTokenId), 0, "claimableUnderlyingTokens");
         vm.expectRevert("ERC721: invalid token ID");
-        deal.claimUnderlying(vestingTokenId, 0);
+        deal.claimUnderlying(vestingTokenId);
 
         vm.stopPrank();
     }
@@ -1330,10 +1320,10 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         // Second claim after vesting period is over
         vm.warp(vestingExpiry + 1 days);
-        (uint256 shareAmount, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(vestingTokenId);
+        (uint256 shareAmount, , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(vestingTokenId);
         vm.expectEmit(true, false, false, true);
         emit ClaimedUnderlyingDealToken(user1, vestingTokenId, address(underlyingDealToken), shareAmount);
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId, 0);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId);
 
         // after claim checks
         assertEq(underlyingDealToken.balanceOf(user1), shareAmount, "underlyingClaimed");
@@ -1346,22 +1336,22 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         // new claim attempt should revert
         vm.warp(vestingExpiry + 2 days);
         assertEq(
-            AelinUpFrontDeal(dealAddressAllowDeallocation).claimableUnderlyingTokens(vestingTokenId, 0),
+            AelinUpFrontDeal(dealAddressAllowDeallocation).claimableUnderlyingTokens(vestingTokenId),
             0,
             "claimableUnderlyingTokens"
         );
         vm.expectRevert("ERC721: invalid token ID");
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId, 0);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId);
         vm.stopPrank();
 
         // sponsor claims and empty the contract from its underlying deal tokens
         vm.startPrank(dealCreatorAddress);
         uint256 sponsorShareAmount = (underlyingDealTokenTotal * sponsorFee) / BASE;
         vm.expectEmit(true, true, false, true);
-        emit VestingTokenMinted(dealCreatorAddress, vestingTokenId + 1, sponsorShareAmount, purchaseExpiry);
+        emit VestingTokenMinted(dealCreatorAddress, vestingTokenId + 1, sponsorShareAmount, purchaseExpiry, 0);
         vm.expectEmit(true, false, false, true);
         emit SponsorClaim(dealCreatorAddress, sponsorShareAmount);
-        AelinUpFrontDeal(dealAddressAllowDeallocation).sponsorClaim();
+        AelinUpFrontDeal(dealAddressAllowDeallocation).sponsorClaim(0);
         vm.expectEmit(true, false, false, true);
         emit ClaimedUnderlyingDealToken(
             dealCreatorAddress,
@@ -1369,13 +1359,13 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
             address(underlyingDealToken),
             sponsorShareAmount
         );
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId + 1, 0);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId + 1);
 
         vm.warp(vestingExpiry + 4 days);
         assertEq(underlyingDealToken.balanceOf(dealAddressAllowDeallocation), 0, "underlyingBalance");
         assertEq(underlyingDealToken.balanceOf(dealCreatorAddress), sponsorShareAmount, "underlyingBalanceSponsor");
         assertEq(
-            AelinUpFrontDeal(dealAddressAllowDeallocation).claimableUnderlyingTokens(vestingTokenId + 1, 0),
+            AelinUpFrontDeal(dealAddressAllowDeallocation).claimableUnderlyingTokens(vestingTokenId + 1),
             0,
             "claimableUnderlyingTokens"
         );
@@ -1394,10 +1384,10 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         // Second claim after vesting period is over
         vm.warp(vestingExpiry + 1 days);
-        (uint256 shareAmount, ) = AelinUpFrontDeal(dealAddressNoDeallocation).vestingDetails(vestingTokenId);
+        (uint256 shareAmount, , ) = AelinUpFrontDeal(dealAddressNoDeallocation).vestingDetails(vestingTokenId);
         vm.expectEmit(true, false, false, true);
         emit ClaimedUnderlyingDealToken(user1, vestingTokenId, address(underlyingDealToken), shareAmount);
-        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId, 0);
+        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId);
 
         // after claim checks
         assertEq(underlyingDealToken.balanceOf(user1), shareAmount, "underlyingClaimed");
@@ -1410,12 +1400,12 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         // new claim attempt should revert
         vm.warp(vestingExpiry + 2 days);
         assertEq(
-            AelinUpFrontDeal(dealAddressNoDeallocation).claimableUnderlyingTokens(vestingTokenId, 0),
+            AelinUpFrontDeal(dealAddressNoDeallocation).claimableUnderlyingTokens(vestingTokenId),
             0,
             "claimableUnderlyingTokens"
         );
         vm.expectRevert("ERC721: invalid token ID");
-        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId, 0);
+        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId);
         vm.stopPrank();
     }
 
@@ -1431,10 +1421,10 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         // Second claim after vesting period is over
         vm.warp(vestingExpiry + 1 days);
-        (uint256 shareAmount, ) = deal.vestingDetails(vestingTokenId);
+        (uint256 shareAmount, , ) = deal.vestingDetails(vestingTokenId);
         vm.expectEmit(true, false, false, true);
         emit ClaimedUnderlyingDealToken(user1, vestingTokenId, address(underlyingDealTokenLowDecimals), shareAmount);
-        deal.claimUnderlying(vestingTokenId, 0);
+        deal.claimUnderlying(vestingTokenId);
 
         // after claim checks
         assertEq(underlyingDealTokenLowDecimals.balanceOf(user1), shareAmount, "underlyingClaimed");
@@ -1442,9 +1432,9 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         // new claim attempt should revert
         vm.warp(vestingExpiry + 2 days);
-        assertEq(deal.claimableUnderlyingTokens(vestingTokenId, 0), 0, "claimableUnderlyingTokens");
+        assertEq(deal.claimableUnderlyingTokens(vestingTokenId), 0, "claimableUnderlyingTokens");
         vm.expectRevert("ERC721: invalid token ID");
-        deal.claimUnderlying(vestingTokenId, 0);
+        deal.claimUnderlying(vestingTokenId);
         vm.stopPrank();
     }
 
@@ -1471,28 +1461,28 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         assertEq(deal.ownerOf(vestingTokenId1 + 1), user1);
 
         //before each vesting has finished, claims should get nothing
-        assertEq(deal.claimUnderlying(vestingTokenId1, 0), 0);
-        assertEq(deal.claimUnderlying(vestingTokenId1 + 1, 1), 0);
+        assertEq(deal.claimUnderlying(vestingTokenId1), 0);
+        assertEq(deal.claimUnderlying(vestingTokenId1 + 1), 0);
 
         //Then claim 1 will succeed, and two will recieve nothing
         vm.warp(vestingCliffExpiry1 + _delay);
-        uint256 claimableUnderlyingTokens1 = deal.claimableUnderlyingTokens(vestingTokenId1, 0);
+        uint256 claimableUnderlyingTokens1 = deal.claimableUnderlyingTokens(vestingTokenId1);
         assertGt(claimableUnderlyingTokens1, 0);
         vm.expectEmit(true, false, false, true);
         emit ClaimedUnderlyingDealToken(user1, vestingTokenId1, address(underlyingDealToken), claimableUnderlyingTokens1);
-        deal.claimUnderlying(vestingTokenId1, 0);
-        assertEq(deal.claimUnderlying(vestingTokenId1 + 1, 1), 0);
+        deal.claimUnderlying(vestingTokenId1);
+        assertEq(deal.claimUnderlying(vestingTokenId1 + 1), 0);
 
         //Then both will start receiving when claining
         vm.warp(vestingCliffExpiry2 + _delay);
-        claimableUnderlyingTokens1 = deal.claimableUnderlyingTokens(vestingTokenId1, 0);
-        uint256 claimableUnderlyingTokens2 = deal.claimableUnderlyingTokens(vestingTokenId1 + 1, 1);
+        claimableUnderlyingTokens1 = deal.claimableUnderlyingTokens(vestingTokenId1);
+        uint256 claimableUnderlyingTokens2 = deal.claimableUnderlyingTokens(vestingTokenId1 + 1);
         assertGt(claimableUnderlyingTokens1, 0);
         assertGt(claimableUnderlyingTokens2, 0);
 
         vm.expectEmit(true, false, false, true);
         emit ClaimedUnderlyingDealToken(user1, vestingTokenId1, address(underlyingDealToken), claimableUnderlyingTokens1);
-        deal.claimUnderlying(vestingTokenId1, 0);
+        deal.claimUnderlying(vestingTokenId1);
 
         vm.expectEmit(true, false, false, true);
         emit ClaimedUnderlyingDealToken(
@@ -1501,7 +1491,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
             address(underlyingDealToken),
             claimableUnderlyingTokens2
         );
-        deal.claimUnderlying(vestingTokenId1 + 1, 1);
+        deal.claimUnderlying(vestingTokenId1 + 1);
 
         vm.stopPrank();
     }
@@ -1510,7 +1500,9 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
                     claimUnderlyingMutlipleEntries()
     //////////////////////////////////////////////////////////////*/
 
-    function testFuzz_ClaimUnderlyingMultipleEntries(uint256 _purchaseAmount1) public {
+    function test_ClaimUnderlyingMultipleEntries_RevertWhenIndicesLengthTooLong() public {}
+
+    function testFuzz_ClaimUnderlyingMultipleEntries_OneVestingSchedule(uint256 _purchaseAmount1) public {
         uint256 vestingExpiry = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingExpiries(0);
 
         // user1 accepts
@@ -1553,30 +1545,94 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         vestingIndices[0] = 0;
 
         vm.expectRevert("must be owner to claim");
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlyingMultipleEntries(tokenIds, vestingIndices);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlyingMultipleEntries(tokenIds);
         vm.expectRevert("must be owner to claim");
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId, 0);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(vestingTokenId);
         vm.stopPrank();
 
         // user1 tries to claiming
         vm.warp(vestingExpiry + 1 days);
         vm.startPrank(user1);
-        (uint256 share1, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(vestingTokenId - 1);
-        (uint256 share2, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(vestingTokenId);
+        (uint256 share1, , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(vestingTokenId - 1);
+        (uint256 share2, , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(vestingTokenId);
         vm.expectEmit(true, false, false, true);
         emit ClaimedUnderlyingDealToken(user1, vestingTokenId - 1, address(underlyingDealToken), share1);
         vm.expectEmit(true, false, false, true);
         emit ClaimedUnderlyingDealToken(user1, vestingTokenId, address(underlyingDealToken), share2);
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlyingMultipleEntries(tokenIds, vestingIndices);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlyingMultipleEntries(tokenIds);
         assertEq(underlyingDealToken.balanceOf(user1), share1 + share2);
 
         // user1 attempts claiming more the next day but it reverts
         vm.warp(vestingExpiry + 2 days);
         // nothing is claimable, all the tokens have been vested and burned
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimableUnderlyingTokens(vestingTokenId - 1, 0), 0);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimableUnderlyingTokens(vestingTokenId, 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimableUnderlyingTokens(vestingTokenId - 1), 0);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimableUnderlyingTokens(vestingTokenId), 0);
         vm.expectRevert("ERC721: invalid token ID");
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlyingMultipleEntries(tokenIds, vestingIndices), 0);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlyingMultipleEntries(tokenIds), 0);
+        vm.stopPrank();
+    }
+
+    function testFuzz_ClaimUnderlyingMultipleEntries_MultipleVestingSchedules(
+        uint256 _purchaseAmount1,
+        uint256 _delay
+    ) public {
+        vm.assume(_delay > 0);
+        vm.assume(_delay < 10 days); // Delta between vestingCliffExpiry1 and vestingCliffExpiry2 is 10 days
+        AelinUpFrontDeal deal = AelinUpFrontDeal(dealAddressMultipleVestingSchedules);
+
+        uint256 vestingCliffExpiry1 = deal.vestingCliffExpiries(0);
+        uint256 vestingCliffExpiry2 = deal.vestingCliffExpiries(1);
+
+        // user1 accepts deal across two vesting periods
+        vm.startPrank(user1);
+        setupAndAcceptDealWithMultipleVesting(dealAddressMultipleVestingSchedules, _purchaseAmount1, user1);
+
+        //Then claim 1 will succeed, and two will recieve nothing
+        vm.warp(vestingCliffExpiry1 + _delay);
+
+        uint256 vestingTokenId1 = deal.tokenCount();
+        deal.purchaserClaim(0);
+        deal.purchaserClaim(1);
+
+        uint256 claimableUnderlyingTokens1 = deal.claimableUnderlyingTokens(vestingTokenId1);
+        uint256 claimableUnderlyingTokens2 = deal.claimableUnderlyingTokens(vestingTokenId1 + 1);
+        assertGt(claimableUnderlyingTokens1, 0);
+        assertEq(claimableUnderlyingTokens2, 0);
+
+        // TokenIds
+        uint256[] memory tokenIds = new uint256[](2);
+        tokenIds[0] = vestingTokenId1;
+        tokenIds[1] = vestingTokenId1 + 1;
+        // Vesting Indices
+        uint256[] memory vestingIndices = new uint256[](2);
+        vestingIndices[0] = 0;
+        vestingIndices[1] = 1;
+
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(user1, vestingTokenId1, address(underlyingDealToken), claimableUnderlyingTokens1);
+        deal.claimUnderlyingMultipleEntries(tokenIds);
+
+        //Then both will start receiving when claining
+        vm.warp(vestingCliffExpiry2 + _delay);
+        claimableUnderlyingTokens1 = deal.claimableUnderlyingTokens(vestingTokenId1);
+        claimableUnderlyingTokens2 = deal.claimableUnderlyingTokens(vestingTokenId1 + 1);
+        assertGt(claimableUnderlyingTokens1, 0);
+        assertGt(claimableUnderlyingTokens2, 0);
+
+        /*
+
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(user1, vestingTokenId1, address(underlyingDealToken), claimableUnderlyingTokens1);
+        */
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(
+            user1,
+            vestingTokenId1 + 1,
+            address(underlyingDealToken),
+            claimableUnderlyingTokens2
+        );
+        deal.claimUnderlyingMultipleEntries(tokenIds);
+
         vm.stopPrank();
     }
 
@@ -1617,14 +1673,14 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(0), user1, "vestingTokenOwnerOf");
 
         // user1 transfers their token to user2
-        (uint256 share, uint256 lastClaimedAt) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(0);
+        (uint256 share, uint256 lastClaimedAt, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(0);
         vm.expectEmit(true, true, true, false);
         emit Transfer(user1, user2, 0);
         AelinUpFrontDeal(dealAddressAllowDeallocation).transfer(user2, 0, "0x0");
         assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user1), 0, "vestingTokenBalance");
         assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user2), 1, "vestingTokenBalance");
         assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(0), user2, "vestingTokenOwnerOf");
-        (uint256 shareTemp, uint256 lastClaimedAtTemp) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(0);
+        (uint256 shareTemp, uint256 lastClaimedAtTemp, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(0);
         assertEq(share, shareTemp, "shareAmount");
         assertEq(lastClaimedAt, lastClaimedAtTemp, "lastClaimedAt");
 
@@ -1641,7 +1697,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user2), 0, "vestingTokenBalance");
         assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user3), 1, "vestingTokenBalance");
         assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(0), user3, "vestingTokenOwnerOf");
-        (shareTemp, lastClaimedAtTemp) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(0);
+        (shareTemp, lastClaimedAtTemp, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(0);
         assertEq(share, shareTemp, "shareAmount");
         assertEq(lastClaimedAt, lastClaimedAtTemp, "lastClaimedAt");
         vm.stopPrank();
@@ -1662,7 +1718,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         // user2 tries to transfer the token
         vm.startPrank(user2);
-        (uint256 share, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(0);
+        (uint256 share, , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(0);
         vm.expectRevert("must be owner to transfer");
         AelinUpFrontDeal(dealAddressAllowDeallocation).transferVestingShare(user3, 0, share - 1);
         vm.stopPrank();
@@ -1699,7 +1755,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(0), user1, "vestingTokenOwnerOf");
 
         // user1 tries to transfer an amount greather than the total value of their vesting
-        (uint256 share, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(0);
+        (uint256 share, , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(0);
         vm.expectRevert("amout gt than current share");
         AelinUpFrontDeal(dealAddressAllowDeallocation).transferVestingShare(user2, 0, share + 1);
     }
@@ -1712,13 +1768,13 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         purchaserClaim(dealAddressAllowDeallocation);
         assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user1), 1, "vestingTokenBalance");
         assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(tokenCount), user1, "vestingTokenOwnerOf");
-        (uint256 share, uint256 lastClaimedAt) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(tokenCount);
+        (uint256 share, uint256 lastClaimedAt, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(tokenCount);
         vm.assume(_shareAmount > 0);
         vm.assume(_shareAmount < share);
 
         // user1 transfers a part of their share to user2
         vm.expectEmit(true, true, false, true);
-        emit VestingTokenMinted(user2, tokenCount + 1, _shareAmount, lastClaimedAt);
+        emit VestingTokenMinted(user2, tokenCount + 1, _shareAmount, lastClaimedAt, 0);
         vm.expectEmit(true, true, true, false);
         emit VestingShareTransferred(user1, user2, tokenCount, _shareAmount);
         AelinUpFrontDeal(dealAddressAllowDeallocation).transferVestingShare(user2, tokenCount, _shareAmount);
@@ -1726,7 +1782,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         // user1 still has the same token but with a smaller share
         assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user1), 1, "vestingTokenBalance");
         assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(tokenCount), user1, "vestingTokenOwnerOf");
-        (uint256 newShare, uint256 newLastClaimedAt) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(
+        (uint256 newShare, uint256 newLastClaimedAt, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(
             tokenCount
         );
         assertEq(newShare, share - _shareAmount);
@@ -1735,7 +1791,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         // user2 has a new vesting token with a share of user1
         assertEq(MockERC721(dealAddressAllowDeallocation).balanceOf(user2), 1, "vestingTokenBalance");
         assertEq(MockERC721(dealAddressAllowDeallocation).ownerOf(tokenCount + 1), user2, "vestingTokenOwnerOf");
-        (newShare, newLastClaimedAt) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(tokenCount + 1);
+        (newShare, newLastClaimedAt, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(tokenCount + 1);
         assertEq(newShare, _shareAmount);
         assertEq(newLastClaimedAt, lastClaimedAt);
         vm.stopPrank();
@@ -1750,7 +1806,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         emit VestingTokenBurned(tokenCount);
         vm.expectEmit(true, false, false, true);
         emit ClaimedUnderlyingDealToken(user1, tokenCount, address(underlyingDealToken), share - _shareAmount);
-        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount, 0);
+        AelinUpFrontDeal(dealAddressAllowDeallocation).claimUnderlying(tokenCount);
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocation).balanceOf(user1), 0);
 
         // user1 can't transfer because the token has been burned

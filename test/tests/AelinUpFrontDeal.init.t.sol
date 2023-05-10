@@ -1163,7 +1163,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
     function testFuzz_ClaimableUnderlyingTokens_DepositIncomplete(address _testAddress, uint256 _tokenId) public {
         vm.assume(_testAddress != address(0));
         vm.prank(_testAddress);
-        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).claimableUnderlyingTokens(_tokenId, 0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).claimableUnderlyingTokens(_tokenId), 0);
         vm.stopPrank();
     }
 }

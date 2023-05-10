@@ -5,9 +5,16 @@ interface IAelinVestingToken {
     struct VestingDetails {
         uint256 share;
         uint256 lastClaimedAt;
+        uint256 vestingIndex;
     }
 
-    event VestingTokenMinted(address indexed user, uint256 indexed tokenId, uint256 amount, uint256 lastClaimedAt);
+    event VestingTokenMinted(
+        address indexed user,
+        uint256 indexed tokenId,
+        uint256 amount,
+        uint256 lastClaimedAt,
+        uint256 vestingIndex
+    );
 
     event VestingTokenBurned(uint256 indexed tokenId);
 
