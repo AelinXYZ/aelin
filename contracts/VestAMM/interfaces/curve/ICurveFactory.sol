@@ -17,4 +17,10 @@ interface ICurveFactory {
         uint256 ma_half_time,
         uint256 initial_price
     ) external returns (address);
+
+    function find_pool_for_coins(
+        address _from,
+        address _to,
+        uint256 i
+    ) external view returns (address);
 }

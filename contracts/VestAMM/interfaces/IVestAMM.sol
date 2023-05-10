@@ -60,6 +60,7 @@ interface IVestAMM {
     }
 
     struct VAmmInfo {
+        AmmData ammData;
         bool hasLaunchPhase;
         // TODO use this as a slippage parameter when the pool already exists
         uint256 investmentPerBase;
@@ -68,11 +69,9 @@ interface IVestAMM {
         address mainHolder;
         Deallocation deallocation;
         LPVestingSchedule[] lpVestingSchedules;
-        // NOTE: Since the only way to check if a pool exists in Balancer
-        // is to call balancerVault.getPool(bytes32 poolId) we need to pass in
-        // a bytes32 poolId property. Ideally we would pass a poolAddress (easier to get)
-        // but as a workaround we could ALLWAYS convert poolAddress to bytes32 on
-        // client-side and handle that in solidity.
+        // NOTE: if hasLaunchPhase is true, then there must be a amm pool identifier we can use.
+        // In most cases, the poolAddress will be enough, but some times (balancer) we need to use the poolId
+        address poolAddress;
         bytes32 poolId;
     }
 

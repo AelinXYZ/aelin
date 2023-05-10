@@ -4,7 +4,6 @@ pragma solidity 0.8.6;
 import "../../libraries/AelinNftGating.sol";
 import "../../libraries/AelinAllowList.sol";
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IRateProvider} from "@balancer-labs/v2-interfaces/contracts/pool-utils/IRateProvider.sol";
 
 // Integration notes
@@ -39,6 +38,17 @@ interface IVestAMMLibrary {
         uint256 swapFeePercentage;
         // this is the LP owner which is the vAMM contract
         address owner;
+        // Curve
+        uint256 A;
+        uint256 gamma;
+        uint256 mid_fee;
+        uint256 out_fee;
+        uint256 allowed_extra_profit;
+        uint256 fee_gamma;
+        uint256 adjustment_step;
+        uint256 admin_fee;
+        uint256 ma_half_time;
+        uint256 initial_price;
     }
 
     struct AddLiquidity {

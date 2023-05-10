@@ -9,16 +9,17 @@ import "contracts/VestAMM/interfaces/balancer/IVault.sol";
 import "contracts/VestAMM/interfaces/balancer/IBalancerPool.sol";
 import "contracts/VestAMM/interfaces/balancer/IAsset.sol";
 import "contracts/VestAMM/interfaces/IVestAMMLibrary.sol";
+import "contracts/VestAMM/interfaces/IVestAMM.sol";
 
 library BalancerVestAMM {
-    IWeightedPoolFactory internal immutable weightedPoolFactory =
+    IWeightedPoolFactory internal constant weightedPoolFactory =
         IWeightedPoolFactory(address(0x5Dd94Da3644DDD055fcf6B3E1aa310Bb7801EB8b));
-    IVault internal immutable balancerVault = IVault(address(0xBA12222222228d8Ba445958a75a0704d566BF2C8));
+    IVault internal constant balancerVault = IVault(address(0xBA12222222228d8Ba445958a75a0704d566BF2C8));
 
     // NOTE: This function will be called frop VestAMM contract to create a new
     // balancer pool and add liquidity to it for the first time
-    function deployPool(IVestAMMLibrary.DeployPool calldata _deployPool) public returns (address) {
-        IBalancerPool.CreateNewPool memory newPoolParsed = _parseNewPoolParams(_deployPool);
+    function deployPool(IVestAMMLibrary.CreateNewPool calldata _newPool) public returns (address) {
+        IBalancerPool.CreateNewPool memory newPoolParsed = _parseNewPoolParams(_newPool);
 
         return _createPool(newPoolParsed);
     }
@@ -26,14 +27,19 @@ library BalancerVestAMM {
     function _createPool(IBalancerPool.CreateNewPool memory _newPool) internal returns (address) {
         // Approve Balancer vault to spend tokens
         for (uint256 i; i < _newPool.tokens.length; i++) {
-            _newPool.tokens[i].approve(address(balancerVault), type(uint256).max);
+            IERC20(_newPool.tokens[i]).approve(address(balancerVault), type(uint256).max);
+        }
+
+        IERC20[] memory tokens = new IERC20[](_newPool.tokens.length);
+        for (uint256 i; i < _newPool.tokens.length; i++) {
+            tokens[i] = IERC20(_newPool.tokens[i]);
         }
 
         return
             weightedPoolFactory.create(
                 string(abi.encodePacked("aevAMM-", _newPool.name)),
                 string(abi.encodePacked("aevA-", _newPool.symbol)),
-                _newPool.tokens,
+                tokens,
                 _newPool.weights,
                 _newPool.rateProviders,
                 _newPool.swapFeePercentage,
@@ -41,19 +47,19 @@ library BalancerVestAMM {
             );
     }
 
-    function _parseNewPoolParams(IVestAMMLibrary.DeployPool calldata _deployPool)
+    function _parseNewPoolParams(IVestAMMLibrary.CreateNewPool calldata _newPool)
         internal
         pure
-        returns (IBalancerPool.DeployPool memory)
+        returns (IBalancerPool.CreateNewPool memory)
     {
         return
             IBalancerPool.CreateNewPool({
-                name: _deployPool.name,
-                symbol: _deployPool.symbol,
-                tokens: _deployPool.tokens,
-                weights: _deployPool.normalizedWeights,
-                rateProviders: _deployPool.rateProviders,
-                swapFeePercentage: _deployPool.swapFeePercentage
+                name: _newPool.name,
+                symbol: _newPool.symbol,
+                tokens: _newPool.tokens,
+                weights: _newPool.normalizedWeights,
+                rateProviders: _newPool.rateProviders,
+                swapFeePercentage: _newPool.swapFeePercentage
             });
     }
 
@@ -116,18 +122,8 @@ library BalancerVestAMM {
             maxAmountsIn[i] = type(uint256).max; // QUESTION We don't want to limit the amount of tokens we can add ???
         }
 
-        // We can ask the Vault to use the tokens which we already have on the vault before using those on our address
-        // If we set this to false, the Vault will always pull all the tokens from our address.
-        // QUESTION How is possible that the vault kept/has tokens?
-        // ANSWER => When exiting a pool, there's possibility to KEEP tokens inside the vault.
-        // In this case, then there will be balance in the vault
-        bool fromInternalBalance = false;
-
         //NOTE: This is the maximum amount of BPT we want to receive. We set it to the max value so we can receive as much as possible
         uint256 maxBpTAmountOut = type(uint256).max;
-
-        // NOTE: When adding liquidity for the second time we need to specify the minimum amount of BPT we want to receive
-        uint256 minBpTAmtOut = 0;
 
         WeightedPoolUserData.JoinKind joinKind = WeightedPoolUserData.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT;
 
@@ -135,21 +131,21 @@ library BalancerVestAMM {
             joinKind = WeightedPoolUserData.JoinKind.INIT;
         }
 
-        bytes memory userData = abi.encode(joinKind, _tokensAmtsIn, _initialLiquidity ? maxBpTAmountOut : minBpTAmtOut);
+        bytes memory userData = abi.encode(joinKind, _tokensAmtsIn, _initialLiquidity ? maxBpTAmountOut : 0);
 
         IVault.JoinPoolRequest memory request = IVault.JoinPoolRequest({
             assets: assets,
             maxAmountsIn: maxAmountsIn,
             userData: userData,
-            fromInternalBalance: fromInternalBalance
+            fromInternalBalance: false
         });
 
         // Here we're using tokens held on this contract to provide liquidity and also revceive the BPT tokens
         // This means that the caller of this function will be won't the owner of the BPT
-        address sender = address(this);
-        address recipient = address(this);
+        // address sender = address(this);
+        // address recipient = address(this);
 
-        balancerVault.joinPool(poolId, sender, recipient, request);
+        balancerVault.joinPool(poolId, address(this), address(this), request);
 
         // TODO: should return (numInvTokensInLP, numBaseTokensInLP, numInvTokensFee, numBaseTokensFee)
         return (_tokensAmtsIn[0], _tokensAmtsIn[1], 0, 0);
@@ -189,8 +185,8 @@ library BalancerVestAMM {
         balancerVault.exitPool(poolId, sender, recipient, request);
     }
 
-    function checkPoolExists(bytes32 _poolId) external view returns (bool) {
-        try balancerVault.getPool(_poolId) {
+    function checkPoolExists(IVestAMM.VAmmInfo calldata _vammInfo) external view returns (bool) {
+        try balancerVault.getPool(_vammInfo.poolId) {
             return true;
         } catch {
             return false;

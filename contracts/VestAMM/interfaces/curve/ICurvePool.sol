@@ -17,13 +17,9 @@ interface ICurvePool {
 
     function token() external view returns (address);
 
-    function fee() external view returns (uint256);
+    function coins(uint index) external view returns (address);
 
-    function find_pool_for_coins(
-        address _from,
-        address _to,
-        uint256 i
-    ) external view returns (address);
+    function fee() external view returns (uint256);
 
     struct CreateNewPool {
         string name;
