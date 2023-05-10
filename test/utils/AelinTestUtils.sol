@@ -207,6 +207,22 @@ contract AelinTestUtils is Test {
             });
     }
 
+    function getDealConfigMultipleVestingSchedules() public pure returns (IAelinUpFrontDeal.UpFrontDealConfig memory) {
+        IAelinUpFrontDeal.VestingSchedule[] memory vestingSchedules = new IAelinUpFrontDeal.VestingSchedule[](10);
+
+        for (uint256 i; i < 10; i++) {
+            vestingSchedules[i].purchaseTokenPerDealToken = 3e18 + (1e18 * i);
+            vestingSchedules[i].vestingCliffPeriod = 60 days + (10 days * i);
+            vestingSchedules[i].vestingPeriod = 365 days + (10 days * i);
+        }
+
+        IAelinUpFrontDeal.UpFrontDealConfig memory dealConfigMultipleVestingSchedules = getDealConfig();
+
+        dealConfigMultipleVestingSchedules.vestingSchedules = vestingSchedules;
+
+        return dealConfigMultipleVestingSchedules;
+    }
+
     function getDealConfigAllowDeallocation() public pure returns (IAelinUpFrontDeal.UpFrontDealConfig memory) {
         IAelinUpFrontDeal.VestingSchedule[] memory vestingSchedules = new IAelinUpFrontDeal.VestingSchedule[](1);
 
@@ -324,6 +340,28 @@ contract AelinTestUtils is Test {
         purchaseToken.approve(_dealAddress, type(uint256).max);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         AelinUpFrontDeal(_dealAddress).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount, 0);
+    }
+
+    function setupAndAcceptDealWithMultipleVesting(address _dealAddress, uint256 _purchaseAmount1, address _user) public {
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (uint256 underlyingDealTokenTotal, uint256 purchaseRaiseMinimum, , ) = AelinUpFrontDeal(_dealAddress).dealConfig();
+        (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(_dealAddress).getVestingScheduleDetails(0);
+        vm.assume(_purchaseAmount1 > purchaseRaiseMinimum);
+
+        bool success = false;
+        (success, ) = SafeMath.tryMul(_purchaseAmount1, 10 ** underlyingTokenDecimals);
+        vm.assume(success);
+
+        uint256 poolSharesAmount1 = (_purchaseAmount1 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+        vm.assume(poolSharesAmount1 > 0);
+        vm.assume(2 * poolSharesAmount1 < underlyingDealTokenTotal);
+
+        // user accepts the deal twice with different vesting schedules
+        deal(address(purchaseToken), _user, type(uint256).max);
+        purchaseToken.approve(_dealAddress, type(uint256).max);
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
+        AelinUpFrontDeal(_dealAddress).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount1, 0);
+        AelinUpFrontDeal(_dealAddress).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount1, 1);
     }
 
     function setupAndAcceptDealWithDeallocation(

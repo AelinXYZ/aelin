@@ -230,8 +230,6 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
 
         uint256 balanceBeforeTransfer = IERC20(_purchaseToken).balanceOf(address(this));
         IERC20(_purchaseToken).safeTransferFrom(msg.sender, address(this), _purchaseTokenAmount);
-        //Stack too deep
-        //uint256 balanceAfterTransfer = IERC20(_purchaseToken).balanceOf(address(this));
         uint256 purchaseTokenAmount = IERC20(_purchaseToken).balanceOf(address(this)) - balanceBeforeTransfer;
 
         totalPurchasingAccepted += purchaseTokenAmount;
@@ -366,7 +364,6 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
 
                 uint256 _totalIntendedRaise;
 
-                //is this correct? triple-check
                 for (uint256 i; i < dealConfig.vestingSchedules.length; i++) {
                     _totalIntendedRaise +=
                         (dealConfig.vestingSchedules[i].purchaseTokenPerDealToken * _underlyingDealTokenTotal) /

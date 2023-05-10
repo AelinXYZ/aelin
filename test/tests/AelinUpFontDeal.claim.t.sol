@@ -32,6 +32,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
     address dealAddressNftGating1155;
     address dealAddressNoVestingPeriod;
     address dealAddressLowDecimals;
+    address dealAddressMultipleVestingSchedules;
 
     function setUp() public {
         AelinAllowList.InitData memory allowListEmpty;
@@ -46,6 +47,8 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         IAelinUpFrontDeal.UpFrontDealData memory dealData = getDealData();
         IAelinUpFrontDeal.UpFrontDealConfig memory dealConfig = getDealConfig();
         IAelinUpFrontDeal.UpFrontDealConfig memory dealConfigAllowDeallocation = getDealConfigAllowDeallocation();
+        IAelinUpFrontDeal.UpFrontDealConfig
+            memory dealConfigMultipleVestingSchedules = getDealConfigMultipleVestingSchedules();
 
         IAelinUpFrontDeal.UpFrontDealConfig memory dealConfigNoVestingPeriod = getDealConfig();
         dealConfigNoVestingPeriod.vestingSchedules[0].vestingPeriod = 0;
@@ -119,6 +122,13 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
             allowListEmpty
         );
 
+        dealAddressMultipleVestingSchedules = upFrontDealFactory.createUpFrontDeal(
+            dealData,
+            dealConfigMultipleVestingSchedules,
+            nftCollectionRulesEmpty,
+            allowListEmpty
+        );
+
         vm.stopPrank();
         vm.startPrank(dealHolderAddress);
 
@@ -148,6 +158,9 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         underlyingDealToken.approve(address(dealAddressNftGating1155), type(uint256).max);
         AelinUpFrontDeal(dealAddressNftGating1155).depositUnderlyingTokens(1e35);
+
+        underlyingDealToken.approve(address(dealAddressMultipleVestingSchedules), type(uint256).max);
+        AelinUpFrontDeal(dealAddressMultipleVestingSchedules).depositUnderlyingTokens(1e35);
 
         vm.stopPrank();
     }
@@ -1052,7 +1065,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
     }
 
     /*//////////////////////////////////////////////////////////////
-                        claimUnderlying()
+                            claimUnderlying()
     //////////////////////////////////////////////////////////////*/
 
     function testFuzz_ClaimUnderlying_NothingToClaim(uint256 _purchaseAmount) public {
@@ -1091,6 +1104,18 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         assertEq(MockERC721(dealAddressNoDeallocation).ownerOf(vestingTokenId), user1);
         vm.expectRevert("ERC721: invalid token ID");
         AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId + 1, 0);
+        vm.stopPrank();
+    }
+
+    function testFuzz_ClaimUnderlying_RevertWhen_IndexOutOfBounds(uint256 _purchaseAmount) public {
+        vm.startPrank(user1);
+        setupAndAcceptDealNoDeallocation(dealAddressNoDeallocation, _purchaseAmount, user1);
+        uint256 vestingTokenId = AelinUpFrontDeal(dealAddressNoDeallocation).tokenCount();
+        purchaserClaim(dealAddressNoDeallocation);
+
+        assertEq(MockERC721(dealAddressNoDeallocation).ownerOf(vestingTokenId), user1);
+        vm.expectRevert("index out of bounds");
+        AelinUpFrontDeal(dealAddressNoDeallocation).claimUnderlying(vestingTokenId, 1);
         vm.stopPrank();
     }
 
@@ -1423,8 +1448,66 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         vm.stopPrank();
     }
 
+    function testFuzz_ClaimUnderlying_MultipleVestingSchedules(uint256 _purchaseAmount1, uint256 _delay) public {
+        vm.assume(_delay > 0);
+        vm.assume(_delay < 10 days); // Delta between vestingCliffExpiry1 and vestingCliffExpiry2 is 10 days
+        AelinUpFrontDeal deal = AelinUpFrontDeal(dealAddressMultipleVestingSchedules);
+
+        uint256 vestingCliffExpiry1 = deal.vestingCliffExpiries(0);
+        uint256 vestingCliffExpiry2 = deal.vestingCliffExpiries(1);
+
+        // user1 accepts deal across two vesting periods
+        vm.startPrank(user1);
+        setupAndAcceptDealWithMultipleVesting(dealAddressMultipleVestingSchedules, _purchaseAmount1, user1);
+
+        //User claims vesting tokens, we know that vestingCliffExpiry2 > vestingCliffExpiry1
+        vm.warp(vestingCliffExpiry1 - _delay);
+
+        uint256 vestingTokenId1 = deal.tokenCount();
+        deal.purchaserClaim(0);
+        deal.purchaserClaim(1);
+
+        assertEq(deal.ownerOf(vestingTokenId1), user1);
+        assertEq(deal.ownerOf(vestingTokenId1 + 1), user1);
+
+        //before each vesting has finished, claims should get nothing
+        assertEq(deal.claimUnderlying(vestingTokenId1, 0), 0);
+        assertEq(deal.claimUnderlying(vestingTokenId1 + 1, 1), 0);
+
+        //Then claim 1 will succeed, and two will recieve nothing
+        vm.warp(vestingCliffExpiry1 + _delay);
+        uint256 claimableUnderlyingTokens1 = deal.claimableUnderlyingTokens(vestingTokenId1, 0);
+        assertGt(claimableUnderlyingTokens1, 0);
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(user1, vestingTokenId1, address(underlyingDealToken), claimableUnderlyingTokens1);
+        deal.claimUnderlying(vestingTokenId1, 0);
+        assertEq(deal.claimUnderlying(vestingTokenId1 + 1, 1), 0);
+
+        //Then both will start receiving when claining
+        vm.warp(vestingCliffExpiry2 + _delay);
+        claimableUnderlyingTokens1 = deal.claimableUnderlyingTokens(vestingTokenId1, 0);
+        uint256 claimableUnderlyingTokens2 = deal.claimableUnderlyingTokens(vestingTokenId1 + 1, 1);
+        assertGt(claimableUnderlyingTokens1, 0);
+        assertGt(claimableUnderlyingTokens2, 0);
+
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(user1, vestingTokenId1, address(underlyingDealToken), claimableUnderlyingTokens1);
+        deal.claimUnderlying(vestingTokenId1, 0);
+
+        vm.expectEmit(true, false, false, true);
+        emit ClaimedUnderlyingDealToken(
+            user1,
+            vestingTokenId1 + 1,
+            address(underlyingDealToken),
+            claimableUnderlyingTokens2
+        );
+        deal.claimUnderlying(vestingTokenId1 + 1, 1);
+
+        vm.stopPrank();
+    }
+
     /*//////////////////////////////////////////////////////////////
-                claimUnderlyingMutlipleEntries()
+                    claimUnderlyingMutlipleEntries()
     //////////////////////////////////////////////////////////////*/
 
     function testFuzz_ClaimUnderlyingMultipleEntries(uint256 _purchaseAmount1) public {
@@ -1677,9 +1760,9 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         vm.stopPrank();
     }
 
-    // /*//////////////////////////////////////////////////////////////
-    //                  Scenarios with precision error
-    // //////////////////////////////////////////////////////////////*/
+    /*//////////////////////////////////////////////////////////////
+                      Scenarios with precision error
+    //////////////////////////////////////////////////////////////*/
 
     function test_PrecisionError_PurchaserSide() public {
         // Deal config
