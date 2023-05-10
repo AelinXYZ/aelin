@@ -719,7 +719,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         // we assume user is the first claimer so owns deal token ID = 0;
         uint256 vestingExpiry = AelinDeal(dealNoOpenRedemptionAddress).vestingExpiry();
         uint256 vestingPeriod = AelinDeal(dealNoOpenRedemptionAddress).vestingPeriod();
-        (uint256 share, uint256 lastClaimedAt) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
+        (uint256 share, uint256 lastClaimedAt, ) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
         assertEq(lastClaimedAt, AelinDeal(dealNoOpenRedemptionAddress).vestingCliffExpiry());
         // user can claim a part of their deal tokens
         vm.warp(AelinDeal(dealNoOpenRedemptionAddress).vestingCliffExpiry() + 1 days);
@@ -736,7 +736,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         AelinDeal(dealNoOpenRedemptionAddress).claimUnderlyingTokens(0);
 
         // post claim checks
-        (, lastClaimedAt) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
+        (, lastClaimedAt, ) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
         assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(dealCreatorAddress), 1);
         assertEq(lastClaimedAt, block.timestamp, "lastClaimedAt");
         assertEq(underlyingDealToken.balanceOf(dealCreatorAddress), claimableAmount, "userDealTokenBalance");
@@ -759,7 +759,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         AelinDeal(dealNoOpenRedemptionAddress).claimUnderlyingTokens(0);
 
         // post claim checks
-        (, lastClaimedAt) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
+        (, lastClaimedAt, ) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
         assertEq(lastClaimedAt, block.timestamp, "lastClaimedAt");
         assertEq(underlyingDealToken.balanceOf(dealCreatorAddress), 2 * claimableAmount, "userDealTokenBalance");
         assertEq(
@@ -782,7 +782,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         uint256 totalShareInUnderlying = (AelinDeal(dealNoOpenRedemptionAddress).underlyingPerDealExchangeRate() * share) /
             1e18;
         // post claim checks
-        (, lastClaimedAt) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
+        (, lastClaimedAt, ) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
         assertEq(lastClaimedAt, 0, "lastClaimedAt");
         assertEq(underlyingDealToken.balanceOf(dealCreatorAddress), totalShareInUnderlying, "userDealTokenBalance");
         assertEq(
@@ -804,7 +804,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         AelinPool(poolNoOpenRedemptionDealAddress).acceptMaxDealTokens();
         // we assume user is the first claimer so owns deal token ID = 0;
         uint256 vestingExpiry = AelinDeal(dealNoOpenRedemptionAddress).vestingExpiry();
-        (uint256 share, uint256 lastClaimedAt) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
+        (uint256 share, uint256 lastClaimedAt, ) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
         assertEq(lastClaimedAt, AelinDeal(dealNoOpenRedemptionAddress).vestingCliffExpiry());
 
         // we wait until vesting period ends
@@ -822,7 +822,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(dealCreatorAddress), 0);
 
         // post claim checks
-        (, lastClaimedAt) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
+        (, lastClaimedAt, ) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
         assertEq(lastClaimedAt, 0, "lastClaimedAt");
         assertEq(underlyingDealToken.balanceOf(dealCreatorAddress), claimableAmount, "userDealTokenBalance");
         assertEq(
@@ -847,7 +847,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         AelinDeal deal = AelinDeal(dealNoOpenRedemptionAddress);
 
         // lastClaimedAt is 0
-        (uint256 share, uint256 lastClaimedAt) = deal.vestingDetails(0);
+        (uint256 share, uint256 lastClaimedAt, ) = deal.vestingDetails(0);
         assertEq(lastClaimedAt, 0);
         assertEq(deal.claimableUnderlyingTokens(0), 0);
 
@@ -855,7 +855,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         vm.startPrank(dealCreatorAddress);
         pool.acceptMaxDealTokens();
         vm.stopPrank();
-        (share, lastClaimedAt) = deal.vestingDetails(0);
+        (share, lastClaimedAt, ) = deal.vestingDetails(0);
 
         // Before vesting Cliff expiry
         assertGt(lastClaimedAt, 0);
@@ -872,7 +872,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
 
         // After vesting expiry
         vm.warp(deal.vestingCliffExpiry() + deal.vestingPeriod() + 1 days);
-        (share, lastClaimedAt) = deal.vestingDetails(0);
+        (share, lastClaimedAt, ) = deal.vestingDetails(0);
         maxTime = deal.vestingExpiry();
         minTime = lastClaimedAt;
         claimableAmount =
@@ -887,14 +887,14 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         AelinDeal deal = AelinDeal(dealNoOpenRedemptionNoVestingPeriodAddress);
 
         // lastClaimedAt is 0
-        (uint256 share, uint256 lastClaimedAt) = deal.vestingDetails(0);
+        (uint256 share, uint256 lastClaimedAt, ) = deal.vestingDetails(0);
         assertEq(lastClaimedAt, 0);
         assertEq(deal.claimableUnderlyingTokens(0), 0);
 
         // lastClaimedAt > 0
         vm.startPrank(dealCreatorAddress);
         pool.acceptMaxDealTokens();
-        (share, lastClaimedAt) = deal.vestingDetails(0);
+        (share, lastClaimedAt, ) = deal.vestingDetails(0);
 
         // Before vesting Cliff expiry
         assertGt(lastClaimedAt, 0);
@@ -1015,8 +1015,8 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         indices[0] = 0;
         indices[1] = 1;
         vm.expectEmit(true, true, false, true);
-        (uint256 share1, ) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
-        (uint256 share2, ) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
+        (uint256 share1, , ) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
+        (uint256 share2, , ) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
         emit ClaimedUnderlyingDealToken(user1, 0, address(underlyingDealToken), share1);
         emit ClaimedUnderlyingDealToken(user1, 0, address(underlyingDealToken), share2);
         AelinDeal(dealAddr).claimUnderlyingMultipleEntries(indices);
@@ -1111,14 +1111,14 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         assertEq(AelinDeal(dealAddr).tokenCount(), 0);
         vm.expectEmit(true, true, false, true);
         emit AcceptDeal(user1, dealAddr, depositAmount / 2, sponsorFee, aelinFee);
-        emit VestingTokenMinted(user1, 0, computedShareAmount, AelinDeal(dealAddr).vestingCliffExpiry());
+        emit VestingTokenMinted(user1, 0, computedShareAmount, AelinDeal(dealAddr).vestingCliffExpiry(), 0);
         AelinPool(poolAddr).acceptMaxDealTokens();
 
         // user1 now owns  a vesting token
         assertEq(AelinDeal(dealAddr).tokenCount(), 1, "tokenCount");
         assertEq(AelinDeal(dealAddr).ownerOf(0), user1, "ownerOf");
         assertEq(AelinDeal(dealAddr).balanceOf(user1), 1);
-        (uint256 share, uint256 lastClaimedAt) = AelinDeal(dealAddr).vestingDetails(0);
+        (uint256 share, uint256 lastClaimedAt, ) = AelinDeal(dealAddr).vestingDetails(0);
         assertEq(share, computedShareAmount, "shareAmount");
         assertEq(lastClaimedAt, AelinDeal(dealAddr).vestingCliffExpiry());
 
@@ -1128,14 +1128,14 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         vm.startPrank(user2);
         vm.expectEmit(true, true, false, true);
         emit AcceptDeal(user2, dealAddr, depositAmount / 2, sponsorFee, aelinFee);
-        emit VestingTokenMinted(user2, 1, computedShareAmount, AelinDeal(dealAddr).vestingCliffExpiry());
+        emit VestingTokenMinted(user2, 1, computedShareAmount, AelinDeal(dealAddr).vestingCliffExpiry(), 0);
         AelinPool(poolAddr).acceptMaxDealTokens();
 
         // user2 now owns  a vesting token
         assertEq(AelinDeal(dealAddr).tokenCount(), 2, "tokenCount");
         assertEq(AelinDeal(dealAddr).ownerOf(1), user2, "ownerOf");
         assertEq(AelinDeal(dealAddr).balanceOf(user2), 1);
-        (share, lastClaimedAt) = AelinDeal(dealAddr).vestingDetails(1);
+        (share, lastClaimedAt, ) = AelinDeal(dealAddr).vestingDetails(1);
         assertEq(share, computedShareAmount, "shareAmount");
         assertEq(lastClaimedAt, AelinDeal(dealAddr).vestingCliffExpiry());
 
@@ -1269,7 +1269,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         AelinPool(poolNoOpenRedemptionDealAddress).acceptMaxDealTokens();
         assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(dealCreatorAddress), 1);
         assertEq(AelinDeal(dealNoOpenRedemptionAddress).ownerOf(0), dealCreatorAddress);
-        (uint256 shareInitial, uint256 lastClaimedAtInitial) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
+        (uint256 shareInitial, uint256 lastClaimedAtInitial, ) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
 
         // dealCreator user transfers their token to user1
         AelinDeal(dealNoOpenRedemptionAddress).transfer(user1, 0, "0x0");
@@ -1284,7 +1284,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(user1), 0);
         assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(user2), 1);
         assertEq(AelinDeal(dealNoOpenRedemptionAddress).ownerOf(0), user2);
-        (uint256 share, uint256 lastClaimedAt) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
+        (uint256 share, uint256 lastClaimedAt, ) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
         uint256 claimableAmount = (AelinDeal(dealNoOpenRedemptionAddress).underlyingPerDealExchangeRate() * share) / 1e18;
 
         // we check that vesting schedule is identical
@@ -1358,7 +1358,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(dealCreatorAddress), 1);
         assertEq(AelinDeal(dealNoOpenRedemptionAddress).ownerOf(0), dealCreatorAddress);
 
-        (uint256 share, ) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
+        (uint256 share, , ) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
         // dealCreator user sends more than their share
         vm.expectRevert("cant transfer more than current share");
         AelinDeal(dealNoOpenRedemptionAddress).transferVestingShare(user2, 0, share + 1);
@@ -1373,14 +1373,14 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(dealCreatorAddress), 1);
         assertEq(AelinDeal(dealNoOpenRedemptionAddress).ownerOf(0), dealCreatorAddress);
 
-        (uint256 share, uint256 lastClaimedAt) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
+        (uint256 share, uint256 lastClaimedAt, ) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
         vm.assume(_shareAmount > 1e18);
         vm.assume(_shareAmount < share);
 
         // dealCreator user transfers a part of their share to user1
         assertEq(AelinDeal(dealNoOpenRedemptionAddress).balanceOf(user1), 0);
         vm.expectEmit(true, true, false, true);
-        emit VestingTokenMinted(user1, 1, _shareAmount, lastClaimedAt);
+        emit VestingTokenMinted(user1, 1, _shareAmount, lastClaimedAt, 0);
         vm.expectEmit(true, true, true, true);
         emit VestingShareTransferred(dealCreatorAddress, user1, 0, _shareAmount);
         AelinDeal(dealNoOpenRedemptionAddress).transferVestingShare(user1, 0, _shareAmount);
@@ -1390,12 +1390,12 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         assertEq(AelinDeal(dealNoOpenRedemptionAddress).ownerOf(1), user1);
 
         // dealCreator has their share reduced
-        (uint256 newShare, uint256 newLastClaimedAt) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
+        (uint256 newShare, uint256 newLastClaimedAt, ) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
         assertEq(newShare, share - _shareAmount);
         assertEq(newLastClaimedAt, lastClaimedAt);
 
         // user1 now has their share
-        (newShare, newLastClaimedAt) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(1);
+        (newShare, newLastClaimedAt, ) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(1);
         assertEq(newShare, _shareAmount);
         assertEq(newLastClaimedAt, lastClaimedAt);
 

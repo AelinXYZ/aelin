@@ -308,7 +308,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
             purchaseTokensPerUser[msg.sender][_vestingIndex] = 0;
 
             // mint vesting token and create schedule
-            _mintVestingToken(msg.sender, adjustedShareAmountForUser, purchaseExpiry);
+            _mintVestingToken(msg.sender, adjustedShareAmountForUser, purchaseExpiry, _vestingIndex);
             emit ClaimDealTokens(msg.sender, adjustedShareAmountForUser, precisionAdjustedRefund);
         } else {
             // Claim Refund
@@ -324,8 +324,10 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
      * @dev sponsor calls once the purchasing period is over if the minimum raise has passed to claim
      * their share of deal tokens
      * NOTE also calls the claim for the protocol fee
+     * NOTE sponser sets the vesting index
      */
-    function sponsorClaim() external nonReentrant purchasingOver passMinimumRaise onlySponsor {
+    function sponsorClaim(uint256 _vestingIndex) external nonReentrant purchasingOver passMinimumRaise onlySponsor {
+        require(_vestingIndex < dealConfig.vestingSchedules.length, "wrong vesting index");
         require(!sponsorClaimed, "sponsor already claimed");
         sponsorClaimed = true;
 
@@ -336,7 +338,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
         uint256 _sponsorFeeAmt = (totalSold * dealData.sponsorFee) / BASE;
 
         // mint vesting token and create schedule
-        _mintVestingToken(_sponsor, _sponsorFeeAmt, purchaseExpiry);
+        _mintVestingToken(_sponsor, _sponsorFeeAmt, purchaseExpiry, _vestingIndex);
         emit SponsorClaim(_sponsor, _sponsorFeeAmt);
 
         if (!feeEscrowClaimed) {
@@ -436,38 +438,31 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
      * @dev ERC721 deal token holder calls after the purchasing period to claim underlying deal tokens
      * amount based on the vesting schedule
      * @param _tokenId the token ID to check the quantity of claimable underlying tokens
-     * @param _vestingIndex the vesting index schedule for which to claim from
      */
-    function claimUnderlying(uint256 _tokenId, uint256 _vestingIndex) external returns (uint256) {
-        return _claimUnderlying(msg.sender, _tokenId, _vestingIndex);
+    function claimUnderlying(uint256 _tokenId) external returns (uint256) {
+        return _claimUnderlying(msg.sender, _tokenId);
     }
 
     /**
      * @dev claims every vesting schedule specified for each token Id specified
      * @param _tokenIds the token ID to check the quantity of claimable underlying tokens
-     * @param _vestingIndices the vesting index schedule for which to claim from
      */
-    function claimUnderlyingMultipleEntries(
-        uint256[] memory _tokenIds,
-        uint256[] memory _vestingIndices
-    ) external returns (uint256) {
+    function claimUnderlyingMultipleEntries(uint256[] memory _tokenIds) external returns (uint256) {
         uint256 totalClaimed;
         for (uint256 i = 0; i < _tokenIds.length; i++) {
-            for (uint256 j = 0; j < _vestingIndices.length; j++) {
-                totalClaimed += _claimUnderlying(msg.sender, _tokenIds[i], _vestingIndices[j]);
-            }
+            totalClaimed += _claimUnderlying(msg.sender, _tokenIds[i]);
         }
         return totalClaimed;
     }
 
-    function _claimUnderlying(address _owner, uint256 _tokenId, uint256 _vestingIndex) internal returns (uint256) {
+    function _claimUnderlying(address _owner, uint256 _tokenId) internal returns (uint256) {
         require(ownerOf(_tokenId) == _owner, "must be owner to claim");
-        require(_vestingIndex < dealConfig.vestingSchedules.length, "index out of bounds");
-        uint256 claimableAmount = claimableUnderlyingTokens(_tokenId, _vestingIndex);
+        uint256 vestingIndex = vestingDetails[_tokenId].vestingIndex;
+        uint256 claimableAmount = claimableUnderlyingTokens(_tokenId);
         if (claimableAmount == 0) {
             return 0;
         }
-        if (block.timestamp >= vestingExpiries[_vestingIndex]) {
+        if (block.timestamp >= vestingExpiries[vestingIndex]) {
             _burnVestingToken(_tokenId);
         } else {
             vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
@@ -482,24 +477,24 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     /**
      * @dev a view showing the amount of the underlying deal token a ERC721 deal token holder can claim
      * @param _tokenId the token ID to check the quantity of claimable underlying tokens
-     * @param _vestingIndex the vesting index schedule for which to claim from
      */
-    function claimableUnderlyingTokens(uint256 _tokenId, uint256 _vestingIndex) public view returns (uint256) {
+    function claimableUnderlyingTokens(uint256 _tokenId) public view returns (uint256) {
         VestingDetails memory details = vestingDetails[_tokenId];
+        uint256 vestingIndex = details.vestingIndex;
         uint256 precisionAdjustedUnderlyingClaimable;
 
         if (details.lastClaimedAt > 0) {
-            uint256 maxTime = block.timestamp > vestingExpiries[_vestingIndex]
-                ? vestingExpiries[_vestingIndex]
+            uint256 maxTime = block.timestamp > vestingExpiries[vestingIndex]
+                ? vestingExpiries[vestingIndex]
                 : block.timestamp;
-            uint256 minTime = details.lastClaimedAt > vestingCliffExpiries[_vestingIndex]
+            uint256 minTime = details.lastClaimedAt > vestingCliffExpiries[vestingIndex]
                 ? details.lastClaimedAt
-                : vestingCliffExpiries[_vestingIndex];
-            uint256 vestingPeriod = dealConfig.vestingSchedules[_vestingIndex].vestingPeriod;
+                : vestingCliffExpiries[vestingIndex];
+            uint256 vestingPeriod = dealConfig.vestingSchedules[vestingIndex].vestingPeriod;
 
             if (
-                (maxTime > vestingCliffExpiries[_vestingIndex] && minTime <= vestingExpiries[_vestingIndex]) ||
-                (maxTime == vestingCliffExpiries[_vestingIndex] && vestingPeriod == 0)
+                (maxTime > vestingCliffExpiries[vestingIndex] && minTime <= vestingExpiries[vestingIndex]) ||
+                (maxTime == vestingCliffExpiries[vestingIndex] && vestingPeriod == 0)
             ) {
                 uint256 underlyingClaimable = vestingPeriod == 0
                     ? details.share

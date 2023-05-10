@@ -236,7 +236,7 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
      */
     function mintVestingToken(address _to, uint256 _amount) external depositCompleted onlyPool {
         totalUnderlyingAccepted += _amount;
-        _mintVestingToken(_to, _amount, vestingCliffExpiry);
+        _mintVestingToken(_to, _amount, vestingCliffExpiry, 0);
     }
 
     /**

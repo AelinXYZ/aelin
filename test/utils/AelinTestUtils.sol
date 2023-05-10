@@ -346,6 +346,7 @@ contract AelinTestUtils is Test {
         uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
         (uint256 underlyingDealTokenTotal, uint256 purchaseRaiseMinimum, , ) = AelinUpFrontDeal(_dealAddress).dealConfig();
         (uint256 purchaseTokenPerDealToken1, , ) = AelinUpFrontDeal(_dealAddress).getVestingScheduleDetails(0);
+        (uint256 purchaseTokenPerDealToken2, , ) = AelinUpFrontDeal(_dealAddress).getVestingScheduleDetails(0);
         vm.assume(_purchaseAmount1 > purchaseRaiseMinimum);
 
         bool success = false;
@@ -353,8 +354,10 @@ contract AelinTestUtils is Test {
         vm.assume(success);
 
         uint256 poolSharesAmount1 = (_purchaseAmount1 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken1;
+        uint256 poolSharesAmount2 = (_purchaseAmount1 * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken2;
         vm.assume(poolSharesAmount1 > 0);
-        vm.assume(2 * poolSharesAmount1 < underlyingDealTokenTotal);
+        vm.assume(poolSharesAmount2 > 0);
+        vm.assume(poolSharesAmount1 + poolSharesAmount2 < underlyingDealTokenTotal);
 
         // user accepts the deal twice with different vesting schedules
         deal(address(purchaseToken), _user, type(uint256).max);
