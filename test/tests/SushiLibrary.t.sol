@@ -6,6 +6,44 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "contracts/VestAMM/libraries/AmmIntegration/SushiVestAMM.sol";
 import "contracts/VestAMM/interfaces/IVestAMM.sol";
 
+contract DerivedSushiVestAMM {
+    function deployPool(IVestAMMLibrary.CreateNewPool calldata _newPool) public returns (address) {
+        return SushiVestAMM.deployPool(_newPool);
+    }
+
+    function addInitialLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData)
+        external
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return SushiVestAMM.addInitialLiquidity(_addLiquidityData);
+    }
+
+    function addLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData)
+        external
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return SushiVestAMM.addLiquidity(_addLiquidityData);
+    }
+
+    function removeLiquidity(IVestAMMLibrary.RemoveLiquidity calldata _removeLiquidityData) external {
+        SushiVestAMM.removeLiquidity(_removeLiquidityData);
+    }
+
+    function checkPoolExists(IVestAMM.VAmmInfo calldata _vammInfo) external view returns (bool) {
+        return SushiVestAMM.checkPoolExists(_vammInfo);
+    }
+}
+
 contract SushiLibraryTest is Test {
     uint256 mainnetFork;
 
@@ -60,11 +98,57 @@ contract SushiLibraryTest is Test {
         return data;
     }
 
+    function getVestAMMInfo(
+        address poolAddress,
+        address investmentToken,
+        address baseToken
+    ) public returns (IVestAMM.VAmmInfo memory) {
+        IVestAMM.AmmData memory ammData = IVestAMM.AmmData(address(0), investmentToken, baseToken);
+
+        IVestAMM.SingleVestingSchedule[] memory single = new IVestAMM.SingleVestingSchedule[](1);
+        single[0] = IVestAMM.SingleVestingSchedule(
+            address(0), // rewardToken
+            0, //vestingPeriod
+            0, //vestingCliffPeriod
+            address(0), //singleHolder
+            0, //totalSingleTokens
+            0, //claimed;
+            true //finalizedDeposit;
+        );
+
+        IVestAMM.LPVestingSchedule[] memory lpSchedules = new IVestAMM.LPVestingSchedule[](1);
+        lpSchedules[0] = IVestAMM.LPVestingSchedule(
+            single, //singleVestingSchedules[]
+            0, //vestingPeriod;
+            0, //vestingCliffPeriod;
+            0, //totalBaseTokens;
+            0, // totalLPTokens;
+            0, // claimed;
+            true, //finalizedDeposit;
+            0 //investorLPShare; // 0 - 100
+        );
+
+        IVestAMM.VAmmInfo memory info = IVestAMM.VAmmInfo(
+            ammData,
+            false, //bool hasLaunchPhase;
+            0, //investmentPerBase;
+            0, // depositWindow;
+            0, //lpFundingWindow;
+            address(0), //mainHolder;
+            IVestAMM.Deallocation.None, // deallocation;
+            lpSchedules,
+            poolAddress,
+            0
+        );
+
+        return info;
+    }
+
     function testCreatePool() public {
         vm.selectFork(mainnetFork);
         vm.startPrank(user);
 
-        SushiVestAMM lib = new SushiVestAMM();
+        DerivedSushiVestAMM lib = new DerivedSushiVestAMM();
 
         IVestAMMLibrary.CreateNewPool memory data = getCreatePoolData();
         address pool = lib.deployPool(data);
@@ -79,7 +163,7 @@ contract SushiLibraryTest is Test {
         deal(aelinToken, user, 1 ether);
         deal(daiToken, user, 1 ether);
 
-        SushiVestAMM lib = new SushiVestAMM();
+        DerivedSushiVestAMM lib = new DerivedSushiVestAMM();
 
         // Emulate sending tokens to VestAMM
         IERC20(aelinToken).transfer(address(lib), 1 ether);
@@ -102,7 +186,7 @@ contract SushiLibraryTest is Test {
         deal(aelinToken, user, 1 ether);
         deal(daiToken, user, 1 ether);
 
-        SushiVestAMM lib = new SushiVestAMM();
+        DerivedSushiVestAMM lib = new DerivedSushiVestAMM();
 
         // Emulate sending tokens to VestAMM
         IERC20(aelinToken).transfer(address(lib), 1 ether);
@@ -134,7 +218,7 @@ contract SushiLibraryTest is Test {
         deal(aelinToken, user, 1 ether);
         deal(daiToken, user, 1 ether);
 
-        SushiVestAMM lib = new SushiVestAMM();
+        DerivedSushiVestAMM lib = new DerivedSushiVestAMM();
 
         // Emulate sending tokens to VestAMM
         IERC20(aelinToken).transfer(address(lib), 1 ether);
@@ -143,7 +227,10 @@ contract SushiLibraryTest is Test {
         IVestAMMLibrary.CreateNewPool memory data = getCreatePoolData();
         address pool = lib.deployPool(data);
 
-        IVestAMM.AmmData memory ammData = IVestAMM.AmmData(address(lib), aelinToken, daiToken);
-        assertTrue(lib.checkPoolExists(ammData));
+        IVestAMM.VAmmInfo memory info = getVestAMMInfo(pool, aelinToken, daiToken);
+        assertTrue(lib.checkPoolExists(info));
+
+        info = getVestAMMInfo(pool, address(user), address(user));
+        assertFalse(lib.checkPoolExists(info));
     }
 }

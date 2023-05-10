@@ -8,7 +8,7 @@ interface IBalancerPool {
     struct CreateNewPool {
         string name;
         string symbol;
-        IERC20[] tokens;
+        address[] tokens;
         uint256[] weights;
         // TODO Investigate what this is for and if we need it (leave if as optional/arg)
         // https://docs.balancer.fi/reference/contracts/rate-providers.html

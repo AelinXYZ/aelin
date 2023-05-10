@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import "forge-std/console.sol";
 import "contracts/VestAMM/interfaces/IVestAMMLibrary.sol";
 import "contracts/VestAMM/interfaces/IVestAMM.sol";
 import "contracts/VestAMM/interfaces/sushi/ISushiFactory.sol";
@@ -9,8 +8,11 @@ import "contracts/VestAMM/interfaces/sushi/ISushiRouter.sol";
 import "contracts/VestAMM/interfaces/sushi/IUniswapV2Pair.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-// NOTE this should be a library. Using a contract for testing purposes
-contract SushiVestAMM {
+interface IERC20Decimals {
+    function decimals() external view returns (uint8);
+}
+
+library SushiVestAMM {
     address constant sushiFactoryV2Address = address(0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac);
     address constant sushiRouterV2Address = address(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
     uint256 constant DEADLINE = 20 minutes;
@@ -100,8 +102,8 @@ contract SushiVestAMM {
             block.timestamp + DEADLINE
         );
 
-        uint numBaseTokensInLP = _convertTokenToLP(amountA, IERC20(_addLiquidityData.tokens[0]).decimals());
-        uint numInvTokensInLP = _convertTokenToLP(amountB, IERC20(_addLiquidityData.tokens[1]).decimals());
+        uint numBaseTokensInLP = _convertTokenToLP(amountA, IERC20Decimals(_addLiquidityData.tokens[0]).decimals());
+        uint numInvTokensInLP = _convertTokenToLP(amountB, IERC20Decimals(_addLiquidityData.tokens[1]).decimals());
 
         return (numInvTokensInLP, numBaseTokensInLP, 0, 0);
     }
@@ -126,10 +128,10 @@ contract SushiVestAMM {
         );
     }
 
-    function checkPoolExists(IVestAMM.AmmData memory _ammData) external view returns (bool) {
+    function checkPoolExists(IVestAMM.VAmmInfo calldata _vammInfo) external view returns (bool) {
         ISushiFactory sushiFactory = ISushiFactory(sushiFactoryV2Address);
 
-        address pool = sushiFactory.getPair(_ammData.baseToken, _ammData.investmentToken);
+        address pool = sushiFactory.getPair(_vammInfo.ammData.baseToken, _vammInfo.ammData.investmentToken);
 
         return pool != address(0);
     }
