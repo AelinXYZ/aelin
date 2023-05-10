@@ -1501,8 +1501,6 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
                     claimUnderlyingMutlipleEntries()
     //////////////////////////////////////////////////////////////*/
 
-    function test_ClaimUnderlyingMultipleEntries_RevertWhenIndicesLengthTooLong() public {}
-
     function testFuzz_ClaimUnderlyingMultipleEntries_OneVestingSchedule(uint256 _purchaseAmount1) public {
         uint256 vestingExpiry = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingExpiries(0);
 
@@ -1604,10 +1602,6 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         uint256[] memory tokenIds = new uint256[](2);
         tokenIds[0] = vestingTokenId1;
         tokenIds[1] = vestingTokenId1 + 1;
-        // Vesting Indices
-        uint256[] memory vestingIndices = new uint256[](2);
-        vestingIndices[0] = 0;
-        vestingIndices[1] = 1;
 
         vm.expectEmit(true, false, false, true);
         emit ClaimedUnderlyingDealToken(user1, vestingTokenId1, address(underlyingDealToken), claimableUnderlyingTokens1);
@@ -1620,19 +1614,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         assertGt(claimableUnderlyingTokens1, 0);
         assertGt(claimableUnderlyingTokens2, 0);
 
-        /*
-
-        vm.expectEmit(true, false, false, true);
-        emit ClaimedUnderlyingDealToken(user1, vestingTokenId1, address(underlyingDealToken), claimableUnderlyingTokens1);
-        */
-        vm.expectEmit(true, false, false, true);
-        emit ClaimedUnderlyingDealToken(
-            user1,
-            vestingTokenId1 + 1,
-            address(underlyingDealToken),
-            claimableUnderlyingTokens2
-        );
-        deal.claimUnderlyingMultipleEntries(tokenIds);
+        assertEq(deal.claimUnderlyingMultipleEntries(tokenIds), claimableUnderlyingTokens1 + claimableUnderlyingTokens2);
 
         vm.stopPrank();
     }
