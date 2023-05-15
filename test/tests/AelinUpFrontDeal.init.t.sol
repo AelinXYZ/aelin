@@ -400,7 +400,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
             merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7,
             ipfsHash: ""
         });
-        vm.prank(dealCreatorAddress);
+        vm.startPrank(dealCreatorAddress);
         vm.expectRevert("merkle needs ipfs hash");
         upFrontDealFactory.createUpFrontDeal(merkleDealData, getDealConfig(), nftCollectionRulesEmpty, allowListInitEmpty);
         vm.stopPrank();
@@ -426,7 +426,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
             merkleRoot: 0x5842148bc6ebeb52af882a317c765fccd3ae80589b21a9b8cbf21abb630e46a7,
             ipfsHash: "bafybeifs6trokoqmvhy6k367zbbow7xw62hf3lqsn2zjtjwxllwtcgk5ze"
         });
-        vm.prank(dealCreatorAddress);
+        vm.startPrank(dealCreatorAddress);
         vm.expectRevert("cant have nft & merkle");
         upFrontDealFactory.createUpFrontDeal(merkleDealData, getDealConfig(), nftCollectionRules721, allowListInitEmpty);
         vm.stopPrank();
@@ -453,7 +453,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         testAllowListAmounts[0] = 1e18;
         allowListInit.allowListAddresses = testAllowListAddresses;
         allowListInit.allowListAmounts = testAllowListAmounts;
-        vm.prank(dealCreatorAddress);
+        vm.startPrank(dealCreatorAddress);
         vm.expectRevert("cant have allow list & merkle");
         upFrontDealFactory.createUpFrontDeal(merkleDealData, getDealConfig(), nftCollectionRulesEmpty, allowListInit);
         vm.stopPrank();
@@ -918,6 +918,5 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         vm.assume(_testAddress != address(0));
         vm.prank(_testAddress);
         assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).claimableUnderlyingTokens(_tokenId), 0);
-        vm.stopPrank();
     }
 }

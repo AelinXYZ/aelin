@@ -848,7 +848,6 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
         // user accepts the deal with purchaseAmount > deal total
         vm.startPrank(user1);
         setupAndAcceptDealWithDeallocation(dealAddressAllowDeallocation, _purchaseAmount, user1, true);
-        vm.stopPrank();
 
         // purchase period is now over
         vm.warp(AelinUpFrontDeal(dealAddressAllowDeallocation).purchaseExpiry() + 1 days);
