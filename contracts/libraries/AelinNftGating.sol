@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "./NftCheck.sol";
+import {NftCheck, IERC721, IERC1155} from "./NftCheck.sol";
 
 library AelinNftGating {
-    uint256 constant ID_RANGES_MAX_LENGTH = 10;
+    uint256 public constant ID_RANGES_MAX_LENGTH = 10;
 
     // A struct that allows specific token Id ranges to be specified in a 721 collection
     // Range is inclusive of beginning and ending token Ids
@@ -177,7 +177,7 @@ library AelinNftGating {
             }
         }
 
-        require(_purchaseTokenAmount <= maxPurchaseTokenAmount, "purchase amount greater than max allocation");
+        require(_purchaseTokenAmount <= maxPurchaseTokenAmount, "purchase amount greater than max");
         return maxPurchaseTokenAmount;
     }
 

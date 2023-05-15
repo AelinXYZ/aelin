@@ -11,8 +11,8 @@ error AlreadyDeposited();
 
 contract AelinTokenSwapper {
     // Initial token supply set to 10M tokens as stated in AELIP-50
-    uint256 public immutable TOKEN_SUPPLY = 10 * 1e6 * 1e18;
-    uint256 public immutable OLD_TOKEN_SUPPLY = 5000 * 1e18;
+    uint256 public constant TOKEN_SUPPLY = 10 * 1e6 * 1e18;
+    uint256 public constant OLD_TOKEN_SUPPLY = 5000 * 1e18;
 
     address public aelinToken;
     address public oldAelinToken;

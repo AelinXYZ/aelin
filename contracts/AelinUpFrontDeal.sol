@@ -1,24 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "./AelinVestingToken.sol";
-import "./MinimalProxyFactory.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {AelinFeeEscrow} from "./AelinFeeEscrow.sol";
+import {AelinVestingToken} from "./AelinVestingToken.sol";
+import {MinimalProxyFactory} from "./MinimalProxyFactory.sol";
+import {AelinAllowList} from "./libraries/AelinAllowList.sol";
+import {AelinNftGating} from "./libraries/AelinNftGating.sol";
+import {MerkleTree} from "./libraries/MerkleTree.sol";
 import {IAelinUpFrontDeal} from "./interfaces/IAelinUpFrontDeal.sol";
 import {IERC20Extended} from "./interfaces/IERC20Extended.sol";
-import "./libraries/AelinNftGating.sol";
-import "./libraries/AelinAllowList.sol";
-import "./libraries/MerkleTree.sol";
+import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestingToken {
     using SafeERC20 for IERC20;
 
-    uint256 constant BASE = 100 * 10 ** 18;
-    uint256 constant MAX_SPONSOR_FEE = 15 * 10 ** 18;
-    uint256 constant AELIN_FEE = 2 * 10 ** 18;
+    uint256 public constant BASE = 100 * 10 ** 18;
+    uint256 public constant MAX_SPONSOR_FEE = 15 * 10 ** 18;
+    uint256 public constant AELIN_FEE = 2 * 10 ** 18;
 
     UpFrontDealData public dealData;
     UpFrontDealConfig public dealConfig;
@@ -65,7 +63,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
         // pool initialization checks
         require(_dealData.purchaseToken != _dealData.underlyingDealToken, "purchase & underlying the same");
         require(_dealData.purchaseToken != address(0), "cant pass null purchase address");
-        require(_dealData.underlyingDealToken != address(0), "cant pass null underlying address");
+        require(_dealData.underlyingDealToken != address(0), "cant pass null underlying addr");
         require(_dealData.holder != address(0), "cant pass null holder address");
 
         require(_dealConfig.purchaseDuration >= 30 minutes && _dealConfig.purchaseDuration <= 30 days, "not within limit");

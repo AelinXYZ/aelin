@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "./AelinVestingToken.sol";
-import "./interfaces/IAelinDeal.sol";
-import "./MinimalProxyFactory.sol";
-import "./AelinFeeEscrow.sol";
+import {AelinFeeEscrow} from "./AelinFeeEscrow.sol";
+import {AelinVestingToken} from "./AelinVestingToken.sol";
+import {MinimalProxyFactory} from "./MinimalProxyFactory.sol";
+import {IAelinDeal} from "./interfaces/IAelinDeal.sol";
+import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
     using SafeERC20 for IERC20;
@@ -35,13 +36,6 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
 
     Timeline public openRedemption;
     Timeline public proRataRedemption;
-
-    /**
-     * @dev the constructor will always be blank due to the MinimalProxyFactory pattern
-     * this allows the underlying logic of this contract to only be deployed once
-     * and each new deal created is simply a storage wrapper
-     */
-    constructor() {}
 
     /**
      * @dev the initialize method replaces the constructor setup and can only be called once

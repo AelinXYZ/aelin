@@ -9,7 +9,7 @@ error InvalidAddress();
 
 contract Aelin is ERC20, Ownable {
     // Initial supply set to 10M tokens as stated in AELIP-50
-    uint256 public immutable INITIAL_SUPPLY = 10 * 1e6 * 1e18;
+    uint256 public constant INITIAL_SUPPLY = 10 * 1e6 * 1e18;
 
     address public authorizedMinter;
 
