@@ -6,8 +6,6 @@ import "./MinimalProxyFactory.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import {AelinDeal} from "./AelinDeal.sol";
-import {AelinPool} from "./AelinPool.sol";
 import {AelinFeeEscrow} from "./AelinFeeEscrow.sol";
 import {IAelinUpFrontDeal} from "./interfaces/IAelinUpFrontDeal.sol";
 import {IERC20Extended} from "./interfaces/IERC20Extended.sol";
