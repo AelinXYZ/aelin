@@ -1611,7 +1611,7 @@ contract AelinUpFrontDealClaimTest is Test, AelinTestUtils, IAelinUpFrontDeal, I
 
         // user1 tries to transfer an amount greather than the total value of their vesting
         (uint256 share, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).vestingDetails(0);
-        vm.expectRevert("cant transfer more than current share");
+        vm.expectRevert("amout gt than current share");
         AelinUpFrontDeal(dealAddressAllowDeallocation).transferVestingShare(user2, 0, share + 1);
     }
 

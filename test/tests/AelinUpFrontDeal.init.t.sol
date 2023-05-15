@@ -194,7 +194,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
 
         dealData.purchaseToken = address(purchaseToken);
         dealData.underlyingDealToken = address(0);
-        vm.expectRevert("cant pass null underlying address");
+        vm.expectRevert("cant pass null underlying addr");
         upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListEmpty);
 
         vm.stopPrank();

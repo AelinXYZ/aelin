@@ -199,7 +199,7 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
 
         AelinPool pool = new AelinPool();
         AelinFeeEscrow escrow = new AelinFeeEscrow();
-        vm.expectRevert("allowListAddresses and allowListAmounts arrays should have the same length");
+        vm.expectRevert("arrays should be same length");
         pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
     }
 

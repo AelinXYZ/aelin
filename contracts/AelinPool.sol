@@ -1,18 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "./AelinERC20.sol";
-import "./AelinDeal.sol";
-import "./interfaces/IAelinPool.sol";
-import "./libraries/NftCheck.sol";
+import {AelinDeal, IAelinDeal} from "./AelinDeal.sol";
+import {AelinERC20} from "./AelinERC20.sol";
+import {MinimalProxyFactory} from "./MinimalProxyFactory.sol";
+import {IAelinPool} from "./interfaces/IAelinPool.sol";
+import {IERC20Extended} from "./interfaces/IERC20Extended.sol";
+import {NftCheck, IERC721, IERC1155} from "./libraries/NftCheck.sol";
+import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
+contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGuard {
     using SafeERC20 for IERC20;
-    uint256 constant BASE = 100 * 10 ** 18;
-    uint256 constant MAX_SPONSOR_FEE = 15 * 10 ** 18;
-    uint256 constant AELIN_FEE = 2 * 10 ** 18;
-    uint256 constant ID_RANGES_MAX_LENGTH = 10;
-    uint8 constant MAX_DEALS = 5;
+    uint256 public constant BASE = 100 * 10 ** 18;
+    uint256 public constant MAX_SPONSOR_FEE = 15 * 10 ** 18;
+    uint256 public constant AELIN_FEE = 2 * 10 ** 18;
+    uint256 public constant ID_RANGES_MAX_LENGTH = 10;
+    uint8 public constant MAX_DEALS = 5;
 
     uint8 public numberOfDeals;
     uint8 public purchaseTokenDecimals;
@@ -62,13 +66,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     string private storedSymbol;
 
     /**
-     * @dev the constructor will always be blank due to the MinimalProxyFactory pattern
-     * this allows the underlying logic of this contract to only be deployed once
-     * and each new pool created is simply a storage wrapper
-     */
-    constructor() {}
-
-    /**
      * @dev the initialize method replaces the constructor setup and can only be called once
      *
      * Requirements:
@@ -89,7 +86,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         );
         require(365 days >= _poolData.duration, "max 1 year duration");
         require(_poolData.sponsorFee <= MAX_SPONSOR_FEE, "exceeds max sponsor fee");
-        purchaseTokenDecimals = IERC20Decimals(_poolData.purchaseToken).decimals();
+        purchaseTokenDecimals = IERC20Extended(_poolData.purchaseToken).decimals();
         require(purchaseTokenDecimals <= DEAL_TOKEN_DECIMALS, "too many token decimals");
         storedName = _poolData.name;
         storedSymbol = _poolData.symbol;
@@ -115,10 +112,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256[] memory allowListAmounts = _poolData.allowListAmounts;
 
         if (allowListAddresses.length > 0 || allowListAmounts.length > 0) {
-            require(
-                allowListAddresses.length == allowListAmounts.length,
-                "allowListAddresses and allowListAmounts arrays should have the same length"
-            );
+            require(allowListAddresses.length == allowListAmounts.length, "arrays should be same length");
             for (uint256 i; i < allowListAddresses.length; ++i) {
                 allowList[allowListAddresses[i]] = allowListAmounts[i];
                 emit AllowlistAddress(allowListAddresses[i], allowListAmounts[i]);
@@ -289,7 +283,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
             }
         }
 
-        require(_purchaseTokenAmount <= maxPurchaseTokenAmount, "purchase amount should be less the max allocation");
+        require(_purchaseTokenAmount <= maxPurchaseTokenAmount, "purchase amount greater than max");
 
         uint256 amountBefore = IERC20(purchaseToken).balanceOf(address(this));
         IERC20(purchaseToken).safeTransferFrom(msg.sender, address(this), _purchaseTokenAmount);
@@ -639,7 +633,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
      * @dev the sponsor may change addresses
      */
     function setSponsor(address _sponsor) external onlySponsor {
-        require(_sponsor != address(0));
+        require(_sponsor != address(0), "cant pass null sponsor address");
         futureSponsor = _sponsor;
     }
 

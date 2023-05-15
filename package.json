@@ -6,10 +6,9 @@
 	"scripts": {
 		"lint:js": "prettier --check '**/*.{t,j}s' && eslint --max-warnings=0 '**/*.{t,j}s'",
 		"lint:js:fix": "prettier --write '**/*.{t,j}s' && eslint --max-warnings=0 --fix '**/*.{t,j}s'",
-		"lint:sol:prettier": "prettier --check '(contracts|test)/**/*.sol'",
-		"lint:sol:solhint": "solhint \"contracts/*.sol\" && solhint \"contracts/interfaces/*.sol\" && solhint \"contracts/interfaces/*.sol\" && solhint \"contracts/libraries/*.sol\"",
+		"lint:sol": "prettier -l '(contracts|test)/**/*.sol' && solhint \"contracts/**/*.sol\"",
 		"lint:sol:fix": "prettier --write '(contracts|test)/**/*.sol' && solhint --fix contracts/**/*.sol",
-		"lint": "yarn lint:js && yarn lint:sol:prettier",
+		"lint": "yarn lint:js && yarn lint:sol",
 		"format": "prettier --write \"contracts/**/*.sol\" \"**/*.js\" \"**/*.md\" \"**/*.yml\" \"**/*.json\"",
 		"test": "forge test --no-match-contract NftCheck",
 		"compile": "forge compile",
