@@ -140,7 +140,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
 
     function testFuzz_DepositUnderlyingTokens_RevertWhen_NotHolder(address _testAddress, uint256 _depositAmount) public {
         vm.assume(_testAddress != dealHolderAddress);
-        vm.prank(_testAddress);
+        vm.startPrank(_testAddress);
         vm.expectRevert("must be holder");
         AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).depositUnderlyingTokens(_depositAmount);
         vm.stopPrank();
@@ -418,7 +418,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
     //////////////////////////////////////////////////////////////*/
 
     function testFuzz_AcceptDeal_RevertWhen_DepositIncomplete(address _user, uint256 _purchaseAmount) public {
-        vm.prank(_user);
+        vm.startPrank(_user);
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         vm.expectRevert("underlying deposit incomplete");
         AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
@@ -454,7 +454,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
     function test_AcceptDeal_RevertWhen_BalanceTooLow() public {
         AelinNftGating.NftPurchaseList[] memory nftPurchaseList;
         uint256 tokenAmount = 100;
-        vm.prank(user1);
+        vm.startPrank(user1);
         deal(address(purchaseToken), user1, tokenAmount);
         purchaseToken.approve(address(dealAddressNoDeallocation), type(uint256).max);
         vm.expectRevert("not enough purchaseToken");

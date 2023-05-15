@@ -263,7 +263,6 @@ contract MerkleFeeDistributorTest is Test {
         vm.expectEmit(false, false, false, true);
         emit Claimed(0, user1, share);
         feeDistributor.claim(0, user1, share, merkleProof);
-        vm.stopPrank();
 
         vm.startPrank(deployer);
         vm.expectEmit(true, true, false, true);
@@ -357,7 +356,6 @@ contract MerkleFeeDistributorTest is Test {
         vm.expectEmit(false, false, false, true);
         emit Claimed(0, user1, share);
         feeDistributor.claim(0, user1, share, merkleProof);
-        vm.stopPrank();
 
         vm.startPrank(deployer);
         vm.expectEmit(true, true, false, true);
