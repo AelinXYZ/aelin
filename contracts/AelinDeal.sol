@@ -157,7 +157,7 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
                 : block.timestamp >= proRataRedemption.expiry,
             "redeem window still active"
         );
-        uint256 withdrawAmount = IERC20(underlyingDealToken).balanceOf(address(this)) -
+        uint256 withdrawAmount = underlyingDealTokenTotal -
             ((underlyingPerDealExchangeRate * totalUnderlyingAccepted) / 1e18);
         IERC20(underlyingDealToken).safeTransfer(holder, withdrawAmount);
         emit WithdrawUnderlyingDealToken(underlyingDealToken, holder, withdrawAmount);
@@ -230,13 +230,17 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
     }
 
     /**
-     * @dev allows the purchaser to mint deal tokens. this method is also used
-     * to send deal tokens to the sponsor. It may only be called from the pool
-     * contract that created this deal
+     * @dev allows the purchaser to mint vesting tokens
      */
-    function mintVestingToken(address _to, uint256 _amount) external depositCompleted onlyPool {
-        totalUnderlyingAccepted += _amount;
-        _mintVestingToken(_to, _amount, vestingCliffExpiry);
+    function mintVestingToken(
+        address _to,
+        uint256 _escrowedAmount,
+        uint256 _underlyingAccepted
+    ) external depositCompleted onlyPool {
+        if (_underlyingAccepted > 0) {
+            totalUnderlyingAccepted += _underlyingAccepted;
+        }
+        _mintVestingToken(_to, _escrowedAmount, vestingCliffExpiry);
     }
 
     /**

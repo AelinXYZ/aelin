@@ -497,7 +497,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         require(totalSponsorFeeAmount > 0, "no sponsor fees");
 
         sponsorClaimed = true;
-        aelinDeal.mintVestingToken(sponsor, totalSponsorFeeAmount);
+        aelinDeal.mintVestingToken(sponsor, totalSponsorFeeAmount, 0);
     }
 
     /**
@@ -541,7 +541,11 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         totalSponsorFeeAmount += sponsorFeeAmt;
 
         aelinDeal.transferProtocolFee(aelinFeeAmt);
-        aelinDeal.mintVestingToken(_recipient, poolTokenDealFormatted - (sponsorFeeAmt + aelinFeeAmt));
+        aelinDeal.mintVestingToken(
+            _recipient,
+            poolTokenDealFormatted - (sponsorFeeAmt + aelinFeeAmt),
+            poolTokenDealFormatted
+        );
 
         IERC20(purchaseToken).safeTransfer(holder, _poolTokenAmount);
         emit AcceptDeal(_recipient, address(aelinDeal), _poolTokenAmount, sponsorFeeAmt, aelinFeeAmt);

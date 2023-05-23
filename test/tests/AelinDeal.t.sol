@@ -412,7 +412,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         // we are now at the end of the proRata period
         vm.warp(openRedemptionEnd + 1 days);
         vm.startPrank(dealHolderAddress);
-        uint256 withdrawAmount = underlyingDealToken.balanceOf(dealNoOpenRedemptionAddress) -
+        uint256 withdrawAmount = AelinDeal(dealNoOpenRedemptionAddress).underlyingDealTokenTotal() -
             ((AelinDeal(dealNoOpenRedemptionAddress).underlyingPerDealExchangeRate() *
                 AelinDeal(dealNoOpenRedemptionAddress).totalUnderlyingAccepted()) / 1e18);
         uint256 dealHolderBalance = underlyingDealToken.balanceOf(dealHolderAddress);
@@ -444,7 +444,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         // we are now at the end of the proRata period
         vm.warp(openRedemptionEnd + 1 days);
         vm.startPrank(dealHolderAddress);
-        uint256 withdrawAmount = underlyingDealToken.balanceOf(dealNoOpenRedemptionAddress) -
+        uint256 withdrawAmount = AelinDeal(dealNoOpenRedemptionAddress).underlyingDealTokenTotal() -
             ((AelinDeal(dealNoOpenRedemptionAddress).underlyingPerDealExchangeRate() *
                 AelinDeal(dealNoOpenRedemptionAddress).totalUnderlyingAccepted()) / 1e18);
         uint256 dealHolderBalance = underlyingDealToken.balanceOf(dealHolderAddress);
@@ -553,7 +553,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         // holder can withdraw the rest
         vm.startPrank(dealHolderAddress);
         uint256 dealHolderBalance = underlyingDealToken.balanceOf(dealHolderAddress);
-        uint256 withdrawAmount = underlyingDealToken.balanceOf(dealAddr) -
+        uint256 withdrawAmount = AelinDeal(dealAddr).underlyingDealTokenTotal() -
             ((AelinDeal(dealAddr).underlyingPerDealExchangeRate() * AelinDeal(dealAddr).totalUnderlyingAccepted()) / 1e18);
         // holder can withdraw the remaining underlying deal tokens
         vm.expectEmit(true, true, false, true);
@@ -657,13 +657,134 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         // holder has nothing to withdraw
         vm.startPrank(dealHolderAddress);
         uint256 dealHolderBalance = underlyingDealToken.balanceOf(dealHolderAddress);
-        uint256 withdrawAmount = underlyingDealToken.balanceOf(dealAddr) -
+        uint256 withdrawAmount = AelinDeal(dealAddr).underlyingDealTokenTotal() -
             ((AelinDeal(dealAddr).underlyingPerDealExchangeRate() * AelinDeal(dealAddr).totalUnderlyingAccepted()) / 1e18);
         // holder can withdraw the remaining underlying deal tokens
         vm.expectEmit(true, true, false, true);
         emit WithdrawUnderlyingDealToken(address(underlyingDealToken), dealHolderAddress, withdrawAmount);
         AelinDeal(dealAddr).withdrawExpiry();
         assertEq(underlyingDealToken.balanceOf(dealHolderAddress), dealHolderBalance + withdrawAmount, "dealHolderBalance");
+        vm.stopPrank();
+    }
+
+    function test_WithrawExpiry_AfterVestingClaims() public {
+        address[] memory allowListAddresses;
+        uint256[] memory allowListAmounts;
+        IAelinPool.NftCollectionRules[] memory nftCollectionRules;
+
+        uint256 purchaseTokenTotal = 100e18;
+        uint256 purchaseAmount1 = 40e18;
+        uint256 purchaseAmount2 = 60e18;
+
+        // creation of a custom pool
+        vm.startPrank(dealCreatorAddress);
+        IAelinPool.PoolData memory poolData = IAelinPool.PoolData({
+            name: "POOL",
+            symbol: "POOL",
+            purchaseTokenCap: 0,
+            purchaseToken: address(purchaseToken),
+            duration: 30 days,
+            sponsorFee: 2e18,
+            purchaseDuration: 20 days,
+            allowListAddresses: allowListAddresses,
+            allowListAmounts: allowListAmounts,
+            nftCollectionRules: nftCollectionRules
+        });
+        address poolAddr = poolFactory.createPool(poolData);
+        vm.stopPrank();
+
+        // user 1 invests in the pool
+        vm.startPrank(user1);
+        purchaseToken.approve(poolAddr, type(uint256).max);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        AelinPool(poolAddr).purchasePoolTokens(purchaseAmount1);
+        vm.stopPrank();
+
+        // user 2 invests in the pool
+        vm.startPrank(user2);
+        purchaseToken.approve(poolAddr, type(uint256).max);
+        deal(address(purchaseToken), user2, type(uint256).max);
+        AelinPool(poolAddr).purchasePoolTokens(purchaseAmount2);
+        vm.stopPrank();
+
+        // purchase window is now expired
+        vm.warp(AelinPool(poolAddr).purchaseExpiry());
+
+        // creation of deal
+        vm.startPrank(dealCreatorAddress);
+        address dealAddr = AelinPool(poolAddr).createDeal(
+            address(underlyingDealToken), // _underlyingDealToken
+            purchaseTokenTotal, // _purchaseTokenTotalForDeal
+            purchaseTokenTotal, // _underlyingDealTokenTotal
+            10 days, // _vestingPeriod
+            20 days, // _vestingCliffPeriod
+            30 days, // _proRataRedemptionPeriod
+            0, // _openRedemptionPeriod
+            dealHolderAddress, // _holder
+            30 days // _holderFundingDuration
+        );
+        vm.stopPrank();
+
+        // holder funds the deal
+        vm.startPrank(dealHolderAddress);
+        underlyingDealToken.approve(address(dealAddr), type(uint256).max);
+        AelinDeal(dealAddr).depositUnderlying(purchaseTokenTotal);
+        vm.stopPrank();
+
+        // user1 accepts max
+        vm.startPrank(user1);
+        uint256 sponsorFee = (purchaseAmount1 *
+            10 ** (18 - AelinPool(poolAddr).purchaseTokenDecimals()) *
+            AelinPool(poolAddr).sponsorFee()) / BASE;
+        uint256 aelinFee = (purchaseAmount1 * 10 ** (18 - AelinPool(poolAddr).purchaseTokenDecimals()) * AELIN_FEE) / BASE;
+        uint256 purchaseAmount1Fee = sponsorFee + aelinFee;
+        vm.expectEmit(true, true, false, true);
+        emit AcceptDeal(user1, dealAddr, purchaseAmount1, sponsorFee, aelinFee);
+        AelinPool(poolAddr).acceptMaxDealTokens();
+        vm.stopPrank();
+
+        // user2 accepts half of their allocation
+        vm.startPrank(user2);
+        sponsorFee =
+            ((purchaseAmount2 / 2) *
+                10 ** (18 - AelinPool(poolAddr).purchaseTokenDecimals()) *
+                AelinPool(poolAddr).sponsorFee()) /
+            BASE;
+        aelinFee = ((purchaseAmount2 / 2) * 10 ** (18 - AelinPool(poolAddr).purchaseTokenDecimals()) * AELIN_FEE) / BASE;
+        vm.expectEmit(true, true, false, true);
+        emit AcceptDeal(user2, dealAddr, purchaseAmount2 / 2, sponsorFee, aelinFee);
+        AelinPool(poolAddr).acceptDealTokens(purchaseAmount2 / 2);
+        vm.stopPrank();
+
+        // we are now at the end of the proRata period
+        (, , uint256 proRataRedemptionEnd) = AelinDeal(dealAddr).proRataRedemption();
+        vm.warp(proRataRedemptionEnd + 1 days);
+
+        // we are now at the end of the vesting schedule
+        vm.warp(AelinDeal(dealAddr).vestingExpiry() + 1 days);
+
+        // user1 claims all their deal tokens
+        vm.startPrank(user1);
+        assertEq(AelinDeal(dealAddr).ownerOf(0), user1);
+        vm.expectEmit(true, true, false, true);
+        emit ClaimedUnderlyingDealToken(
+            user1,
+            0,
+            address(underlyingDealToken),
+            purchaseAmount1 - ((purchaseAmount1Fee * AelinDeal(dealAddr).underlyingPerDealExchangeRate()) / 1e18)
+        );
+        AelinDeal(dealAddr).claimUnderlyingTokens(0);
+        vm.stopPrank();
+
+        // holder withdraws the unsold tokens
+        vm.startPrank(dealHolderAddress);
+        vm.expectEmit(true, true, false, true);
+        emit WithdrawUnderlyingDealToken(
+            address(underlyingDealToken),
+            dealHolderAddress,
+            purchaseTokenTotal - purchaseAmount1 - (purchaseAmount2 - (purchaseAmount2 / 2))
+        );
+        AelinDeal(dealAddr).withdrawExpiry();
         vm.stopPrank();
     }
 
@@ -1027,17 +1148,21 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
                             mintVestingToken
     //////////////////////////////////////////////////////////////*/
 
-    function testFuzz_MintVestingToken_RevertWhen_DepositNotCompleted(address _minter, uint256 _shareAmount) public {
+    function testFuzz_MintVestingToken_RevertWhen_DepositNotCompleted(
+        address _minter,
+        uint256 _shareAmount,
+        uint256 _fee
+    ) public {
         vm.startPrank(user1);
         vm.expectRevert("deposit not complete");
-        AelinDeal(dealAddress).mintVestingToken(_minter, _shareAmount);
+        AelinDeal(dealAddress).mintVestingToken(_minter, _shareAmount, _fee);
         vm.stopPrank();
     }
 
-    function testFuzz_MintVestingToken_RevertWhen_NotPool(address _minter, uint256 _shareAmount) public {
+    function testFuzz_MintVestingToken_RevertWhen_NotPool(address _minter, uint256 _shareAmount, uint256 _fee) public {
         vm.startPrank(user1);
         vm.expectRevert("only AelinPool can access");
-        AelinDeal(dealNoOpenRedemptionAddress).mintVestingToken(_minter, _shareAmount);
+        AelinDeal(dealNoOpenRedemptionAddress).mintVestingToken(_minter, _shareAmount, _fee);
         vm.stopPrank();
     }
 
@@ -1402,9 +1527,6 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         vm.warp(AelinDeal(dealNoOpenRedemptionAddress).vestingExpiry() + 1 days);
         uint256 claimableAmount = (AelinDeal(dealNoOpenRedemptionAddress).underlyingPerDealExchangeRate() *
             (share - _shareAmount)) / 1e18;
-
-        console.log(claimableAmount);
-        console.log(share - _shareAmount);
 
         // dealCreator user can claim their share
         vm.expectEmit(true, true, false, true);
