@@ -14,6 +14,7 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
     uint256 public underlyingDealTokenTotal;
     uint256 public totalUnderlyingAccepted;
     uint256 public totalUnderlyingClaimed;
+    uint256 public totalProtocolFee;
     address public holder;
     address public futureHolder;
     address public aelinTreasuryAddress;
@@ -136,7 +137,9 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
         } else {
             withdrawAmount =
                 IERC20(underlyingDealToken).balanceOf(address(this)) -
-                (underlyingDealTokenTotal - totalUnderlyingClaimed);
+                (underlyingDealTokenTotal -
+                    totalUnderlyingClaimed -
+                    ((underlyingPerDealExchangeRate * totalProtocolFee) / 1e18));
         }
         IERC20(underlyingDealToken).safeTransfer(holder, withdrawAmount);
         emit WithdrawUnderlyingDealToken(underlyingDealToken, holder, withdrawAmount);
@@ -230,17 +233,24 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
     }
 
     /**
-     * @dev allows the purchaser to mint vesting tokens
+     * @dev allows the sponsor to mint their vesting tokens
      */
-    function mintVestingToken(
+    function createSponsorVestingSchedule(address _to, uint256 _tokenAmount) external depositCompleted onlyPool {
+        _mintVestingToken(_to, _tokenAmount, vestingCliffExpiry);
+    }
+
+    /**
+     * @dev allows the purchaser to mint their vesting tokens
+     */
+    function createVestingSchedule(
         address _to,
-        uint256 _escrowedAmount,
-        uint256 _underlyingAccepted
+        uint256 _underlyingAmount,
+        uint256 _sponsorFee,
+        uint256 _protocolFee
     ) external depositCompleted onlyPool {
-        if (_underlyingAccepted > 0) {
-            totalUnderlyingAccepted += _underlyingAccepted;
-        }
-        _mintVestingToken(_to, _escrowedAmount, vestingCliffExpiry);
+        totalUnderlyingAccepted += _underlyingAmount;
+        totalProtocolFee += _protocolFee;
+        _mintVestingToken(_to, _underlyingAmount - _sponsorFee - _protocolFee, vestingCliffExpiry);
     }
 
     /**

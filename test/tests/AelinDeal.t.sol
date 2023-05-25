@@ -355,6 +355,104 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         vm.stopPrank();
     }
 
+    function testFuzz_Withdraw_OverTotalAfterDealAccepted(uint256 _depositAmount, uint256 _acceptAmount) public {
+        uint256 underlyingDealTokenTotal = AelinDeal(dealAddress).underlyingDealTokenTotal();
+        vm.assume(_depositAmount < 1e50);
+        vm.assume(_depositAmount > underlyingDealTokenTotal);
+
+        vm.assume(_acceptAmount <= underlyingDealTokenTotal);
+        vm.assume(_acceptAmount > 0);
+
+        // holder funds the deal
+        vm.startPrank(dealHolderAddress);
+        AelinDeal(dealAddress).depositUnderlying(_depositAmount);
+        // contract balance equals the deposit
+        assertEq(underlyingDealToken.balanceOf(dealAddress), _depositAmount);
+        vm.stopPrank();
+
+        // user accepts the deal
+        vm.startPrank(dealCreatorAddress);
+        AelinPool(poolAddress).acceptMaxDealTokens();
+        vm.stopPrank();
+
+        // contract balance = deposit - protocolFee
+        uint256 protocolFeePaid = (AelinDeal(dealAddress).totalProtocolFee() *
+            AelinDeal(dealAddress).underlyingPerDealExchangeRate()) / 1e18;
+        assertEq(underlyingDealToken.balanceOf(dealAddress), _depositAmount - protocolFeePaid);
+
+        // holder withdraws the extra amount deposited
+        vm.startPrank(dealHolderAddress);
+        vm.expectEmit(true, true, false, true);
+        emit Transfer(dealAddress, dealHolderAddress, _depositAmount - underlyingDealTokenTotal);
+        AelinDeal(dealAddress).withdraw();
+
+        // contract balance = dealTokenTotal - protocolFeePaid
+        assertEq(underlyingDealToken.balanceOf(dealAddress), underlyingDealTokenTotal - protocolFeePaid);
+        vm.stopPrank();
+    }
+
+    function testFuzz_Withdraw_OverTotalAfterClaimed(uint256 _depositAmount, uint256 _acceptAmount) public {
+        uint256 underlyingDealTokenTotal = AelinDeal(dealAddress).underlyingDealTokenTotal();
+        vm.assume(_depositAmount < 1e50);
+        vm.assume(_depositAmount > underlyingDealTokenTotal);
+
+        vm.assume(_acceptAmount <= underlyingDealTokenTotal);
+        vm.assume(_acceptAmount > 0);
+
+        // holder funds the deal
+        vm.startPrank(dealHolderAddress);
+        AelinDeal(dealAddress).depositUnderlying(_depositAmount);
+        // contract balance equals the deposit
+        assertEq(underlyingDealToken.balanceOf(dealAddress), _depositAmount);
+        vm.stopPrank();
+
+        // user accepts the deal
+        vm.startPrank(dealCreatorAddress);
+        AelinPool(poolAddress).acceptMaxDealTokens();
+        assertEq(AelinDeal(dealAddress).ownerOf(0), dealCreatorAddress);
+
+        // contract balance = deposit - protocolFee
+        uint256 protocolFeePaid = (AelinDeal(dealAddress).totalProtocolFee() *
+            AelinDeal(dealAddress).underlyingPerDealExchangeRate()) / 1e18;
+        assertEq(underlyingDealToken.balanceOf(dealAddress), _depositAmount - protocolFeePaid);
+
+        // we wait until the end of the vesting schedule
+        vm.warp(AelinDeal(dealAddress).vestingExpiry() + 1 days);
+
+        // user claims their underlying tokens
+        (uint256 share, ) = AelinDeal(dealAddress).vestingDetails(0);
+        uint amountClaimed = (share * AelinDeal(dealAddress).underlyingPerDealExchangeRate()) / 1e18;
+        vm.expectEmit(true, true, false, true);
+        emit ClaimedUnderlyingDealToken(dealCreatorAddress, 0, address(underlyingDealToken), amountClaimed);
+        AelinDeal(dealAddress).claimUnderlyingTokens(0);
+
+        // contract balance = deposit - protocolFee - underlyingClaimed
+        assertEq(underlyingDealToken.balanceOf(dealAddress), _depositAmount - protocolFeePaid - amountClaimed);
+
+        // sponsor claims their tokens
+        AelinPool(poolAddress).sponsorClaim();
+        assertEq(AelinDeal(dealAddress).ownerOf(1), dealCreatorAddress);
+        (share, ) = AelinDeal(dealAddress).vestingDetails(1);
+        uint sponsorAmountClaimed = (share * AelinDeal(dealAddress).underlyingPerDealExchangeRate()) / 1e18;
+        vm.expectEmit(true, true, false, true);
+        emit ClaimedUnderlyingDealToken(dealCreatorAddress, 1, address(underlyingDealToken), sponsorAmountClaimed);
+        AelinDeal(dealAddress).claimUnderlyingTokens(1);
+        vm.stopPrank();
+
+        // contract balance = deposit - protocolFee - underlyingClaimed - sponsorUnderlyingClaimed
+        assertEq(
+            underlyingDealToken.balanceOf(dealAddress),
+            _depositAmount - protocolFeePaid - amountClaimed - sponsorAmountClaimed
+        );
+
+        // holder withdraws the extra amount deposited
+        vm.startPrank(dealHolderAddress);
+        vm.expectEmit(true, true, false, true);
+        emit Transfer(dealAddress, dealHolderAddress, _depositAmount - underlyingDealTokenTotal);
+        AelinDeal(dealAddress).withdraw();
+        vm.stopPrank();
+    }
+
     /*//////////////////////////////////////////////////////////////
                             withdrawExpiry
     //////////////////////////////////////////////////////////////*/
@@ -1155,14 +1253,14 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
     ) public {
         vm.startPrank(user1);
         vm.expectRevert("deposit not complete");
-        AelinDeal(dealAddress).mintVestingToken(_minter, _shareAmount, _fee);
+        AelinDeal(dealAddress).createVestingSchedule(_minter, _shareAmount, _fee, _fee);
         vm.stopPrank();
     }
 
     function testFuzz_MintVestingToken_RevertWhen_NotPool(address _minter, uint256 _shareAmount, uint256 _fee) public {
         vm.startPrank(user1);
         vm.expectRevert("only AelinPool can access");
-        AelinDeal(dealNoOpenRedemptionAddress).mintVestingToken(_minter, _shareAmount, _fee);
+        AelinDeal(dealNoOpenRedemptionAddress).createVestingSchedule(_minter, _shareAmount, _fee, _fee);
         vm.stopPrank();
     }
 
