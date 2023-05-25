@@ -6,7 +6,7 @@ import {MinimalProxyFactory} from "./MinimalProxyFactory.sol";
 import {AelinAllowList} from "./libraries/AelinAllowList.sol";
 import {AelinNftGating} from "./libraries/AelinNftGating.sol";
 
-contract AelinUpFrontDealFactory is MinimalProxyFactory {
+contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
     address public immutable UP_FRONT_DEAL_LOGIC;
     address public immutable AELIN_ESCROW_LOGIC;
     address public immutable AELIN_TREASURY;
@@ -54,36 +54,10 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory {
         emit CreateUpFrontDealConfig(
             upFrontDealAddress,
             _dealConfig.underlyingDealTokenTotal,
-            _dealConfig.purchaseTokenPerDealToken,
             _dealConfig.purchaseRaiseMinimum,
             _dealConfig.purchaseDuration,
-            _dealConfig.vestingPeriod,
-            _dealConfig.vestingCliffPeriod,
+            _dealConfig.vestingSchedules,
             _dealConfig.allowDeallocation
         );
     }
-
-    event CreateUpFrontDeal(
-        address indexed dealAddress,
-        string name,
-        string symbol,
-        address purchaseToken,
-        address underlyingDealToken,
-        address indexed holder,
-        address indexed sponsor,
-        uint256 sponsorFee,
-        bytes32 merkleRoot,
-        string ipfsHash
-    );
-
-    event CreateUpFrontDealConfig(
-        address indexed dealAddress,
-        uint256 underlyingDealTokenTotal,
-        uint256 purchaseTokenPerDealToken,
-        uint256 purchaseRaiseMinimum,
-        uint256 purchaseDuration,
-        uint256 vestingPeriod,
-        uint256 vestingCliffPeriod,
-        bool allowDeallocation
-    );
 }

@@ -10,7 +10,7 @@ import {AelinUpFrontDeal} from "contracts/AelinUpFrontDeal.sol";
 import {AelinAllowList} from "contracts/libraries/AelinAllowList.sol";
 import {AelinNftGating} from "contracts/libraries/AelinNftGating.sol";
 
-contract AelinUpFronDealFactoryTest is Test, AelinTestUtils {
+contract AelinUpFronDealFactoryTest is Test, AelinTestUtils, IAelinUpFrontDeal {
     address public upfronDealAddress;
     address public poolAddressWith721;
     address public poolAddressWithAllowList;
@@ -37,41 +37,6 @@ contract AelinUpFronDealFactoryTest is Test, AelinTestUtils {
         uint256 vestingCliffPeriod;
         bool allowDeallocation;
     }
-
-    enum UpFrontDealVarsNftCollection {
-        ERC721,
-        ERC1155,
-        NONE
-    }
-
-    enum NftCollectionType {
-        ERC1155,
-        ERC721
-    }
-
-    event CreateUpFrontDeal(
-        address indexed dealAddress,
-        string name,
-        string symbol,
-        address purchaseToken,
-        address underlyingDealToken,
-        address indexed holder,
-        address indexed sponsor,
-        uint256 sponsorFee,
-        bytes32 merkleRoot,
-        string ipfsHash
-    );
-
-    event CreateUpFrontDealConfig(
-        address indexed dealAddress,
-        uint256 underlyingDealTokenTotal,
-        uint256 purchaseTokenPerDealToken,
-        uint256 purchaseRaiseMinimum,
-        uint256 purchaseDuration,
-        uint256 vestingPeriod,
-        uint256 vestingCliffPeriod,
-        bool allowDeallocation
-    );
 
     function setUp() public {}
 
@@ -138,14 +103,18 @@ contract AelinUpFronDealFactoryTest is Test, AelinTestUtils {
         uint256 _vestingCliffPeriod,
         bool _allowDeallocation
     ) public pure returns (IAelinUpFrontDeal.UpFrontDealConfig memory) {
+        IAelinUpFrontDeal.VestingSchedule[] memory vestingSchedules = new IAelinUpFrontDeal.VestingSchedule[](1);
+
+        vestingSchedules[0].purchaseTokenPerDealToken = _purchaseTokenPerDealToken;
+        vestingSchedules[0].vestingCliffPeriod = _vestingCliffPeriod;
+        vestingSchedules[0].vestingPeriod = _vestingPeriod;
+
         return
             IAelinUpFrontDeal.UpFrontDealConfig({
                 underlyingDealTokenTotal: _underlyingDealTokenTotal,
-                purchaseTokenPerDealToken: _purchaseTokenPerDealToken,
                 purchaseRaiseMinimum: _purchaseRaiseMinimum,
                 purchaseDuration: _purchaseDuration,
-                vestingPeriod: _vestingPeriod,
-                vestingCliffPeriod: _vestingCliffPeriod,
+                vestingSchedules: vestingSchedules,
                 allowDeallocation: _allowDeallocation
             });
     }
@@ -184,6 +153,10 @@ contract AelinUpFronDealFactoryTest is Test, AelinTestUtils {
 
         return boundedVars;
     }
+
+    /*//////////////////////////////////////////////////////////////
+                            tests
+    //////////////////////////////////////////////////////////////*/
 
     function testFuzz_AelinUpFrontDealFactory_RevertWhen_AelinDealLogicAddressNull(
         uint256 _sponsorFee,
@@ -403,11 +376,9 @@ contract AelinUpFronDealFactoryTest is Test, AelinTestUtils {
         emit CreateUpFrontDealConfig(
             address(0),
             boundedVars.underlyingDealTokenTotal,
-            boundedVars.purchaseTokenPerDealToken,
             boundedVars.purchaseRaiseMinimum,
             boundedVars.purchaseDuration,
-            boundedVars.vestingPeriod,
-            boundedVars.vestingCliffPeriod,
+            upFrontDealVars.dealConfig.vestingSchedules,
             _allowDeallocation
         );
         factory.createUpFrontDeal(
