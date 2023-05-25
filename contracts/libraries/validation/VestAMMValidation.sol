@@ -217,7 +217,7 @@ library Validate {
     }
 
     function depositNotFinalized(bool _depositFinalized, uint256 _index) external pure {
-        if (!_depositFinalized) {
+        if (_depositFinalized) {
             revert SingleDepositNotCompleted({index: _index});
         }
     }
@@ -252,8 +252,8 @@ library Validate {
         }
     }
 
-    function hasIPFSHash(bool _hashExists) external pure {
-        if (!_hashExists) {
+    function hasIPFSHash(bool _hashNotProvided) external pure {
+        if (_hashNotProvided) {
             revert IPFSHashNotProvided();
         }
     }

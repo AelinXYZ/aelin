@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "contracts/VestAMM/interfaces/IVestAMMLibrary.sol";
 import "contracts/VestAMM/interfaces/IVestAMM.sol";
 import "contracts/VestAMM/interfaces/curve/ICurveFactory.sol";
 import "contracts/VestAMM/interfaces/curve/ICurvePool.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-library CurveVestAMM {
+// NOTE: This should be a lirbary. But atmm it's not possible to test the whole process with a library.
+contract CurveVestAMM {
+    using SafeERC20 for IERC20;
+
     address constant curveFactoryAddress = address(0xF18056Bbd320E96A48e3Fbf8bC061322531aac99);
 
     function deployPool(IVestAMMLibrary.CreateNewPool calldata _newPool) public returns (address) {
@@ -22,6 +26,7 @@ library CurveVestAMM {
         returns (ICurvePool.CreateNewPool memory)
     {
         address[2] memory tokens = [_newPool.tokens[0], _newPool.tokens[1]];
+
         return
             ICurvePool.CreateNewPool(
                 _newPool.name,
@@ -78,7 +83,7 @@ library CurveVestAMM {
             uint256
         )
     {
-        return _addLiquidity(_addLiquidityData, 0);
+        return _addLiquidity(_addLiquidityData, true);
     }
 
     function addLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData)
@@ -90,14 +95,10 @@ library CurveVestAMM {
             uint256
         )
     {
-        ICurvePool curvePool = ICurvePool(_addLiquidityData.poolAddress);
-        uint256[2] memory tokensAmtsIn = [_addLiquidityData.tokensAmtsIn[0], _addLiquidityData.tokensAmtsIn[1]];
-        uint256 minLpTokensOut = curvePool.calc_token_amount(tokensAmtsIn);
-
-        return _addLiquidity(_addLiquidityData, minLpTokensOut);
+        return _addLiquidity(_addLiquidityData, false);
     }
 
-    function _addLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData, uint256 _minLpTokensOut)
+    function _addLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData, bool _isInitialLiquidity)
         internal
         returns (
             uint256,
@@ -106,6 +107,8 @@ library CurveVestAMM {
             uint256
         )
     {
+        // NOTE: should add validation to check that tokensAmtsIn match initial_price
+
         ICurvePool curvePool = ICurvePool(_addLiquidityData.poolAddress);
 
         for (uint256 i; i < _addLiquidityData.tokens.length; i++) {
@@ -113,21 +116,44 @@ library CurveVestAMM {
         }
 
         uint256[2] memory tokensAmtsIn = [_addLiquidityData.tokensAmtsIn[0], _addLiquidityData.tokensAmtsIn[1]];
-        curvePool.add_liquidity(tokensAmtsIn, _minLpTokensOut);
+
+        uint256 _minLpTokensOut = _isInitialLiquidity ? 0 : curvePool.calc_token_amount(tokensAmtsIn);
+
+        uint256 lpTokens = curvePool.add_liquidity(tokensAmtsIn, _minLpTokensOut);
+
+        IERC20(curvePool.token()).transfer(msg.sender, lpTokens);
 
         // TODO: should return (numInvTokensInLP, numBaseTokensInLP, numInvTokensFee, numBaseTokensFee)
         return (_addLiquidityData.tokensAmtsIn[0], _addLiquidityData.tokensAmtsIn[1], 0, 0);
     }
 
-    function removeLiquidity(IVestAMMLibrary.RemoveLiquidity calldata _removeLiquidityData) external {
+    function removeLiquidity(IVestAMMLibrary.RemoveLiquidity calldata _removeLiquidityData)
+        external
+        returns (uint256, uint256)
+    {
         ICurvePool curvePool = ICurvePool(_removeLiquidityData.poolAddress);
+
+        IERC20(_removeLiquidityData.lpToken).transferFrom(msg.sender, address(this), _removeLiquidityData.lpTokenAmtIn);
 
         uint256[2] memory minAmountsOut;
         minAmountsOut[0] = curvePool.calc_withdraw_one_coin(_removeLiquidityData.lpTokenAmtIn / 2, 0); // Remove same amount of each token by default ?
         minAmountsOut[1] = curvePool.calc_withdraw_one_coin(_removeLiquidityData.lpTokenAmtIn / 2, 1); // Remove same amount of each token by default ?
 
+        uint256 token0AmtBefore = IERC20(_removeLiquidityData.tokens[0]).balanceOf(address(this));
+        uint256 token1AmtBefore = IERC20(_removeLiquidityData.tokens[1]).balanceOf(address(this));
+
         //NOTE: Send tokens to user? or fees must be capture first?
-        curvePool.remove_liquidity(_removeLiquidityData.lpTokenAmtIn, minAmountsOut, false, msg.sender);
+        curvePool.remove_liquidity(_removeLiquidityData.lpTokenAmtIn, minAmountsOut);
+
+        uint256 token0AmtAfter = IERC20(_removeLiquidityData.tokens[0]).balanceOf(address(this));
+        uint256 token1AmtAfter = IERC20(_removeLiquidityData.tokens[1]).balanceOf(address(this));
+
+        // Since curve "remove_liquidity" function doesn't allow to specify the amount of tokens to withdraw, we need to calculate the amount of tokens to send to the user
+        // NOTE: Check if this is really needed, or we could just send all the balance of each token
+        IERC20(_removeLiquidityData.tokens[0]).transfer(msg.sender, token0AmtAfter - token0AmtBefore);
+        IERC20(_removeLiquidityData.tokens[1]).transfer(msg.sender, token1AmtAfter - token1AmtBefore);
+
+        return (token0AmtAfter - token0AmtBefore, token1AmtAfter - token1AmtBefore);
     }
 
     function checkPoolExists(IVestAMM.VAmmInfo calldata _vammInfo) external view returns (bool) {

@@ -1,86 +1,25 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.6;
 
-import "forge-std/Test.sol";
 import {BalancerVestAMM} from "contracts/VestAMM/libraries/AmmIntegration/BalancerVestAMM.sol";
 import {WeightedPoolUserData} from "@balancer-labs/v2-interfaces/contracts/pool-weighted/WeightedPoolUserData.sol";
 import {IRateProvider} from "@balancer-labs/v2-interfaces/contracts/pool-utils/IRateProvider.sol";
-
-import "contracts/VestAMM/interfaces/balancer/IBalancerPool.sol";
-import "contracts/VestAMM/interfaces/IVestAMMLibrary.sol";
-import "contracts/VestAMM/interfaces/IVestAMM.sol";
+import {AelinVestAMMTest} from "./utils/AelinVestAMMTest.sol";
+import {VestAMMLibrary} from "./utils/VestAMMLibrary.sol";
+import {IBalancerPool} from "contracts/VestAMM/interfaces/balancer/IBalancerPool.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "contracts/VestAMM/interfaces/IVestAMM.sol";
+import "contracts/VestAMM/interfaces/IVestAMMLibrary.sol";
 
-contract DerivedBalancerVestAMM {
-    function deployPool(IVestAMMLibrary.CreateNewPool calldata _newPool) public returns (address) {
-        return BalancerVestAMM.deployPool(_newPool);
-    }
-
-    function addInitialLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData)
-        external
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        return BalancerVestAMM.addInitialLiquidity(_addLiquidityData);
-    }
-
-    function addLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData)
-        external
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        return BalancerVestAMM.addLiquidity(_addLiquidityData);
-    }
-
-    function removeLiquidity(IVestAMMLibrary.RemoveLiquidity calldata _removeLiquidityData) external {
-        BalancerVestAMM.removeLiquidity(_removeLiquidityData);
-    }
-
-    function checkPoolExists(IVestAMM.VAmmInfo calldata _vammInfo) external view returns (bool) {
-        return BalancerVestAMM.checkPoolExists(_vammInfo);
-    }
-}
-
-contract BalancerLibraryTest is Test {
-    uint256 mainnetFork;
-    address aelinToken = address(0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9);
-    address daiToken = address(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-    address user = address(0x000137);
-
-    struct BalancerPoolData {
-        string name;
-        string symbol;
-        address[] tokens;
-        uint256[] normalizedWeights;
-        IRateProvider[] rateProviders;
-        uint256 swapFeePercentage;
-        DerivedBalancerVestAMM balancerLib;
-        address pool;
-    }
-
-    // Alchemy url + key in .env
-    string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
-
-    function setUp() public {
-        mainnetFork = vm.createFork(MAINNET_RPC_URL);
-    }
-
-    function getBalancerTestData() public returns (BalancerPoolData memory) {
+contract BalancerLibraryTest is AelinVestAMMTest {
+    function getCreateBalancerPoolData() public returns (IVestAMMLibrary.CreateNewPool memory) {
         address[] memory tokens = new address[](2);
         IRateProvider[] memory rateProviders = new IRateProvider[](2);
         uint256[] memory normalizedWeights = new uint256[](2);
 
-        tokens[0] = daiToken;
-        tokens[1] = aelinToken;
+        tokens[0] = aelinToken;
+        tokens[1] = daiToken;
         rateProviders[0] = IRateProvider(address(0));
         rateProviders[1] = IRateProvider(address(0));
         normalizedWeights[0] = 500000000000000000;
@@ -93,7 +32,7 @@ contract BalancerLibraryTest is Test {
             normalizedWeights,
             rateProviders,
             2500000000000000, // 2,5%
-            address(0), // OWNER: Do we need this?,
+            address(0),
             0,
             0,
             0,
@@ -106,153 +45,95 @@ contract BalancerLibraryTest is Test {
             0
         );
 
-        DerivedBalancerVestAMM balancerLib = new DerivedBalancerVestAMM();
-
-        // First we need to approve the VestAMM(or the library for this test case) to use user's tokens
-        for (uint256 i = 0; i < tokens.length; i++) {
-            IERC20(tokens[i]).approve(address(balancerLib), type(uint256).max);
-        }
-
-        address pool = balancerLib.deployPool(newPoolData);
-
-        BalancerPoolData memory data;
-
-        data.balancerLib = balancerLib;
-        data.name = "aelindai";
-        data.symbol = "AELIN-DAI";
-        data.tokens = tokens;
-        data.normalizedWeights = normalizedWeights;
-        data.rateProviders = rateProviders;
-        data.swapFeePercentage = 2500000000000000;
-        data.pool = pool;
-
-        return data;
+        return newPoolData;
     }
 
-    function getVestAMMInfo(bytes32 poolId) public returns (IVestAMM.VAmmInfo memory) {
-        IVestAMM.AmmData memory ammData = IVestAMM.AmmData(address(0), address(0), address(0));
-
-        IVestAMM.SingleVestingSchedule[] memory single = new IVestAMM.SingleVestingSchedule[](1);
-        single[0] = IVestAMM.SingleVestingSchedule(
-            address(0), // rewardToken
-            0, //vestingPeriod
-            0, //vestingCliffPeriod
-            address(0), //singleHolder
-            0, //totalSingleTokens
-            0, //claimed;
-            true //finalizedDeposit;
-        );
-
-        IVestAMM.LPVestingSchedule[] memory lpSchedules = new IVestAMM.LPVestingSchedule[](1);
-        lpSchedules[0] = IVestAMM.LPVestingSchedule(
-            single, //singleVestingSchedules[]
-            0, //vestingPeriod;
-            0, //vestingCliffPeriod;
-            0, //totalBaseTokens;
-            0, // totalLPTokens;
-            0, // claimed;
-            true, //finalizedDeposit;
-            0 //investorLPShare; // 0 - 100
-        );
-
-        IVestAMM.VAmmInfo memory info = IVestAMM.VAmmInfo(
-            ammData,
-            false, //bool hasLaunchPhase;
-            0, //investmentPerBase;
-            0, // depositWindow;
-            0, //lpFundingWindow;
-            address(0), //mainHolder;
-            IVestAMM.Deallocation.None, // deallocation;
-            lpSchedules,
-            address(0),
-            poolId
-        );
-
-        return info;
-    }
-
-    function testAddRemoveLiquidity() public {
+    function testCreatePool() public {
         vm.selectFork(mainnetFork);
         vm.startPrank(user);
 
-        deal(aelinToken, user, 1 ether);
-        deal(daiToken, user, 1 ether);
+        address balancerLibraryAddress = deployCode("BalancerVestAMM.sol");
+        VestAMMLibrary vestAMM = new VestAMMLibrary(balancerLibraryAddress);
 
-        /* DEPLOY POOL */
-        BalancerPoolData memory data = getBalancerTestData();
+        IVestAMMLibrary.CreateNewPool memory data = getCreateBalancerPoolData();
 
-        /* ADD LIQUIDITY FOR THE FIRST TIME */
-        uint256[] memory amountsIn = new uint256[](2);
-        amountsIn[0] = 10000000;
-        amountsIn[1] = 10000000;
+        // Create Pool
+        address pool = vestAMM.deployPool(data);
 
-        IVestAMMLibrary.AddLiquidity memory addLiquidityData = IVestAMMLibrary.AddLiquidity(
-            data.pool,
-            amountsIn,
-            data.tokens
-        );
-
-        data.balancerLib.addInitialLiquidity(addLiquidityData);
-
-        uint256 poolLPSupply = IBalancerPool(data.pool).getActualSupply();
-        uint256 vAMMLPBalance = IBalancerPool(data.pool).balanceOf(address(data.balancerLib));
-
-        // Check liquidity has been added and LP tokens balance in vAMM
-        assertGt(poolLPSupply, 0);
-        assertGt(vAMMLPBalance, 0);
-
-        /* ADD LIQUIDITY FOR THE SECOND TIME */
-        amountsIn[0] = 30000000;
-        amountsIn[1] = 30000000;
-
-        addLiquidityData = IVestAMMLibrary.AddLiquidity(data.pool, amountsIn, data.tokens);
-        data.balancerLib.addLiquidity(addLiquidityData);
-
-        uint256 newPoolLPSupply = IBalancerPool(data.pool).getActualSupply();
-        uint256 newVAMMBalance = IBalancerPool(data.pool).balanceOf(address(data.balancerLib));
-
-        // Check new liquidity has been added and new LP tokens balance in vAMM
-        assertGt(newPoolLPSupply, poolLPSupply);
-        assertGt(newVAMMBalance, vAMMLPBalance);
-
-        // /* REMOVE SOME LIQUIDITY */
-        uint256 lpTokenAmountIn = 20000000;
-
-        IVestAMMLibrary.RemoveLiquidity memory removeLiquidityData = IVestAMMLibrary.RemoveLiquidity(
-            data.pool,
-            lpTokenAmountIn,
-            data.tokens
-        );
-        data.balancerLib.removeLiquidity(removeLiquidityData);
-
-        uint256 removedPoolLPSupply = IBalancerPool(data.pool).getActualSupply();
-        uint256 removedVAMMBalance = IBalancerPool(data.pool).balanceOf(address(data.balancerLib));
-
-        // TODO: need to check calculation to get exact amounts
-        assertLt(removedPoolLPSupply, newPoolLPSupply);
-        assertLt(removedVAMMBalance, newVAMMBalance);
-        vm.stopPrank();
-
-        // TODO Get liquidity fees
+        assertFalse(pool == address(0));
     }
 
-    function test_checkPoolExists() public {
+    function testAddLiquidity() public {
+        vm.selectFork(mainnetFork);
+        vm.startPrank(user, user);
+
+        address balancerLibraryAddress = deployCode("BalancerVestAMM.sol");
+        VestAMMLibrary vestAMM = new VestAMMLibrary(balancerLibraryAddress);
+
+        // Asume vestAMM has investmentToken and base tokens
+        deal(daiToken, address(vestAMM), 1 ether);
+        deal(aelinToken, address(vestAMM), 1 ether);
+
+        IVestAMMLibrary.CreateNewPool memory data = getCreateBalancerPoolData();
+
+        // Create Pool
+        address pool = vestAMM.deployPool(data);
+
+        // Amounts in should match "initial_price" ratio
+        IVestAMMLibrary.AddLiquidity memory addInitialLiquidityData = getAddLiquidityData(pool, 0.5 ether, 0.5 ether);
+        vestAMM.addInitialLiquidity(addInitialLiquidityData);
+
+        // Add liquidity for the second time
+        vestAMM.addLiquidity(addInitialLiquidityData);
+    }
+
+    function testRemoveLiquidity() public {
         vm.selectFork(mainnetFork);
         vm.startPrank(user);
 
-        deal(aelinToken, user, 1 ether);
-        deal(daiToken, user, 1 ether);
+        address balancerLibraryAddress = deployCode("BalancerVestAMM.sol");
+        VestAMMLibrary vestAMM = new VestAMMLibrary(balancerLibraryAddress);
 
-        /* DEPLOY POOL */
-        BalancerPoolData memory data = getBalancerTestData();
+        // Asume vestAMM has investmentToken and base tokens
+        deal(daiToken, address(vestAMM), 1 ether);
+        deal(aelinToken, address(vestAMM), 1 ether);
 
-        bytes32 id = IBalancerPool(address(data.pool)).getPoolId();
+        IVestAMMLibrary.CreateNewPool memory data = getCreateBalancerPoolData();
+
+        // Create Pool
+        address pool = vestAMM.deployPool(data);
+
+        // Amounts in should match "initial_price" ratio
+        IVestAMMLibrary.AddLiquidity memory addInitialLiquidityData = getAddLiquidityData(pool, 0.5 ether, 0.5 ether);
+        vestAMM.addInitialLiquidity(addInitialLiquidityData);
+
+        // Remove All liquidity
+        uint256 lpTokenAmountIn = IERC20(pool).balanceOf(address(vestAMM));
+
+        IVestAMMLibrary.RemoveLiquidity memory removeLiquidityData = getRemoveLiquidityData(pool, pool, lpTokenAmountIn);
+
+        vestAMM.removeLiquidity(removeLiquidityData);
+    }
+
+    function testCheckPoolExists() public {
+        vm.selectFork(mainnetFork);
+        vm.startPrank(user);
+
+        address balancerLibraryAddress = deployCode("BalancerVestAMM.sol");
+        VestAMMLibrary vestAMM = new VestAMMLibrary(balancerLibraryAddress);
+
+        IVestAMMLibrary.CreateNewPool memory data = getCreateBalancerPoolData();
+
+        // Create Pool
+        address pool = vestAMM.deployPool(data);
+
+        bytes32 id = IBalancerPool(pool).getPoolId();
         bytes32 wrongId = keccak256(abi.encodePacked(user));
 
-        IVestAMM.VAmmInfo memory vammInfo = getVestAMMInfo(id);
-        assertTrue(data.balancerLib.checkPoolExists(vammInfo), "Correct Id");
+        IVestAMM.VAmmInfo memory vammInfo = getVestAMMInfo(pool, daiToken, aelinToken, balancerLibraryAddress, id);
+        assertTrue(vestAMM.checkPoolExists(vammInfo), "Correct Id");
 
-        vammInfo = getVestAMMInfo(wrongId);
-        assertFalse(data.balancerLib.checkPoolExists(vammInfo), "Wrong Id");
+        vammInfo = getVestAMMInfo(pool, daiToken, aelinToken, balancerLibraryAddress, wrongId);
+        assertFalse(vestAMM.checkPoolExists(vammInfo), "Wrong Id");
     }
 }

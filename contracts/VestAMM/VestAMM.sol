@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
+import "forge-std/console.sol";
 // NEED pausing and management features
 import "./VestVestingToken.sol";
-import "./VestAMMMultiRewards.sol";
+
+// import "./VestAMMMultiRewards.sol";
 import {AelinVestingToken} from "contracts/AelinVestingToken.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
@@ -16,9 +19,20 @@ import "../libraries/AelinAllowList.sol";
 import "../libraries/MerkleTree.sol";
 import "./interfaces/IVestAMM.sol";
 import "./interfaces/IVestAMMLibrary.sol";
-import "contracts/interfaces/balancer/IBalancerPool.sol";
 
 import "contracts/libraries/validation/VestAMMValidation.sol";
+
+interface IERC20Decimals {
+    function decimals() external view returns (uint8);
+}
+
+contract VestAMMMultiRewards {
+    constructor(address _vestAMM) {}
+
+    function stake(uint256 _amount) external {}
+
+    function withdraw(uint256 _amount) external {}
+}
 
 // we will have a modified staking rewards contract that reads the balances of each investor in the locked LP alongside which bucket they are in
 // so you can distribute protocol fees to locked LPs and also do highly targeted rewards just to specific buckets if you want
@@ -48,6 +62,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     mapping(uint8 => uint256) public maxInvTokensPerVestSchedule;
     mapping(uint8 => uint256) public depositedPerVestSchedule;
     mapping(uint8 => uint256) public lpClaimedPerVestSchedule;
+    mapping(uint8 => uint256) public lpTokenAmountPerSchedule;
     mapping(uint8 => mapping(uint8 => uint256)) public singleClaimedPerVestSchedule;
     mapping(address => uint256) totalSingleClaimed;
     mapping(uint8 => bool) public isVestingScheduleFull;
@@ -66,7 +81,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     uint256 public totalDeposited;
     uint256 investmentTokenPerBase;
 
-    AmmData public ammData;
+    // AmmData public ammData;
     VestAMMMultiRewards public vestAmmMultiRewards;
     VAmmInfo public vAmmInfo;
     DealAccess public dealAccess;
@@ -74,15 +89,23 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     bool private calledInitialize;
     bool private baseComplete;
     bool public isCancelled;
+    bool public depositComplete;
     DepositData public depositData;
 
     uint256 public globalTotalLPTokens;
+
+    IVestAMMLibrary internal vestAMMLibrary;
+
+    uint256 public numInvTokensFee;
+    uint256 public numBaseTokensFee;
+
+    bool public locked = false;
 
     /**
      * @dev initializes the contract configuration, called from the factory contract when creating a new Up Front Deal
      */
     function initialize(
-        AmmData calldata _ammData,
+        // AmmData calldata _ammData,
         VAmmInfo calldata _vAmmInfo,
         DealAccess calldata _dealAccess,
         address _aelinFeeModule
@@ -91,14 +114,19 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // pool initialization checks
         // TODO how to name these
         // _setNameAndSymbol(string(abi.encodePacked("vAMM-", TBD)), string(abi.encodePacked("v-", TBD)));
-        ammData = _ammData;
+        // added ammData to VAmmInfo
+        // ammData = _ammData;
         vAmmInfo = _vAmmInfo;
         dealAccess = _dealAccess;
-        aelinFeeModule = _aelinFeeModule;
+        vestAMMLibrary = IVestAMMLibrary(_vAmmInfo.ammData.ammLibrary);
+        // TODO
+        // aelinFeeModule = _aelinFeeModule;
+
         // TODO work on the rewards logic
         // TODO research the limit of how many rewards tokens you can distribute
         // TODO emit the multi rewards distributor contract address
-        vestAmmMultiRewards = new VestAMMMultiRewards(address(this));
+        // TODO
+        // vestAmmMultiRewards = new VestAMMMultiRewards(address(this));
 
         // TODO if we are doing a liquidity growth round we need to read the prices of the assets
         // from onchain here and set the current price as the median price
@@ -106,13 +134,13 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // TODO research how to solve a new pool where liquidity exists elsewhere
         if (!_vAmmInfo.hasLaunchPhase) {
             // we need to pass in data to check if the pool exists. ammData is a placeholder but not the right argument
-            Validate.poolExists(_ammData.ammLibrary.checkPoolExists(ammData), ammData.poolAddress); // NOTE: Check if poolAddress is required if hasLaunchPhase is false
+            Validate.poolExists(vestAMMLibrary.checkPoolExists(vAmmInfo), vAmmInfo.poolAddress); // NOTE: Check if poolAddress is required if hasLaunchPhase is false
             // initial price ratio between the two assets
             // TODO slippage check
-            investmentTokenPerBase = _ammData.ammLibrary.getPriceRatio(
-                _ammData.poolAddress,
-                _ammData.investmentToken,
-                _ammData.baseToken
+            investmentTokenPerBase = vestAMMLibrary.getPriceRatio(
+                vAmmInfo.poolAddress,
+                vAmmInfo.ammData.investmentToken,
+                vAmmInfo.ammData.baseToken
             );
         }
         // TODO if its a launch make sure pool doesn't exist for certain AMMs
@@ -123,9 +151,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // launch struct for new protocols without liquidity
         uint256 invPerBase = _vAmmInfo.hasLaunchPhase ? _vAmmInfo.investmentPerBase : investmentTokenPerBase;
 
-        numVestingSchedules = vAmmInfo.lpVestingSchedules.length;
-        for (uint i = 0; i < numVestingSchedules; i++) {
-            numSingleRewards += vAmmInfo.lpVestingSchedules[i].singleVestingSchedules.length;
+        numVestingSchedules = uint8(vAmmInfo.lpVestingSchedules.length);
+        for (uint8 i = 0; i < numVestingSchedules; i++) {
+            numSingleRewards += uint8(vAmmInfo.lpVestingSchedules[i].singleVestingSchedules.length);
             holderTokenTotal += vAmmInfo.lpVestingSchedules[i].totalBaseTokens;
             // the maximum number of investment tokens investors can deposit per vesting schedule
             // this is important for the deallocation logic and the ability to invest more than the cap
@@ -135,9 +163,14 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             // NOTE the invPerBase variable is in the investment token decimal format
             maxInvTokensPerVestSchedule[i] =
                 (vAmmInfo.lpVestingSchedules[i].totalBaseTokens * invPerBase) /
-                10**IERC20(ammData.baseToken).decimals();
+                10**IERC20Decimals(vAmmInfo.ammData.baseToken).decimals();
             maxInvTokens += maxInvTokensPerVestSchedule[i];
         }
+
+        // NOTE: We need to approve the lirbary to use base/investment tokens
+        // instead of type(uint256).max we should use the max amount of tokens set by the user
+        IERC20(vAmmInfo.ammData.baseToken).approve(address(vestAMMLibrary), type(uint256).max);
+        IERC20(vAmmInfo.ammData.investmentToken).approve(address(vestAMMLibrary), type(uint256).max);
 
         // Allow list logic
         // check if there's allowlist and amounts,
@@ -166,13 +199,14 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
     function depositSingle(DepositToken[] calldata _depositTokens) external depositIncomplete dealOpen {
         for (uint i = 0; i < _depositTokens.length; i++) {
-            SingleVestingSchedule singleVestingSchedule = vAmmInfo
-                .lpVestingSchedules[_depositTokens[i].vestingScheduleIndex]
+            SingleVestingSchedule memory singleVestingSchedule = vAmmInfo
+                .lpVestingSchedules[_depositTokens[i].lpScheduleIndex]
                 .singleVestingSchedules[_depositTokens[i].singleRewardIndex];
             Validate.singleHolder(vAmmInfo.mainHolder, singleVestingSchedule.singleHolder, i);
             Validate.singleToken(_depositTokens[i].token, singleVestingSchedule.rewardToken, i);
-            Valida.singleTokenBalance(_depositTokens[i].amount, IERC20(_depositTokens[i].token).balanceOf(msg.sender), i);
-            Validate.signleDepositNotFinalized(singleVestingSchedule.finalizedDeposit, i);
+            Validate.singleTokenBalance(_depositTokens[i].amount, IERC20(_depositTokens[i].token).balanceOf(msg.sender), i);
+            // TODO
+            // Validate.signleDepositNotFinalized(singleVestingSchedule.finalizedDeposit, i);
 
             // check deposit is not finalized here
             uint256 balanceBeforeTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
@@ -180,26 +214,26 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             uint256 balanceAfterTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
             uint256 amountPostTransfer = balanceAfterTransfer - balanceBeforeTransfer;
 
-            holderDeposits[msg.sender][_depositTokens[i].vestingScheduleIndex][
+            holderDeposits[msg.sender][_depositTokens[i].lpScheduleIndex][
                 _depositTokens[i].singleRewardIndex
             ] += amountPostTransfer;
 
             emit SingleRewardDeposited(
                 msg.sender,
-                _depositTokens[i].vestingScheduleIndex,
+                _depositTokens[i].lpScheduleIndex,
                 _depositTokens[i].singleRewardIndex,
                 _depositTokens[i].token,
                 amountPostTransfer
             );
             if (
-                holderDeposits[msg.sender][_depositTokens[i].vestingScheduleIndex][_depositTokens[i].singleRewardIndex] >=
+                holderDeposits[msg.sender][_depositTokens[i].lpScheduleIndex][_depositTokens[i].singleRewardIndex] >=
                 singleVestingSchedule.totalSingleTokens
             ) {
                 singleRewardsComplete += 1;
                 singleVestingSchedule.finalizedDeposit = true;
                 emit SingleDepositComplete(
                     _depositTokens[i].token,
-                    _depositTokens[i].vestingScheduleIndex,
+                    _depositTokens[i].lpScheduleIndex,
                     _depositTokens[i].singleRewardIndex
                 );
             }
@@ -218,17 +252,23 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // TODO maybe put this in another function like refundBase and the below logic can be in a method refundSingle or something
         // NOTE we are splitting this because removeSingle is complex and expensive to call
         if (amountBaseDeposited > 0) {
-            IERC20(baseToken).safeTransferFrom(address(this), vAmmInfo.mainHolder, amountBaseDeposited);
+            IERC20(vAmmInfo.ammData.baseToken).safeTransferFrom(address(this), vAmmInfo.mainHolder, amountBaseDeposited);
         }
+
         for (uint8 i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
-            for (uint8 j = 0; j < vAmmInfo.lpVestingSchedules[i].singleVestingSchedules; j++) {
-                removeSingle(RemoveSingle(i, j, vAmmInfo.lpVestingSchedules[i].singleVestingSchedules[j].token));
+            for (uint8 j = 0; j < vAmmInfo.lpVestingSchedules[i].singleVestingSchedules.length; j++) {
+                RemoveSingle memory removeSingleData = RemoveSingle(
+                    i,
+                    j
+                    // vAmmInfo.lpVestingSchedules[i].singleVestingSchedules[j].rewardToken
+                );
+                removeSingle(removeSingleData);
             }
         }
         cancelVestAMM();
     }
 
-    function cancelVestAMM() external onlyHolder depositIncomplete {
+    function cancelVestAMM() public onlyHolder depositIncomplete {
         isCancelled = true;
     }
 
@@ -238,91 +278,100 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         depositIncomplete
         dealOpen
     {
+        // TODO: Validate _lpVestingIndexList indexes are valid ( ei: 99 => will revert)
         Validate.lpVestingAndSingleArrayLength(_lpVestingIndexList.length, _newSingleRewards.length);
         _validateSingleVestingSched(_newSingleRewards);
         for (uint8 i = 0; i < _lpVestingIndexList.length; i++) {
-            LPVestingSchedule lpVestingSchedule = vAmmInfo.lpVestingSchedules[_lpVestingIndexList[i]];
-            Validae.maxSingleRewards(MAX_SINGLE_REWARDS, lpVestingSchedule.singleVestingSchedules.length, i);
-            lpVestingSchedule.singleVestingSchedules[lpVestingSchedule.singleVestingSchedules.length] = _newSingleRewards[i];
+            // TODO
+            // Validae.maxSingleRewards(MAX_SINGLE_REWARDS, lpVestingSchedule.singleVestingSchedules.length, i);
+            vAmmInfo.lpVestingSchedules[_lpVestingIndexList[i]].singleVestingSchedules.push(_newSingleRewards[i]);
+            numSingleRewards += 1;
         }
     }
 
-    function removeSingle(RemoveSingle[] calldata _removeSingleList) external depositIncomplete {
-        for (uint8 i = 0; i < _removeSingleList.length; i++) {
-            LPVestingSchedule lpVestingSchedule = vAmmInfo.lpVestingSchedules[_removeSingleList[i].vestingScheduleIndex];
-            SingleVestingSchedule singleVestingSchedule = lpVestingSchedule.singleVestingSchedules[
-                _removeSingleList[i].singleRewardIndex
-            ];
-            Validate.singleHolder(vAmmInfo.mainHolder, singleVestingSchedule.singleHolder, i);
-            uint256 mainHolderAmount = holderDeposits[vAmmInfo.mainHolder][_removeSingleList[i].vestingScheduleIndex][
-                _removeSingleList[i].singleRewardIndex
-            ];
-            uint256 singleHolderAmount = holderDeposits[singleVestingSchedule.singleHolder][
-                _removeSingleList[i].vestingScheduleIndex
-            ][_removeSingleList[i].singleRewardIndex];
-            if (mainHolderAmount > 0) {
-                IERC20(singleRewards[_removeSingleList[i]].token).safeTransferFrom(
-                    address(this),
-                    vAmmInfo.mainHolder,
-                    mainHolderAmount
-                );
-            }
-            if (singleHolderAmount > 0) {
-                IERC20(singleRewards[_removeSingleList[i]].token).safeTransferFrom(
-                    address(this),
-                    singleRewards[_removeSingleList[i]].singleHolder,
-                    singleHolderAmount
-                );
-            }
-            emit SingleRemoved(
-                _removeSingleList[i].singleRewardIndex,
-                _removeSingleList[i].vestingScheduleIndex,
-                singleRewards[_removeSingleList[i]].token,
-                singleRewards[_removeSingleList[i]].rewardTokenTotal,
-                mainHolderAmount,
+    function removeSingle(RemoveSingle memory _removeSingleList) public depositIncomplete {
+        LPVestingSchedule memory lpVestingSchedule = vAmmInfo.lpVestingSchedules[_removeSingleList.lpScheduleIndex];
+        SingleVestingSchedule memory singleVestingSchedule = lpVestingSchedule.singleVestingSchedules[
+            _removeSingleList.singleRewardIndex
+        ];
+        // TODO
+        // Validate.singleHolder(vAmmInfo.mainHolder, singleVestingSchedule.singleHolder, i);
+        uint256 mainHolderAmount = holderDeposits[vAmmInfo.mainHolder][_removeSingleList.lpScheduleIndex][
+            _removeSingleList.singleRewardIndex
+        ];
+        uint256 singleHolderAmount = holderDeposits[singleVestingSchedule.singleHolder][_removeSingleList.lpScheduleIndex][
+            _removeSingleList.singleRewardIndex
+        ];
+        if (mainHolderAmount > 0) {
+            IERC20(singleVestingSchedule.rewardToken).safeTransferFrom(address(this), vAmmInfo.mainHolder, mainHolderAmount);
+        }
+        if (singleHolderAmount > 0) {
+            IERC20(singleVestingSchedule.rewardToken).safeTransferFrom(
+                address(this),
+                // singleRewards[_removeSingleList].singleHolder,
+                singleVestingSchedule.singleHolder,
                 singleHolderAmount
             );
+        }
+        emit SingleRemoved(
+            _removeSingleList.singleRewardIndex,
+            _removeSingleList.lpScheduleIndex,
+            // singleRewards[_removeSingleList].token,
+            // singleRewards[_removeSingleList].rewardTokenTotal,
+            singleVestingSchedule.rewardToken,
+            singleVestingSchedule.totalSingleTokens,
+            mainHolderAmount,
+            singleHolderAmount
+        );
 
-            if (singleVestingSchedule.finalizedDeposit) {
-                singleRewardsComplete -= 1;
-            }
+        if (singleVestingSchedule.finalizedDeposit) {
+            singleRewardsComplete -= 1;
+        }
 
-            if (_removeSingleList[i].singleRewardIndex != lpVestingSchedule.singleVestingSchedules.length - 1) {
-                lpVestingSchedule.singleVestingSchedules[_removeSingleList[i].singleRewardIndex] = lpVestingSchedule
-                    .singleVestingSchedules[lpVestingSchedule.singleVestingSchedules.length - 1];
-                holderDeposits[vAmmInfo.mainHolder][_removeSingleList[i].vestingScheduleIndex][
-                    _removeSingleList[i].singleRewardIndex
-                ] = holderDeposits[vAmmInfo.mainHolder][_removeSingleList[i].vestingScheduleIndex][
-                    lpVestingSchedule.singleVestingSchedules.length - 1
-                ];
-                holderDeposits[singleVestingSchedule.singleHolder][_removeSingleList[i].vestingScheduleIndex][
-                    _removeSingleList[i].singleRewardIndex
-                ] = holderDeposits[singleVestingSchedule.singleHolder][_removeSingleList[i].vestingScheduleIndex][
-                    lpVestingSchedule.singleVestingSchedules.length - 1
-                ];
-            }
-            delete lpVestingSchedule.singleVestingSchedules[lpVestingSchedule.singleVestingSchedules.length - 1];
-            delete holderDeposits[singleVestingSchedule.singleHolder][_removeSingleList[i].vestingScheduleIndex][
-                lpVestingSchedule.singleVestingSchedules.length - 1
+        if (_removeSingleList.singleRewardIndex != lpVestingSchedule.singleVestingSchedules.length - 1) {
+            lpVestingSchedule.singleVestingSchedules[_removeSingleList.singleRewardIndex] = lpVestingSchedule
+                .singleVestingSchedules[lpVestingSchedule.singleVestingSchedules.length - 1];
+            holderDeposits[vAmmInfo.mainHolder][_removeSingleList.lpScheduleIndex][
+                _removeSingleList.singleRewardIndex
+            ] = holderDeposits[vAmmInfo.mainHolder][_removeSingleList.lpScheduleIndex][
+                uint8(lpVestingSchedule.singleVestingSchedules.length - 1)
             ];
-            delete holderDeposits[vAmmInfo.mainHolder][_removeSingleList[i].vestingScheduleIndex][
-                lpVestingSchedule.singleVestingSchedules.length - 1
+            holderDeposits[singleVestingSchedule.singleHolder][_removeSingleList.lpScheduleIndex][
+                _removeSingleList.singleRewardIndex
+            ] = holderDeposits[singleVestingSchedule.singleHolder][_removeSingleList.lpScheduleIndex][
+                uint8(lpVestingSchedule.singleVestingSchedules.length - 1)
             ];
+        }
+        delete lpVestingSchedule.singleVestingSchedules[lpVestingSchedule.singleVestingSchedules.length - 1];
+        delete holderDeposits[singleVestingSchedule.singleHolder][_removeSingleList.lpScheduleIndex][
+            uint8(lpVestingSchedule.singleVestingSchedules.length - 1)
+        ];
+        delete holderDeposits[vAmmInfo.mainHolder][_removeSingleList.lpScheduleIndex][
+            uint8(lpVestingSchedule.singleVestingSchedules.length - 1)
+        ];
+
+        // NOTE: was missing?
+        numSingleRewards -= 1;
+    }
+
+    function removeSingles(RemoveSingle[] calldata _removeSingleList) external {
+        for (uint8 i = 0; i < _removeSingleList.length; i++) {
+            removeSingle(_removeSingleList[i]);
         }
     }
 
     function depositBase() external onlyHolder depositIncomplete dealOpen {
         Validate.baseDepositNotCompleted(baseComplete);
-        address baseToken = ammData.baseToken;
+        address baseToken = vAmmInfo.ammData.baseToken;
         // TODO add new validation for the base amount that they have enough
-        Validate.baseTokenBalance(holderTokenTotal, IERC20(baseToken).balanceOf(msg.sender));
+        // Validate.baseTokenBalance(holderTokenTotal, IERC20(baseToken).balanceOf(msg.sender));
 
         uint256 balanceBeforeTransfer = IERC20(baseToken).balanceOf(address(this));
         IERC20(baseToken).safeTransferFrom(msg.sender, address(this), holderTokenTotal);
         uint256 balanceAfterTransfer = IERC20(baseToken).balanceOf(address(this));
         uint256 amountPostTransfer = balanceAfterTransfer - balanceBeforeTransfer;
         amountBaseDeposited += amountPostTransfer;
-        emit DepositPoolToken(baseToken, msg.sender, amountPostTransfer);
+        emit BaseDepositComplete(baseToken, msg.sender, amountPostTransfer);
         if (amountBaseDeposited >= holderTokenTotal) {
             baseComplete = true;
         }
@@ -338,8 +387,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     ) external lock acceptDealOpen vestingScheduleOpen(_vestingScheduleIndex, _investmentTokenAmount) {
         // TODO how to check if an array item is empty in solidity.
         // it says access to a non-existing index will throw an exception. lets test this.
-        Validate.vestingScheduleExists(!!vAmmInfo.vestingSchedule[_vestingScheduleIndex], _vestingScheduleIndex);
-        Validate.investmentTokenBalance(_investmentTokenAmount, IERC20(ammContract.investmentToken).balanceOf(msg.sender));
+        // TODO
+        // Validate.vestingScheduleExists(!!vAmmInfo.lpVestingSchedules[_vestingScheduleIndex], _vestingScheduleIndex);
+        // Validate.investmentTokenBalance(_investmentTokenAmount, IERC20(ammData.investmentToken).balanceOf(msg.sender));
         if (nftGating.hasNftList || _nftPurchaseList.length > 0) {
             AelinNftGating.purchaseDealTokensWithNft(_nftPurchaseList, nftGating, _investmentTokenAmount);
         } else if (allowList.hasAllowList) {
@@ -348,9 +398,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         } else if (dealAccess.merkleRoot != 0) {
             MerkleTree.purchaseMerkleAmount(_merkleData, trackClaimed, _investmentTokenAmount, dealAccess.merkleRoot);
         }
-        uint256 balanceBeforeTransfer = IERC20(investmentToken).balanceOf(address(this));
-        IERC20(investmentToken).safeTransferFrom(msg.sender, address(this), _investmentTokenAmount);
-        uint256 balanceAfterTransfer = IERC20(investmentToken).balanceOf(address(this));
+        uint256 balanceBeforeTransfer = IERC20(vAmmInfo.ammData.investmentToken).balanceOf(address(this));
+        IERC20(vAmmInfo.ammData.investmentToken).safeTransferFrom(msg.sender, address(this), _investmentTokenAmount);
+        uint256 balanceAfterTransfer = IERC20(vAmmInfo.ammData.investmentToken).balanceOf(address(this));
         uint256 depositTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
         depositedPerVestSchedule[_vestingScheduleIndex] += depositTokenAmount;
 
@@ -363,99 +413,105 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         }
         totalDeposited += depositTokenAmount;
         // stake your virtual token so the rewards distribution contract can track all the investors
-        VestAMMMultiRewards.stake(depositTokenAmount);
-        mintVestingToken(msg.sender, depositTokenAmount, _vestingScheduleIndex);
+
+        // TODO
+        // VestAMMMultiRewards.stake(depositTokenAmount);
+        // mintVestingToken(msg.sender, depositTokenAmount, _vestingScheduleIndex);
 
         emit AcceptVestDeal(msg.sender, depositTokenAmount, _vestingScheduleIndex);
     }
 
     function createInitialLiquidity() external onlyHolder lpFundingWindow {
-        validate.isLiquidityLaunch(vAmmInfo.hasLiquidityLaunch);
+        Validate.isLiquidityLaunch(vAmmInfo.hasLaunchPhase);
 
-        DeployPool deployPool = createDeployPool();
-        poolAddress = IVestAMMLibrary(ammData.ammLibrary).deployPool(deployPool);
+        // DeployPool memory deployPool = createDeployPool();
+        address poolAddress = vestAMMLibrary.deployPool(vAmmInfo.newPoolData);
         // NOTE we can do this inside create add liquidity maybe instead where we calculate the fees
         // basically what we need is to determine exactly how much we are going to LP and then take out 1% for fees and track that
-        AddLiquidity addLiquidity = createAddLiquidity();
+        IVestAMMLibrary.AddLiquidity memory addLiquidity = createAddLiquidity(poolAddress);
         // NOTE so imagine we have 100 ABC against 1000 sUSD that we are goign to LP into Balancer
         // in reality we are taking a 1% fee of these tokens before we LP. So we will end up LP'ing 99 ABC against 990 sUSD
         // and the fee will be 1 ABC against 10 sUSD
-        (numInvTokensFee, numBaseTokensFee) = IVestAMMLibrary(ammData.ammLibrary).addInitialLiquidity(addLiquidity);
+        // (numInvTokensInLP, numBaseTokensInLP, numInvTokensFee, numBaseTokensFee)
+        (, , numInvTokensFee, numBaseTokensFee) = vestAMMLibrary.addInitialLiquidity(addLiquidity);
         saveDepositData(poolAddress);
         calcLPTokensPerSchedule();
-        aelinFees(numInvTokensFee, numBaseTokensFee);
+
+        // TODO
+        // aelinFees(numInvTokensFee, numBaseTokensFee);
     }
 
     // to create the pool and deposit assets after phase 0 ends
     // TODO add a view that calculates max extra base tokens and have a wrapper around that is called createLiquidityMax
     // which calls the view and passes in the max value to this method
-    function createLiquidity(uint256 _extraBaseTokens) external onlyHolder lpFundingWindow {
-        Validate.notLiquidityLaunch(vAmmInfo.hasLiquidityLaunch);
-        // If the price starts at 10 sUSD/ ABC and goes up to 20 sUSD per ABC then we need to add the extra ABC as single sided rewards
-        // or if the price goes down to 5 sUSD / ABC we need to let the protocol add more tokens if they want
-        uint256 currentRaio = _ammData.ammLibrary.getPriceRatio(
-            ammData.poolAddress,
-            ammData.investmentToken,
-            ammData.baseToken
-        );
-        LiquidityRatio liquidityRatio = createLiquidityRatio();
-        (
-            numInvTokensInLP, // example 1: 1000 sUSD (price up); example 2: 1000 sUSD (price down)
-            numBaseTokensInLP, // example 1: 50 ABC (price up); example 2: 200 ABC (price down)
-            initialNumInvTokensInLP, // 1000 sUSD
-            initialNumBaseTokensInLP, // 100 ABC
+    // function createLiquidity(uint256 _extraBaseTokens) external onlyHolder lpFundingWindow {
+    //     Validate.notLiquidityLaunch(vAmmInfo.hasLiquidityLaunch);
+    //     // If the price starts at 10 sUSD/ ABC and goes up to 20 sUSD per ABC then we need to add the extra ABC as single sided rewards
+    //     // or if the price goes down to 5 sUSD / ABC we need to let the protocol add more tokens if they want
+    //     uint256 currentRaio = ammData.ammLibrary.getPriceRatio(
+    //         ammData.poolAddress,
+    //         ammData.investmentToken,
+    //         ammData.baseToken
+    //     );
+    //     LiquidityRatio liquidityRatio = createLiquidityRatio();
+    //     (
+    //         numInvTokensInLP, // example 1: 1000 sUSD (price up); example 2: 1000 sUSD (price down)
+    //         numBaseTokensInLP, // example 1: 50 ABC (price up); example 2: 200 ABC (price down)
+    //         initialNumInvTokensInLP, // 1000 sUSD
+    //         initialNumBaseTokensInLP, // 100 ABC
 
-        ) = IVestAMMLibrary(ammData.ammLibrary).getLiquidityRatios(liquidityRatio);
-        // NOTE the initial price was 10 sUSD per ABC and the total in LP is 100 ABC to 1000 sUSD if the price doesn't change
-        // NOTE if the price is the same then nothing changes and it should look just like a launch
-        if (currentRatio > investmentTokenPerBase) {
-            // NOTE the price has shifted to 20 sUSD per ABC
-            // instead of doing 100 ABC to 1000 sUSD we are doing 50 ABC to 1000 sUSD
-            // TODO add more single sided rewards from the base tokens
-            uint256 excessTokens = initialNumBaseTokensInLP - numBaseTokensInLP;
-            // TODO add another single sided reward with these amounts included spread across every vesting schedule
-            // NOTE be wary of 2 things. we might have to track how full bucket is but maybe not. if you just put it in all the buckets
-            // equally then the protocol can get their excess amount by calling withdrawExcessFunding
-            // the other thing to be wary of is if we have the maximum number of single rewards we are going to add a 7th single sided reward
-            // NOTE that we have to make sure that we override any maximum single rewards settings for this reward
-            // NOTE might need a different function than addSingle() which shares most logic but allows you to add a 7th reward
-            AddLiquidity addLiquidity = createAddLiquidity();
-            (numInvTokensFee, numBaseTokensFee) = IVestAMMLibrary(ammData.ammLibrary).addLiquidity(addLiquidity);
-            // and also allows you to add rewards this late in the process when all the rewards are already locked
-        } else if (currentRatio < investmentTokenPerBase) {
-            // NOTE the price has shifted to 5 sUSD per ABC. Now you get  200 - 100
-            uint256 maxExcessBaseTokens = numBaseTokensInLP - initialNumBaseTokensInLP;
-            // TODO add validation
-            require(_excessBaseTokens <= maxExcessBaseTokens, "too many base tokens");
-            Validate.baseTokenBalance(_excessBaseTokens, IERC20(baseToken).balanceOf(msg.sender));
-            uint256 balanceBeforeTransfer = IERC20(baseToken).balanceOf(address(this));
-            IERC20(baseToken).safeTransferFrom(msg.sender, address(this), _excessBaseTokens);
-            uint256 balanceAfterTransfer = IERC20(baseToken).balanceOf(address(this));
-            uint256 excessTransferred = balanceAfterTransfer - balanceBeforeTransfer;
-            // NOTE when we create the new add liquidity struct
+    //     ) = IVestAMMLibrary(ammData.ammLibrary).getLiquidityRatios(liquidityRatio);
+    //     // NOTE the initial price was 10 sUSD per ABC and the total in LP is 100 ABC to 1000 sUSD if the price doesn't change
+    //     // NOTE if the price is the same then nothing changes and it should look just like a launch
+    //     if (currentRatio > investmentTokenPerBase) {
+    //         // NOTE the price has shifted to 20 sUSD per ABC
+    //         // instead of doing 100 ABC to 1000 sUSD we are doing 50 ABC to 1000 sUSD
+    //         // TODO add more single sided rewards from the base tokens
+    //         uint256 excessTokens = initialNumBaseTokensInLP - numBaseTokensInLP;
+    //         // TODO add another single sided reward with these amounts included spread across every vesting schedule
+    //         // NOTE be wary of 2 things. we might have to track how full bucket is but maybe not. if you just put it in all the buckets
+    //         // equally then the protocol can get their excess amount by calling withdrawExcessFunding
+    //         // the other thing to be wary of is if we have the maximum number of single rewards we are going to add a 7th single sided reward
+    //         // NOTE that we have to make sure that we override any maximum single rewards settings for this reward
+    //         // NOTE might need a different function than addSingle() which shares most logic but allows you to add a 7th reward
+    //         AddLiquidity addLiquidity = createAddLiquidity();
+    //         (numInvTokensFee, numBaseTokensFee) = IVestAMMLibrary(ammData.ammLibrary).addLiquidity(addLiquidity);
+    //         // and also allows you to add rewards this late in the process when all the rewards are already locked
+    //     } else if (currentRatio < investmentTokenPerBase) {
+    //         // NOTE the price has shifted to 5 sUSD per ABC. Now you get  200 - 100
+    //         uint256 maxExcessBaseTokens = numBaseTokensInLP - initialNumBaseTokensInLP;
+    //         // TODO add validation
+    //         require(_excessBaseTokens <= maxExcessBaseTokens, "too many base tokens");
+    //         Validate.baseTokenBalance(_excessBaseTokens, IERC20(baseToken).balanceOf(msg.sender));
+    //         uint256 balanceBeforeTransfer = IERC20(baseToken).balanceOf(address(this));
+    //         IERC20(baseToken).safeTransferFrom(msg.sender, address(this), _excessBaseTokens);
+    //         uint256 balanceAfterTransfer = IERC20(baseToken).balanceOf(address(this));
+    //         uint256 excessTransferred = balanceAfterTransfer - balanceBeforeTransfer;
+    //         // NOTE when we create the new add liquidity struct
 
-            // first we have to deposit those extra tokens and then we
-            // create a new AddLiquidity struct but isntead of using amountBaseDeposited
-            // we use amountBaseDeposited + excessTransferred and we LP with more ABC tokens
-            AddLiquidity addLiquidity = createAddLiquidity();
-            (numInvTokensFee, numBaseTokensFee) = IVestAMMLibrary(ammData.ammLibrary).addLiquidity(addLiquidity);
-            // NOTE an important caveat is that when you add liquidity if they do not add enough excess tokens
-            // then there will be excess sUSD that needs to be returned to investors. they will receive this amount
-            // ideally by just calling the depositorDeallocWithdraw method when there is excess sUSD in a bucket
-        }
-        saveDepositData(ammData.poolAddress);
-        calcLPTokensPerSchedule();
-        aelinFees(numInvTokensFee, numBaseTokensFee);
-    }
+    //         // first we have to deposit those extra tokens and then we
+    //         // create a new AddLiquidity struct but isntead of using amountBaseDeposited
+    //         // we use amountBaseDeposited + excessTransferred and we LP with more ABC tokens
+    //         AddLiquidity addLiquidity = createAddLiquidity();
+    //         (numInvTokensFee, numBaseTokensFee) = IVestAMMLibrary(ammData.ammLibrary).addLiquidity(addLiquidity);
+    //         // NOTE an important caveat is that when you add liquidity if they do not add enough excess tokens
+    //         // then there will be excess sUSD that needs to be returned to investors. they will receive this amount
+    //         // ideally by just calling the depositorDeallocWithdraw method when there is excess sUSD in a bucket
+    //     }
+    //     saveDepositData(ammData.poolAddress);
+    //     calcLPTokensPerSchedule();
+    //     aelinFees(numInvTokensFee, numBaseTokensFee);
+    // }
 
     function saveDepositData(address _poolAddress) internal {
+        // We might have to add a method to the librariers IVestAMMLibrary.balanceOf
         depositData = DepositData(_poolAddress, IERC20(_poolAddress).balanceOf(address(this)), block.timestamp);
     }
 
     // TODO review this logic
     function calcLPTokensPerSchedule() internal {
         uint256 totalInvestmentTokenAmount = totalDeposited < maxInvTokens ? totalDeposited : maxInvTokens;
-        for (uint i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
+        for (uint8 i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
             uint256 scheduleInvestmentTotal = depositedPerVestSchedule[i] > maxInvTokensPerVestSchedule[i]
                 ? maxInvTokensPerVestSchedule[i]
                 : depositedPerVestSchedule[i];
@@ -463,17 +519,26 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         }
     }
 
-    function createAddLiquidity() internal returns (AddLiquidity) {
+    function createAddLiquidity(address _poolAddress) internal view returns (IVestAMMLibrary.AddLiquidity memory) {
         // TODO add in the other variables needed to deploy a pool and return these values
         uint256 investmentTokenAmount = totalDeposited < maxInvTokens ? totalDeposited : maxInvTokens;
         uint256 baseTokenAmount = totalDeposited < maxInvTokens
             ? (holderTokenTotal * totalDeposited) / maxInvTokens
             : holderTokenTotal;
 
-        return AddLiquidity(investmentTokenAmount, baseTokenAmount);
+        uint256[] memory tokensAmtsIn = new uint256[](2);
+        tokensAmtsIn[0] = investmentTokenAmount;
+        tokensAmtsIn[1] = baseTokenAmount;
+
+        address[] memory tokens = new address[](2);
+        tokens[0] = vAmmInfo.ammData.investmentToken;
+        tokens[1] = vAmmInfo.ammData.baseToken;
+
+        return IVestAMMLibrary.AddLiquidity(_poolAddress, tokensAmtsIn, tokens);
     }
 
-    function createDeployPool() internal returns (DeployPool) {
+    // NOTE: Is this really needed?? I we only need this to add liquidity
+    function createDeployPool() internal view returns (DeployPool memory) {
         // TODO add in the other variables needed to deploy a pool and return these values
         uint256 investmentTokenAmount = totalDeposited < maxInvTokens ? totalDeposited : maxInvTokens;
         uint256 baseTokenAmount = totalDeposited < maxInvTokens
@@ -483,49 +548,49 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         return DeployPool(investmentTokenAmount, baseTokenAmount);
     }
 
-    function aelinFees(uint256 _invTokenFeeAmt, uint256 _baseTokenFeeAmt) internal {
-        sendFeesToAelin(ammData.baseToken, _baseTokenFeeAmt);
-        sendFeesToAelin(ammData.investmentAsset, _baseTokenFeeAmt);
+    // function aelinFees(uint256 _invTokenFeeAmt, uint256 _baseTokenFeeAmt) internal {
+    //     sendFeesToAelin(ammData.baseToken, _baseTokenFeeAmt);
+    //     sendFeesToAelin(ammData.investmentAsset, _baseTokenFeeAmt);
 
-        // NOTE we need to DELETE or we just make it an admin call!!!! this part and figure out a more efficient way of sending single
-        // sided rewards to the AelinFeeModule. In addition to 1% of the tokens used to LP (base + investment)
-        // we are also taking 1% of each single sided reward
-        // BUT instead of sending them all here which could be up to 24 transfers which happen at the end
-        // of a lot of add liquidity logic
-        // NOTE instead of sending the single fees here what we can do is when an investor goes to claim their rewards
-        // we check if the fees have been sent yet and if not, we send the fees. So the first investor to claim any single
-        // rewards tokens will also pay to transfer all the fees to Aelin. After that no one else has to pay.
-        for (uint8 i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
-            LPVestingSchedule lpVestingSchedule = vAmmInfo.lpVestingSchedules[i];
-            for (uint8 j = 0; j < lpVestingSchedule.singleVestingSchedules.length; j++) {
-                SingleVestingSchedule singleVestingSchedule = lpVestingSchedule.singleVestingSchedules[j];
+    //     // NOTE we need to DELETE or we just make it an admin call!!!! this part and figure out a more efficient way of sending single
+    //     // sided rewards to the AelinFeeModule. In addition to 1% of the tokens used to LP (base + investment)
+    //     // we are also taking 1% of each single sided reward
+    //     // BUT instead of sending them all here which could be up to 24 transfers which happen at the end
+    //     // of a lot of add liquidity logic
+    //     // NOTE instead of sending the single fees here what we can do is when an investor goes to claim their rewards
+    //     // we check if the fees have been sent yet and if not, we send the fees. So the first investor to claim any single
+    //     // rewards tokens will also pay to transfer all the fees to Aelin. After that no one else has to pay.
+    //     for (uint8 i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
+    //         LPVestingSchedule lpVestingSchedule = vAmmInfo.lpVestingSchedules[i];
+    //         for (uint8 j = 0; j < lpVestingSchedule.singleVestingSchedules.length; j++) {
+    //             SingleVestingSchedule singleVestingSchedule = lpVestingSchedule.singleVestingSchedules[j];
 
-                uint256 singleRewardsUsed = ((singleVestingSchedule.totalSingleTokens *
-                    depositedPerVestSchedule[_vestingScheduleIndex]) / maxInvTokensPerVestSchedule[_vestingScheduleIndex]);
+    //             uint256 singleRewardsUsed = ((singleVestingSchedule.totalSingleTokens *
+    //                 depositedPerVestSchedule[_vestingScheduleIndex]) / maxInvTokensPerVestSchedule[_vestingScheduleIndex]);
 
-                uint256 feeAmount = (singleRewardsUsed * VEST_ASSET_FEE) / 1e18;
-                sendFeesToAelin(_singleRewards[i].token, feeAmount);
-            }
-        }
-    }
+    //             uint256 feeAmount = (singleRewardsUsed * VEST_ASSET_FEE) / 1e18;
+    //             sendFeesToAelin(_singleRewards[i].token, feeAmount);
+    //         }
+    //     }
+    // }
 
     // TODO make sure the timestamp restrictions are set properly on these methods
     function withdrawAllExcessFunding() external {
-        for (uint i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
+        for (uint8 i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
             withdrawExcessFunding(i);
         }
     }
 
     // TODO make each holder withdraw their own separately or keep it like this???
-    function withdrawExcessFunding(uint256 _vestingScheduleIndex) external lpComplete {
-        LPVestingSchedule lpVestingSchedule = vAmmInfo.vestingSchedules[schedule.vestingScheduleIndex];
+    function withdrawExcessFunding(uint8 _vestingScheduleIndex) public lpComplete {
+        LPVestingSchedule memory lpVestingSchedule = vAmmInfo.lpVestingSchedules[_vestingScheduleIndex];
         uint256 excessBaseAmount = lpVestingSchedule.totalBaseTokens -
             ((lpVestingSchedule.totalBaseTokens * depositedPerVestSchedule[_vestingScheduleIndex]) /
                 maxInvTokensPerVestSchedule[_vestingScheduleIndex]);
-        IERC20(ammData.baseToken).safeTransferFrom(address(this), vAmmInfo.holder, excessBaseAmount);
+        IERC20(vAmmInfo.ammData.baseToken).safeTransferFrom(address(this), vAmmInfo.mainHolder, excessBaseAmount);
 
-        for (uint i = 0; i < lpVestingSchedule.singleVestingSchedules.length; i++) {
-            SingleVestingSchedule singleVestingSchedule = lpVestingSchedule.singleVestingSchedules[i];
+        for (uint8 i = 0; i < lpVestingSchedule.singleVestingSchedules.length; i++) {
+            SingleVestingSchedule memory singleVestingSchedule = lpVestingSchedule.singleVestingSchedules[i];
             Validate.singleHolder(vAmmInfo.mainHolder, singleVestingSchedule.singleHolder, i);
 
             uint256 mainHolderAmount = holderDeposits[vAmmInfo.mainHolder][_vestingScheduleIndex][i];
@@ -538,14 +603,14 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             uint256 excessAmountMain = (excessAmount * mainHolderAmount) / (mainHolderAmount + singleHolderAmount);
             uint256 excessAmountSingle = (excessAmount * singleHolderAmount) / (mainHolderAmount + singleHolderAmount);
             if (excessAmountMain > 0) {
-                IERC20(singleRewards[_singleIndex].token).safeTransferFrom(
+                IERC20(singleVestingSchedule.rewardToken).safeTransferFrom(
                     address(this),
                     vAmmInfo.mainHolder,
                     excessAmountMain
                 );
             }
             if (excessAmountSingle > 0) {
-                IERC20(singleRewards[_singleIndex].token).safeTransferFrom(
+                IERC20(singleVestingSchedule.rewardToken).safeTransferFrom(
                     address(this),
                     singleVestingSchedule.singleHolder,
                     excessAmountSingle
@@ -555,16 +620,16 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     // for when the lp is not funded in time
-    function depositorWithdraw(uint256[] _tokenIds) external depositWindowEnded {
-        for (uint256 i; i < _tokenIds.length; i++) {
-            // NOTE make sure this properly tests ownership during testing
-            Validate.owner(ownerOf(_tokenIds[i]));
-            VestVestingToken memory schedule = vestingDetails[_tokenId];
-            IERC20(investmentToken).safeTransferFrom(address(this), msg.sender, schedule.amountDeposited);
-            // NOTE any reason to burn the NFT?
-            emit Withdraw(msg.sender, schedule.amountDeposited);
-        }
-    }
+    // function depositorWithdraw(uint256[] _tokenIds) external depositWindowEnded {
+    //     for (uint256 i; i < _tokenIds.length; i++) {
+    //         // NOTE make sure this properly tests ownership during testing
+    //         Validate.owner(ownerOf(_tokenIds[i]));
+    //         VestVestingToken memory schedule = vestingDetails[_tokenIds[i]];
+    //         IERC20(vAmmInfo.ammData.investmentToken).safeTransferFrom(address(this), msg.sender, schedule.amountDeposited);
+    //         // NOTE any reason to burn the NFT?
+    //         emit Withdraw(msg.sender, schedule.amountDeposited);
+    //     }
+    // }
 
     // withdraw deallocated
     // NOTE this function is when all the buckets are full and one or more
@@ -574,18 +639,18 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     // if the excess is too small it will be FCFS for the tiny amount of excess
     // NOTE we have to be very careful with precision and not to let them remove more than the
     // amount of excess in a bucket
-    function depositorDeallocWithdraw(uint256[] _tokenIds) external {
-        Validate.withdrawAllowed(_depositComplete, _lpFundingExpiry);
-        for (uint256 i; i < _tokenIds.length; i++) {
-            VestVestingToken memory schedule = vestingDetails[_tokenId];
-            // TODO need to calculate and save this number during LP submission
-            // and store it as an 18 decimals percentage 5e17 is 50%
-            uint256 deallocationPercent;
-            uint256 excessWithdrawAmount = (schedule.amountDeposited * 1e18) / deallocationPercent;
-            IERC20(investmentToken).safeTransferFrom(address(this), msg.sender, excessWithdrawAmount);
-            emit Withdraw(msg.sender, excessWithdrawAmount);
-        }
-    }
+    // function depositorDeallocWithdraw(uint256[] _tokenIds) external {
+    //     Validate.withdrawAllowed(depositComplete, lpFundingExpiry);
+    //     for (uint256 i; i < _tokenIds.length; i++) {
+    //         VestVestingToken memory schedule = vestingDetails[_tokenId];
+    //         // TODO need to calculate and save this number during LP submission
+    //         // and store it as an 18 decimals percentage 5e17 is 50%
+    //         uint256 deallocationPercent;
+    //         uint256 excessWithdrawAmount = (schedule.amountDeposited * 1e18) / deallocationPercent;
+    //         IERC20(vAmmInfo.ammData.investmentToken).safeTransferFrom(address(this), msg.sender, excessWithdrawAmount);
+    //         emit Withdraw(msg.sender, excessWithdrawAmount);
+    //     }
+    // }
 
     // collect the fees from AMMs and send them to the Fee Module
     function collectAllFees(uint256 tokenId) public returns (uint256 amount0, uint256 amount1) {
@@ -622,176 +687,180 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // NOTE will collect the fees and then call the method sendAelinFees(amounts...)
     }
 
-    function claimableTokens(
-        uint256 _tokenId,
-        ClaimType _claimType,
-        uint8 _singleRewardsIndex
-    ) public view returns (uint256) {
-        if (lpDepositTime == 0) {
-            return 0;
-        }
-        VestVestingToken memory schedule = vestingDetails[_tokenId];
-        uint256 precisionAdjustedClaimable;
+    // function claimableTokens(
+    //     uint256 _tokenId,
+    //     ClaimType _claimType,
+    //     uint8 _singleRewardsIndex
+    // ) public view returns (uint256) {
+    //     if (depositData.lpDepositTime == 0) {
+    //         return 0;
+    //     }
+    //     VestVestingToken memory schedule = vestingDetails[_tokenId];
+    //     uint256 precisionAdjustedClaimable;
 
-        LPVestingSchedule lpVestingSchedule = vAmmInfo.vestingSchedules[schedule.vestingScheduleIndex];
-        SingleVestingSchedule singleVestingSchedule;
-        if (_claimType == ClaimType.Single) {
-            singleVestingSchedule = lpVestingSchedule.singleVestingSchedules[_singleRewardsIndex];
-        }
+    //     LPVestingSchedule lpVestingSchedule = vAmmInfo.[schedule.vestingScheduleIndex];
+    //     SingleVestingSchedule singleVestingSchedule;
+    //     if (_claimType == ClaimType.Single) {
+    //         singleVestingSchedule = lpVestingSchedule.singleVestingSchedules[_singleRewardsIndex];
+    //     }
 
-        uint256 lastClaimedAt = _claimType == ClaimType.Single
-            ? schedule.lastClaimedAtRewardList[_singleRewardsIndex]
-            : schedule.lastClaimedAt;
+    //     uint256 lastClaimedAt = _claimType == ClaimType.Single
+    //         ? schedule.lastClaimedAtRewardList[_singleRewardsIndex]
+    //         : schedule.lastClaimedAt;
 
-        uint256 vestingCliffPeriod = _claimType == ClaimType.Single
-            ? singleVestingSchedule.vestingCliffPeriod
-            : lpVestingSchedule.vestingCliffPeriod;
+    //     uint256 vestingCliffPeriod = _claimType == ClaimType.Single
+    //         ? singleVestingSchedule.vestingCliffPeriod
+    //         : lpVestingSchedule.vestingCliffPeriod;
 
-        uint256 vestingPeriod = _claimType == ClaimType.Single
-            ? singleVestingSchedule.vestingPeriod
-            : lpVestingSchedule.vestingPeriod;
+    //     uint256 vestingPeriod = _claimType == ClaimType.Single
+    //         ? singleVestingSchedule.vestingPeriod
+    //         : lpVestingSchedule.vestingPeriod;
 
-        uint256 vestingCliff = lpDepositTime + vestingCliffPeriod;
-        uint256 vestingExpiry = vestingCliff + vestingPeriod;
-        uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+    //     uint256 vestingCliff = depositData.lpDepositTime + vestingCliffPeriod;
+    //     uint256 vestingExpiry = vestingCliff + vestingPeriod;
+    //     uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
 
-        if (lastClaimedAt < maxTime && block.timestamp > vestingCliff) {
-            uint256 minTime = lastClaimedAt == 0 ? vestingCliff : lastClaimedAt;
+    //     if (lastClaimedAt < maxTime && block.timestamp > vestingCliff) {
+    //         uint256 minTime = lastClaimedAt == 0 ? vestingCliff : lastClaimedAt;
 
-            uint256 totalShare = _claimType == ClaimType.Single
-                ? (((singleVestingSchedule.totalSingleTokens * depositedPerVestSchedule[_vestingScheduleIndex]) /
-                    maxInvTokensPerVestSchedule[_vestingScheduleIndex]) * schedule.amountDeposited) /
-                    depositedPerVestSchedule[schedule.vestingScheduleIndex]
-                : (lpTokenAmountPerSchedule[schedule.vestingScheduleIndex] * schedule.amountDeposited) /
-                    depositedPerVestSchedule[schedule.vestingScheduleIndex];
+    //         uint256 totalShare = _claimType == ClaimType.Single
+    //             ? (((singleVestingSchedule.totalSingleTokens * depositedPerVestSchedule[_vestingScheduleIndex]) /
+    //                 maxInvTokensPerVestSchedule[_vestingScheduleIndex]) * schedule.amountDeposited) /
+    //                 depositedPerVestSchedule[schedule.vestingScheduleIndex]
+    //             : (lpTokenAmountPerSchedule[schedule.vestingScheduleIndex] * schedule.amountDeposited) /
+    //                 depositedPerVestSchedule[schedule.vestingScheduleIndex];
 
-            uint256 claimableAmount = vestingPeriod == 0 ? totalShare : (totalShare * (maxTime - minTime)) / vestingPeriod;
-            address claimToken = _claimType == ClaimType.Single ? singleVestingSchedule.token : depositData.lpToken;
+    //         uint256 claimableAmount = vestingPeriod == 0 ? totalShare : (totalShare * (maxTime - minTime)) / vestingPeriod;
+    //         address claimToken = _claimType == ClaimType.Single ? singleVestingSchedule.token : depositData.lpToken;
 
-            // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
-            // although it will generally never happen as solidity rounds down so there should always be a little bit left
-            precisionAdjustedClaimable = tokensClaimable > IERC20(claimToken).balanceOf(address(this))
-                ? IERC20(claimToken).balanceOf(address(this))
-                : tokensClaimable;
-        }
-        return precisionAdjustedClaimable;
-    }
+    //         // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
+    //         // although it will generally never happen as solidity rounds down so there should always be a little bit left
+    //         precisionAdjustedClaimable = tokensClaimable > IERC20(claimToken).balanceOf(address(this))
+    //             ? IERC20(claimToken).balanceOf(address(this))
+    //             : tokensClaimable;
+    //     }
+    //     return precisionAdjustedClaimable;
+    // }
 
     /**
      * @dev allows a user to claim their all their vested tokens across a single NFT
      */
-    function claimAllTokensSingleNFT(uint256 _tokenId) external {
-        claimLPTokens(_tokenId);
-        VestVestingToken memory schedule = vestingDetails[_tokenId];
-        LPVestingSchedule lpVestingSchedule = vAmmInfo.vestingSchedules[schedule.vestingScheduleIndex];
-        for (uint256 i; i < lpVestingSchedule.singleVestingSchedules.length; i++) {
-            claimRewardToken(_tokenId, i);
-        }
-    }
+    // function claimAllTokensSingleNFT(uint256 _tokenId) public {
+    //     claimLPTokens(_tokenId);
+    //     VestVestingToken memory schedule = vestingDetails[_tokenId];
+    //     LPVestingSchedule lpVestingSchedule = vAmmInfo.[schedule.vestingScheduleIndex];
+    //     for (uint256 i; i < lpVestingSchedule.singleVestingSchedules.length; i++) {
+    //         claimRewardToken(_tokenId, i);
+    //     }
+    // }
 
-    /**
-     * @dev allows a user to claim their all their vested tokens across many NFTs
-     */
-    function claimAllTokensManyNFTs(uint256[] _tokenIds) external {
-        for (uint256 i; i < _tokenIds.length; i++) {
-            claimAllTokensSingleNFT(_tokenIds[i]);
-        }
-    }
+    // /**
+    //  * @dev allows a user to claim their all their vested tokens across many NFTs
+    //  */
+    // function claimAllTokensManyNFTs(uint256[] _tokenIds) external {
+    //     for (uint256 i; i < _tokenIds.length; i++) {
+    //         claimAllTokensSingleNFT(_tokenIds[i]);
+    //     }
+    // }
 
     /**
      * @dev allows a user to claim their LP tokens or a partial amount
      * of their LP tokens once they have vested according to the schedule
      * created by the protocol
      */
-    function claimLPTokens(uint256 _tokenId) external {
-        _claimTokens(_tokenId, ClaimType.LP, 0);
-    }
+    // function claimLPTokens(uint256 _tokenId) public {
+    //     _claimTokens(_tokenId, ClaimType.LP, 0);
+    // }
 
-    /**
-     * @dev allows a user to claim their single sided reward tokens or a partial amount
-     * of their single sided reward tokens once they have vested according to the schedule
-     */
-    function claimRewardToken(uint256 _tokenId, uint256 _singleRewardsIndex) external {
-        _claimTokens(_tokenId, ClaimType.Single, _singleRewardsIndex);
-    }
+    // /**
+    //  * @dev allows a user to claim their single sided reward tokens or a partial amount
+    //  * of their single sided reward tokens once they have vested according to the schedule
+    //  */
+    // function claimRewardToken(uint256 _tokenId, uint256 _singleRewardsIndex) external {
+    //     _claimTokens(_tokenId, ClaimType.Single, _singleRewardsIndex);
+    // }
 
-    function _claimTokens(
-        uint256 _tokenId,
-        ClaimType _claimType,
-        uint8 _singleRewardsIndex
-    ) internal {
-        Validate.owner(ownerOf(_tokenId));
-        if (claimType == ClaimType.LP) {
-            // TODO claim fees for the protocol. this fee amount should be the global total for all LP tokens
-            // we want to know how many fees ALL the LP tokens have earned since the last time someone claimed
-            // or since we called a public function which captures the fees
-            collectAllFees();
-        }
-        uint256 claimableAmount = claimableTokens(_tokenId, _claimType, _singleRewardsIndex);
-        Validate.hasClaimBalance(claimableAmount);
-        VestVestingToken memory schedule = vestingDetails[_tokenId];
-        address claimToken = _claimType == ClaimType.Single
-            ? lpVestingSchedule.singleVestingSchedules[_singleRewardsIndex].token
-            : depositData.lpToken;
-        if (_claimType == ClaimType.Single) {
-            vestingDetails[_tokenId].lastClaimedAtRewardList[_singleRewardsIndex] = block.timestamp;
-            singleClaimedPerVestSchedule[schedule.vestingScheduleIndex][_singleRewardsIndex] += claimableAmount;
-            totalSingleClaimed[claimToken] += claimableAmount;
-        } else {
-            vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
-            totalLPClaimed += claimableAmount;
-            lpClaimedPerVestSchedule[schedule.vestingScheduleIndex] += claimableAmount;
-        }
-        // TODO indicate to the VestAMMMultiRewards staking rewards contract that
-        // a withdraw has occured and they now have less funds locked
-        // the difficulty here is when you go to stake them you are using investment tokens
-        // when you go to withdraw you are using LP units so they are not the same.
-        if (claimType == ClaimType.LP) {
-            // TODO implement this logic to calculate the % of LP tokens you are withdrawing
-            // since the rewards contract knows the % you invested they want to know the % you
-            // are removing even though they are in different token formats. going in you have investment tokens
-            // going out you have LP tokens
-            VestAMMMultiRewards.withdraw(claimableAmount, depositData.lpTokenAmount);
-        }
-        IERC20(claimToken).safeTransfer(msg.sender, claimableAmount);
-        emit ClaimedToken(
-            claimToken,
-            msg.sender,
-            claimableAmount,
-            _claimType,
-            schedule.vestingScheduleIndex,
-            _singleRewardsIndex
-        );
-    }
+    // function _claimTokens(
+    //     uint256 _tokenId,
+    //     ClaimType _claimType,
+    //     uint8 _singleRewardsIndex
+    // ) internal {
+    //     Validate.owner(ownerOf(_tokenId));
+    //     if (_claimType == ClaimType.LP) {
+    //         // TODO claim fees for the protocol. this fee amount should be the global total for all LP tokens
+    //         // we want to know how many fees ALL the LP tokens have earned since the last time someone claimed
+    //         // or since we called a public function which captures the fees
+    //         collectAllFees();
+    //     }
+    //     uint256 claimableAmount = claimableTokens(_tokenId, _claimType, _singleRewardsIndex);
+    //     Validate.hasClaimBalance(claimableAmount);
+    //     VestVestingToken memory schedule = vestingDetails[_tokenId];
+    //     address claimToken = _claimType == ClaimType.Single // How do you know which lpVestingSchedule to use?
+    //         ? vAmmInfo.lpVestingSchedule.singleVestingSchedules[_singleRewardsIndex].token
+    //         : depositData.lpToken;
+    //     if (_claimType == ClaimType.Single) {
+    //         vestingDetails[_tokenId].lastClaimedAtRewardList[_singleRewardsIndex] = block.timestamp;
+    //         singleClaimedPerVestSchedule[schedule.vestingScheduleIndex][_singleRewardsIndex] += claimableAmount;
+    //         totalSingleClaimed[claimToken] += claimableAmount;
+    //     } else {
+    //         vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
+    //         totalLPClaimed += claimableAmount;
+    //         lpClaimedPerVestSchedule[schedule.vestingScheduleIndex] += claimableAmount;
+    //     }
+    //     // TODO indicate to the VestAMMMultiRewards staking rewards contract that
+    //     // a withdraw has occured and they now have less funds locked
+    //     // the difficulty here is when you go to stake them you are using investment tokens
+    //     // when you go to withdraw you are using LP units so they are not the same.
+    //     if (_claimType == ClaimType.LP) {
+    //         // TODO implement this logic to calculate the % of LP tokens you are withdrawing
+    //         // since the rewards contract knows the % you invested they want to know the % you
+    //         // are removing even though they are in different token formats. going in you have investment tokens
+    //         // going out you have LP tokens
+    //         VestAMMMultiRewards.withdraw(claimableAmount, depositData.lpTokenAmount);
+    //     }
+    //     IERC20(claimToken).safeTransfer(msg.sender, claimableAmount);
+    //     emit ClaimedToken(
+    //         claimToken,
+    //         msg.sender,
+    //         claimableAmount,
+    //         _claimType,
+    //         schedule.vestingScheduleIndex,
+    //         _singleRewardsIndex
+    //     );
+    // }
 
-    function sendFeesToAelin(address _token, uint256 _amount) external {
+    function sendFeesToAelin(address _token, uint256 _amount) public {
         // NOTE you don't just transfer fees to the AelinFeeModule because you need to track
         // which period they came in for AELIN stakers to be able to claim correctly from the AelinFeeModule
-        AelinFeeModule(aelinFeeModule).sendFees(_token, _amount);
+
+        // TODO
+        // AelinFeeModule(aelinFeeModule).sendFees(_token, _amount);
         emit SentFees(_token, _amount);
     }
 
-    function _validateSchedules(LPVestingSchedule[] _vestingSchedules) internal {
+    function _validateSchedules(LPVestingSchedule[] memory _vestingSchedules) internal pure {
         Validate.maxVestingPeriods(MAX_LP_VESTING_SCHEDULES, _vestingSchedules.length);
         for (uint256 i; i < _vestingSchedules.length; ++i) {
-            Validate.vestingCliff(1825 days, _vestingSchedules[i].schedule.vestingCliffPeriod, i);
-            Validate.vestingPeriod(1825 days, _vestingSchedules[i].schedule.vestingPeriod, i);
+            Validate.vestingCliff(1825 days, _vestingSchedules[i].vestingCliffPeriod, i);
+            Validate.vestingPeriod(1825 days, _vestingSchedules[i].vestingPeriod, i);
             Validate.investorShare(100 * 10**18, 0, _vestingSchedules[i].investorLPShare, i);
             Validate.hasTotalBaseTokens(_vestingSchedules[i].totalBaseTokens, i);
             Validate.lpNotZero(_vestingSchedules[i].totalLPTokens, i);
             Validate.nothingClaimed(_vestingSchedules[i].claimed, i);
-            Validate.maxSingleRewards(MAX_SINGLE_REWARDS, _vestingSchedules[i].singleVestingSchedules.length, i);
+            // TODO
+            // Validate.maxSingleRewards(MAX_SINGLE_REWARDS, _vestingSchedules[i].singleVestingSchedules.length, i);
             _validateSingleVestingSched(_vestingSchedules[i].singleVestingSchedules);
         }
     }
 
-    function _validateSingleVestingSched(SingleVestingSchedule[] _singleVestingSchedules) internal {
+    function _validateSingleVestingSched(SingleVestingSchedule[] memory _singleVestingSchedules) internal pure {
         for (uint256 i; i < _singleVestingSchedules.length; ++i) {
             Validate.singleVestingCliff(1825 days, _singleVestingSchedules[i].vestingCliffPeriod, i);
             Validate.singleVestingPeriod(1825 days, _singleVestingSchedules[i].vestingPeriod, i);
-            Validate.hasTotalSingleTokens(_singleVestingSchedules[i].totalSingleToken, i);
+            Validate.hasTotalSingleTokens(_singleVestingSchedules[i].totalSingleTokens, i);
             Validate.singleNothingClaimed(_singleVestingSchedules[i].claimed, i);
-            Validate.singleHolderNotNull(_singleVestingSchedules[i].singleHolder, i);
+            // TODO
+            // Validate.singleHolderNotNull(_singleVestingSchedules[i].singleHolder, i);
             Validate.depositNotFinalized(_singleVestingSchedules[i].finalizedDeposit, i);
         }
     }
@@ -808,45 +877,49 @@ contract VestAMM is AelinVestingToken, IVestAMM {
      * their index will be set to 1. This system gets rid of the need to have a settle step where the
      * deallocation is managed like we do in the regular Aelin pools.
      */
-    function mintVestingToken(
-        address _to,
-        uint256 _amount,
-        uint8 _vestingScheduleIndex
-    ) internal {
-        uint256[] memory singleRewardTimestamps = new uint256[](
-            vAmmInfo.lpVestingSchedules[_vestingScheduleIndex].singleVestingSchedules.length
-        );
-        _mintVestingToken(_to, _amount, 0, singleRewardTimestamps, _vestingScheduleIndex);
-    }
+    // function mintVestingToken(
+    //     address _to,
+    //     uint256 _amount,
+    //     uint8 _vestingScheduleIndex
+    // ) internal {
+    //     uint256[] memory singleRewardTimestamps = new uint256[](
+    //         vAmmInfo.lpVestingSchedules[_vestingScheduleIndex].singleVestingSchedules.length
+    //     );
+    //     // TODO
+    //     // _mintVestingToken(_to, _amount, 0, singleRewardTimestamps, _vestingScheduleIndex);
+    // }
 
-    function singleRewardsToDeposit(address _holder) external view returns (rewardsToDeposit) {
-        DepositToken[] rewardsToDeposit;
-        for (uint i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
-            for (uint j = 0; j < vAmmInfo.lpVestingSchedules[i].singleVestingSchedules; j++) {
+    // // Does not like returning the array name
+    function singleRewardsToDeposit(address _holder) external view returns (DepositToken[] memory) {
+        DepositToken[] memory rewardsToDeposit = new DepositToken[](numSingleRewards);
+        for (uint8 i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
+            for (uint8 j = 0; j < vAmmInfo.lpVestingSchedules[i].singleVestingSchedules.length; j++) {
                 address singleHolder = vAmmInfo.lpVestingSchedules[i].singleVestingSchedules[j].singleHolder;
                 if (_holder == vAmmInfo.mainHolder || _holder == singleHolder) {
                     uint256 amountDeposited = holderDeposits[vAmmInfo.mainHolder][i][j] + holderDeposits[singleHolder][i][j];
-                    rewardsToDeposit.push(
-                        DepositToken(
-                            i,
-                            j,
-                            vAmmInfo.lpVestingSchedules[i].singleVestingSchedules[j].rewardToken,
-                            vAmmInfo.lpVestingSchedules[i].singleVestingSchedules[j].totalTokens - amountDeposited
-                        )
+                    DepositToken memory rewardToDeposit = DepositToken(
+                        i,
+                        j,
+                        vAmmInfo.lpVestingSchedules[i].singleVestingSchedules[j].rewardToken,
+                        vAmmInfo.lpVestingSchedules[i].singleVestingSchedules[j].totalSingleTokens - amountDeposited
                     );
+                    rewardsToDeposit[i * vAmmInfo.lpVestingSchedules[i].singleVestingSchedules.length + j] = rewardToDeposit;
                 }
             }
         }
+        return rewardsToDeposit;
     }
 
     modifier initOnce() {
-        Validate.isNotInitialized(calledInitialize);
+        // TODO
+        // Validate.isNotInitialized(calledInitialize);
         calledInitialize = true;
         _;
     }
 
     modifier onlyHolder() {
-        Validate.callerIsHolder(vAmmInfo.mainHolder, msg.sender);
+        // TODO
+        // Validate.callerIsHolder(vAmmInfo.mainHolder, msg.sender);
         _;
     }
 
@@ -856,12 +929,13 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     modifier dealOpen() {
-        Validate.daelIsOpen(!isCancelled);
+        // TODO
+        // Validate.daelIsOpen(!isCancelled);
         _;
     }
 
     modifier depositWindowEnded() {
-        Validate.depositWindowEnded(lpDepositTime, lpFundingExpiry);
+        Validate.depositWindowEnded(depositData.lpDepositTime, lpFundingExpiry);
         _;
     }
 
@@ -873,7 +947,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     // TODO add require. ty
     modifier lpComplete() {
         // require lpDepositTime > 0
-        Validate.inFundingComplete(lpDepositTime);
+        // TODO
+        // Validate.inFundingComplete(depositData.lpDepositTime);
         _;
     }
 
@@ -888,11 +963,11 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // NOTE the logic we are using here is all buckets need to be full before you can over allocate
         // on any bucket. if any bucket is open you must fill that bucket before you can overflow any other bucket that
         // is already full
-        for (uint8 i; i < numVestingSchedules.length; i++) {
+        for (uint8 i; i < numVestingSchedules; i++) {
             if (i == _vestingScheduleIndex) {
                 continue;
             }
-            if (!isVestingScheduleFull[numVestingSchedules[i]]) {
+            if (!isVestingScheduleFull[i]) {
                 otherBucketsFull = false;
                 break;
             }

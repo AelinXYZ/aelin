@@ -3,6 +3,7 @@ pragma solidity 0.8.6;
 
 import "../../libraries/AelinNftGating.sol";
 import "../../libraries/AelinAllowList.sol";
+import "./IVestAMMLibrary.sol";
 
 interface IVestAMM {
     enum Deallocation {
@@ -45,10 +46,11 @@ interface IVestAMM {
     }
 
     struct DepositData {
-        uint256 lpDepositTime;
         address lpToken;
         uint256 lpTokenAmount;
+        uint256 lpDepositTime;
     }
+
     struct DeployPool {
         uint256 investmentTokenAmount;
         uint256 baseTokenAmount;
@@ -69,10 +71,12 @@ interface IVestAMM {
         address mainHolder;
         Deallocation deallocation;
         LPVestingSchedule[] lpVestingSchedules;
-        // NOTE: if hasLaunchPhase is true, then there must be a amm pool identifier we can use.
+        // NOTE: if hasLaunchPhase is false, then there must be a amm pool identifier we can use.
         // In most cases, the poolAddress will be enough, but some times (balancer) we need to use the poolId
         address poolAddress;
         bytes32 poolId;
+        // If hasLaunchPhase is true, then we need all data needed to create a new pool
+        IVestAMMLibrary.CreateNewPool newPoolData;
     }
 
     struct MigrationRules {
@@ -97,7 +101,8 @@ interface IVestAMM {
     struct RemoveSingle {
         uint8 lpScheduleIndex;
         uint8 singleRewardIndex;
-        address token;
+        // NOTE: not needed
+        // address token;
     }
 
     event AcceptVestDeal(address indexed depositor, uint256 depositTokenAmount, uint8 vestingScheduleIndex);
@@ -123,6 +128,8 @@ interface IVestAMM {
     event Disavow(address indexed voucher);
 
     event SingleDepositComplete(address indexed token, uint8 vestingScheduleIndex, uint8 singleRewardIndex);
+
+    event BaseDepositComplete(address indexed token, address indexed depositor, uint256 amount);
 
     event DepositComplete(uint256 depositExpiry, uint256 lpFundingExpiry);
 

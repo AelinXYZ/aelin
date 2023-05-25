@@ -9,18 +9,22 @@ import "../libraries/AelinAllowList.sol";
 import {IVestAMM} from "./interfaces/IVestAMM.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+interface IAelinLibraryList {
+    function libraryList(address _library) external view returns (bool);
+}
+
 contract VestAMMDealFactory is IVestAMM {
-    using SafeERC20 for IERC20;
+    // using SafeERC20 for IERC20;
 
     address public immutable VEST_AMM_LOGIC;
     address public immutable AELIN_FEE_MODULE;
     address public immutable VEST_DAO_FEES = 0x0000000000000000000000000000000000000000;
-    address public immutable AELIN_LIBRARY_LIST;
+    IAelinLibraryList public immutable AELIN_LIBRARY_LIST;
 
     constructor(address _aelinLibraryList) {
         VEST_AMM_LOGIC = address(new VestAMM());
         AELIN_FEE_MODULE = address(new AelinFeeModule());
-        AELIN_LIBRARY_LIST = _aelinLibraryList;
+        AELIN_LIBRARY_LIST = IAelinLibraryList(_aelinLibraryList);
     }
 
     // TODO list
@@ -39,17 +43,19 @@ contract VestAMMDealFactory is IVestAMM {
     // NOTE for liquidity launch we are pretty close but we need to fix the way we capture fees for single rewards
     // NOTE for liquidity growth...
     function createVestAMM(
-        AmmData calldata _ammData,
+        // AmmData calldata _ammData,
         VAmmInfo calldata _vAmmInfo,
         DealAccess calldata _dealAccess
     ) external returns (address vAmmAddress) {
-        require(AELIN_LIBRARY_LIST.libraryList[_ammData.ammLibrary], "invalid AMM library");
+        // Use customs errors
+        require(AELIN_LIBRARY_LIST.libraryList(_vAmmInfo.ammData.ammLibrary), "invalid AMM library");
 
         vAmmAddress = Clones.clone(VEST_AMM_LOGIC);
 
-        VestAMM(vAmmAddress).initialize(_ammData, _vAmmInfo, _dealAccess, AELIN_FEE_MODULE);
+        VestAMM(vAmmAddress).initialize(_vAmmInfo, _dealAccess, AELIN_FEE_MODULE);
 
-        emit NewVestAMM(_ammData, _vAmmInfo, _dealAccess);
+        // TODO
+        // emit NewVestAMM(_vAmmInfo, _dealAccess);
     }
 
     // TODO a function that locks existing LP tokens

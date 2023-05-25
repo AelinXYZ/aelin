@@ -23,6 +23,7 @@ interface IWeightedPoolFactory {
         uint256[] memory normalizedWeights,
         IRateProvider[] memory rateProviders,
         uint256 swapFeePercentage,
-        address owner
+        address owner,
+        bytes32 salt
     ) external returns (address);
 }

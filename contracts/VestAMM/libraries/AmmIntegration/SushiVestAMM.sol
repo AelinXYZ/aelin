@@ -7,17 +7,23 @@ import "contracts/VestAMM/interfaces/sushi/ISushiFactory.sol";
 import "contracts/VestAMM/interfaces/sushi/ISushiRouter.sol";
 import "contracts/VestAMM/interfaces/sushi/IUniswapV2Pair.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import "forge-std/console.sol";
 
 interface IERC20Decimals {
     function decimals() external view returns (uint8);
 }
 
-library SushiVestAMM {
+// NOTE: This should be a lirbary. But atmm it's not possible to test the whole process with a library.
+contract SushiVestAMM {
+    using SafeERC20 for IERC20;
+
     address constant sushiFactoryV2Address = address(0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac);
     address constant sushiRouterV2Address = address(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
     uint256 constant DEADLINE = 20 minutes;
 
-    function deployPool(IVestAMMLibrary.CreateNewPool calldata _newPool) public returns (address) {
+    function deployPool(IVestAMMLibrary.CreateNewPool calldata _newPool) external returns (address) {
         return _createPool(_newPool);
     }
 
@@ -85,6 +91,9 @@ library SushiVestAMM {
         )
     {
         //NOTE Some pools have staking available. For this version we will not support staking.
+        for (uint256 i; i < _addLiquidityData.tokens.length; i++) {
+            IERC20(_addLiquidityData.tokens[i]).transferFrom(msg.sender, address(this), _addLiquidityData.tokensAmtsIn[i]);
+        }
 
         // Add liquidity to pool via Router
         ISushiRouter sushiRouterV2 = ISushiRouter(sushiRouterV2Address);
@@ -98,7 +107,7 @@ library SushiVestAMM {
             _addLiquidityData.tokensAmtsIn[1],
             _minAmtsToLp[0],
             _minAmtsToLp[1],
-            address(this),
+            msg.sender, // lpTokens sent to vestAMM
             block.timestamp + DEADLINE
         );
 
@@ -108,8 +117,13 @@ library SushiVestAMM {
         return (numInvTokensInLP, numBaseTokensInLP, 0, 0);
     }
 
-    function removeLiquidity(IVestAMMLibrary.RemoveLiquidity calldata _removeLiquidityData) external {
+    function removeLiquidity(IVestAMMLibrary.RemoveLiquidity calldata _removeLiquidityData)
+        external
+        returns (uint256, uint256)
+    {
         ISushiRouter sushiRouterV2 = ISushiRouter(sushiRouterV2Address);
+
+        IERC20(_removeLiquidityData.lpToken).transferFrom(msg.sender, address(this), _removeLiquidityData.lpTokenAmtIn);
 
         address[] memory path = new address[](2);
         path[0] = _removeLiquidityData.tokens[0];
@@ -117,15 +131,17 @@ library SushiVestAMM {
 
         uint[] memory amountsMin = sushiRouterV2.getAmountsOut(_removeLiquidityData.lpTokenAmtIn, path);
 
-        sushiRouterV2.removeLiquidity(
+        (uint256 token0Amt, uint256 token1Amt) = sushiRouterV2.removeLiquidity(
             _removeLiquidityData.tokens[0],
             _removeLiquidityData.tokens[1],
             _removeLiquidityData.lpTokenAmtIn,
             amountsMin[0],
             amountsMin[1],
-            address(this),
+            msg.sender, // investmentToken + baseToken sent to vestAMM
             block.timestamp + DEADLINE
         );
+
+        return (token0Amt, token1Amt);
     }
 
     function checkPoolExists(IVestAMM.VAmmInfo calldata _vammInfo) external view returns (bool) {
