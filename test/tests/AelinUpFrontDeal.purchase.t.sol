@@ -695,13 +695,8 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         MockERC721(collection721_1).mint(user1, 2);
 
         vm.startPrank(user1);
-<<<<<<< HEAD
         vm.expectRevert("purchase amount greater than max");
-        AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount);
-=======
-        vm.expectRevert("purchase amount greater than max allocation");
         AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, _purchaseAmount, 0);
->>>>>>> add multiple vesting schedules to UpFrontDeal
         vm.stopPrank();
     }
 
@@ -1321,7 +1316,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         nftPurchaseList[0].tokenIds = tokenIdsArray;
 
         // balance(user2) * purchaseCollection2 as user2 can't buy more than the allocation amount for collection2
-        vm.expectRevert("purchase amount greater than max allocation");
+        vm.expectRevert("purchase amount greater than max");
         AelinUpFrontDeal(dealAddressNftGating721).acceptDeal(nftPurchaseList, merkleDataEmpty, 6 * purchaseCollection2, 0);
 
         // we then make user2 buy the exact amount
