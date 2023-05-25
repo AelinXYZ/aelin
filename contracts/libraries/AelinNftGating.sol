@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 import {NftCheck, IERC721, IERC1155} from "./NftCheck.sol";
 
 library AelinNftGating {
+    //TEST
     uint256 public constant ID_RANGES_MAX_LENGTH = 10;
 
     // A struct that allows specific token Id ranges to be specified in a 721 collection
