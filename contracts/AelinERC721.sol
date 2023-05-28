@@ -4,11 +4,13 @@ pragma solidity 0.8.19;
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
+/**
+ * @dev A standard ERC721 contract that is extended with a few additional functions and variables.
+ * Due to the constructor being empty for the MinimalProxy architecture the customName and customSymbol
+ * variables are set in the initializer. The MinimalProxy architecture also requires custom logic for
+ * the name(), symbol(), and _setNameAndSymbol() functions.
+ */
 contract AelinERC721 is ERC721, ReentrancyGuard {
-    /**
-     * @dev Due to the constructor being empty for the MinimalProxy architecture we need
-     * to set the name and symbol in the initializer which requires these custom variables
-     */
     string private customName;
     string private customSymbol;
 
@@ -24,14 +26,17 @@ contract AelinERC721 is ERC721, ReentrancyGuard {
     }
 
     /**
-     * @dev Due to the constructor being empty for the MinimalProxy architecture we need
-     * to set the name and symbol, and decimals in the initializer which requires this
-     * custom logic for name(), symbol(), and _setNameAndSymbol()
+     * @notice This view function returns the name of the token.
+     * @return string The name of the token.
      */
     function name() public view virtual override returns (string memory) {
         return customName;
     }
 
+    /**
+     * @notice This view function returns the symbol of the token.
+     * @return string The symbol of the token.
+     */
     function symbol() public view virtual override returns (string memory) {
         return customSymbol;
     }

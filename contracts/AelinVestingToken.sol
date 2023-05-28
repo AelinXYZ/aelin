@@ -21,6 +21,12 @@ contract AelinVestingToken is AelinERC721, IAelinVestingToken {
         emit VestingTokenBurned(_tokenId);
     }
 
+    /**
+     * @notice This function allows anyone to transfer their vesting share to another address.
+     * @param _to The recipient of the vesting token.
+     * @param _tokenId The token Id from which the user wants to trasnfer.
+     * @param _shareAmount The amount of vesting share the user wants to transfer.
+     */
     function transferVestingShare(address _to, uint256 _tokenId, uint256 _shareAmount) public nonReentrant {
         require(ownerOf(_tokenId) == msg.sender, "must be owner to transfer");
         VestingDetails memory schedule = vestingDetails[_tokenId];

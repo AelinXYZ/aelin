@@ -4,15 +4,12 @@ pragma solidity 0.8.19;
 import {NftCheck, IERC721, IERC1155} from "./NftCheck.sol";
 
 library AelinNftGating {
-    /**
-     * @notice The maximum number of token Id ranges that an NftCollectionRules struct can have.
-     */
     uint256 public constant ID_RANGES_MAX_LENGTH = 10;
 
     /**
-     * @notice A stuct containing all the relevant information for an NFT-gated deal.
-     * @dev    For ERC721 collections the nftId mapping specifies whether a token Id has been used.
-     *         For ERC1155 collections, the nftId mapping specifies whether a token Id is accepted in the deal.
+     * @dev For ERC721 collections the nftId mapping specifies whether a token Id has been used.
+     * Conversely, for ERC1155 collections the nftId mapping specifies whether a token Id is accepted
+     * in the deal.
      */
     struct NftGatingData {
         mapping(address => NftCollectionRules) nftCollectionDetails;
@@ -21,11 +18,10 @@ library AelinNftGating {
     }
 
     /**
-     * @notice A struct used to specify the deal rules for an NFT-gated deal.
-     * @dev    The collectionAddress should be unique, otherwise will override pre-existing storage.
-     * @dev    If purchaseAmount equals zero, then unlimited purchase amounts are allowed.
-     * @dev    Both the tokenIds and minTokensEligible arrays are only applicable for deals involving ERC1155
-     *         collections.
+     * @dev The collectionAddress should be unique, otherwise will override pre-existing storage.
+     * NOTE If purchaseAmount equals zero, then unlimited purchase amounts are allowed. Additionally,
+     * both the tokenIds and minTokensEligible arrays are only applicable for deals involving ERC1155
+     * collections.
      */
     struct NftCollectionRules {
         uint256 purchaseAmount;
@@ -38,17 +34,13 @@ library AelinNftGating {
     }
 
     /**
-     * @notice A struct that allows specific token Id ranges to be specified in a 721 collection.
-     * @dev    The range is inclusive of beginning and ending token Ids.
+     * NOTE The range is inclusive of beginning and ending token Ids.
      */
     struct IdRange {
         uint256 begin;
         uint256 end;
     }
 
-    /**
-     * @notice A struct used when making a purchase from an NFT-gated deal.
-     */
     struct NftPurchaseList {
         address collectionAddress;
         uint256[] tokenIds;
@@ -56,10 +48,10 @@ library AelinNftGating {
 
     /**
      * @notice This function helps to set up an NFT-gated deal.
-     * @dev    Checks if deal is NFT-gated and sets hasNftList.
-     *         If it is NFT-gated, then NftCollectionRules array is stored in the relevant NftGatingData mapping.
-     * @param  _nftCollectionRules An array of all NftCollectionRules for the deal.
-     * @param  _data The contract storage data where the NftCollectionRules data is stored.
+     * @dev Checks if deal is NFT-gated, stores NFT-gated collection rule information, and 
+     * sets hasNftList.
+     * @param _nftCollectionRules An array of all NftCollectionRules for the deal.
+     * @param _data The contract storage data where the NftCollectionRules data is stored.
      */
     function initialize(NftCollectionRules[] calldata _nftCollectionRules, NftGatingData storage _data) external {
         if (_nftCollectionRules.length > 0) {
@@ -111,12 +103,12 @@ library AelinNftGating {
 
     /**
      * @notice This function allows anyone to become a purchaser with a qualified ERC721 nft in the pool.
-     * @dev    Multiple scenarios supported:
-     *         1. Each wallet holding a qualified NFT to deposit an unlimited amount of purchase tokens.
-     *         2. A certain amount of investment tokens per qualified NFT held.
-     * @param  _nftPurchaseList NFT collection address and token Ids to use for purchase.
-     * @param  _data Contract storage data for NFT-gating passed by reference.
-     * @param  _purchaseTokenAmount Amount to purchase with, must not exceed max allowable from collection rules.
+     * @dev Multiple scenarios supported:
+     * 1. Each wallet holding a qualified NFT to deposit an unlimited amount of purchase tokens.
+     * 2. A certain amount of investment tokens per qualified NFT held.
+     * @param _nftPurchaseList NFT collection address and token Ids to use for purchase.
+     * @param _data Contract storage data for NFT-gating passed by reference.
+     * @param _purchaseTokenAmount Amount to purchase with, must not exceed max allowable from collection rules.
      * @return uint256 Max purchase token amount allowable.
      */
     function purchaseDealTokensWithNft(
@@ -135,10 +127,10 @@ library AelinNftGating {
         uint256 tokenIdsLength;
         NftCollectionRules memory nftCollectionRules;
 
-        //The running total for 721 tokens
+        // The running total for 721 tokens
         uint256 maxPurchaseTokenAmount;
 
-        //Iterate over the collections
+        // Iterate over the collections
         for (uint256 i; i < nftPurchaseListLength; ++i) {
             nftPurchaseList = _nftPurchaseList[i];
             collectionAddress = nftPurchaseList.collectionAddress;
@@ -149,7 +141,7 @@ library AelinNftGating {
             require(collectionAddress != address(0), "collection should not be null");
             require(nftCollectionRules.collectionAddress == collectionAddress, "collection not in the pool");
 
-            //Iterate over the token ids
+            // Iterate over the token ids
             for (uint256 j; j < tokenIdsLength; ++j) {
                 if (NftCheck.supports721(collectionAddress)) {
                     require(IERC721(collectionAddress).ownerOf(tokenIds[j]) == msg.sender, "has to be the token owner");
@@ -163,7 +155,7 @@ library AelinNftGating {
                     _data.nftId[collectionAddress][tokenIds[j]] = true;
                     emit BlacklistNFT(collectionAddress, tokenIds[j]);
                 } else {
-                    //Must otherwise be an 1155 given initialise function
+                    // Must otherwise be an 1155 given initialise function
                     require(_data.nftId[collectionAddress][tokenIds[j]], "tokenId not in the pool");
                     require(
                         IERC1155(collectionAddress).balanceOf(msg.sender, tokenIds[j]) >=

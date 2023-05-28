@@ -31,7 +31,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     AelinAllowList.AllowList public allowList;
     AelinNftGating.NftGatingData public nftGating;
 
-    //User => vestingIndex => amount
+    // User => VestingIndex => Amount
     mapping(address => mapping(uint256 => uint256)) public purchaseTokensPerUser;
     mapping(address => mapping(uint256 => uint256)) public poolSharesPerUser;
 
@@ -53,7 +53,8 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     uint256[] public vestingExpiries;
 
     /**
-     * @dev initializes the contract configuration, called from the factory contract when creating a new Up Front Deal
+     * @dev Initializes the contract configuration, called from the factory contract when creating a new Up
+     * Front Deal.
      */
     function initialize(
         UpFrontDealData calldata _dealData,
@@ -63,7 +64,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
         address _aelinTreasuryAddress,
         address _aelinEscrowLogicAddress
     ) external initOnce {
-        // pool initialization checks
+        // Pool initialization checks
         require(_dealData.purchaseToken != _dealData.underlyingDealToken, "purchase & underlying the same");
         require(_dealData.purchaseToken != address(0), "cant pass null purchase address");
         require(_dealData.underlyingDealToken != address(0), "cant pass null underlying addr");
@@ -77,7 +78,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
         require(numberOfVestingSchedules > 0, "no vesting schedules");
         require(numberOfVestingSchedules <= MAX_VESTING_SCHEDULES, "too many vesting schedules");
 
-        //sets as the first vesting schedule value initially but updates in the loop later
+        // Sets as the first vesting schedule value initially but updates in the loop later
         uint256 lowestPrice = _dealConfig.vestingSchedules[0].purchaseTokenPerDealToken;
 
         for (uint256 i; i < numberOfVestingSchedules; i++) {
@@ -99,7 +100,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
             require(minDealTotal >= _dealConfig.purchaseRaiseMinimum, "raise min > deal total");
         }
 
-        // store pool and deal details as state variables
+        // Store pool and deal details as state variables
         dealData = _dealData;
         dealConfig = _dealConfig;
 
@@ -110,8 +111,10 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
 
         dealFactory = msg.sender;
 
-        // the deal token has the same amount of decimals as the underlying deal token,
-        // eventually making them 1:1 redeemable
+        /**
+         * @dev The deal token has the same amount of decimals as the underlying deal token, eventually making
+         * them 1:1 redeemable.
+         */
         _setNameAndSymbol(
             string(abi.encodePacked("aeUpFrontDeal-", _dealData.name)),
             string(abi.encodePacked("aeUD-", _dealData.symbol))
@@ -120,14 +123,16 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
         aelinEscrowLogicAddress = _aelinEscrowLogicAddress;
         aelinTreasuryAddress = _aelinTreasuryAddress;
 
-        // Allow list logic
-        // check if there's allowlist and amounts,
-        // if yes, store it to `allowList` and emit a single event with the addresses and amounts
+        /**
+         * @dev Allow list logic: Checks if there's an allowlist and amounts, if yes then stores it to
+         * `allowList` and emit a single event with the addresses and amounts.
+         */
         AelinAllowList.initialize(_allowListInit, allowList);
 
-        // NftCollection logic
-        // check if the deal is nft gated
-        // if yes, store it in `nftCollectionDetails` and `nftId` and emit respective events for 721 and 1155
+        /**
+         * @dev NftCollection logic: Checks if the deal is NFT-gated, if yes then stores it in
+         * `nftCollectionDetails` and `nftId` and emit respective events for 721 and 1155 tokens.
+         */
         AelinNftGating.initialize(_nftCollectionRules, nftGating);
 
         require(!(allowList.hasAllowList && nftGating.hasNftList), "cant have allow list & nft");
@@ -151,17 +156,11 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
         emit DealFullyFunded(address(this), block.timestamp, purchaseExpiry, vestingCliffExpiries, vestingExpiries);
     }
 
-    modifier initOnce() {
-        require(!calledInitialize, "can only init once");
-        calledInitialize = true;
-        _;
-    }
-
     /**
-     * @dev method for holder to deposit underlying deal tokens
-     * all underlying deal tokens must be deposited for the purchasing period to start
-     * if tokens were deposited directly, this method must still be called to start the purchasing period
+     * @notice This function allows the holder to deposit underlying deal tokens.
      * @param _depositUnderlyingAmount how many underlying tokens the holder will transfer to the contract
+     * NOTE All underlying deal tokens must be deposited for the purchasing period to start. If tokens were
+     * deposited directly, this method must still be called in order to start the purchasing period.
      */
     function depositUnderlyingTokens(uint256 _depositUnderlyingAmount) external onlyHolder {
         address _underlyingDealToken = dealData.underlyingDealToken;
@@ -182,7 +181,8 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     }
 
     /**
-     * @dev allows holder to withdraw any excess underlying deal tokens deposited to the contract
+     * @notice This function allows the holder to withdraw any excess underlying deal tokens deposited
+     * to the contract.
      */
     function withdrawExcess() external onlyHolder {
         address _underlyingDealToken = dealData.underlyingDealToken;
@@ -197,12 +197,14 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     }
 
     /**
-     * @dev accept deal by depositing purchasing tokens which is converted to a mapping which stores the amount of
-     * underlying purchased. pool shares have the same decimals as the underlying deal token
-     * @param _nftPurchaseList NFTs to use for accepting the deal if deal is NFT gated
-     * @param _merkleData Merkle Proof data to prove investors allocation
-     * @param _purchaseTokenAmount how many purchase tokens will be used to purchase deal token shares
-     * @param _vestingIndex the vesting schedule index for which to claim from
+     * @notice This function allows anyone to accept a deal by depositing purchasing tokens.
+     * @dev The deposited purchasing tokens are converted to a mapping that stores the amount of underlying
+     * tokens purchased.
+     * @param _nftPurchaseList NFTs to use for accepting the deal if deal is NFT gated.
+     * @param _merkleData Merkle Proof data to prove investors allocation.
+     * @param _purchaseTokenAmount How many purchase tokens will be used to purchase deal token shares.
+     * @param _vestingIndex The vesting schedule index for which to claim from.
+     * NOTE Pool shares have the same decimals as the underlying deal token.
      */
     function acceptDeal(
         AelinNftGating.NftPurchaseList[] calldata _nftPurchaseList,
@@ -237,13 +239,17 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
 
         uint8 underlyingTokenDecimals = IERC20Extended(dealData.underlyingDealToken).decimals();
 
-        // this takes into account the decimal conversion between purchasing token and underlying deal token
-        // pool shares having the same amount of decimals as underlying deal tokens
+        /**
+         * @dev This takes into account the decimal conversion between purchasing token and underlying deal token
+         * pool shares having the same amount of decimals as underlying deal tokens.
+         */
         uint256 poolSharesAmount = (purchaseTokenAmount * 10 ** underlyingTokenDecimals) / _purchaseTokenPerDealToken;
         require(poolSharesAmount > 0, "purchase amount too small");
 
-        // pool shares directly correspond to the amount of deal tokens that can be minted
-        // pool shares held = deal tokens minted as long as no deallocation takes place
+        /**
+         * @dev Pool shares directly correspond to the amount of deal tokens that can be minted. Moreover,
+         * pool shares held = deal tokens minted as long as no deallocation takes place.
+         */
         totalPoolShares += poolSharesAmount;
         poolSharesPerUser[msg.sender][_vestingIndex] += poolSharesAmount;
 
@@ -262,7 +268,11 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     }
 
     /**
-     * @dev purchaser calls to claim their deal tokens or refund if the minimum raise does not pass
+     * @notice This function allows the purchaser to claim their deal tokens or refund if the minimum raise
+     * does not pass.
+     * @param _vestingIndex The vesting index that corresponds to the purchase the user made.
+     * NOTE If a user purchased across multiple vesting schedules they will need to call this function for each
+     * vesting index to recieve a full refund.
      */
     function purchaserClaim(uint256 _vestingIndex) external nonReentrant purchasingOver {
         require(poolSharesPerUser[msg.sender][_vestingIndex] > 0, "no pool shares to claim with");
@@ -278,13 +288,13 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
             uint256 precisionAdjustedRefund;
 
             if (deallocate) {
-                // adjust for deallocation and mint deal tokens
+                // Adjust for deallocation and mint deal tokens
                 adjustedShareAmountForUser =
                     (((poolSharesPerUser[msg.sender][_vestingIndex] * _underlyingDealTokenTotal) / totalPoolShares) *
                         (BASE - AELIN_FEE - dealData.sponsorFee)) /
                     BASE;
 
-                // refund any purchase tokens that got deallocated
+                // Refund any purchase tokens that got deallocated
                 uint256 purchasingRefund = purchaseTokensPerUser[msg.sender][_vestingIndex] -
                     ((purchaseTokensPerUser[msg.sender][_vestingIndex] * _underlyingDealTokenTotal) / totalPoolShares);
 
@@ -295,7 +305,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
                 // Transfer purchase token refund
                 IERC20(_purchaseToken).safeTransfer(msg.sender, precisionAdjustedRefund);
             } else {
-                // mint deal tokens when there is no deallocation
+                // Mint deal tokens when there is no deallocation
                 adjustedShareAmountForUser =
                     ((BASE - AELIN_FEE - dealData.sponsorFee) * poolSharesPerUser[msg.sender][_vestingIndex]) /
                     BASE;
@@ -303,7 +313,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
             poolSharesPerUser[msg.sender][_vestingIndex] = 0;
             purchaseTokensPerUser[msg.sender][_vestingIndex] = 0;
 
-            // mint vesting token and create schedule
+            // Mint vesting token and create schedule
             _mintVestingToken(msg.sender, adjustedShareAmountForUser, purchaseExpiry, _vestingIndex);
             emit ClaimDealTokens(msg.sender, adjustedShareAmountForUser, precisionAdjustedRefund);
         } else {
@@ -317,10 +327,11 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     }
 
     /**
-     * @dev sponsor calls once the purchasing period is over if the minimum raise has passed to claim
-     * their share of deal tokens
-     * NOTE also calls the claim for the protocol fee
-     * NOTE sponser sets the vesting index
+     * @notice This function allows the sponsor to claim their share of the deal tokens if the purchasing
+     * period has passed and the minimum raise has been achieved.
+     * @dev The sponser sets their own vesting index.
+     * @param _vestingIndex The vesting index the sponsor elects.
+     * NOTE This function also calls the claim for the protocol fee.
      */
     function sponsorClaim(uint256 _vestingIndex) external nonReentrant purchasingOver passMinimumRaise onlySponsor {
         require(_vestingIndex < dealConfig.vestingSchedules.length, "wrong vesting index");
@@ -333,7 +344,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
         uint256 totalSold = totalPoolShares > _underlyingDealTokenTotal ? _underlyingDealTokenTotal : totalPoolShares;
         uint256 _sponsorFeeAmt = (totalSold * dealData.sponsorFee) / BASE;
 
-        // mint vesting token and create schedule
+        // Mint vesting token and create schedule
         _mintVestingToken(_sponsor, _sponsorFeeAmt, purchaseExpiry, _vestingIndex);
         emit SponsorClaim(_sponsor, _sponsorFeeAmt);
 
@@ -343,9 +354,9 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     }
 
     /**
-     * @dev holder calls once purchasing period is over to claim their raise or
-     * underlying deal tokens if the minimum raise has not passed
-     * NOTE also calls the claim for the protocol fee
+     * @notice This function allows the holder, purchasing period is over, to claim their raise or the
+     * underlying deal tokens if the minimum raise was not exceeded.
+     * NOTE This function also calls the claim for the protocol fee.
      */
     function holderClaim() external nonReentrant purchasingOver onlyHolder {
         require(!holderClaimed, "holder already claimed");
@@ -379,10 +390,10 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
                 IERC20(_purchaseToken).safeTransfer(_holder, precisionAdjustedRaise);
                 emit HolderClaim(_holder, _purchaseToken, precisionAdjustedRaise, _underlyingDealToken, 0, block.timestamp);
             } else {
-                // holder receives raise
+                // Holder receives raise
                 uint256 _currentBalance = IERC20(_purchaseToken).balanceOf(address(this));
                 IERC20(_purchaseToken).safeTransfer(_holder, _currentBalance);
-                // holder receives any leftover underlying deal tokens
+                // Holder receives any leftover underlying deal tokens
                 uint256 _underlyingRefund = _underlyingDealTokenTotal - totalPoolShares;
                 IERC20(_underlyingDealToken).safeTransfer(_holder, _underlyingRefund);
                 emit HolderClaim(
@@ -405,7 +416,8 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     }
 
     /**
-     * @dev transfers protocol fee of underlying deal tokens to the treasury escrow contract
+     * @notice This function transfers the protocol fee of the underlying deal tokens to the treasury
+     * escrow contract.
      */
     function feeEscrowClaim() public purchasingOver passMinimumRaise {
         if (!feeEscrowClaimed) {
@@ -431,17 +443,21 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     }
 
     /**
-     * @dev ERC721 deal token holder calls after the purchasing period to claim underlying deal tokens
-     * amount based on the vesting schedule
-     * @param _tokenId the token ID to check the quantity of claimable underlying tokens
+     * @notice This function allows a purchaser to claim the underlying deal tokens after the purchasing period
+     * is over. The amount recieved is dependent on the vesting schedule associated with the token id.
+     * @param _tokenId The token id to check the quantity of claimable underlying tokens.
+     * @return uint256 The amount of underlying deal tokens recieved.
      */
     function claimUnderlying(uint256 _tokenId) external returns (uint256) {
         return _claimUnderlying(msg.sender, _tokenId);
     }
 
     /**
-     * @dev claims every vesting schedule specified for each token Id specified
-     * @param _indices the token ID to check the quantity of claimable underlying tokens
+     * @notice This function allows a purchaser to claim across multiple indices in order to retrieve the
+     * underlying deal tokens after the purchasing period is over. The amount recieved is dependent on the
+     * vesting schedules associated with the token ids.
+     * @param _indices An array of token ids to check the quantity of claimable underlying tokens.
+     * @return uint256 The total amount of underlying deal tokens recieved.
      */
     function claimUnderlyingMultipleEntries(uint256[] memory _indices) external returns (uint256) {
         uint256 totalClaimed;
@@ -471,8 +487,9 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     }
 
     /**
-     * @dev a view showing the amount of the underlying deal token a ERC721 deal token holder can claim
-     * @param _tokenId the token ID to check the quantity of claimable underlying tokens
+     * @notice This view function returns the the amount of the underlying deal token a purchaser can claim.
+     * @param _tokenId The token id to check the quantity of claimable underlying tokens.
+     * @return uint256 The amount of underlying deal tokens that can be recieved.
      */
     function claimableUnderlyingTokens(uint256 _tokenId) public view returns (uint256) {
         VestingDetails memory details = vestingDetails[_tokenId];
@@ -496,8 +513,11 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
                     ? details.share
                     : (details.share * (maxTime - minTime)) / vestingPeriod;
 
-                // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
-                // although it will generally never happen as solidity rounds down so there should always be a little bit left
+                /**
+                 * @dev There could potentially be the case where the last user claims a slightly smaller amount
+                 * if there is some precision loss, although it will generally never happen as solidity rounds
+                 * down so there should always be a little bit left.
+                 */
                 address _underlyingDealToken = dealData.underlyingDealToken;
                 precisionAdjustedUnderlyingClaimable = underlyingClaimable >
                     IERC20(_underlyingDealToken).balanceOf(address(this))
@@ -509,17 +529,18 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     }
 
     /**
-     * @dev the holder may change their address
-     * @param _holder address to swap the holder role
+     * @notice This function allows the holder to set a future holder address without changing the
+     * holder address currently.
+     * @param _futureHolder The future holder address.
      */
-    function setHolder(address _holder) external onlyHolder {
-        require(_holder != address(0), "holder cant be null");
-        futureHolder = _holder;
-        emit HolderSet(_holder);
+    function setHolder(address _futureHolder) external onlyHolder {
+        require(_futureHolder != address(0), "holder cant be null");
+        futureHolder = _futureHolder;
+        emit HolderSet(_futureHolder);
     }
 
     /**
-     * @dev futurHolder can call to accept the role of holder
+     * @notice This function allows the future holder address to replace the current holder address.
      */
     function acceptHolder() external {
         require(msg.sender == futureHolder, "only future holder can access");
@@ -528,26 +549,27 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     }
 
     /**
-     * @dev a function that any Ethereum address can call to vouch for a pool's legitimacy
+     * @notice A function that any address can call to vouch for a pool's legitimacy.
      */
     function vouch() external {
         emit Vouch(msg.sender);
     }
 
     /**
-     * @dev a function that any Ethereum address can call to disavow for a pool's legitimacy
+     * @notice A function that any address can call to disavow a pool's legitimacy.
      */
     function disavow() external {
         emit Disavow(msg.sender);
     }
 
     /**
-     * @dev returns allow list information
-     * @param _userAddress address to use in returning the amountPerAddress
-     * @return address[] returns array of addresses included in the allow list
-     * @return uint256[] returns array of allow list amounts for the address matching the index of allowListAddresses
-     * @return uint256 allow list amount for _userAddress input
-     * @return bool true if this deal has an allow list
+     * @notice This view function the allow list information for this deal.
+     * @param _userAddress The address to use in returning the amountPerAddress.
+     * @return address[] Returns array of addresses included in the allow list.
+     * @return uint256[] Returns array of allow list amounts for the address matching the index of
+     * allowListAddresses.
+     * @return uint256 Allow list amount for _userAddress input.
+     * @return bool Returns true if this deal has an allow list, false otherwise.
      */
     function getAllowList(address _userAddress) public view returns (address[] memory, uint256[] memory, uint256, bool) {
         return (
@@ -559,13 +581,13 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     }
 
     /**
-     * @dev returns NFT collection details for the input collection address
-     * @param _collection NFT collection address to get the collection details for
-     * @return uint256 purchase amount, if 0 then unlimited purchase
-     * @return address collection address used for configuration
-     * @return IdRange[] for ERC721, an array of token Id ranges
-     * @return uint256[] for ERC1155, included token IDs for this collection
-     * @return uint256[] for ERC1155, min number of tokens required for participating
+     * @notice This view function returns the NFT collection details for the input collection address.
+     * @param _collection The NFT collection address to get the collection details for.
+     * @return uint256 Purchase amount, if 0 then an unlimited purchase.
+     * @return address Collection address used for configuration.
+     * @return IdRange[] For ERC721 collections, an array of token Id ranges.
+     * @return uint256[] for ERC1155 collections, included token IDs for this collection.
+     * @return uint256[] for ERC1155 collections, min number of tokens required for participating.
      */
     function getNftCollectionDetails(
         address _collection
@@ -580,22 +602,24 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     }
 
     /**
-     * @dev returns various details about the NFT gating storage
-     * @param _collection NFT collection address to check
-     * @param _nftId if _collection is ERC721 check if this ID has been used, if ERC1155 check if this ID is included
-     * @return bool if _collection is ERC721 true if this ID has been used, if ERC1155 true if this ID is included
-     * @return bool returns hasNftList, true if this deal has a valid NFT gating list
+     * @notice This view function returns the NFT gating storage details for this deal.
+     * @param _collection NFT collection address to check.
+     * @param _nftId If _collection is ERC721 check if this id has been used, if ERC1155 check if this id is
+     * included.
+     * @return bool If _collection is an ERC721 collection, then true signifies the id has been used,
+     * if it is an ERC1155 collection, true signifies that the id is included.
+     * @return bool Returns true if this deal has a valid NFT gating list.
      */
     function getNftGatingDetails(address _collection, uint256 _nftId) public view returns (bool, bool) {
         return (nftGating.nftId[_collection][_nftId], nftGating.hasNftList);
     }
 
     /**
-     * @dev returns various details about the vesting schedule
-     * @param _vestingIndex the vesting index schedule for which to claim from
-     * @return uint256 the purchaseTokenPerDealToken for the vesting schedule selected
-     * @return uint256 the vestingCliffPeriod for the vesting schedule selected
-     * @return uint256 the vestingPeriod for the vesting schedule selected
+     * @notice This view function returns the vesting schedule details for a given vesting index.
+     * @param _vestingIndex The vesting index schedule to retrieve details about.
+     * @return uint256 The purchaseTokenPerDealToken for the vesting schedule selected.
+     * @return uint256 The vestingCliffPeriod for the vesting schedule selected.
+     * @return uint256 The vestingPeriod for the vesting schedule selected.
      */
     function getVestingScheduleDetails(uint256 _vestingIndex) public view returns (uint256, uint256, uint256) {
         require(_vestingIndex < dealConfig.vestingSchedules.length, "index out of bounds");
@@ -607,19 +631,26 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     }
 
     /**
-     * @dev returns the number of vesting schedules that exist for this deal
-     * @return uint256 the length of the vesting schedules array
+     * @notice This view function returns the number of vesting schedules that exist for this deal.
+     * @return uint256 The length of the vesting schedules array.
      */
     function getNumberOfVestingSchedules() public view returns (uint256) {
         return dealConfig.vestingSchedules.length;
     }
 
     /**
-     * @dev hasPurchasedMerkle
-     * @param _index index of leaf node/ address to check
+     * @notice This is a view function that returns a boolean specifying whether or not an account has
+     * has purchased tokens from a deal using a merkle proof.
+     * @param _index The index of leaf node/address to check.
      */
     function hasPurchasedMerkle(uint256 _index) public view returns (bool) {
         return MerkleTree.hasPurchasedMerkle(trackClaimed, _index);
+    }
+
+    modifier initOnce() {
+        require(!calledInitialize, "can only init once");
+        calledInitialize = true;
+        _;
     }
 
     modifier onlyHolder() {

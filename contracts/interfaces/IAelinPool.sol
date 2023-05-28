@@ -15,26 +15,32 @@ interface IAelinPool {
         NftCollectionRules[] nftCollectionRules;
     }
 
-    // collectionAddress should be unique, otherwise will override
+    /**
+     * @dev The collectionAddress should be unique, otherwise will override pre-existing storage.
+     * NOTE If purchaseAmount equals zero, then unlimited purchase amounts are allowed. Additionally,
+     * both the tokenIds and minTokensEligible arrays are only applicable for deals involving ERC1155
+     * collections.
+     */
     struct NftCollectionRules {
-        // if 0, then unlimited purchase
         uint256 purchaseAmount;
         address collectionAddress;
-        // An array of Id Ranges for gating specific nfts in unique erc721 collections (e.g. POAP)
+        // Ranges for 721s
         IdRange[] idRanges;
-        // both variables below are only applicable for 1155
+        // Ids and minimums for 1155s
         uint256[] tokenIds;
-        // min number of tokens required for participating
         uint256[] minTokensEligible;
+    }
+
+    /**
+     * NOTE The range is inclusive of beginning and ending token Ids.
+     */
+    struct IdRange {
+        uint256 begin;
+        uint256 end;
     }
 
     struct NftPurchaseList {
         address collectionAddress;
         uint256[] tokenIds;
-    }
-
-    struct IdRange {
-        uint256 begin;
-        uint256 end;
     }
 }

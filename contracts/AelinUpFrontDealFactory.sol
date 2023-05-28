@@ -20,6 +20,14 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
         AELIN_TREASURY = _aelinTreasury;
     }
 
+    /**
+     * @notice This function allows anyone to create an Up Front Deal.
+     * @param _dealData The deal data for the new deal.
+     * @param _dealConfig The deal configuration settings for the new deal.
+     * @param _nftCollectionRules An array of NFT collection rules for the new deal.
+     * @param _allowListInit The allow list informtation for the new deal.
+     * @return upFrontDealAddress The address of the newly created Up Front Deal.
+     */
     function createUpFrontDeal(
         IAelinUpFrontDeal.UpFrontDealData calldata _dealData,
         IAelinUpFrontDeal.UpFrontDealConfig calldata _dealConfig,

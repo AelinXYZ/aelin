@@ -38,8 +38,7 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
     Timeline public proRataRedemption;
 
     /**
-     * @dev the initialize method replaces the constructor setup and can only be called once
-     * NOTE the deal tokens wrapping the underlying are always 18 decimals
+     * NOTE The deal tokens wrapping the underlying are always 18 decimals.
      */
     function initialize(
         string calldata _poolName,
@@ -66,22 +65,23 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
 
         depositComplete = false;
 
-        /**
-         * calculates the amount of underlying deal tokens you get per wrapped deal token accepted
-         */
+        // Calculates the amount of underlying deal tokens you get per wrapped deal token accepted
         underlyingPerDealExchangeRate = (_dealData.underlyingDealTokenTotal * 1e18) / maxTotalSupply;
         emit HolderAccepted(_dealData.holder);
     }
 
     /**
-     * @dev the holder finalizes the deal for the pool created by the
-     * sponsor by depositing funds using this method.
-     *
-     * NOTE if the deposit was completed with a transfer instead of this method
-     * the deposit still needs to be finalized by calling this method with
-     * _underlyingDealTokenAmount set to 0
+     * @notice This function allows the holder to deposit any amount of underlying deal tokens to a pool.
+     * If the cumulative deposited amount is greater than the underlyingDealTokenTotal the deal is finalized.
+     * @param _underlyingDealTokenAmount The amount of underlying deal tokens deposited.
+     * @return bool Returns true if the cumulative deposited amount is greater than the underlyingDealTokenTotal,
+     * meaning that the deal is full funded and finalized. Returns false otherwise.
+     * NOTE If the deposit was completed with a transfer instead of this method the deposit still needs to
+     * be finalized by calling this method with _underlyingDealTokenAmount set to 0.
      */
-    function depositUnderlying(uint256 _underlyingDealTokenAmount) external finalizeDeposit nonReentrant returns (bool) {
+    function depositUnderlying(
+        uint256 _underlyingDealTokenAmount
+    ) external finalizeDeposit onlyHolder nonReentrant returns (bool) {
         if (_underlyingDealTokenAmount > 0) {
             uint256 currentBalance = IERC20(underlyingDealToken).balanceOf(address(this));
             IERC20(underlyingDealToken).safeTransferFrom(msg.sender, address(this), _underlyingDealTokenAmount);
@@ -120,8 +120,9 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
     }
 
     /**
-     * @dev the holder can withdraw any amount accidentally deposited over
-     * the amount needed to fulfill the deal or all amount if deposit was not completed
+     * @notice This function allows the holder to withdraw any amount of underlying tokens accidently
+     * deposited over the amount needed to fulfill the deal, or all of the amount deposited if the deal
+     * was not completed.
      */
     function withdraw() external onlyHolder {
         uint256 withdrawAmount;
@@ -137,11 +138,9 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
     }
 
     /**
-     * @dev after the redemption period has ended the holder can withdraw
-     * the excess funds remaining from purchasers who did not accept the deal
-     *
-     * Requirements:
-     * - both the pro rata and open redemption windows are no longer active
+     * @notice This function allows the holder to withdraw any excess underlying deal tokens after
+     * the the redemption period has ended.
+     * NOTE Both the pro rata and open redemption windows must no longer be active.
      */
     function withdrawExpiry() external onlyHolder {
         require(proRataRedemption.expiry > 0, "redemption period not started");
@@ -158,9 +157,11 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
     }
 
     /**
-     * @dev a view showing the number of claimable underlying deal
+     * @notice This view function returns the number of claimable underlying deal tokens given the token id
+     * of a user's vesting token.
+     * @param _tokenId The token id of a user's vesting token.
+     * @return uint256 The number of underlying deal tokens a user can claim.
      */
-
     function claimableUnderlyingTokens(uint256 _tokenId) public view returns (uint256) {
         VestingDetails memory schedule = vestingDetails[_tokenId];
         uint256 precisionAdjustedUnderlyingClaimable;
@@ -178,8 +179,11 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
                     : (schedule.share * (maxTime - minTime)) / vestingPeriod;
                 uint256 underlyingClaimable = (underlyingPerDealExchangeRate * claimableAmount) / 1e18;
 
-                // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
-                // although it will generally never happen as solidity rounds down so there should always be a little bit left
+                /**
+                 * @dev There could potentially be the case where the last user claims a slightly smaller amount
+                 * if there is some precision loss, although it will generally never happen as solidity rounds
+                 * down so there should always be a little bit left.
+                 */
                 precisionAdjustedUnderlyingClaimable = underlyingClaimable >
                     IERC20(underlyingDealToken).balanceOf(address(this))
                     ? IERC20(underlyingDealToken).balanceOf(address(this))
@@ -189,6 +193,14 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
         return precisionAdjustedUnderlyingClaimable;
     }
 
+    /**
+     * @notice This function allows a user to claim their underlying deal tokens, or a partial amount of their
+     * underlying tokens, from multiple vesting tokens once they have vested according to the schedule created
+     * by the sponsor.
+     * @param _indices The token ids of a user's vesting tokens.
+     * @return uint256 The number of underlying deal tokens a user claimed.
+     * NOTE If the vesting of any token ids has been completed the corresponding vesting token will be burned.
+     */
     function claimUnderlyingMultipleEntries(uint256[] memory _indices) external returns (uint256) {
         uint256 totalClaimed;
         for (uint256 i = 0; i < _indices.length; i++) {
@@ -198,9 +210,11 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
     }
 
     /**
-     * @dev allows a user to claim their underlying deal tokens or a partial amount
-     * of their underlying tokens once they have vested according to the schedule
-     * created by the sponsor
+     * @notice This function allows a user to claim their underlying deal tokens, or a partial amount of their
+     * underlying tokens, once they have vested according to the schedule created by the sponsor.
+     * @param _tokenId The token id of a user's vesting token.
+     * @return uint256 The number of underlying deal tokens a user claimed.
+     * NOTE If the vesting has been completed the vesting token will be burned.
      */
     function claimUnderlyingTokens(uint256 _tokenId) external returns (uint256) {
         return _claimUnderlyingTokens(msg.sender, _tokenId);
@@ -224,33 +238,47 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
     }
 
     /**
-     * @dev allows the purchaser to mint deal tokens. this method is also used
-     * to send deal tokens to the sponsor. It may only be called from the pool
-     * contract that created this deal
+     * @notice This function allows the purchaser to mint deal tokens. It is also used to send deal tokens to
+     * the sponsor.
+     * @param _to The recipient of the vesting token.
+     * @param _amount The number of vesting tokens to be minted.
+     * NOTE It may only be called from the pool contract that created this deal, and only after the deposit has
+     * been completed.
      */
     function mintVestingToken(address _to, uint256 _amount) external depositCompleted onlyPool {
         totalUnderlyingAccepted += _amount;
+        /**
+         * @dev Vesting index hard-coded to zero here. Multiple vesting schedules currently not supported
+         * for these deals.
+         */
         _mintVestingToken(_to, _amount, vestingCliffExpiry, 0);
     }
 
     /**
-     * @dev allows the protocol to handle protocol fees coming in deal tokens.
-     * It may only be called from the pool contract that created this deal
+     * @notice This function allows the protocol to handle protocol fees, with deal tokens.
+     * @param _dealTokenAmount The number of deal tokens reserved for protocol fees.
+     * NOTE It may only be called from the pool contract that created this deal, and only after the deposit has
+     * been completed.
      */
-    function transferProtocolFee(uint256 dealTokenAmount) external depositCompleted onlyPool {
-        uint256 underlyingProtocolFees = (underlyingPerDealExchangeRate * dealTokenAmount) / 1e18;
+    function transferProtocolFee(uint256 _dealTokenAmount) external depositCompleted onlyPool {
+        uint256 underlyingProtocolFees = (underlyingPerDealExchangeRate * _dealTokenAmount) / 1e18;
         IERC20(underlyingDealToken).safeTransfer(address(aelinFeeEscrow), underlyingProtocolFees);
     }
 
     /**
-     * @dev the holder may change their address
+     * @notice This function allows the holder to set a future holder address without changing the
+     * holder address currently.
+     * @param _futureHolder The future holder address.
      */
-    function setHolder(address _holder) external onlyHolder {
-        require(_holder != address(0), "holder cant be null");
-        futureHolder = _holder;
-        emit HolderSet(_holder);
+    function setHolder(address _futureHolder) external onlyHolder {
+        require(_futureHolder != address(0), "holder cant be null");
+        futureHolder = _futureHolder;
+        emit HolderSet(_futureHolder);
     }
 
+    /**
+     * @notice This function allows the future holder address to replace the current holder address.
+     */
     function acceptHolder() external {
         require(msg.sender == futureHolder, "only future holder can access");
         holder = futureHolder;

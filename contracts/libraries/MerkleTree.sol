@@ -16,8 +16,14 @@ library MerkleTree {
     }
 
     /**
-     * @dev a function that checks if the index leaf node is valid and if the user has purchased.
-     * will set the index node to purchased if approved
+     * @notice This function allows users to verify their allocation in a deal with a merkle proof.
+     * @dev Checks if the index leaf node is valid and if the user has purchased. It will set the index node
+     * to purchased if approved.
+     * @param merkleData The merkle data struct specifying the index, account, amount, and proof of a user's
+     * allocation in a deal.
+     * @param self The Bitmap storage location for tracking already claimed tokens using a merkle proof.
+     * @param _purchaseTokenAmount The amount of tokens to purchase.
+     * @param merkleRoot The merkle root used to verify the merkle data and a user's allocation.
      */
     function purchaseMerkleAmount(
         UpFrontMerkleData calldata merkleData,
@@ -40,7 +46,7 @@ library MerkleTree {
     }
 
     /**
-     * @dev sets the claimedBitMap to true for that index
+     * @dev Sets the claimedBitMap to true for that index.
      */
     function _setPurchased(TrackClaimed storage self, uint256 _index) private {
         uint256 claimedWordIndex = _index / 256;
@@ -49,8 +55,11 @@ library MerkleTree {
     }
 
     /**
-     * @dev returns if address has purchased merkle
-     * @return bool index of the leaf node has purchased or not
+     * @notice This is a view function that returns a boolean specifying whether or not an account has
+     * has purchased tokens from a deal using a merkle proof.
+     * @param self The Bitmap storage location for tracking already claimed tokens using a merkle proof.
+     * @param _index The index of the merkle data to be tested.
+     * @return bool Returns true if the index of the leaf node has purchased, and false if not.
      */
     function hasPurchasedMerkle(TrackClaimed storage self, uint256 _index) public view returns (bool) {
         uint256 claimedWordIndex = _index / 256;

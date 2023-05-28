@@ -10,7 +10,9 @@ error AwaitingDeposit();
 error AlreadyDeposited();
 
 contract AelinTokenSwapper {
-    // Initial token supply set to 10M tokens as stated in AELIP-50
+    /**
+     * NOTE Initial token supply set to 10M tokens as stated in AELIP-50.
+     */
     uint256 public constant TOKEN_SUPPLY = 10 * 1e6 * 1e18;
     uint256 public constant OLD_TOKEN_SUPPLY = 5000 * 1e18;
 
@@ -26,6 +28,10 @@ contract AelinTokenSwapper {
         aelinTreasury = _aelinTreasury;
     }
 
+    /**
+     * @notice This function provides a formal method for the Aelin treasury to deposit the new Aelin
+     * token into this Token Swapper contract.
+     */
     function depositTokens() external {
         if (deposited == true) revert AlreadyDeposited();
         if (msg.sender != aelinTreasury) revert Unauthorized();
@@ -35,6 +41,11 @@ contract AelinTokenSwapper {
         emit TokenDeposited(msg.sender, address(this), TOKEN_SUPPLY);
     }
 
+    /**
+     * @notice This function allows any holder of the old Aelin token to redeem their old tokens for a
+     * commensurate amount of new Aelin tokens.
+     * @param _amount The amount of old Aelin tokens to be swapped for new Aelin tokens.
+     */
     function swap(uint256 _amount) external {
         if (deposited == false) revert AwaitingDeposit();
         if (_amount == 0) revert AmountTooLow();

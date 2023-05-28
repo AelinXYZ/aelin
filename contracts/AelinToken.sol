@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /**
- * @dev a standard ERC20 contract for the AELIN token
+ * @dev A standard ERC20 contract for the AELIN token.
  */
 
 contract AelinToken is ERC20 {

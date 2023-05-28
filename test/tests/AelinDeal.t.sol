@@ -212,13 +212,13 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         (uint256 openPeriod, , ) = AelinDeal(dealAddress).openRedemption();
         vm.assume(_depositAmount < type(uint256).max);
         vm.assume(_depositAmount >= AelinDeal(dealAddress).underlyingDealTokenTotal());
-        // anybody can call this function
-        vm.startPrank(user1);
-        deal(address(underlyingDealToken), user1, type(uint256).max);
+        // only the holder can call this function
+        vm.startPrank(dealHolderAddress);
+        deal(address(underlyingDealToken), dealHolderAddress, type(uint256).max);
         underlyingDealToken.approve(address(dealAddress), type(uint256).max);
 
         vm.expectEmit(true, true, true, true);
-        emit DepositDealToken(address(underlyingDealToken), user1, _depositAmount);
+        emit DepositDealToken(address(underlyingDealToken), dealHolderAddress, _depositAmount);
         vm.expectEmit(true, true, true, true);
         emit DealFullyFunded(
             poolAddress,

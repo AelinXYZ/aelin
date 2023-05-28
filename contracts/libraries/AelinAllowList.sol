@@ -14,6 +14,12 @@ library AelinAllowList {
         bool hasAllowList;
     }
 
+    /**
+     * @notice This function stores any Allow List information for a deal if there is any.
+     * @param _init The Allow List information that is to be stored. This includes an array of 
+     * addresses and an array of corresponding amounts that will be mapped together in storage.
+     * @param _self The storage struct for the Allow List information.
+     */
     function initialize(InitData calldata _init, AllowList storage _self) external {
         if (_init.allowListAddresses.length > 0 || _init.allowListAmounts.length > 0) {
             require(_init.allowListAddresses.length == _init.allowListAmounts.length, "arrays should be same length");

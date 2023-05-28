@@ -24,26 +24,35 @@ contract AelinFeeEscrow {
     }
 
     /**
-     * @dev the treasury may change their address
+     * @notice This function allows the treasury to set a future treasury address without changing the
+     * treasury address currently.
+     * @param _futureTreasury The future treasury address.
      */
     function setTreasury(address _futureTreasury) external onlyTreasury {
         require(_futureTreasury != address(0), "cant pass null treasury address");
         futureTreasury = _futureTreasury;
     }
 
+    /**
+     * @notice This function allows the future treasury address to replace the current treasury address.
+     */
     function acceptTreasury() external {
         require(msg.sender == futureTreasury, "must be future treasury");
         treasury = futureTreasury;
         emit SetTreasury(futureTreasury);
     }
 
+    /**
+     * @notice This function allows the treasury to further delay the vesting expiry of escrowed assets
+     * by the DELAY_PERIOD.
+     */
     function delayEscrow() external onlyTreasury {
         vestingExpiry = block.timestamp + DELAY_PERIOD;
         emit DelayEscrow(vestingExpiry);
     }
 
     /**
-     * @dev transfer all the escrow tokens to the treasury
+     * @notice This function allows the treasury to transfer all of the escrow tokens to the treasury.
      */
     function withdrawToken() external onlyTreasury {
         require(block.timestamp > vestingExpiry, "cannot access funds yet");
