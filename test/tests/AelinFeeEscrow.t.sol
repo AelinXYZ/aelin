@@ -64,14 +64,18 @@ contract AelinFeeEscrowTest is Test, AelinTestUtils {
             merkleRoot: 0x0000000000000000000000000000000000000000000000000000000000000000
         });
 
+        IAelinUpFrontDeal.VestingSchedule[] memory vestingSchedules = new IAelinUpFrontDeal.VestingSchedule[](1);
+
+        vestingSchedules[0].purchaseTokenPerDealToken = 3e20;
+        vestingSchedules[0].vestingCliffPeriod = 60 days;
+        vestingSchedules[0].vestingPeriod = 365 days;
+
         IAelinUpFrontDeal.UpFrontDealConfig memory dealConfig;
         dealConfig = IAelinUpFrontDeal.UpFrontDealConfig({
             underlyingDealTokenTotal: 1e35,
-            purchaseTokenPerDealToken: 3e20,
             purchaseRaiseMinimum: 0,
             purchaseDuration: 10 days,
-            vestingPeriod: 365 days,
-            vestingCliffPeriod: 60 days,
+            vestingSchedules: vestingSchedules,
             allowDeallocation: true
         });
 
@@ -94,7 +98,7 @@ contract AelinFeeEscrowTest is Test, AelinTestUtils {
         vm.startPrank(user1);
         deal(address(purchaseToken), user1, 3e18);
         purchaseToken.approve(address(upfrontDeal), 3e18);
-        AelinUpFrontDeal(upfrontDeal).acceptDeal(nftPurchaseList, merkleDataEmpty, 3e18);
+        AelinUpFrontDeal(upfrontDeal).acceptDeal(nftPurchaseList, merkleDataEmpty, 3e18, 0);
         vm.stopPrank();
 
         // Holder claim

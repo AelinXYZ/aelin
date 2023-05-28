@@ -26,6 +26,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
     address dealAddressNftGating1155;
     address dealAddressLowDecimals;
     address dealAddressNftGating721IdRanges;
+    address dealAddressMultipleVestingSchedules;
 
     function setUp() public {
         AelinAllowList.InitData memory allowListEmpty;
@@ -40,6 +41,8 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         IAelinUpFrontDeal.UpFrontDealData memory dealData = getDealData();
         IAelinUpFrontDeal.UpFrontDealConfig memory dealConfig = getDealConfig();
         IAelinUpFrontDeal.UpFrontDealConfig memory dealConfigAllowDeallocation = getDealConfigAllowDeallocation();
+        IAelinUpFrontDeal.UpFrontDealConfig
+            memory dealConfigMultipleVestingSchedules = getDealConfigMultipleVestingSchedules();
 
         IAelinUpFrontDeal.UpFrontDealData memory dealDataLowDecimals = getDealData();
         dealDataLowDecimals.underlyingDealToken = address(underlyingDealTokenLowDecimals);
@@ -114,6 +117,13 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
             allowListEmpty
         );
 
+        dealAddressMultipleVestingSchedules = upFrontDealFactory.createUpFrontDeal(
+            dealData,
+            dealConfigMultipleVestingSchedules,
+            nftCollectionRulesEmpty,
+            allowListEmpty
+        );
+
         vm.stopPrank();
         vm.startPrank(dealHolderAddress);
 
@@ -142,6 +152,9 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
 
         underlyingDealToken.approve(address(dealAddressNftGating721IdRanges), type(uint256).max);
         AelinUpFrontDeal(dealAddressNftGating721IdRanges).depositUnderlyingTokens(1e35);
+
+        underlyingDealToken.approve(address(dealAddressMultipleVestingSchedules), type(uint256).max);
+        AelinUpFrontDeal(dealAddressMultipleVestingSchedules).depositUnderlyingTokens(1e35);
 
         vm.stopPrank();
     }
@@ -255,13 +268,73 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListEmpty);
 
         dealConfig.purchaseDuration = 10 days;
-        dealConfig.vestingCliffPeriod = _vestingCliffPeriod;
-        dealConfig.vestingPeriod = _vestingPeriod;
+        dealConfig.vestingSchedules[0].vestingCliffPeriod = _vestingCliffPeriod;
+        dealConfig.vestingSchedules[0].vestingPeriod = _vestingPeriod;
         vm.expectRevert("max 5 year cliff");
         upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListEmpty);
 
-        dealConfig.vestingCliffPeriod = 365 days;
+        dealConfig.vestingSchedules[0].vestingCliffPeriod = 365 days;
         vm.expectRevert("max 5 year vesting");
+        upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListEmpty);
+
+        vm.stopPrank();
+    }
+
+    function test_CreateUpFrontDeal_RevertWhen_WrongVestingDurationsAcrossVestingSchedules(
+        uint256 _vestingCliffPeriod,
+        uint256 _vestingPeriod
+    ) public {
+        vm.startPrank(dealCreatorAddress);
+        vm.assume(_vestingCliffPeriod > 1825 days);
+        vm.assume(_vestingPeriod > 1825 days);
+
+        AelinAllowList.InitData memory allowListEmpty;
+        IAelinUpFrontDeal.UpFrontDealData memory dealData = getDealData();
+        IAelinUpFrontDeal.UpFrontDealConfig memory dealConfig = getDealConfig();
+
+        IAelinUpFrontDeal.VestingSchedule[] memory vestingSchedules = new IAelinUpFrontDeal.VestingSchedule[](2);
+
+        //These vesting periods are fine
+        vestingSchedules[0].purchaseTokenPerDealToken = 3e18;
+        vestingSchedules[0].vestingCliffPeriod = 60 days;
+        vestingSchedules[0].vestingPeriod = 365 days;
+
+        //These aren't
+        vestingSchedules[1].purchaseTokenPerDealToken = 3e18;
+        vestingSchedules[1].vestingCliffPeriod = _vestingCliffPeriod;
+        vestingSchedules[1].vestingPeriod = _vestingPeriod;
+
+        dealConfig.vestingSchedules = vestingSchedules;
+
+        vm.expectRevert("max 5 year cliff");
+        upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListEmpty);
+
+        dealConfig.vestingSchedules[1].vestingCliffPeriod = 365 days;
+        vm.expectRevert("max 5 year vesting");
+        upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListEmpty);
+
+        vm.stopPrank();
+    }
+
+    function test_CreateUpFrontDeal_RevertWhen_IncorrectVestingSchedulesLength() public {
+        vm.startPrank(dealCreatorAddress);
+
+        AelinAllowList.InitData memory allowListEmpty;
+        IAelinUpFrontDeal.UpFrontDealData memory dealData = getDealData();
+        IAelinUpFrontDeal.UpFrontDealConfig memory dealConfig = getDealConfig();
+
+        //First no vesting schedules
+        IAelinUpFrontDeal.VestingSchedule[] memory vestingSchedules;
+        dealConfig.vestingSchedules = vestingSchedules;
+
+        vm.expectRevert("no vesting schedules");
+        upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListEmpty);
+
+        //Then too many
+        vestingSchedules = new IAelinUpFrontDeal.VestingSchedule[](11);
+        dealConfig.vestingSchedules = vestingSchedules;
+
+        vm.expectRevert("too many vesting schedules");
         upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListEmpty);
 
         vm.stopPrank();
@@ -279,15 +352,47 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListEmpty);
 
         dealConfig.underlyingDealTokenTotal = 100;
-        dealConfig.purchaseTokenPerDealToken = 0;
+        dealConfig.vestingSchedules[0].purchaseTokenPerDealToken = 0;
         vm.expectRevert("invalid deal price");
         upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListEmpty);
 
-        dealConfig.purchaseTokenPerDealToken = 1;
-        dealConfig.underlyingDealTokenTotal = 1;
-        vm.expectRevert("intended raise too small");
+        dealConfig.vestingSchedules[0].purchaseTokenPerDealToken = 1;
+        dealConfig.underlyingDealTokenTotal = 1e28;
+        vm.expectRevert("raise min > deal total");
         upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListEmpty);
 
+        vm.stopPrank();
+    }
+
+    function test_CreateUpFrontDeal_RevertWhen_WrongDealSetupAcrossMultipleVestingSchedules() public {
+        vm.startPrank(dealCreatorAddress);
+
+        AelinAllowList.InitData memory allowListEmpty;
+        IAelinUpFrontDeal.UpFrontDealData memory dealData = getDealData();
+        IAelinUpFrontDeal.UpFrontDealConfig memory dealConfig = getDealConfig();
+
+        IAelinUpFrontDeal.VestingSchedule[] memory vestingSchedules = new IAelinUpFrontDeal.VestingSchedule[](3);
+
+        vestingSchedules[0].purchaseTokenPerDealToken = 3e18;
+        vestingSchedules[0].vestingCliffPeriod = 60 days;
+        vestingSchedules[0].vestingPeriod = 365 days;
+
+        vestingSchedules[1].purchaseTokenPerDealToken = 3e18;
+        vestingSchedules[1].vestingCliffPeriod = 60 days;
+        vestingSchedules[1].vestingPeriod = 365 days;
+
+        //Invalid price
+        vestingSchedules[2].purchaseTokenPerDealToken = 0;
+        vestingSchedules[2].vestingCliffPeriod = 60 days;
+        vestingSchedules[2].vestingPeriod = 365 days;
+
+        dealConfig.vestingSchedules = vestingSchedules;
+
+        dealConfig.underlyingDealTokenTotal = 100;
+        vm.expectRevert("invalid deal price");
+        upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListEmpty);
+
+        dealConfig.vestingSchedules[2].purchaseTokenPerDealToken = 1;
         dealConfig.underlyingDealTokenTotal = 1e28;
         vm.expectRevert("raise min > deal total");
         upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListEmpty);
@@ -529,8 +634,8 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).tokenCount(), 0);
         // underlying hasn't been deposited yet so deal has't started
         assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).purchaseExpiry(), 0);
-        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).vestingCliffExpiry(), 0);
-        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).vestingExpiry(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).vestingCliffExpiries(0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).vestingExpiries(0), 0);
         // deal data
         (tempString, , , , , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
         assertEq(tempString, "DEAL");
@@ -547,25 +652,26 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         (, , , , , , tempUint, , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealData();
         assertEq(tempUint, 1e18);
         // deal config
-        (tempUint, , , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
+        (tempUint, , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
         assertEq(tempUint, 1e35);
-        (, tempUint, , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
-        assertEq(tempUint, 3e18);
-        (, , tempUint, , , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
+        (, tempUint, , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
         assertEq(tempUint, 1e28);
-        (, , , tempUint, , , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
+        (, , tempUint, ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
         assertEq(tempUint, 10 days);
-        (, , , , tempUint, , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
-        assertEq(tempUint, 365 days);
-        (, , , , , tempUint, ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
-        assertEq(tempUint, 60 days);
-        (, , , , , , tempBool) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
+        (, , , tempBool) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).dealConfig();
         assertFalse(tempBool);
+        // vesting schedule
+        (tempUint, , ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).getVestingScheduleDetails(0);
+        assertEq(tempUint, 3e18);
+        (, tempUint, ) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).getVestingScheduleDetails(0);
+        assertEq(tempUint, 60 days);
+        (, , tempUint) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).getVestingScheduleDetails(0);
+        assertEq(tempUint, 365 days);
         // test allow list
-        (, , , tempBool) = AelinUpFrontDeal(dealAddressNoDeallocation).getAllowList(address(0));
+        (, , , tempBool) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).getAllowList(address(0));
         assertFalse(tempBool);
         // test nft gating
-        (, tempBool) = AelinUpFrontDeal(dealAddressNoDeallocation).getNftGatingDetails(address(0), 0);
+        (, tempBool) = AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).getNftGatingDetails(address(0), 0);
         assertFalse(tempBool);
     }
 
@@ -586,8 +692,8 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).tokenCount(), 0);
         // underlying hasn't been deposited yet so deal has't started
         assertEq(AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).purchaseExpiry(), 0);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).vestingCliffExpiry(), 0);
-        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).vestingExpiry(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).vestingCliffExpiries(0), 0);
+        assertEq(AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).vestingExpiries(0), 0);
         // deal data
         (tempString, , , , , , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealData();
         assertEq(tempString, "DEAL");
@@ -604,20 +710,21 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         (, , , , , , tempUint, , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealData();
         assertEq(tempUint, 1e18);
         // deal config
-        (tempUint, , , , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealConfig();
+        (tempUint, , , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealConfig();
         assertEq(tempUint, 1e35);
-        (, tempUint, , , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealConfig();
-        assertEq(tempUint, 3e18);
-        (, , tempUint, , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealConfig();
+        (, tempUint, , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealConfig();
         assertEq(tempUint, 0);
-        (, , , tempUint, , , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealConfig();
+        (, , tempUint, ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealConfig();
         assertEq(tempUint, 10 days);
-        (, , , , tempUint, , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealConfig();
-        assertEq(tempUint, 365 days);
-        (, , , , , tempUint, ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealConfig();
-        assertEq(tempUint, 60 days);
-        (, , , , , , tempBool) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealConfig();
+        (, , , tempBool) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).dealConfig();
         assertTrue(tempBool);
+        // vesting schedule
+        (tempUint, , ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).getVestingScheduleDetails(0);
+        assertEq(tempUint, 3e18);
+        (, tempUint, ) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).getVestingScheduleDetails(0);
+        assertEq(tempUint, 60 days);
+        (, , tempUint) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).getVestingScheduleDetails(0);
+        assertEq(tempUint, 365 days);
         // test allow list
         (, , , tempBool) = AelinUpFrontDeal(dealAddressAllowDeallocationNoDeposit).getAllowList(address(0));
         assertFalse(tempBool);
@@ -643,9 +750,9 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).tokenCount(), 0);
         // underlying has deposited so deal has started
         assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).purchaseExpiry(), block.timestamp + 10 days);
-        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).vestingCliffExpiries(0), block.timestamp + 10 days + 60 days);
         assertEq(
-            AelinUpFrontDeal(dealAddressNoDeallocation).vestingExpiry(),
+            AelinUpFrontDeal(dealAddressNoDeallocation).vestingExpiries(0),
             block.timestamp + 10 days + 60 days + 365 days
         );
         // deal data
@@ -664,20 +771,21 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         (, , , , , , tempUint, , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealData();
         assertEq(tempUint, 1e18);
         // deal config
-        (tempUint, , , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
+        (tempUint, , , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
         assertEq(tempUint, 1e35);
-        (, tempUint, , , , , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
-        assertEq(tempUint, 3e18);
-        (, , tempUint, , , , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
+        (, tempUint, , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
         assertEq(tempUint, 1e28);
-        (, , , tempUint, , , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
+        (, , tempUint, ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
         assertEq(tempUint, 10 days);
-        (, , , , tempUint, , ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
-        assertEq(tempUint, 365 days);
-        (, , , , , tempUint, ) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
-        assertEq(tempUint, 60 days);
-        (, , , , , , tempBool) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
+        (, , , tempBool) = AelinUpFrontDeal(dealAddressNoDeallocation).dealConfig();
         assertFalse(tempBool);
+        // vesting schedule
+        (tempUint, , ) = AelinUpFrontDeal(dealAddressNoDeallocation).getVestingScheduleDetails(0);
+        assertEq(tempUint, 3e18);
+        (, tempUint, ) = AelinUpFrontDeal(dealAddressNoDeallocation).getVestingScheduleDetails(0);
+        assertEq(tempUint, 60 days);
+        (, , tempUint) = AelinUpFrontDeal(dealAddressNoDeallocation).getVestingScheduleDetails(0);
+        assertEq(tempUint, 365 days);
         // test allow list
         (, , , tempBool) = AelinUpFrontDeal(dealAddressNoDeallocation).getAllowList(address(0));
         assertFalse(tempBool);
@@ -705,8 +813,8 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         assertEq(deal.tokenCount(), 0);
         // underlying has deposited so deal has started
         assertEq(deal.purchaseExpiry(), block.timestamp + 10 days);
-        assertEq(deal.vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
-        assertEq(deal.vestingExpiry(), block.timestamp + 10 days + 60 days + 365 days);
+        assertEq(deal.vestingCliffExpiries(0), block.timestamp + 10 days + 60 days);
+        assertEq(deal.vestingExpiries(0), block.timestamp + 10 days + 60 days + 365 days);
         // deal data
         (tempString, , , , , , , , ) = deal.dealData();
         assertEq(tempString, "DEAL");
@@ -723,20 +831,21 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         (, , , , , , tempUint, , ) = deal.dealData();
         assertEq(tempUint, 1e18);
         // deal config
-        (tempUint, , , , , , ) = deal.dealConfig();
+        (tempUint, , , ) = deal.dealConfig();
         assertEq(tempUint, 1e35);
-        (, tempUint, , , , , ) = deal.dealConfig();
-        assertEq(tempUint, 3e18);
-        (, , tempUint, , , , ) = deal.dealConfig();
+        (, tempUint, , ) = deal.dealConfig();
         assertEq(tempUint, 1e28);
-        (, , , tempUint, , , ) = deal.dealConfig();
+        (, , tempUint, ) = deal.dealConfig();
         assertEq(tempUint, 10 days);
-        (, , , , tempUint, , ) = deal.dealConfig();
-        assertEq(tempUint, 365 days);
-        (, , , , , tempUint, ) = deal.dealConfig();
-        assertEq(tempUint, 60 days);
-        (, , , , , , tempBool) = deal.dealConfig();
+        (, , , tempBool) = deal.dealConfig();
         assertFalse(tempBool);
+        // vesting schedule
+        (tempUint, , ) = deal.getVestingScheduleDetails(0);
+        assertEq(tempUint, 3e18);
+        (, tempUint, ) = deal.getVestingScheduleDetails(0);
+        assertEq(tempUint, 60 days);
+        (, , tempUint) = deal.getVestingScheduleDetails(0);
+        assertEq(tempUint, 365 days);
         // test allow list
         (, , , tempBool) = deal.getAllowList(address(0));
         assertFalse(tempBool);
@@ -763,9 +872,9 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).tokenCount(), 0);
         // underlying hasn't been deposited yet so deal has't started
         assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).purchaseExpiry(), block.timestamp + 10 days);
-        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
+        assertEq(AelinUpFrontDeal(dealAddressNoDeallocation).vestingCliffExpiries(0), block.timestamp + 10 days + 60 days);
         assertEq(
-            AelinUpFrontDeal(dealAddressNoDeallocation).vestingExpiry(),
+            AelinUpFrontDeal(dealAddressNoDeallocation).vestingExpiries(0),
             block.timestamp + 10 days + 60 days + 365 days
         );
         // deal data
@@ -784,20 +893,21 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         (, , , , , , tempUint, , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealData();
         assertEq(tempUint, 1e18);
         // deal config
-        (tempUint, , , , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealConfig();
+        (tempUint, , , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealConfig();
         assertEq(tempUint, 1e35);
-        (, tempUint, , , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealConfig();
-        assertEq(tempUint, 3e18);
-        (, , tempUint, , , , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealConfig();
+        (, tempUint, , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealConfig();
         assertEq(tempUint, 0);
-        (, , , tempUint, , , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealConfig();
+        (, , tempUint, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealConfig();
         assertEq(tempUint, 10 days);
-        (, , , , tempUint, , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealConfig();
-        assertEq(tempUint, 365 days);
-        (, , , , , tempUint, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealConfig();
-        assertEq(tempUint, 60 days);
-        (, , , , , , tempBool) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealConfig();
+        (, , , tempBool) = AelinUpFrontDeal(dealAddressAllowDeallocation).dealConfig();
         assertTrue(tempBool);
+        // vesting schedule
+        (tempUint, , ) = AelinUpFrontDeal(dealAddressAllowDeallocation).getVestingScheduleDetails(0);
+        assertEq(tempUint, 3e18);
+        (, tempUint, ) = AelinUpFrontDeal(dealAddressAllowDeallocation).getVestingScheduleDetails(0);
+        assertEq(tempUint, 60 days);
+        (, , tempUint) = AelinUpFrontDeal(dealAddressAllowDeallocation).getVestingScheduleDetails(0);
+        assertEq(tempUint, 365 days);
         // test allow list
         (, , , tempBool) = AelinUpFrontDeal(dealAddressAllowDeallocation).getAllowList(address(0));
         assertFalse(tempBool);
@@ -821,7 +931,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         assertEq(AelinUpFrontDeal(dealAddressAllowList).tokenCount(), 0);
         // underlying has deposited so deal has started
         assertEq(AelinUpFrontDeal(dealAddressAllowList).purchaseExpiry(), block.timestamp + 10 days);
-        assertEq(AelinUpFrontDeal(dealAddressAllowList).vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
+        assertEq(AelinUpFrontDeal(dealAddressAllowList).vestingCliffExpiries(0), block.timestamp + 10 days + 60 days);
         // test allow list
         address[] memory tempAddressArray;
         uint256[] memory tempUintArray;
@@ -854,6 +964,71 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         assertFalse(tempBool);
     }
 
+    function test_CreateUpFrontDeal_MultipleVestingSchedules() public {
+        string memory tempString;
+        address tempAddress;
+        uint256 tempUint;
+        bool tempBool;
+
+        AelinUpFrontDeal deal = AelinUpFrontDeal(dealAddressMultipleVestingSchedules);
+        // balance
+        assertEq(underlyingDealToken.balanceOf(address(dealAddressMultipleVestingSchedules)), 1e35);
+        // deal contract storage
+        assertEq(deal.dealFactory(), address(upFrontDealFactory));
+        assertEq(deal.name(), "aeUpFrontDeal-DEAL");
+        assertEq(deal.symbol(), "aeUD-DEAL");
+        assertEq(deal.dealStart(), block.timestamp);
+        assertEq(deal.aelinEscrowLogicAddress(), address(testEscrow));
+        assertEq(deal.aelinTreasuryAddress(), aelinTreasury);
+        assertEq(deal.tokenCount(), 0);
+        // underlying has deposited so deal has started
+        assertEq(deal.purchaseExpiry(), block.timestamp + 10 days);
+        // deal data
+        (tempString, , , , , , , , ) = deal.dealData();
+        assertEq(tempString, "DEAL");
+        (, tempString, , , , , , , ) = deal.dealData();
+        assertEq(tempString, "DEAL");
+        (, , tempAddress, , , , , , ) = deal.dealData();
+        assertEq(tempAddress, address(purchaseToken));
+        (, , , tempAddress, , , , , ) = deal.dealData();
+        assertEq(tempAddress, address(underlyingDealToken));
+        (, , , , tempAddress, , , , ) = deal.dealData();
+        assertEq(tempAddress, dealHolderAddress);
+        (, , , , , tempAddress, , , ) = deal.dealData();
+        assertEq(tempAddress, dealCreatorAddress);
+        (, , , , , , tempUint, , ) = deal.dealData();
+        assertEq(tempUint, 1e18);
+        // deal config
+        (tempUint, , , ) = deal.dealConfig();
+        assertEq(tempUint, 1e35);
+        (, tempUint, , ) = deal.dealConfig();
+        assertEq(tempUint, 1e28);
+        (, , tempUint, ) = deal.dealConfig();
+        assertEq(tempUint, 10 days);
+        (, , , tempBool) = deal.dealConfig();
+        assertFalse(tempBool);
+
+        // vesting schedules
+        for (uint256 i; i < 10; i++) {
+            (tempUint, , ) = deal.getVestingScheduleDetails(i);
+            assertEq(tempUint, 3e18 + (1e18 * i));
+            (, tempUint, ) = deal.getVestingScheduleDetails(i);
+            assertEq(tempUint, 60 days + (10 days * i));
+            (, , tempUint) = deal.getVestingScheduleDetails(i);
+            assertEq(tempUint, 365 days + (10 days * i));
+            assertEq(deal.vestingCliffExpiries(i), block.timestamp + 10 days + 60 days + (10 days * i));
+            assertEq(deal.vestingExpiries(i), block.timestamp + 10 days + 60 days + 365 days + (20 days * i));
+        }
+
+        // test allow list
+        (, , , tempBool) = deal.getAllowList(address(0));
+        assertFalse(tempBool);
+        // test nft gating
+        (, tempBool) = deal.getNftGatingDetails(address(0), 0);
+        assertFalse(tempBool);
+        assertEq(underlyingDealTokenLowDecimals.decimals(), 2);
+    }
+
     function test_CreateUpFrontDeal_NftGating721() public {
         address tempAddress;
         uint256 tempUint;
@@ -870,7 +1045,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         assertEq(AelinUpFrontDeal(dealAddressNftGating721).tokenCount(), 0);
         // underlying has deposited so deal has started
         assertEq(AelinUpFrontDeal(dealAddressNftGating721).purchaseExpiry(), block.timestamp + 10 days);
-        assertEq(AelinUpFrontDeal(dealAddressNftGating721).vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
+        assertEq(AelinUpFrontDeal(dealAddressNftGating721).vestingCliffExpiries(0), block.timestamp + 10 days + 60 days);
         // test allow list
         (, , , tempBool) = AelinUpFrontDeal(dealAddressNftGating721).getAllowList(address(0));
         assertFalse(tempBool);
@@ -906,7 +1081,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         // underlying has deposited so deal has started
         assertEq(AelinUpFrontDeal(dealAddressNftGating721IdRanges).purchaseExpiry(), block.timestamp + 10 days);
         assertEq(
-            AelinUpFrontDeal(dealAddressNftGating721IdRanges).vestingCliffExpiry(),
+            AelinUpFrontDeal(dealAddressNftGating721IdRanges).vestingCliffExpiries(0),
             block.timestamp + 10 days + 60 days
         );
         // test allow list
@@ -953,7 +1128,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         assertEq(AelinUpFrontDeal(dealAddressNftGating1155).tokenCount(), 0);
         // underlying has deposited so deal has started
         assertEq(AelinUpFrontDeal(dealAddressNftGating1155).purchaseExpiry(), block.timestamp + 10 days);
-        assertEq(AelinUpFrontDeal(dealAddressNftGating1155).vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
+        assertEq(AelinUpFrontDeal(dealAddressNftGating1155).vestingCliffExpiries(0), block.timestamp + 10 days + 60 days);
         // test allow list
         (, , , tempBool) = AelinUpFrontDeal(dealAddressNftGating1155).getAllowList(address(0));
         assertFalse(tempBool);
@@ -989,5 +1164,6 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         vm.assume(_testAddress != address(0));
         vm.prank(_testAddress);
         assertEq(AelinUpFrontDeal(dealAddressNoDeallocationNoDeposit).claimableUnderlyingTokens(_tokenId), 0);
+        vm.stopPrank();
     }
 }

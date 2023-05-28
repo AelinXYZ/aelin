@@ -50,13 +50,12 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
     mapping(address => uint256) public amountWithdrawn;
     mapping(address => bool) public openPeriodEligible;
     mapping(address => uint256) public allowList;
-    // collectionAddress -> NftCollectionRules struct
+    // CollectionAddress -> NftCollectionRules struct
     mapping(address => NftCollectionRules) public nftCollectionDetails;
 
     /**
-     * @dev For 721, it is used for blacklisting the tokenId of a collection
-     * and for 1155, it is used for identifying the eligible tokenIds for
-     * participating in the pool
+     * @dev For 721, it is used for blacklisting the tokenId of a collection and for 1155, it is used
+     * for identifying the eligible tokenIds for participating in the pool.
      */
     mapping(address => mapping(uint256 => bool)) public nftId;
     bool public hasNftList;
@@ -66,12 +65,12 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
     string private storedSymbol;
 
     /**
-     * @dev the initialize method replaces the constructor setup and can only be called once
+     * @dev The initialize method replaces the constructor setup and can only be called once.
      *
      * Requirements:
-     * - max 1 year duration
-     * - purchase expiry can be set from 30 minutes to 30 days
-     * - max sponsor fee is 15000 representing 15%
+     * - Max 1 year duration.
+     * - Purchase expiry can be set from 30 minutes to 30 days.
+     * - Max sponsor fee is 15000 representing 15%.
      */
     function initialize(
         PoolData calldata _poolData,
@@ -123,7 +122,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
         NftCollectionRules[] calldata nftCollectionRules = _poolData.nftCollectionRules;
 
         if (nftCollectionRules.length > 0) {
-            // if the first address supports 721, the entire pool only supports 721
+            // If the first address supports 721, the entire pool only supports 721
             if (NftCheck.supports721(nftCollectionRules[0].collectionAddress)) {
                 for (uint256 i; i < nftCollectionRules.length; ++i) {
                     require(NftCheck.supports721(nftCollectionRules[i].collectionAddress), "can only contain 721");
@@ -143,7 +142,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
                 }
                 hasNftList = true;
             }
-            // if the first address supports 1155, the entire pool only supports 1155
+            // If the first address supports 1155, the entire pool only supports 1155
             else if (NftCheck.supports1155(nftCollectionRules[0].collectionAddress)) {
                 for (uint256 i; i < nftCollectionRules.length; ++i) {
                     require(NftCheck.supports1155(nftCollectionRules[i].collectionAddress), "can only contain 1155");
@@ -170,12 +169,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
     }
 
     /**
-     * @dev allows anyone to become a purchaser by sending purchase tokens
-     * in exchange for pool tokens
-     *
-     * Requirements:
-     * - the deal is in the purchase expiry window
-     * - the cap has not been exceeded
+     * @notice This function allows anyone to become a purchaser by sending purchase tokens in exchange
+     * for pool tokens.
+     * @param _purchaseTokenAmount The amount of purchase tokens a user will send to the pool.
+     * NOTE The deal must be within the purchase expiry window, and the cap must not have been exceeded.
      */
     function purchasePoolTokens(uint256 _purchaseTokenAmount) external nonReentrant {
         require(block.timestamp < purchaseExpiry, "not in purchase window");
@@ -201,14 +198,13 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
     }
 
     /**
-     * @dev allows anyone to become a purchaser with a qualified erc721
-     * nft in the pool depending on the scenarios
-     *
-     * Scenarios:
-     * 1. each wallet holding a qualified NFT to deposit an unlimited amount of purchase tokens
-     * 2. certain amount of Investment tokens per qualified NFT held
+     * @notice This function allows anyone to become a purchaser with a qualified ERC721 token in the
+     * pool depending on two scenarios. Either, each account holding a qualified NFT can deposit an
+     * unlimited amount of purchase tokens, or there exists a certain amount of investment tokens per
+     * qualified NFT held.
+     * @param _nftPurchaseList The list of NFTs used to qualify an account for purchasing pool tokens.
+     * @param _purchaseTokenAmount The amount of purchase tokens a user will send to the pool.
      */
-
     function purchasePoolTokensWithNft(
         NftPurchaseList[] calldata _nftPurchaseList,
         uint256 _purchaseTokenAmount
@@ -225,10 +221,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
         uint256 tokenIdsLength;
         NftCollectionRules memory nftCollectionRules;
 
-        //The running total for 721 tokens
+        // The running total for 721 tokens
         uint256 maxPurchaseTokenAmount;
 
-        //Iterate over the collections
+        // Iterate over the collections
         for (uint256 i; i < nftPurchaseListLength; ++i) {
             nftPurchaseList = _nftPurchaseList[i];
             collectionAddress = nftPurchaseList.collectionAddress;
@@ -239,7 +235,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
             require(collectionAddress != address(0), "collection should not be null");
             require(nftCollectionRules.collectionAddress == collectionAddress, "collection not in the pool");
 
-            //Iterate over the token ids
+            // Iterate over the token ids
             for (uint256 j; j < tokenIdsLength; ++j) {
                 if (NftCheck.supports721(collectionAddress)) {
                     require(IERC721(collectionAddress).ownerOf(tokenIds[j]) == msg.sender, "has to be the token owner");
@@ -253,7 +249,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
                     nftId[collectionAddress][tokenIds[j]] = true;
                     emit BlacklistNFT(collectionAddress, tokenIds[j]);
                 } else {
-                    //Must otherwise be an 1155 given initialise function
+                    // Must otherwise be an 1155 given initialise function
                     require(nftId[collectionAddress][tokenIds[j]], "tokenId not in the pool");
                     require(
                         IERC1155(collectionAddress).balanceOf(msg.sender, tokenIds[j]) >=
@@ -266,7 +262,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
             if (nftCollectionRules.purchaseAmount > 0 && maxPurchaseTokenAmount != type(uint256).max) {
                 unchecked {
                     uint256 collectionAllowance = nftCollectionRules.purchaseAmount * tokenIdsLength;
-                    // if there is an overflow of the previous calculation, allow the max purchase token amount
+                    // If there is an overflow of the previous calculation, allow the max purchase token amount
                     if (collectionAllowance / nftCollectionRules.purchaseAmount != tokenIdsLength) {
                         maxPurchaseTokenAmount = type(uint256).max;
                     } else {
@@ -335,24 +331,27 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
     }
 
     /**
-     * @dev the withdraw and partial withdraw methods allow a purchaser to take their
-     * purchase tokens back in exchange for pool tokens if they do not accept a deal
-     *
-     * Requirements:
-     * - the pool has expired either due to the creation of a deal or the end of the duration
+     * @notice This function allows any purchaser to take all of their purchase tokens back in exchange
+     * for pool tokens if they do not accept a deal.
+     * NOTE The pool must have expired either due to the creation of a deal or the end of the duration.
      */
     function withdrawMaxFromPool() external {
         _withdraw(balanceOf(msg.sender));
     }
 
+    /**
+     * @notice This function allows any purchaser to a portion of their purchase tokens back in exchange
+     * for pool tokens if they do not accept a deal.
+     * @param _purchaseTokenAmount The amount of purchase tokens the user wishes to recieve.
+     * NOTE The pool must have expired either due to the creation of a deal or the end of the duration.
+     */
     function withdrawFromPool(uint256 _purchaseTokenAmount) external {
         _withdraw(_purchaseTokenAmount);
     }
 
     /**
-     * @dev purchasers can withdraw at the end of the pool expiry period if
-     * no deal was presented or they can withdraw after the holder funding period
-     * if they do not like a deal
+     * @dev Purchasers can withdraw at the end of the pool expiry period if no deal was presented or they
+     * can withdraw after the holder funding period if they do not like a deal.
      */
     function _withdraw(uint256 _purchaseTokenAmount) internal {
         require(_purchaseTokenAmount <= balanceOf(msg.sender), "input larger than balance");
@@ -368,19 +367,30 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
     }
 
     /**
-     * @dev only the sponsor can create a deal. The deal must be funded by the holder
-     * of the underlying deal token before a purchaser may accept the deal. If the
-     * holder does not fund the deal before the expiry period is over then the sponsor
-     * can create a new deal for the pool of capital by calling this method again.
-     *
-     * Requirements:
-     * - The purchase expiry period must be over
-     * - the holder funding expiry period must be from 30 minutes to 30 days
-     * - the pro rata redemption period must be from 30 minutes to 30 days
-     * - the purchase token total for the deal that may be accepted must be <= the funds in the pool
-     * - if the pro rata conversion ratio (purchase token total for the deal:funds in pool)
-     *   is 1:1 then the open redemption period must be 0,
-     *   otherwise the open period is from 30 minutes to 30 days
+     * @notice This function allows the sponsor to create a deal.
+     * @param _underlyingDealToken The address of the underlying deal token.
+     * @param _purchaseTokenTotalForDeal The total amount of purchase tokens to be distributed for the
+     * deal.
+     * @param _underlyingDealTokenTotal The total amount of underlying deal tokens to be used in the deal.
+     * @param _vestingPeriod The vesting period for the deal.
+     * @param _vestingCliffPeriod The vesting cliff period for the deal.
+     * @param _proRataRedemptionPeriod The pro rata redemption period for the deal.
+     * @param _openRedemptionPeriod The open redemption period for the deal.
+     * @param _holder The account with the holder role for the deal.
+     * @param _holderFundingDuration The holder funding duration for the deal.
+     * @return address The address of the storage proxy contract for the newly created deal.
+     * NOTE The deal must be fully funded with the underlying deal token before a purchaser may accept
+     * the deal. If the deal has not been funded before the expiry period is over then the sponsor may
+     * create a new deal for the pool of capital by calling this function again. Moreover, the following
+     * requirements must be satisfied:
+     * - The purchase expiry period must be over.
+     * - The vestingPeriod must be less than 5 years.
+     * - The vestingCliffPeriod must be less than 5 years.
+     * - The holder funding expiry period must be from 30 minutes to 30 days.
+     * - The pro rata redemption period must be from 30 minutes to 30 days.
+     * - The purchase token total for the deal that may be accepted must be <= the funds in the pool.
+     * - If the pro rata conversion ratio (purchase token total for the deal:funds in pool) is 1:1 then
+     *   the open redemption period must be 0, otherwise the open period is from 30 minutes to 30 days.
      */
     function createDeal(
         address _underlyingDealToken,
@@ -459,19 +469,23 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
     }
 
     /**
-     * @dev the 2 methods allow a purchaser to exchange accept all or a
-     * portion of their pool tokens for deal tokens
-     *
-     * Requirements:
-     * - the redemption period is either in the pro rata or open windows
-     * - the purchaser cannot accept more than their share for a period
-     * - if participating in the open period, a purchaser must have maxxed their
-     *   contribution in the pro rata phase
+     * @notice This function allows a purchaser to exchange all of their pool tokens for deal tokens.
+     * NOTE The redemption period must be either in the pro rata or open periods, the purchaser cannot
+     * accept more than their share for a period, and if participating in the open period, a purchaser
+     * must have maxxed out their contribution in the pro rata phase.
      */
     function acceptMaxDealTokens() external {
         _acceptDealTokens(msg.sender, 0, true);
     }
 
+    /**
+     * @notice This function allows a purchaser to exchange a portion of their pool tokens for deal
+     * tokens.
+     * @param _poolTokenAmount The amount of pool tokens to be exchanged.
+     * NOTE The redemption period must be either in the pro rata or open periods, the purchaser cannot
+     * accept more than their share for a period, and if participating in the open period, a purchaser
+     * must have maxxed out their contribution in the pro rata phase.
+     */
     function acceptDealTokens(uint256 _poolTokenAmount) external {
         _acceptDealTokens(msg.sender, _poolTokenAmount, false);
     }
@@ -520,6 +534,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
         _mintDealTokens(_recipient, acceptAmount);
     }
 
+    /**
+     * @notice This function allows the sponsor to claim their sponsor fee amount.
+     * NOTE The redemption period must have expired.
+     */
     function sponsorClaim() external {
         require(address(aelinDeal) != address(0), "no deal yet");
         (, , uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
@@ -533,8 +551,12 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
     }
 
     /**
-     * @dev the if statement says if you have no balance or if the deal is not funded
-     * or if the pro rata period is not active, then you have 0 available for this period
+     * @notice This view function returns the maximum pro rata amount a purchaser can receive at any
+     * given time.
+     * @param _purchaser The purchaser's address.
+     * @return uint256 The max pro rata amount the purchaser can recieve.
+     * @dev The if statement says if you have no balance or if the deal is not funded or if the pro rata
+     * period is not active, then you have 0 available for this period.
      */
     function maxProRataAmount(address _purchaser) public view returns (uint256) {
         (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
@@ -561,8 +583,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
     }
 
     /**
-     * @dev the holder will receive less purchase tokens than the amount
-     * transferred if the purchase token burns or takes a fee during transfer
+     * @dev The holder will receive less purchase tokens than the amount transferred if the purchase token
+     * burns or takes a fee during transfer.
      */
     function _mintDealTokens(address _recipient, uint256 _poolTokenAmount) internal {
         _burn(_recipient, _poolTokenAmount);
@@ -580,15 +602,16 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
     }
 
     /**
-     * @dev view to see how much of the deal a purchaser can accept.
+     * @notice This view function returns the maximum amount of deal tokens a purchaser can recieve.
+     * @param _purchaser The purchaser's address.
+     * @return uint256 The max amount the purchaser can recieve.
      */
     function maxDealAccept(address _purchaser) external view returns (uint256) {
         /**
-         * The if statement is checking to see if the holder has not funded the deal
-         * or if the period is outside of a redemption window so nothing is available.
-         * It then checks if you are in the pro rata period and open period eligibility
+         * @dev The if statement is checking to see if the holder has not funded the deal or if the
+         * period is outside of a redemption window so nothing is available. It then checks if you are
+         * in the pro rata period and open period eligibility.
          */
-
         (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
         (, uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
 
@@ -622,21 +645,26 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
     }
 
     /**
-     * @dev convert pool with varying decimals to deal tokens of 18 decimals
-     * NOTE that a purchase token must not be greater than 18 decimals
+     * @dev Convert pool with varying decimals to deal tokens of 18 decimals.
+     * NOTE A purchase token must not be greater than 18 decimals.
      */
     function _convertPoolToDeal(uint256 _poolTokenAmount, uint256 _poolTokenDecimals) internal pure returns (uint256) {
         return _poolTokenAmount * 10 ** (18 - _poolTokenDecimals);
     }
 
     /**
-     * @dev the sponsor may change addresses
+     * @notice This function allows the sponosor to set a future sponsor address without changing the
+     * sponsor address currently.
+     * @param _futureSponsor The future sponsor address.
      */
-    function setSponsor(address _sponsor) external onlySponsor {
-        require(_sponsor != address(0), "cant pass null sponsor address");
-        futureSponsor = _sponsor;
+    function setSponsor(address _futureSponsor) external onlySponsor {
+        require(_futureSponsor != address(0), "cant pass null sponsor address");
+        futureSponsor = _futureSponsor;
     }
 
+    /**
+     * @notice This function allows the future sponsor address to replace the current sponsor address.
+     */
     function acceptSponsor() external {
         require(msg.sender == futureSponsor, "only future sponsor can access");
         sponsor = futureSponsor;
@@ -644,14 +672,14 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
     }
 
     /**
-     * @dev a function that any Ethereum address can call to vouch for a pool's legitimacy
+     * @notice A function that any address can call to vouch for a pool's legitimacy.
      */
     function vouch() external {
         emit Vouch(msg.sender);
     }
 
     /**
-     * @dev a function that any Ethereum address can call to disavow for a pool's legitimacy
+     * @notice A function that any address can call to disavow a pool's legitimacy.
      */
     function disavow() external {
         emit Disavow(msg.sender);
@@ -662,20 +690,24 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
         calledInitialize = true;
         _;
     }
+
     modifier onlySponsor() {
         require(msg.sender == sponsor, "only sponsor can access");
         _;
     }
+
     modifier dealReady() {
         if (holderFundingExpiry > 0) {
             require(!aelinDeal.depositComplete() && block.timestamp >= holderFundingExpiry, "cant create new deal");
         }
         _;
     }
+
     modifier dealFunded() {
         require(holderFundingExpiry > 0 && aelinDeal.depositComplete(), "deal not yet funded");
         _;
     }
+
     modifier transferWindow() {
         (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
         (, uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();

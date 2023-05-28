@@ -32,6 +32,12 @@ contract MerkleFeeDistributor is Ownable, IMerkleFeeDistributor {
         merkleRoot = _merkleRoot;
     }
 
+    /**
+     * @notice This view function returns true if fees have already been claimed for a given merkle index,
+     * and false otherwise.
+     * @param index The user's merkle index that corresponds to their account and share.
+     * @return bool Returns true if the index has already been used to claim and false otherwise.
+     */
     function isClaimed(uint256 index) public view override returns (bool) {
         uint256 claimedWordIndex = index / 256;
         uint256 claimedBitIndex = index % 256;
@@ -54,6 +60,16 @@ contract MerkleFeeDistributor is Ownable, IMerkleFeeDistributor {
                 : claimableAmount;
     }
 
+    /**
+     * @notice This function allows anyone to claim tokens if they can provide valid data and assocaited
+     * merkle proof.
+     * @param _index The index in the merkle tree.
+     * @param _account The account to claim the fee tokens.
+     * @param _share The share of tokens to be distributed.
+     * @param _merkleProof The merkle proof used to verify account and share for claiming.
+     * NOTE A user may call this function and claim fees on behalf of another user if they can provide
+     * a valid merkle proof.
+     */
     function claim(uint256 _index, address _account, uint256 _share, bytes32[] calldata _merkleProof) external override {
         require(!isClaimed(_index), "already claimed");
 
@@ -72,6 +88,10 @@ contract MerkleFeeDistributor is Ownable, IMerkleFeeDistributor {
         emit Claimed(_index, _account, _share);
     }
 
+    /**
+     * @notice This function allows the owner to retrieve all ERC20 tokens specified above that are
+     * in this contract.
+     */
     function withdrawAll() public onlyOwner {
         emit Withdrawn(owner(), TOKEN1, IERC20(TOKEN1).balanceOf(address(this)));
         IERC20(TOKEN1).safeTransfer(owner(), IERC20(TOKEN1).balanceOf(address(this)));
@@ -86,6 +106,10 @@ contract MerkleFeeDistributor is Ownable, IMerkleFeeDistributor {
         IERC20(TOKEN4).safeTransfer(owner(), IERC20(TOKEN4).balanceOf(address(this)));
     }
 
+    /**
+     * @notice This function allows the owner to retrieve any given ERC20 token in this contract.
+     * @param _token The address of the ERC20 token.
+     */
     function withdraw(address _token) public onlyOwner {
         uint256 tokenBalance = IERC20(_token).balanceOf(address(this));
         require(tokenBalance > 0, "balance is zero");
