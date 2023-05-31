@@ -71,7 +71,7 @@ contract AelinVestAMMTest is Test {
             0, //vestingPeriod;
             0, //vestingCliffPeriod;
             1 ether, //totalBaseTokens;
-            0, // totalLPTokens;
+            1 ether, // totalLPTokens;
             0, // claimed;
             false, //finalizedDeposit;
             10 //investorLPShare; // 0 - 100
@@ -85,7 +85,7 @@ contract AelinVestAMMTest is Test {
             1 ether, //investmentPerBase;
             10 days, // depositWindow;
             15 days, //lpFundingWindow;
-            address(0), //mainHolder;
+            user, //mainHolder;
             IVestAMM.Deallocation.None, // deallocation;
             lpSchedules,
             poolAddress,
