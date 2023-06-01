@@ -264,10 +264,10 @@ contract AelinTestUtils is Test {
         idRanges[1].begin = 1e20;
         idRanges[1].end = 1e21;
 
-        idRanges[2].begin = 4;
-        idRanges[2].end = 5;
-        idRanges[3].begin = 6;
-        idRanges[3].end = 10;
+        idRanges[2].begin = 4e21;
+        idRanges[2].end = 5e21;
+        idRanges[3].begin = 6e21;
+        idRanges[3].end = 10e21;
 
         return idRanges;
     }
@@ -414,6 +414,39 @@ contract AelinTestUtils is Test {
         return allowListAddresses;
     }
 
+    function getNft721CollectionRulesUnlimitedPurchaseAmount()
+        public
+        view
+        returns (AelinNftGating.NftCollectionRules[] memory)
+    {
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRules = new AelinNftGating.NftCollectionRules[](3);
+        address[3] memory collectionsAddresses = [
+            address(collection721_1),
+            address(collection721_2),
+            address(collection721_3)
+        ];
+
+        AelinNftGating.IdRange[] memory idRanges = new AelinNftGating.IdRange[](4);
+        idRanges[0].begin = 1;
+        idRanges[0].end = 2;
+        idRanges[1].begin = 1e20;
+        idRanges[1].end = 1e21;
+
+        idRanges[2].begin = 4e21;
+        idRanges[2].end = 5e21;
+        idRanges[3].begin = 6e21;
+        idRanges[3].end = 10e21;
+
+        uint256 pseudoRandom;
+        for (uint256 i; i < 3; ++i) {
+            pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp, i))) % 100_000_000;
+            nftCollectionRules[i].collectionAddress = collectionsAddresses[i];
+            nftCollectionRules[i].purchaseAmount = 0;
+            nftCollectionRules[i].idRanges = idRanges;
+        }
+        return nftCollectionRules;
+    }
+
     function getNft721CollectionRules() public view returns (IAelinPool.NftCollectionRules[] memory) {
         IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](3);
         address[3] memory collectionsAddresses = [
@@ -428,10 +461,10 @@ contract AelinTestUtils is Test {
         idRanges[1].begin = 1e20;
         idRanges[1].end = 1e21;
 
-        idRanges[2].begin = 4;
-        idRanges[2].end = 5;
-        idRanges[3].begin = 6;
-        idRanges[3].end = 10;
+        idRanges[2].begin = 4e21;
+        idRanges[2].end = 5e21;
+        idRanges[3].begin = 6e21;
+        idRanges[3].end = 10e21;
 
         uint256 pseudoRandom;
         for (uint256 i; i < 3; ++i) {

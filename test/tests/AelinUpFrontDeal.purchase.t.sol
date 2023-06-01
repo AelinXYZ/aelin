@@ -27,6 +27,7 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
     address dealAddressAllowDeallocation;
     address dealAddressAllowList;
     address dealAddressNftGating721;
+    address dealAddressNftGating721Unlimited;
     address dealAddressNftGating1155;
     address dealAddressNftGating721IdRanges;
 
@@ -49,6 +50,9 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
 
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules721IdRanges = getERC721Collection();
         nftCollectionRules721IdRanges[0].idRanges = getERC721IdRanges();
+
+        AelinNftGating.NftCollectionRules[]
+            memory nftCollectionRules721Unlimited = getNft721CollectionRulesUnlimitedPurchaseAmount();
 
         dealAddressNoDeallocationNoDeposit = upFrontDealFactory.createUpFrontDeal(
             dealData,
@@ -106,6 +110,13 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
             allowListEmpty
         );
 
+        dealAddressNftGating721Unlimited = upFrontDealFactory.createUpFrontDeal(
+            dealData,
+            dealConfig,
+            nftCollectionRules721Unlimited,
+            allowListEmpty
+        );
+
         vm.stopPrank();
         vm.startPrank(dealHolderAddress);
 
@@ -130,6 +141,9 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
 
         underlyingDealToken.approve(address(dealAddressNftGating721IdRanges), type(uint256).max);
         AelinUpFrontDeal(dealAddressNftGating721IdRanges).depositUnderlyingTokens(1e35);
+
+        underlyingDealToken.approve(address(dealAddressNftGating721Unlimited), type(uint256).max);
+        AelinUpFrontDeal(dealAddressNftGating721Unlimited).depositUnderlyingTokens(1e35);
 
         vm.stopPrank();
     }
@@ -1343,6 +1357,65 @@ contract AelinUpFrontDealPurchaseTest is Test, AelinTestUtils, IAelinUpFrontDeal
         assertTrue(hasNftList);
         (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(collection721_2), 3);
         assertTrue(NftIdUsed);
+        assertTrue(hasNftList);
+    }
+
+    function test_AcceptDeal_ERC721_TokenReuse() public {
+        // user setup
+        uint8 underlyingTokenDecimals = underlyingDealToken.decimals();
+        (, uint256 purchaseTokenPerDealToken, , , , , ) = AelinUpFrontDeal(dealAddressNftGating721Unlimited).dealConfig();
+
+        MockERC721(collection721_1).mint(user1, 1);
+
+        uint256 totalPoolShares;
+        uint256 poolSharesAmount;
+
+        // nft gating setup
+        AelinNftGating.NftPurchaseList[] memory nftPurchaseList = new AelinNftGating.NftPurchaseList[](1);
+        uint256[] memory tokenIdsArray = new uint256[](1);
+
+        // checks pre-purchase
+        bool NftIdUsed;
+        bool hasNftList;
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721Unlimited).getNftGatingDetails(
+            address(collection721_1),
+            1
+        );
+        assertFalse(NftIdUsed);
+        assertTrue(hasNftList);
+
+        //User buys with a token, and then re-buys with the same token
+        vm.startPrank(user1);
+
+        uint256 ted = 10e10;
+
+        // 2 tokens so double the purchaseAmount
+        poolSharesAmount = (ted * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        totalPoolShares = poolSharesAmount;
+        vm.assume(poolSharesAmount > 0);
+        deal(address(purchaseToken), user1, type(uint256).max);
+        purchaseToken.approve(address(dealAddressNftGating721Unlimited), type(uint256).max);
+        tokenIdsArray[0] = 1;
+        nftPurchaseList[0].collectionAddress = address(collection721_1);
+        nftPurchaseList[0].tokenIds = tokenIdsArray;
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user1, ted, ted, poolSharesAmount, poolSharesAmount);
+        AelinUpFrontDeal(dealAddressNftGating721Unlimited).acceptDeal(nftPurchaseList, merkleDataEmpty, ted);
+
+        // user1 now purchases again
+        poolSharesAmount = (ted * 10 ** underlyingTokenDecimals) / purchaseTokenPerDealToken;
+        totalPoolShares += poolSharesAmount;
+        vm.expectEmit(true, false, false, true);
+        emit AcceptDeal(user1, ted, ted * 2, poolSharesAmount, totalPoolShares);
+        AelinUpFrontDeal(dealAddressNftGating721Unlimited).acceptDeal(nftPurchaseList, merkleDataEmpty, ted);
+
+        vm.stopPrank();
+
+        (NftIdUsed, hasNftList) = AelinUpFrontDeal(dealAddressNftGating721Unlimited).getNftGatingDetails(
+            address(collection721_1),
+            1
+        );
+        assertFalse(NftIdUsed);
         assertTrue(hasNftList);
     }
 

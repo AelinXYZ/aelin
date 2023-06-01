@@ -48,7 +48,9 @@ library AelinNftGating {
             // if the first address supports 721, the entire pool only supports 721
             if (NftCheck.supports721(_nftCollectionRules[0].collectionAddress)) {
                 for (uint256 i; i < _nftCollectionRules.length; ++i) {
-                    require(NftCheck.supports721(_nftCollectionRules[i].collectionAddress), "can only contain 721");
+                    if (i != 0) {
+                        require(NftCheck.supports721(_nftCollectionRules[i].collectionAddress), "can only contain 721");
+                    }
 
                     uint256 rangesLength = _nftCollectionRules[i].idRanges.length;
                     require(rangesLength <= ID_RANGES_MAX_LENGTH, "too many ranges");
@@ -58,6 +60,13 @@ library AelinNftGating {
                             _nftCollectionRules[i].idRanges[j].begin <= _nftCollectionRules[i].idRanges[j].end,
                             "begin greater than end"
                         );
+
+                        if (j > 0) {
+                            require(
+                                _nftCollectionRules[i].idRanges[j].begin >= _nftCollectionRules[i].idRanges[j - 1].end,
+                                "range overlap"
+                            );
+                        }
                     }
 
                     _data.nftCollectionDetails[_nftCollectionRules[i].collectionAddress] = _nftCollectionRules[i];
@@ -68,7 +77,9 @@ library AelinNftGating {
             // if the first address supports 1155, the entire pool only supports 1155
             else if (NftCheck.supports1155(_nftCollectionRules[0].collectionAddress)) {
                 for (uint256 i; i < _nftCollectionRules.length; ++i) {
-                    require(NftCheck.supports1155(_nftCollectionRules[i].collectionAddress), "can only contain 1155");
+                    if (i != 0) {
+                        require(NftCheck.supports1155(_nftCollectionRules[i].collectionAddress), "can only contain 1155");
+                    }
                     require(_nftCollectionRules[i].purchaseAmount == 0, "purchase amt must be 0 for 1155");
                     _data.nftCollectionDetails[_nftCollectionRules[i].collectionAddress] = _nftCollectionRules[i];
 
@@ -86,8 +97,6 @@ library AelinNftGating {
             } else {
                 require(false, "collection is not compatible");
             }
-        } else {
-            _data.hasNftList = false;
         }
     }
 
@@ -122,6 +131,9 @@ library AelinNftGating {
         //The running total for 721 tokens
         uint256 maxPurchaseTokenAmount;
 
+        //True => ERC721, False => ERC1155
+        bool nftType;
+
         //Iterate over the collections
         for (uint256 i; i < nftPurchaseListLength; ++i) {
             nftPurchaseList = _nftPurchaseList[i];
@@ -133,9 +145,13 @@ library AelinNftGating {
             require(collectionAddress != address(0), "collection should not be null");
             require(nftCollectionRules.collectionAddress == collectionAddress, "collection not in the pool");
 
+            if (i == 0) {
+                nftType = NftCheck.supports721(collectionAddress);
+            }
+
             //Iterate over the token ids
             for (uint256 j; j < tokenIdsLength; ++j) {
-                if (NftCheck.supports721(collectionAddress)) {
+                if (nftType) {
                     require(IERC721(collectionAddress).ownerOf(tokenIds[j]) == msg.sender, "has to be the token owner");
 
                     // If there are no ranges then no need to check whether token Id is within them
@@ -143,9 +159,12 @@ library AelinNftGating {
                         require(isTokenIdInRange(tokenIds[j], nftCollectionRules.idRanges), "tokenId not in range");
                     }
 
-                    require(!_data.nftId[collectionAddress][tokenIds[j]], "tokenId already used");
-                    _data.nftId[collectionAddress][tokenIds[j]] = true;
-                    emit BlacklistNFT(collectionAddress, tokenIds[j]);
+                    // Only blacklist if purchase amount not unlimited
+                    if (nftCollectionRules.purchaseAmount != 0) {
+                        require(!_data.nftId[collectionAddress][tokenIds[j]], "tokenId already used");
+                        _data.nftId[collectionAddress][tokenIds[j]] = true;
+                        emit BlacklistNFT(collectionAddress, tokenIds[j]);
+                    }
                 } else {
                     //Must otherwise be an 1155 given initialise function
                     require(_data.nftId[collectionAddress][tokenIds[j]], "tokenId not in the pool");
@@ -157,23 +176,24 @@ library AelinNftGating {
                 }
             }
 
-            if (nftCollectionRules.purchaseAmount > 0 && maxPurchaseTokenAmount != type(uint256).max) {
+            if (nftCollectionRules.purchaseAmount > 0) {
                 unchecked {
                     uint256 collectionAllowance = nftCollectionRules.purchaseAmount * tokenIdsLength;
                     // if there is an overflow of the previous calculation, allow the max purchase token amount
                     if (collectionAllowance / nftCollectionRules.purchaseAmount != tokenIdsLength) {
                         maxPurchaseTokenAmount = type(uint256).max;
+                        break;
                     } else {
                         maxPurchaseTokenAmount += collectionAllowance;
                         if (maxPurchaseTokenAmount < collectionAllowance) {
                             maxPurchaseTokenAmount = type(uint256).max;
+                            break;
                         }
                     }
                 }
-            }
-
-            if (nftCollectionRules.purchaseAmount == 0) {
+            } else {
                 maxPurchaseTokenAmount = type(uint256).max;
+                break;
             }
         }
 
