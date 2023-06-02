@@ -126,7 +126,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
             // if the first address supports 721, the entire pool only supports 721
             if (NftCheck.supports721(nftCollectionRules[0].collectionAddress)) {
                 for (uint256 i; i < nftCollectionRules.length; ++i) {
-                    require(NftCheck.supports721(nftCollectionRules[i].collectionAddress), "can only contain 721");
+                    if (i != 0) {
+                        require(NftCheck.supports721(nftCollectionRules[i].collectionAddress), "can only contain 721");
+                    }
 
                     uint256 rangesLength = nftCollectionRules[i].idRanges.length;
                     require(rangesLength <= ID_RANGES_MAX_LENGTH, "too many ranges");
@@ -136,6 +138,13 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
                             nftCollectionRules[i].idRanges[j].begin <= nftCollectionRules[i].idRanges[j].end,
                             "begin greater than end"
                         );
+
+                        if (j > 0) {
+                            require(
+                                nftCollectionRules[i].idRanges[j].begin >= nftCollectionRules[i].idRanges[j - 1].end,
+                                "range overlap"
+                            );
+                        }
                     }
 
                     nftCollectionDetails[nftCollectionRules[i].collectionAddress] = nftCollectionRules[i];
@@ -146,7 +155,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
             // if the first address supports 1155, the entire pool only supports 1155
             else if (NftCheck.supports1155(nftCollectionRules[0].collectionAddress)) {
                 for (uint256 i; i < nftCollectionRules.length; ++i) {
-                    require(NftCheck.supports1155(nftCollectionRules[i].collectionAddress), "can only contain 1155");
+                    if (i != 0) {
+                        require(NftCheck.supports1155(nftCollectionRules[i].collectionAddress), "can only contain 1155");
+                    }
                     require(nftCollectionRules[i].purchaseAmount == 0, "purchase amt must be 0 for 1155");
                     nftCollectionDetails[nftCollectionRules[i].collectionAddress] = nftCollectionRules[i];
 
@@ -224,6 +235,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
         uint256[] memory tokenIds;
         uint256 tokenIdsLength;
         NftCollectionRules memory nftCollectionRules;
+        bool isCollectionERC721;
 
         //The running total for 721 tokens
         uint256 maxPurchaseTokenAmount;
@@ -239,9 +251,13 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
             require(collectionAddress != address(0), "collection should not be null");
             require(nftCollectionRules.collectionAddress == collectionAddress, "collection not in the pool");
 
+            if (i == 0) {
+                isCollectionERC721 = NftCheck.supports721(collectionAddress);
+            }
+
             //Iterate over the token ids
             for (uint256 j; j < tokenIdsLength; ++j) {
-                if (NftCheck.supports721(collectionAddress)) {
+                if (isCollectionERC721) {
                     require(IERC721(collectionAddress).ownerOf(tokenIds[j]) == msg.sender, "has to be the token owner");
 
                     // If there are no ranges then no need to check whether token Id is within them
@@ -249,9 +265,12 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
                         require(isTokenIdInRange(tokenIds[j], nftCollectionRules.idRanges), "tokenId not in range");
                     }
 
-                    require(!nftId[collectionAddress][tokenIds[j]], "tokenId already used");
-                    nftId[collectionAddress][tokenIds[j]] = true;
-                    emit BlacklistNFT(collectionAddress, tokenIds[j]);
+                    // Only blacklist if purchase amount not unlimited
+                    if (nftCollectionRules.purchaseAmount != 0) {
+                        require(!nftId[collectionAddress][tokenIds[j]], "tokenId already used");
+                        nftId[collectionAddress][tokenIds[j]] = true;
+                        emit BlacklistNFT(collectionAddress, tokenIds[j]);
+                    }
                 } else {
                     //Must otherwise be an 1155 given initialise function
                     require(nftId[collectionAddress][tokenIds[j]], "tokenId not in the pool");
@@ -263,23 +282,24 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGua
                 }
             }
 
-            if (nftCollectionRules.purchaseAmount > 0 && maxPurchaseTokenAmount != type(uint256).max) {
+            if (nftCollectionRules.purchaseAmount > 0) {
                 unchecked {
                     uint256 collectionAllowance = nftCollectionRules.purchaseAmount * tokenIdsLength;
                     // if there is an overflow of the previous calculation, allow the max purchase token amount
                     if (collectionAllowance / nftCollectionRules.purchaseAmount != tokenIdsLength) {
                         maxPurchaseTokenAmount = type(uint256).max;
+                        break;
                     } else {
                         maxPurchaseTokenAmount += collectionAllowance;
                         if (maxPurchaseTokenAmount < collectionAllowance) {
                             maxPurchaseTokenAmount = type(uint256).max;
+                            break;
                         }
                     }
                 }
-            }
-
-            if (nftCollectionRules.purchaseAmount == 0) {
+            } else {
                 maxPurchaseTokenAmount = type(uint256).max;
+                break;
             }
         }
 

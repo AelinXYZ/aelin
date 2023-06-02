@@ -512,6 +512,24 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         vm.stopPrank();
     }
 
+    function test_CreateUpFrontDeal_RevertWHen_RangeOverlap() public {
+        AelinAllowList.InitData memory allowListEmpty;
+
+        vm.startPrank(dealCreatorAddress);
+
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRules721A = getERC721Collection();
+
+        nftCollectionRules721A[0].idRanges = getERC721IdRanges();
+        nftCollectionRules721A[0].idRanges[0].begin = 0;
+        nftCollectionRules721A[0].idRanges[0].end = 2;
+        nftCollectionRules721A[0].idRanges[1].begin = 1; //Overlaps
+        nftCollectionRules721A[0].idRanges[1].end = 10;
+
+        vm.expectRevert("range overlap");
+        upFrontDealFactory.createUpFrontDeal(getDealData(), getDealConfig(), nftCollectionRules721A, allowListEmpty);
+        vm.stopPrank();
+    }
+
     function test_CreateUpFrontDeal_NoDeallocationNoDeposit() public {
         string memory tempString;
         address tempAddress;
