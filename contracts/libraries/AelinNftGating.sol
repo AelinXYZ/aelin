@@ -127,12 +127,10 @@ library AelinNftGating {
         uint256[] memory tokenIds;
         uint256 tokenIdsLength;
         NftCollectionRules memory nftCollectionRules;
+        bool isCollectionERC721;
 
         //The running total for 721 tokens
         uint256 maxPurchaseTokenAmount;
-
-        //True => ERC721, False => ERC1155
-        bool nftType;
 
         //Iterate over the collections
         for (uint256 i; i < nftPurchaseListLength; ++i) {
@@ -146,12 +144,12 @@ library AelinNftGating {
             require(nftCollectionRules.collectionAddress == collectionAddress, "collection not in the pool");
 
             if (i == 0) {
-                nftType = NftCheck.supports721(collectionAddress);
+                isCollectionERC721 = NftCheck.supports721(collectionAddress);
             }
 
             //Iterate over the token ids
             for (uint256 j; j < tokenIdsLength; ++j) {
-                if (nftType) {
+                if (isCollectionERC721) {
                     require(IERC721(collectionAddress).ownerOf(tokenIds[j]) == msg.sender, "has to be the token owner");
 
                     // If there are no ranges then no need to check whether token Id is within them
