@@ -24,7 +24,7 @@ contract AelinTokenSwapperTest is Test, AelinTestUtils {
     error AwaitingDeposit();
     error AlreadyDeposited();
 
-    event TokenDeposited(address indexed sender, address indexed receiver, uint256 amount);
+    event TokenDeposited(address indexed sender, uint256 amount);
     event TokenSwapped(address indexed sender, uint256 depositAmount, uint256 swapAmount);
     event Transfer(address indexed from, address indexed to, uint256 value);
 
@@ -72,7 +72,9 @@ contract AelinTokenSwapperTest is Test, AelinTestUtils {
         newToken.burn(_burnAmount);
         assertEq(newToken.balanceOf(aelinTreasury), initialBalance - _burnAmount);
 
-        vm.expectRevert(BalanceTooLow.selector);
+        newToken.approve(address(aelinTokenSwapper), TOKEN_SUPPLY);
+
+        vm.expectRevert("ERC20: transfer amount exceeds balance");
         aelinTokenSwapper.depositTokens();
         vm.stopPrank();
     }
@@ -85,7 +87,7 @@ contract AelinTokenSwapperTest is Test, AelinTestUtils {
         vm.expectEmit(true, true, false, true);
         emit Transfer(aelinTreasury, address(aelinTokenSwapper), TOKEN_SUPPLY);
         vm.expectEmit(true, true, false, true);
-        emit TokenDeposited(aelinTreasury, address(aelinTokenSwapper), TOKEN_SUPPLY);
+        emit TokenDeposited(aelinTreasury, TOKEN_SUPPLY);
         aelinTokenSwapper.depositTokens();
 
         assertEq(newToken.balanceOf(aelinTreasury), 0);

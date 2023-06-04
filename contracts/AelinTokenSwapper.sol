@@ -14,9 +14,9 @@ contract AelinTokenSwapper {
     uint256 public constant TOKEN_SUPPLY = 10 * 1e6 * 1e18;
     uint256 public constant OLD_TOKEN_SUPPLY = 5000 * 1e18;
 
-    address public aelinToken;
-    address public oldAelinToken;
-    address public aelinTreasury;
+    address public immutable aelinToken;
+    address public immutable oldAelinToken;
+    address public immutable aelinTreasury;
 
     bool public deposited;
 
@@ -29,10 +29,9 @@ contract AelinTokenSwapper {
     function depositTokens() external {
         if (deposited == true) revert AlreadyDeposited();
         if (msg.sender != aelinTreasury) revert Unauthorized();
-        if (IERC20(aelinToken).balanceOf(msg.sender) < TOKEN_SUPPLY) revert BalanceTooLow();
         IERC20(aelinToken).transferFrom(msg.sender, address(this), TOKEN_SUPPLY);
         deposited = true;
-        emit TokenDeposited(msg.sender, address(this), TOKEN_SUPPLY);
+        emit TokenDeposited(msg.sender, TOKEN_SUPPLY);
     }
 
     function swap(uint256 _amount) external {
@@ -45,6 +44,6 @@ contract AelinTokenSwapper {
         emit TokenSwapped(msg.sender, _amount, swapAmount);
     }
 
-    event TokenDeposited(address indexed sender, address indexed receiver, uint256 amount);
+    event TokenDeposited(address indexed sender, uint256 amount);
     event TokenSwapped(address indexed sender, uint256 depositAmount, uint256 swapAmount);
 }
