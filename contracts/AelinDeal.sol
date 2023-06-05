@@ -12,7 +12,7 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
 
     address public underlyingDealToken;
     uint256 public underlyingDealTokenTotal;
-    uint256 public totalUnderlyingAccepted;
+    uint256 public totalDealTokenAccepted;
     uint256 public totalUnderlyingClaimed;
     uint256 public totalProtocolFee;
     address public holder;
@@ -161,7 +161,7 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
             "redeem window still active"
         );
         uint256 withdrawAmount = underlyingDealTokenTotal -
-            ((underlyingPerDealExchangeRate * totalUnderlyingAccepted) / 1e18);
+            ((underlyingPerDealExchangeRate * totalDealTokenAccepted) / 1e18);
         IERC20(underlyingDealToken).safeTransfer(holder, withdrawAmount);
         emit WithdrawUnderlyingDealToken(underlyingDealToken, holder, withdrawAmount);
     }
@@ -248,7 +248,7 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
         uint256 _sponsorFee,
         uint256 _protocolFee
     ) external depositCompleted onlyPool {
-        totalUnderlyingAccepted += _underlyingAmount;
+        totalDealTokenAccepted += _underlyingAmount;
         totalProtocolFee += _protocolFee;
         _mintVestingToken(_to, _underlyingAmount - _sponsorFee - _protocolFee, vestingCliffExpiry);
     }

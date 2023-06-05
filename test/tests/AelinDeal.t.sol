@@ -512,7 +512,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         vm.startPrank(dealHolderAddress);
         uint256 withdrawAmount = AelinDeal(dealNoOpenRedemptionAddress).underlyingDealTokenTotal() -
             ((AelinDeal(dealNoOpenRedemptionAddress).underlyingPerDealExchangeRate() *
-                AelinDeal(dealNoOpenRedemptionAddress).totalUnderlyingAccepted()) / 1e18);
+                AelinDeal(dealNoOpenRedemptionAddress).totalDealTokenAccepted()) / 1e18);
         uint256 dealHolderBalance = underlyingDealToken.balanceOf(dealHolderAddress);
         // holder can withdraw the remaining underlying deal tokens
         vm.expectEmit(true, true, false, true);
@@ -544,7 +544,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         vm.startPrank(dealHolderAddress);
         uint256 withdrawAmount = AelinDeal(dealNoOpenRedemptionAddress).underlyingDealTokenTotal() -
             ((AelinDeal(dealNoOpenRedemptionAddress).underlyingPerDealExchangeRate() *
-                AelinDeal(dealNoOpenRedemptionAddress).totalUnderlyingAccepted()) / 1e18);
+                AelinDeal(dealNoOpenRedemptionAddress).totalDealTokenAccepted()) / 1e18);
         uint256 dealHolderBalance = underlyingDealToken.balanceOf(dealHolderAddress);
         // holder can withdraw the remaining underlying deal tokens
         vm.expectEmit(true, true, false, true);
@@ -652,7 +652,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         vm.startPrank(dealHolderAddress);
         uint256 dealHolderBalance = underlyingDealToken.balanceOf(dealHolderAddress);
         uint256 withdrawAmount = AelinDeal(dealAddr).underlyingDealTokenTotal() -
-            ((AelinDeal(dealAddr).underlyingPerDealExchangeRate() * AelinDeal(dealAddr).totalUnderlyingAccepted()) / 1e18);
+            ((AelinDeal(dealAddr).underlyingPerDealExchangeRate() * AelinDeal(dealAddr).totalDealTokenAccepted()) / 1e18);
         // holder can withdraw the remaining underlying deal tokens
         vm.expectEmit(true, true, false, true);
         emit WithdrawUnderlyingDealToken(address(underlyingDealToken), dealHolderAddress, withdrawAmount);
@@ -756,7 +756,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
         vm.startPrank(dealHolderAddress);
         uint256 dealHolderBalance = underlyingDealToken.balanceOf(dealHolderAddress);
         uint256 withdrawAmount = AelinDeal(dealAddr).underlyingDealTokenTotal() -
-            ((AelinDeal(dealAddr).underlyingPerDealExchangeRate() * AelinDeal(dealAddr).totalUnderlyingAccepted()) / 1e18);
+            ((AelinDeal(dealAddr).underlyingPerDealExchangeRate() * AelinDeal(dealAddr).totalDealTokenAccepted()) / 1e18);
         // holder can withdraw the remaining underlying deal tokens
         vm.expectEmit(true, true, false, true);
         emit WithdrawUnderlyingDealToken(address(underlyingDealToken), dealHolderAddress, withdrawAmount);

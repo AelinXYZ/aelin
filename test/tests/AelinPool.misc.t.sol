@@ -2205,7 +2205,7 @@ contract AelinPoolMiscTest is Test, AelinTestUtils {
             MockERC20(underlyingDealToken).balanceOf(address(AelinDeal(poolVars.dealAddress).aelinFeeEscrow())),
             underlyingProtocolFees
         );
-        assertEq(AelinDeal(poolVars.dealAddress).totalUnderlyingAccepted(), poolTokenDealFormatted);
+        assertEq(AelinDeal(poolVars.dealAddress).totalDealTokenAccepted(), poolTokenDealFormatted);
         assertEq(MockERC20(purchaseToken).balanceOf(user2), acceptedAmount);
 
         (uint256 share, uint256 lastClaimedAt) = AelinDeal(poolVars.dealAddress).vestingDetails(0);
@@ -2302,7 +2302,7 @@ contract AelinPoolMiscTest is Test, AelinTestUtils {
             MockERC20(underlyingDealToken).balanceOf(address(AelinDeal(poolVars.dealAddress).aelinFeeEscrow())),
             underlyingProtocolFees
         );
-        assertEq(AelinDeal(poolVars.dealAddress).totalUnderlyingAccepted(), poolTokenDealFormatted);
+        assertEq(AelinDeal(poolVars.dealAddress).totalDealTokenAccepted(), poolTokenDealFormatted);
         assertEq(MockERC20(purchaseToken).balanceOf(user2), acceptedAmount);
 
         (uint256 share, uint256 lastClaimedAt) = AelinDeal(poolVars.dealAddress).vestingDetails(0);
@@ -2399,7 +2399,7 @@ contract AelinPoolMiscTest is Test, AelinTestUtils {
             MockERC20(underlyingDealToken).balanceOf(address(AelinDeal(poolVars.dealAddress).aelinFeeEscrow())),
             underlyingProtocolFees
         );
-        assertEq(AelinDeal(poolVars.dealAddress).totalUnderlyingAccepted(), poolTokenDealFormatted);
+        assertEq(AelinDeal(poolVars.dealAddress).totalDealTokenAccepted(), poolTokenDealFormatted);
         assertEq(MockERC20(purchaseToken).balanceOf(user2), acceptedAmount);
 
         (uint256 share, uint256 lastClaimedAt) = AelinDeal(poolVars.dealAddress).vestingDetails(0);
@@ -2500,7 +2500,7 @@ contract AelinPoolMiscTest is Test, AelinTestUtils {
             MockERC20(underlyingDealToken).balanceOf(address(AelinDeal(poolVars.dealAddress).aelinFeeEscrow())),
             underlyingProtocolFees
         );
-        assertEq(AelinDeal(poolVars.dealAddress).totalUnderlyingAccepted(), poolTokenDealFormatted);
+        assertEq(AelinDeal(poolVars.dealAddress).totalDealTokenAccepted(), poolTokenDealFormatted);
         assertEq(MockERC20(purchaseToken).balanceOf(user2), acceptedAmount);
 
         (uint256 share, uint256 lastClaimedAt) = AelinDeal(poolVars.dealAddress).vestingDetails(0);
