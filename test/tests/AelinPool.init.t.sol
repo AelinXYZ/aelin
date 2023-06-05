@@ -418,6 +418,33 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
         pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
     }
 
+    function test_Initialize_RevertWhen_RangeOverlap() public {
+        address[] memory allowListAddressesEmpty;
+        uint256[] memory allowListAmountsEmpty;
+
+        IAelinPool.NftCollectionRules[] memory nftCollectionRulesA = getNft721CollectionRules();
+
+        nftCollectionRulesA[0].idRanges[0].begin = 0;
+        nftCollectionRulesA[0].idRanges[0].end = 2;
+        nftCollectionRulesA[0].idRanges[1].begin = 1;
+        nftCollectionRulesA[0].idRanges[1].end = 10;
+
+        IAelinPool.PoolData memory poolData = getPoolData({
+            purchaseTokenCap: 1e35,
+            duration: 10 days,
+            sponsorFee: 2e18,
+            purchaseDuration: 1 days,
+            allowListAddresses: allowListAddressesEmpty,
+            allowListAmounts: allowListAmountsEmpty,
+            nftCollectionRules: nftCollectionRulesA
+        });
+
+        AelinPool pool = new AelinPool();
+        AelinFeeEscrow escrow = new AelinFeeEscrow();
+        vm.expectRevert("range overlap");
+        pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
+    }
+
     function testFuzz_Initialize_Pool(
         uint256 _purchaseTokenCap,
         uint256 _poolDuration,
