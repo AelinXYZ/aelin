@@ -25,8 +25,8 @@ export default async function (hre: HardhatRuntimeEnvironment) {
 	const upFrontDealFactory = await deployer.loadArtifact('AelinUpFrontDealFactory');
 
 	// Deployment
-	console.log('Deploying AelinFeeEscrow contract...');
-	const feeEscrowContract = await deployer.deploy(feeEscrow);
+	// console.log('Deploying AelinFeeEscrow contract...');
+	// const feeEscrowContract = await deployer.deploy(feeEscrow);
 
 	console.log('Deploying AelinDeal contract...');
 	const dealContract = await deployer.deploy(deal);
@@ -34,54 +34,54 @@ export default async function (hre: HardhatRuntimeEnvironment) {
 	console.log('Deploying AelinPool contract...');
 	const poolContract = await deployer.deploy(pool);
 
-	console.log('Deploying AelinUpFrontDeal contract...');
-	const upFrontDealContract = await deployer.deploy(upFrontDeal);
+	// console.log('Deploying AelinUpFrontDeal contract...');
+	// const upFrontDealContract = await deployer.deploy(upFrontDeal);
 
 	console.log('Deploying AelinPoolFactory contract...');
 	const poolFactoryContract = await deployer.deploy(poolFactory, [
 		poolContract.address,
 		dealContract.address,
 		wallet.address,
-		feeEscrowContract.address,
+		'0x5EdDBe17A79d526b9272Bd18B0d03E6e1807c97d',
 	]);
 
-	console.log('Deploying AelinUpFrontDealFactory contract...');
-	const upFrontDealFactoryContract = await deployer.deploy(upFrontDealFactory, [
-		upFrontDealContract.address,
-		feeEscrowContract.address,
-		wallet.address,
-	]);
+	// console.log('Deploying AelinUpFrontDealFactory contract...');
+	// const upFrontDealFactoryContract = await deployer.deploy(upFrontDealFactory, [
+	// 	upFrontDealContract.address,
+	// 	feeEscrowContract.address,
+	// 	wallet.address,
+	// ]);
 
 	// Logs
-	console.log(
-		'AelinPoolFactory constructor args:' +
-			poolFactoryContract.interface.encodeDeploy([
-				poolContract.address,
-				dealContract.address,
-				wallet.address,
-				feeEscrowContract.address,
-			])
-	);
+	// console.log(
+	// 	'AelinPoolFactory constructor args:' +
+	// 		poolFactoryContract.interface.encodeDeploy([
+	// 			poolContract.address,
+	// 			dealContract.address,
+	// 			wallet.address,
+	// 			'0x5EdDBe17A79d526b9272Bd18B0d03E6e1807c97d',
+	// 		])
+	// );
 
-	console.log(
-		'AelinUpFrontDealFactory constructor args:' +
-			upFrontDealFactoryContract.interface.encodeDeploy([
-				upFrontDealContract.address,
-				feeEscrowContract.address,
-				wallet.address,
-			])
-	);
+	// console.log(
+	// 	'AelinUpFrontDealFactory constructor args:' +
+	// 		upFrontDealFactoryContract.interface.encodeDeploy([
+	// 			upFrontDealContract.address,
+	// 			feeEscrowContract.address,
+	// 			wallet.address,
+	// 		])
+	// );
 
-	console.log('Verification for AelinFeeEscrow...');
-	let verificationId = await hre.run('verify:verify', {
-		address: feeEscrowContract.address,
-		contract: 'contracts/AelinFeeEscrow.sol:AelinFeeEscrow',
-		constructorArguments: [],
-	});
-	console.log('Verification ID for AelinFeeEscrow: ', verificationId);
+	// console.log('Verification for AelinFeeEscrow...');
+	// let verificationId = await hre.run('verify:verify', {
+	// 	address: feeEscrowContract.address,
+	// 	contract: 'contracts/AelinFeeEscrow.sol:AelinFeeEscrow',
+	// 	constructorArguments: [],
+	// });
+	// console.log('Verification ID for AelinFeeEscrow: ', verificationId);
 
 	console.log('Verification for AelinDeal...');
-	verificationId = await hre.run('verify:verify', {
+	let verificationId = await hre.run('verify:verify', {
 		address: dealContract.address,
 		contract: 'contracts/AelinDeal.sol:AelinDeal',
 		constructorArguments: [],
@@ -96,13 +96,13 @@ export default async function (hre: HardhatRuntimeEnvironment) {
 	});
 	console.log('Verification ID for AelinPool: ', verificationId);
 
-	console.log('Verification for AelinUpFrontDeal...');
-	verificationId = await hre.run('verify:verify', {
-		address: upFrontDealContract.address,
-		contract: 'contracts/AelinUpFrontDeal.sol:AelinUpFrontDeal',
-		constructorArguments: [],
-	});
-	console.log('Verification ID for AelinUpFrontDeal: ', verificationId);
+	// console.log('Verification for AelinUpFrontDeal...');
+	// verificationId = await hre.run('verify:verify', {
+	// 	address: upFrontDealContract.address,
+	// 	contract: 'contracts/AelinUpFrontDeal.sol:AelinUpFrontDeal',
+	// 	constructorArguments: [],
+	// });
+	// console.log('Verification ID for AelinUpFrontDeal: ', verificationId);
 
 	console.log('Verification for AelinPoolFactory...');
 	verificationId = await hre.run('verify:verify', {
@@ -112,23 +112,23 @@ export default async function (hre: HardhatRuntimeEnvironment) {
 			poolContract.address,
 			dealContract.address,
 			wallet.address,
-			feeEscrowContract.address,
+			'0x5EdDBe17A79d526b9272Bd18B0d03E6e1807c97d',
 		],
 	});
 	console.log('Verification ID for AelinPoolFactory: ', verificationId);
 
-	console.log('Verification for AelinUpFrontDealFactory...');
-	verificationId = await hre.run('verify:verify', {
-		address: upFrontDealFactoryContract.address,
-		contract: 'contracts/AelinUpFrontDealFactory.sol:AelinUpFrontDealFactory',
-		constructorArguments: [upFrontDealContract.address, feeEscrowContract.address, wallet.address],
-	});
-	console.log('Verification ID for AelinUpFrontDealFactory: ', verificationId);
+	// console.log('Verification for AelinUpFrontDealFactory...');
+	// verificationId = await hre.run('verify:verify', {
+	// 	address: upFrontDealFactoryContract.address,
+	// 	contract: 'contracts/AelinUpFrontDealFactory.sol:AelinUpFrontDealFactory',
+	// 	constructorArguments: [upFrontDealContract.address, feeEscrowContract.address, wallet.address],
+	// });
+	// console.log('Verification ID for AelinUpFrontDealFactory: ', verificationId);
 
-	console.log('AelinFeeEscrow address: ', feeEscrowContract.address);
+	console.log('AelinFeeEscrow address: ', '0x5EdDBe17A79d526b9272Bd18B0d03E6e1807c97d');
 	console.log('AelinDeal address: ', dealContract.address);
 	console.log('AelinPool address: ', poolContract.address);
-	console.log('AelinUpFrontDeal address: ', upFrontDealContract.address);
+	// console.log('AelinUpFrontDeal address: ', upFrontDealContract.address);
 	console.log('AelinPoolFactory address: ', poolFactoryContract.address);
-	console.log('AelinUpFrontDealFactory address: ', upFrontDealFactoryContract.address);
+	// console.log('AelinUpFrontDealFactory address: ', upFrontDealFactoryContract.address);
 }

@@ -526,7 +526,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ethersproject/wallet@npm:5.7.0":
+"@ethersproject/wallet@npm:5.7.0, @ethersproject/wallet@npm:^5.7.0":
   version: 5.7.0
   resolution: "@ethersproject/wallet@npm:5.7.0"
   dependencies:
@@ -1499,7 +1499,10 @@ __metadata:
   dependencies:
     "@eth-optimism/contracts": ^0.5.40
     "@ethersproject/address": ^5.7.0
+    "@ethersproject/contracts": ^5.7.0
+    "@ethersproject/providers": ^5.7.0
     "@ethersproject/units": ^5.7.0
+    "@ethersproject/wallet": ^5.7.0
     "@matterlabs/hardhat-zksync-deploy": ^0.6.3
     "@matterlabs/hardhat-zksync-solc": ^0.3.17
     "@matterlabs/hardhat-zksync-verify": ^0.1.6

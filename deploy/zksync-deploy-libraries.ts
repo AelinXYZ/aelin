@@ -20,6 +20,8 @@ export default async function (hre: HardhatRuntimeEnvironment) {
 	const aelinNftGating = await deployer.loadArtifact('AelinNftGating');
 	const merkleTree = await deployer.loadArtifact('MerkleTree');
 
+	console.log('=============== deployment ================');
+
 	console.log('Deploying AllowList contract...');
 	const allowListContract = await deployer.deploy(aelinAllowList);
 	console.log('Address: ', allowListContract.address);
@@ -28,7 +30,36 @@ export default async function (hre: HardhatRuntimeEnvironment) {
 	const nftGatingContract = await deployer.deploy(aelinNftGating);
 	console.log('Address: ', nftGatingContract.address);
 
-	console.log('Deploying AllowList contract...');
+	console.log('Deploying MerkleTree contract...');
 	const merkleTreeContract = await deployer.deploy(merkleTree);
 	console.log('Address: ', merkleTreeContract.address);
+
+	console.log('============ verification ================');
+
+	let verificationId = await hre.run('verify:verify', {
+		address: allowListContract.address,
+		contract: 'contracts/libraries/AelinAllowList.sol:AelinAllowList',
+		constructorArguments: [],
+	});
+	console.log('Verification ID for AllowList: ', verificationId);
+
+	verificationId = await hre.run('verify:verify', {
+		address: nftGatingContract.address,
+		contract: 'contracts/libraries/AelinNftGating.sol:AelinNftGating',
+		constructorArguments: [],
+	});
+	console.log('Verification ID for AelinNftGating: ', verificationId);
+
+	verificationId = await hre.run('verify:verify', {
+		address: merkleTreeContract.address,
+		contract: 'contracts/libraries/MerkleTree.sol:MerkleTree',
+		constructorArguments: [],
+	});
+	console.log('Verification ID for MerkleTree: ', verificationId);
+
+	console.log('============ addresses ================');
+
+	console.log('AelinAllowList: ', allowListContract.address);
+	console.log('AelinNftGating: ', nftGatingContract.address);
+	console.log('MerkleTree: ', merkleTreeContract.address);
 }
