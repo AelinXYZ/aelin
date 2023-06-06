@@ -7,7 +7,7 @@ import "./interfaces/IAelinPool.sol";
 import "./interfaces/ICryptoPunks.sol";
 import "./libraries/NftCheck.sol";
 
-contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
+contract AelinPool is AelinERC20, IAelinPool {
     using SafeERC20 for IERC20;
     address constant CRYPTO_PUNKS = address(0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB);
     uint256 constant BASE = 100 * 10 ** 18;
@@ -387,8 +387,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         purchaseTokenTotalForDeal = _purchaseTokenTotalForDeal;
         uint256 maxDealTotalSupply = _convertPoolToDeal(_purchaseTokenTotalForDeal, purchaseTokenDecimals);
 
-        address aelinDealStorageProxy = _cloneAsMinimalProxy(aelinDealLogicAddress, "Could not create new deal");
-        aelinDeal = AelinDeal(aelinDealStorageProxy);
+        aelinDeal = new AelinDeal();
         IAelinDeal.DealData memory dealData = IAelinDeal.DealData(
             _underlyingDealToken,
             _underlyingDealTokenTotal,
@@ -407,11 +406,11 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
             string(abi.encodePacked("aeDeal-", storedName)),
             string(abi.encodePacked("aeD-", storedSymbol)),
             sponsor,
-            aelinDealStorageProxy
+            address(aelinDeal)
         );
 
         emit DealDetail(
-            aelinDealStorageProxy,
+            address(aelinDeal),
             _underlyingDealToken,
             _purchaseTokenTotalForDeal,
             _underlyingDealTokenTotal,
@@ -423,7 +422,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
             _holderFundingDuration
         );
 
-        return aelinDealStorageProxy;
+        return address(aelinDeal);
     }
 
     /**

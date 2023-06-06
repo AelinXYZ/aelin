@@ -3,10 +3,9 @@ pragma solidity 0.8.6;
 
 import "./AelinVestingToken.sol";
 import "./interfaces/IAelinDeal.sol";
-import "./MinimalProxyFactory.sol";
 import "./AelinFeeEscrow.sol";
 
-contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
+contract AelinDeal is AelinVestingToken, IAelinDeal {
     using SafeERC20 for IERC20;
     uint256 public maxTotalSupply;
 
@@ -109,8 +108,7 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
                 openRedemption.expiry = proRataRedemption.expiry + openRedemption.period;
             }
 
-            address aelinEscrowStorageProxy = _cloneAsMinimalProxy(aelinEscrowAddress, "Could not create new escrow");
-            aelinFeeEscrow = AelinFeeEscrow(aelinEscrowStorageProxy);
+            aelinFeeEscrow = new AelinFeeEscrow();
             aelinFeeEscrow.initialize(aelinTreasuryAddress, underlyingDealToken);
 
             emit DealFullyFunded(

@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import "./MinimalProxyFactory.sol";
 import "./AelinUpFrontDeal.sol";
 import "./libraries/AelinNftGating.sol";
 import "./libraries/AelinAllowList.sol";
 import {IAelinUpFrontDeal} from "./interfaces/IAelinUpFrontDeal.sol";
 
-contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
+contract AelinUpFrontDealFactory is IAelinUpFrontDeal {
     using SafeERC20 for IERC20;
 
     address public immutable UP_FRONT_DEAL_LOGIC;
@@ -28,11 +27,11 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
         UpFrontDealConfig calldata _dealConfig,
         AelinNftGating.NftCollectionRules[] calldata _nftCollectionRules,
         AelinAllowList.InitData calldata _allowListInit
-    ) external returns (address upFrontDealAddress) {
+    ) external returns (address) {
         require(_dealData.sponsor == msg.sender, "sponsor must be msg.sender");
-        upFrontDealAddress = _cloneAsMinimalProxy(UP_FRONT_DEAL_LOGIC, "Could not create new deal");
+        AelinUpFrontDeal upFrontDeal = new AelinUpFrontDeal();
 
-        AelinUpFrontDeal(upFrontDealAddress).initialize(
+        upFrontDeal.initialize(
             _dealData,
             _dealConfig,
             _nftCollectionRules,
@@ -41,8 +40,15 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
             AELIN_ESCROW_LOGIC
         );
 
+        _emitCreateUpFrontDeal(address(upFrontDeal), _dealData);
+        _emitCreateUpFrontDealConfig(address(upFrontDeal), _dealConfig);
+
+        return address(upFrontDeal);
+    }
+
+    function _emitCreateUpFrontDeal(address _upFrontDealAddress, UpFrontDealData calldata _dealData) internal {
         emit CreateUpFrontDeal(
-            upFrontDealAddress,
+            _upFrontDealAddress,
             string(abi.encodePacked("aeUpFrontDeal-", _dealData.name)),
             string(abi.encodePacked("aeUD-", _dealData.symbol)),
             _dealData.purchaseToken,
@@ -53,9 +59,11 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
             _dealData.merkleRoot,
             _dealData.ipfsHash
         );
+    }
 
+    function _emitCreateUpFrontDealConfig(address _upFrontDealAddress, UpFrontDealConfig calldata _dealConfig) internal {
         emit CreateUpFrontDealConfig(
-            upFrontDealAddress,
+            _upFrontDealAddress,
             _dealConfig.underlyingDealTokenTotal,
             _dealConfig.purchaseTokenPerDealToken,
             _dealConfig.purchaseRaiseMinimum,
