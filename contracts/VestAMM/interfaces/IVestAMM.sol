@@ -18,16 +18,14 @@ interface IVestAMM {
 
     struct SingleVestingSchedule {
         address rewardToken;
-        uint256 vestingPeriod;
-        uint256 vestingCliffPeriod;
         address singleHolder;
         uint256 totalSingleTokens;
         uint256 claimed;
         bool finalizedDeposit;
+        bool isLiquid;
     }
 
     struct LPVestingSchedule {
-        SingleVestingSchedule[] singleVestingSchedules;
         uint256 vestingPeriod;
         uint256 vestingCliffPeriod;
         uint256 totalBaseTokens;
@@ -70,8 +68,9 @@ interface IVestAMM {
         uint256 lpFundingWindow;
         address mainHolder;
         Deallocation deallocation;
-        LPVestingSchedule[] lpVestingSchedules;
-        // NOTE: if hasLaunchPhase is false, then there must be a amm pool identifier we can use.
+        LPVestingSchedule lpVestingSchedule;
+        SingleVestingSchedule[] singleVestingSchedules;
+        // NOTE: if hasLaunchPhase is true, then there must be a amm pool identifier we can use.
         // In most cases, the poolAddress will be enough, but some times (balancer) we need to use the poolId
         address poolAddress;
         bytes32 poolId;
@@ -92,14 +91,12 @@ interface IVestAMM {
     }
 
     struct DepositToken {
-        uint8 lpScheduleIndex;
         uint8 singleRewardIndex;
         address token;
         uint256 amount;
     }
 
     struct RemoveSingle {
-        uint8 lpScheduleIndex;
         uint8 singleRewardIndex;
         // NOTE: not needed
         // address token;
@@ -109,7 +106,6 @@ interface IVestAMM {
 
     event SingleRewardDeposited(
         address indexed holder,
-        uint8 vestingScheduleIndex,
         uint8 singleRewardIndex,
         address indexed token,
         uint256 amountPostTransfer
@@ -127,7 +123,7 @@ interface IVestAMM {
 
     event Disavow(address indexed voucher);
 
-    event SingleDepositComplete(address indexed token, uint8 vestingScheduleIndex, uint8 singleRewardIndex);
+    event SingleDepositComplete(address indexed token, uint8 singleRewardIndex);
 
     event BaseDepositComplete(address indexed token, address indexed depositor, uint256 amount);
 
@@ -138,13 +134,11 @@ interface IVestAMM {
         address indexed owner,
         uint256 claimableAmount,
         ClaimType claimType,
-        uint8 vestingScheduleIndex,
         uint8 singleRewardsIndex
     );
 
     event SingleRemoved(
         uint8 singleIndex,
-        uint8 lpIndex,
         address indexed token,
         uint256 tokenTotal,
         uint256 mainHolderRefund,
