@@ -2,6 +2,7 @@
 src = 'contracts'
 out = 'artifacts'
 libs = ['lib']
+solc_version = '0.8.6'
 remappings = [
     '@ensdomains/=node_modules/@ensdomains/',
     '@eth-optimism/=node_modules/@eth-optimism/',

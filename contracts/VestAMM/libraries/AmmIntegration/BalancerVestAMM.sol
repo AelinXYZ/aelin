@@ -2,8 +2,12 @@
 pragma solidity 0.8.6;
 pragma experimental ABIEncoderV2;
 
+import "forge-std/console.sol";
+
 import {WeightedPoolUserData} from "@balancer-labs/v2-interfaces/contracts/pool-weighted/WeightedPoolUserData.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import "contracts/VestAMM/interfaces/balancer/IWeightedPoolFactory.sol";
 import "contracts/VestAMM/interfaces/balancer/IVault.sol";
 import "contracts/VestAMM/interfaces/balancer/IBalancerPool.sol";
@@ -11,9 +15,10 @@ import "contracts/VestAMM/interfaces/balancer/IAsset.sol";
 import "contracts/VestAMM/interfaces/IVestAMMLibrary.sol";
 import "contracts/VestAMM/interfaces/IVestAMM.sol";
 
-library BalancerVestAMM {
+// NOTE: This should be a lirbary. But atmm it's not possible to test the whole process with a library.
+contract BalancerVestAMM {
     IWeightedPoolFactory internal constant weightedPoolFactory =
-        IWeightedPoolFactory(address(0x5Dd94Da3644DDD055fcf6B3E1aa310Bb7801EB8b));
+        IWeightedPoolFactory(address(0x897888115Ada5773E02aA29F775430BFB5F34c51));
     IVault internal constant balancerVault = IVault(address(0xBA12222222228d8Ba445958a75a0704d566BF2C8));
 
     // NOTE: This function will be called frop VestAMM contract to create a new
@@ -43,20 +48,22 @@ library BalancerVestAMM {
                 _newPool.weights,
                 _newPool.rateProviders,
                 _newPool.swapFeePercentage,
-                address(this) // owner the protocol? or vAMM ?
+                msg.sender,
+                bytes32(0) // TODO/ investigate what to do with this SALT
             );
     }
 
     function _parseNewPoolParams(IVestAMMLibrary.CreateNewPool calldata _newPool)
         internal
-        pure
         returns (IBalancerPool.CreateNewPool memory)
     {
+        address[] memory sortedTokens = _sortTokensArray(_newPool.tokens);
+
         return
             IBalancerPool.CreateNewPool({
                 name: _newPool.name,
                 symbol: _newPool.symbol,
-                tokens: _newPool.tokens,
+                tokens: sortedTokens,
                 weights: _newPool.normalizedWeights,
                 rateProviders: _newPool.rateProviders,
                 swapFeePercentage: _newPool.swapFeePercentage
@@ -143,15 +150,17 @@ library BalancerVestAMM {
         // Here we're using tokens held on this contract to provide liquidity and also revceive the BPT tokens
         // This means that the caller of this function will be won't the owner of the BPT
         // address sender = address(this);
-        // address recipient = address(this);
-
-        balancerVault.joinPool(poolId, address(this), address(this), request);
+        // address recipient = msg.sender; => vestAMM
+        balancerVault.joinPool(poolId, address(this), msg.sender, request);
 
         // TODO: should return (numInvTokensInLP, numBaseTokensInLP, numInvTokensFee, numBaseTokensFee)
         return (_tokensAmtsIn[0], _tokensAmtsIn[1], 0, 0);
     }
 
-    function removeLiquidity(IVestAMMLibrary.RemoveLiquidity calldata _removeLiquidityData) external {
+    function removeLiquidity(IVestAMMLibrary.RemoveLiquidity calldata _removeLiquidityData)
+        external
+        returns (uint256, uint256)
+    {
         bytes32 poolId = IBalancerPool(_removeLiquidityData.poolAddress).getPoolId();
 
         // First approve Vault to use vAMM LP tokens
@@ -180,9 +189,20 @@ library BalancerVestAMM {
             toInternalBalance: toInternalBalance
         });
 
+        IERC20(_removeLiquidityData.lpToken).transferFrom(msg.sender, address(this), _removeLiquidityData.lpTokenAmtIn);
+
         address sender = address(this);
         address payable recipient = payable(msg.sender);
+
+        uint256 token0AmtBefore = IERC20(_removeLiquidityData.tokens[0]).balanceOf(msg.sender);
+        uint256 token1AmtBefore = IERC20(_removeLiquidityData.tokens[1]).balanceOf(msg.sender);
+
         balancerVault.exitPool(poolId, sender, recipient, request);
+
+        uint256 token0AmtAfter = IERC20(_removeLiquidityData.tokens[0]).balanceOf(msg.sender);
+        uint256 token1AmtAfter = IERC20(_removeLiquidityData.tokens[1]).balanceOf(msg.sender);
+
+        return (token0AmtAfter - token0AmtBefore, token1AmtAfter - token1AmtBefore);
     }
 
     function checkPoolExists(IVestAMM.VAmmInfo calldata _vammInfo) external view returns (bool) {
@@ -201,5 +221,16 @@ library BalancerVestAMM {
         assembly {
             assets := _tokens
         }
+    }
+
+    function _sortTokensArray(address[] memory _tokens) internal returns (address[] memory) {
+        //Ensure token array is sorted.
+        if (_tokens[0] > _tokens[1]) {
+            address temp = _tokens[0];
+            _tokens[0] = _tokens[1];
+            _tokens[1] = temp;
+        }
+
+        return _tokens;
     }
 }

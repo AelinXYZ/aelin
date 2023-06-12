@@ -3,6 +3,7 @@ pragma solidity 0.8.6;
 
 import "../../libraries/AelinNftGating.sol";
 import "../../libraries/AelinAllowList.sol";
+import "./IVestAMM.sol";
 
 import {IRateProvider} from "@balancer-labs/v2-interfaces/contracts/pool-utils/IRateProvider.sol";
 
@@ -59,24 +60,44 @@ interface IVestAMMLibrary {
 
     struct RemoveLiquidity {
         address poolAddress;
+        address lpToken;
         uint256 lpTokenAmtIn;
         address[] tokens;
     }
 
-    // deploy pool also adds liquidity?
-    function deployPool() external returns (bool);
+    function addInitialLiquidity(AddLiquidity calldata)
+        external
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        );
 
-    function addLiquidity(uint256, uint256) external returns (bool);
+    function addLiquidity(AddLiquidity calldata)
+        external
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        );
 
-    function removeLiquidity(uint256, uint256) external returns (bool);
+    function removeLiquidity(RemoveLiquidity calldata) external returns (uint256, uint256);
 
     function collectFees() external returns (bool);
 
     // TODO figure out which views we might want.
     // maybe a view for APY and fees earned or something
-    function getPriceRatio(address, address) external view returns (uint256);
+    function getPriceRatio(
+        address,
+        address,
+        address
+    ) external view returns (uint256);
 
     function feesEarned() external view returns (uint256, uint256);
 
-    function checkPoolExists() external view returns (bool);
+    function checkPoolExists(IVestAMM.VAmmInfo calldata) external view returns (bool);
+
+    function deployPool(CreateNewPool calldata) external returns (address);
 }
