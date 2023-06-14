@@ -16,11 +16,11 @@ contract VestVestingToken is VestERC721, IVestVestingToken {
     function _mintVestingToken(
         address _to,
         uint256 _amount,
-        uint256 _lpTimestamp
+        uint256 _lastClaimed
     ) internal {
         _mint(_to, tokenCount);
-        vestVestingToken[tokenCount] = VestVestingToken(_amount, _lpTimestamp);
-        emit VestingTokenMinted(_to, tokenCount, _amount, _lpTimestamp);
+        vestVestingToken[tokenCount] = VestVestingToken(_amount, _lastClaimed);
+        emit VestingTokenMinted(_to, tokenCount, _amount, _lastClaimed);
         tokenCount += 1;
     }
 

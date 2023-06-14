@@ -319,7 +319,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         uint256 balanceAfterTransfer = IERC20(vAmmInfo.ammData.investmentToken).balanceOf(address(this));
         uint256 depositTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
         totalInvTokensDeposited += depositTokenAmount;
-        require(totalInvTokensDeposited > maxInvTokens, "investment cap exceeded");
+        require(totalInvTokensDeposited >= maxInvTokens, "investment cap exceeded");
         
 
         // TODO
@@ -583,59 +583,38 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // NOTE will collect the fees and then call the method sendAelinFees(amounts...)
     }
 
-    function claimableTokens(
-        uint256 _tokenId,
-        ClaimType _claimType,
-        uint8 _singleRewardsIndex
+    function claimableSingleTokens(uint256 _tokenId, uint256 _singleRewardIndex) {
+        if (depositData.lpDepositTime == 0) {
+            return 0;
+        }
+    }
+
+    // WIP TODO fix this section tomorrow
+    function claimableLPTokens(
+        uint256 _tokenId
     ) public view returns (uint256) {
         if (depositData.lpDepositTime == 0) {
             return 0;
         }
         VestVestingToken memory schedule = vestingDetails[_tokenId];
-        uint256 precisionAdjustedClaimable;
+        LPVestingSchedule lpVestingSchedule = vAmmInfo.lpVestingSchedule;
 
-        LPVestingSchedule lpVestingSchedule = vAmmInfo.[schedule.vestingScheduleIndex];
-        SingleVestingSchedule singleVestingSchedule;
-        if (_claimType == ClaimType.Single) {
-            singleVestingSchedule = lpVestingSchedule.singleVestingSchedules[_singleRewardsIndex];
-        }
-
-        uint256 lastClaimedAt = _claimType == ClaimType.Single
-            ? schedule.lastClaimedAtRewardList[_singleRewardsIndex]
-            : schedule.lastClaimedAt;
-
-        uint256 vestingCliffPeriod = _claimType == ClaimType.Single
-            ? singleVestingSchedule.vestingCliffPeriod
-            : lpVestingSchedule.vestingCliffPeriod;
-
-        uint256 vestingPeriod = _claimType == ClaimType.Single
-            ? singleVestingSchedule.vestingPeriod
-            : lpVestingSchedule.vestingPeriod;
-
-        uint256 vestingCliff = depositData.lpDepositTime + vestingCliffPeriod;
-        uint256 vestingExpiry = vestingCliff + vestingPeriod;
+        uint256 vestingCliff = depositData.lpDepositTime + vAmmInfo.lpVestingSchedule.vestingCliffPeriod;
+        uint256 vestingExpiry = vestingCliff + vAmmInfo.lpVestingSchedule.vestingPeriod;
         uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
 
-        if (lastClaimedAt < maxTime && block.timestamp > vestingCliff) {
-            uint256 minTime = lastClaimedAt == 0 ? vestingCliff : lastClaimedAt;
+        if (schedule.lastClaimedAt < maxTime && block.timestamp > vestingCliff) {
+            uint256 minTime = schedule.lastClaimedAt == 0 ? vestingCliff : schedule.lastClaimedAt;
 
-            uint256 totalShare = _claimType == ClaimType.Single
-                ? (((singleVestingSchedule.totalSingleTokens * depositedPerVestSchedule[_vestingScheduleIndex]) /
-                    maxInvTokensPerVestSchedule[_vestingScheduleIndex]) * schedule.amountDeposited) /
-                    depositedPerVestSchedule[schedule.vestingScheduleIndex]
-                : (lpTokenAmountPerSchedule[schedule.vestingScheduleIndex] * schedule.amountDeposited) /
-                    depositedPerVestSchedule[schedule.vestingScheduleIndex];
+            uint256 totalShare = holderTokenTotal * schedule.amountDeposited / totalInvTokensDeposited;
 
             uint256 claimableAmount = vestingPeriod == 0 ? totalShare : (totalShare * (maxTime - minTime)) / vestingPeriod;
-            address claimToken = _claimType == ClaimType.Single ? singleVestingSchedule.token : depositData.lpToken;
 
-            // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
-            // although it will generally never happen as solidity rounds down so there should always be a little bit left
-            precisionAdjustedClaimable = tokensClaimable > IERC20(claimToken).balanceOf(address(this))
-                ? IERC20(claimToken).balanceOf(address(this))
+            return tokensClaimable > IERC20(depositData.lpToken).balanceOf(address(this))
+                ? IERC20(depositData.lpToken).balanceOf(address(this))
                 : tokensClaimable;
         }
-        return precisionAdjustedClaimable;
+        return 0;
     }
 
     /**
