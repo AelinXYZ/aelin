@@ -583,147 +583,147 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // NOTE will collect the fees and then call the method sendAelinFees(amounts...)
     }
 
-    // function claimableTokens(
-    //     uint256 _tokenId,
-    //     ClaimType _claimType,
-    //     uint8 _singleRewardsIndex
-    // ) public view returns (uint256) {
-    //     if (depositData.lpDepositTime == 0) {
-    //         return 0;
-    //     }
-    //     VestVestingToken memory schedule = vestingDetails[_tokenId];
-    //     uint256 precisionAdjustedClaimable;
+    function claimableTokens(
+        uint256 _tokenId,
+        ClaimType _claimType,
+        uint8 _singleRewardsIndex
+    ) public view returns (uint256) {
+        if (depositData.lpDepositTime == 0) {
+            return 0;
+        }
+        VestVestingToken memory schedule = vestingDetails[_tokenId];
+        uint256 precisionAdjustedClaimable;
 
-    //     LPVestingSchedule lpVestingSchedule = vAmmInfo.[schedule.vestingScheduleIndex];
-    //     SingleVestingSchedule singleVestingSchedule;
-    //     if (_claimType == ClaimType.Single) {
-    //         singleVestingSchedule = lpVestingSchedule.singleVestingSchedules[_singleRewardsIndex];
-    //     }
+        LPVestingSchedule lpVestingSchedule = vAmmInfo.[schedule.vestingScheduleIndex];
+        SingleVestingSchedule singleVestingSchedule;
+        if (_claimType == ClaimType.Single) {
+            singleVestingSchedule = lpVestingSchedule.singleVestingSchedules[_singleRewardsIndex];
+        }
 
-    //     uint256 lastClaimedAt = _claimType == ClaimType.Single
-    //         ? schedule.lastClaimedAtRewardList[_singleRewardsIndex]
-    //         : schedule.lastClaimedAt;
+        uint256 lastClaimedAt = _claimType == ClaimType.Single
+            ? schedule.lastClaimedAtRewardList[_singleRewardsIndex]
+            : schedule.lastClaimedAt;
 
-    //     uint256 vestingCliffPeriod = _claimType == ClaimType.Single
-    //         ? singleVestingSchedule.vestingCliffPeriod
-    //         : lpVestingSchedule.vestingCliffPeriod;
+        uint256 vestingCliffPeriod = _claimType == ClaimType.Single
+            ? singleVestingSchedule.vestingCliffPeriod
+            : lpVestingSchedule.vestingCliffPeriod;
 
-    //     uint256 vestingPeriod = _claimType == ClaimType.Single
-    //         ? singleVestingSchedule.vestingPeriod
-    //         : lpVestingSchedule.vestingPeriod;
+        uint256 vestingPeriod = _claimType == ClaimType.Single
+            ? singleVestingSchedule.vestingPeriod
+            : lpVestingSchedule.vestingPeriod;
 
-    //     uint256 vestingCliff = depositData.lpDepositTime + vestingCliffPeriod;
-    //     uint256 vestingExpiry = vestingCliff + vestingPeriod;
-    //     uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        uint256 vestingCliff = depositData.lpDepositTime + vestingCliffPeriod;
+        uint256 vestingExpiry = vestingCliff + vestingPeriod;
+        uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
 
-    //     if (lastClaimedAt < maxTime && block.timestamp > vestingCliff) {
-    //         uint256 minTime = lastClaimedAt == 0 ? vestingCliff : lastClaimedAt;
+        if (lastClaimedAt < maxTime && block.timestamp > vestingCliff) {
+            uint256 minTime = lastClaimedAt == 0 ? vestingCliff : lastClaimedAt;
 
-    //         uint256 totalShare = _claimType == ClaimType.Single
-    //             ? (((singleVestingSchedule.totalSingleTokens * depositedPerVestSchedule[_vestingScheduleIndex]) /
-    //                 maxInvTokensPerVestSchedule[_vestingScheduleIndex]) * schedule.amountDeposited) /
-    //                 depositedPerVestSchedule[schedule.vestingScheduleIndex]
-    //             : (lpTokenAmountPerSchedule[schedule.vestingScheduleIndex] * schedule.amountDeposited) /
-    //                 depositedPerVestSchedule[schedule.vestingScheduleIndex];
+            uint256 totalShare = _claimType == ClaimType.Single
+                ? (((singleVestingSchedule.totalSingleTokens * depositedPerVestSchedule[_vestingScheduleIndex]) /
+                    maxInvTokensPerVestSchedule[_vestingScheduleIndex]) * schedule.amountDeposited) /
+                    depositedPerVestSchedule[schedule.vestingScheduleIndex]
+                : (lpTokenAmountPerSchedule[schedule.vestingScheduleIndex] * schedule.amountDeposited) /
+                    depositedPerVestSchedule[schedule.vestingScheduleIndex];
 
-    //         uint256 claimableAmount = vestingPeriod == 0 ? totalShare : (totalShare * (maxTime - minTime)) / vestingPeriod;
-    //         address claimToken = _claimType == ClaimType.Single ? singleVestingSchedule.token : depositData.lpToken;
+            uint256 claimableAmount = vestingPeriod == 0 ? totalShare : (totalShare * (maxTime - minTime)) / vestingPeriod;
+            address claimToken = _claimType == ClaimType.Single ? singleVestingSchedule.token : depositData.lpToken;
 
-    //         // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
-    //         // although it will generally never happen as solidity rounds down so there should always be a little bit left
-    //         precisionAdjustedClaimable = tokensClaimable > IERC20(claimToken).balanceOf(address(this))
-    //             ? IERC20(claimToken).balanceOf(address(this))
-    //             : tokensClaimable;
-    //     }
-    //     return precisionAdjustedClaimable;
-    // }
+            // This could potentially be the case where the last user claims a slightly smaller amount if there is some precision loss
+            // although it will generally never happen as solidity rounds down so there should always be a little bit left
+            precisionAdjustedClaimable = tokensClaimable > IERC20(claimToken).balanceOf(address(this))
+                ? IERC20(claimToken).balanceOf(address(this))
+                : tokensClaimable;
+        }
+        return precisionAdjustedClaimable;
+    }
 
     /**
      * @dev allows a user to claim their all their vested tokens across a single NFT
      */
-    // function claimAllTokensSingleNFT(uint256 _tokenId) public {
-    //     claimLPTokens(_tokenId);
-    //     VestVestingToken memory schedule = vestingDetails[_tokenId];
-    //     LPVestingSchedule lpVestingSchedule = vAmmInfo.[schedule.vestingScheduleIndex];
-    //     for (uint256 i; i < lpVestingSchedule.singleVestingSchedules.length; i++) {
-    //         claimRewardToken(_tokenId, i);
-    //     }
-    // }
+    function claimAllTokensSingleNFT(uint256 _tokenId) public {
+        claimLPTokens(_tokenId);
+        VestVestingToken memory schedule = vestingDetails[_tokenId];
+        LPVestingSchedule lpVestingSchedule = vAmmInfo.[schedule.vestingScheduleIndex];
+        for (uint256 i; i < lpVestingSchedule.singleVestingSchedules.length; i++) {
+            claimRewardToken(_tokenId, i);
+        }
+    }
 
-    // /**
-    //  * @dev allows a user to claim their all their vested tokens across many NFTs
-    //  */
-    // function claimAllTokensManyNFTs(uint256[] _tokenIds) external {
-    //     for (uint256 i; i < _tokenIds.length; i++) {
-    //         claimAllTokensSingleNFT(_tokenIds[i]);
-    //     }
-    // }
+    /**
+     * @dev allows a user to claim their all their vested tokens across many NFTs
+     */
+    function claimAllTokensManyNFTs(uint256[] _tokenIds) external {
+        for (uint256 i; i < _tokenIds.length; i++) {
+            claimAllTokensSingleNFT(_tokenIds[i]);
+        }
+    }
 
     /**
      * @dev allows a user to claim their LP tokens or a partial amount
      * of their LP tokens once they have vested according to the schedule
      * created by the protocol
      */
-    // function claimLPTokens(uint256 _tokenId) public {
-    //     _claimTokens(_tokenId, ClaimType.LP, 0);
-    // }
+    function claimLPTokens(uint256 _tokenId) public {
+        _claimTokens(_tokenId, ClaimType.LP, 0);
+    }
 
-    // /**
-    //  * @dev allows a user to claim their single sided reward tokens or a partial amount
-    //  * of their single sided reward tokens once they have vested according to the schedule
-    //  */
-    // function claimRewardToken(uint256 _tokenId, uint256 _singleRewardsIndex) external {
-    //     _claimTokens(_tokenId, ClaimType.Single, _singleRewardsIndex);
-    // }
+    /**
+     * @dev allows a user to claim their single sided reward tokens or a partial amount
+     * of their single sided reward tokens once they have vested according to the schedule
+     */
+    function claimRewardToken(uint256 _tokenId, uint256 _singleRewardsIndex) external {
+        _claimTokens(_tokenId, ClaimType.Single, _singleRewardsIndex);
+    }
 
-    // function _claimTokens(
-    //     uint256 _tokenId,
-    //     ClaimType _claimType,
-    //     uint8 _singleRewardsIndex
-    // ) internal {
-    //     Validate.owner(ownerOf(_tokenId));
-    //     if (_claimType == ClaimType.LP) {
-    //         // TODO claim fees for the protocol. this fee amount should be the global total for all LP tokens
-    //         // we want to know how many fees ALL the LP tokens have earned since the last time someone claimed
-    //         // or since we called a public function which captures the fees
-    //         collectAllFees();
-    //     }
-    //     uint256 claimableAmount = claimableTokens(_tokenId, _claimType, _singleRewardsIndex);
-    //     Validate.hasClaimBalance(claimableAmount);
-    //     VestVestingToken memory schedule = vestingDetails[_tokenId];
-    //     address claimToken = _claimType == ClaimType.Single // How do you know which lpVestingSchedule to use?
-    //         ? vAmmInfo.lpVestingSchedule.singleVestingSchedules[_singleRewardsIndex].token
-    //         : depositData.lpToken;
-    //     if (_claimType == ClaimType.Single) {
-    //         vestingDetails[_tokenId].lastClaimedAtRewardList[_singleRewardsIndex] = block.timestamp;
-    //         singleClaimedPerVestSchedule[schedule.vestingScheduleIndex][_singleRewardsIndex] += claimableAmount;
-    //         totalSingleClaimed[claimToken] += claimableAmount;
-    //     } else {
-    //         vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
-    //         totalLPClaimed += claimableAmount;
-    //         lpClaimedPerVestSchedule[schedule.vestingScheduleIndex] += claimableAmount;
-    //     }
-    //     // TODO indicate to the VestAMMMultiRewards staking rewards contract that
-    //     // a withdraw has occured and they now have less funds locked
-    //     // the difficulty here is when you go to stake them you are using investment tokens
-    //     // when you go to withdraw you are using LP units so they are not the same.
-    //     if (_claimType == ClaimType.LP) {
-    //         // TODO implement this logic to calculate the % of LP tokens you are withdrawing
-    //         // since the rewards contract knows the % you invested they want to know the % you
-    //         // are removing even though they are in different token formats. going in you have investment tokens
-    //         // going out you have LP tokens
-    //         VestAMMMultiRewards.withdraw(claimableAmount, depositData.lpTokenAmount);
-    //     }
-    //     IERC20(claimToken).safeTransfer(msg.sender, claimableAmount);
-    //     emit ClaimedToken(
-    //         claimToken,
-    //         msg.sender,
-    //         claimableAmount,
-    //         _claimType,
-    //         schedule.vestingScheduleIndex,
-    //         _singleRewardsIndex
-    //     );
-    // }
+    function _claimTokens(
+        uint256 _tokenId,
+        ClaimType _claimType,
+        uint8 _singleRewardsIndex
+    ) internal {
+        Validate.owner(ownerOf(_tokenId));
+        if (_claimType == ClaimType.LP) {
+            // TODO claim fees for the protocol. this fee amount should be the global total for all LP tokens
+            // we want to know how many fees ALL the LP tokens have earned since the last time someone claimed
+            // or since we called a public function which captures the fees
+            collectAllFees();
+        }
+        uint256 claimableAmount = claimableTokens(_tokenId, _claimType, _singleRewardsIndex);
+        Validate.hasClaimBalance(claimableAmount);
+        VestVestingToken memory schedule = vestingDetails[_tokenId];
+        address claimToken = _claimType == ClaimType.Single // How do you know which lpVestingSchedule to use?
+            ? vAmmInfo.lpVestingSchedule.singleVestingSchedules[_singleRewardsIndex].token
+            : depositData.lpToken;
+        if (_claimType == ClaimType.Single) {
+            vestingDetails[_tokenId].lastClaimedAtRewardList[_singleRewardsIndex] = block.timestamp;
+            singleClaimedPerVestSchedule[schedule.vestingScheduleIndex][_singleRewardsIndex] += claimableAmount;
+            totalSingleClaimed[claimToken] += claimableAmount;
+        } else {
+            vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
+            totalLPClaimed += claimableAmount;
+            lpClaimedPerVestSchedule[schedule.vestingScheduleIndex] += claimableAmount;
+        }
+        // TODO indicate to the VestAMMMultiRewards staking rewards contract that
+        // a withdraw has occured and they now have less funds locked
+        // the difficulty here is when you go to stake them you are using investment tokens
+        // when you go to withdraw you are using LP units so they are not the same.
+        if (_claimType == ClaimType.LP) {
+            // TODO implement this logic to calculate the % of LP tokens you are withdrawing
+            // since the rewards contract knows the % you invested they want to know the % you
+            // are removing even though they are in different token formats. going in you have investment tokens
+            // going out you have LP tokens
+            VestAMMMultiRewards.withdraw(claimableAmount, depositData.lpTokenAmount);
+        }
+        IERC20(claimToken).safeTransfer(msg.sender, claimableAmount);
+        emit ClaimedToken(
+            claimToken,
+            msg.sender,
+            claimableAmount,
+            _claimType,
+            schedule.vestingScheduleIndex,
+            _singleRewardsIndex
+        );
+    }
 
     function sendFeesToAelin(address _token, uint256 _amount) public {
         // NOTE you don't just transfer fees to the AelinFeeModule because you need to track
@@ -769,9 +769,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         address _to,
         uint256 _amount
     ) internal {
-        // uint256[] memory singleRewardTimestamps = new uint256[](
-        //     vAmmInfo.lpVestingSchedules[_vestingScheduleIndex].singleVestingSchedules.length
-        // );
+        uint256[] memory singleRewardTimestamps = new uint256[](
+            vAmmInfo.lpVestingSchedules[_vestingScheduleIndex].singleVestingSchedules.length
+        );
         _mintVestingToken(_to, _amount, 0, singleRewardTimestamps);
     }
 
