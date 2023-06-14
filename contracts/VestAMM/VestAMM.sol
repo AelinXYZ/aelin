@@ -20,7 +20,7 @@ import "../libraries/MerkleTree.sol";
 import "./interfaces/IVestAMM.sol";
 import "./interfaces/IVestAMMLibrary.sol";
 
-import "contracts/libraries/validation/VestAMMValidation.sol";
+import "../libraries/validation/VestAMMValidation.sol";
 
 interface IERC20Decimals {
     function decimals() external view returns (uint8);
@@ -103,6 +103,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         address _aelinFeeModule
     ) external initOnce {
         _validateLPSchedule(_vAmmInfo.lpVestingSchedule);
+        // NOTE I don't like the current validation file that much. it is confusing
         _validateSingleSchedules(_vAmmInfo.singleVestingSchedules);
         // pool initialization checks
         // TODO how to name these
@@ -181,7 +182,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             SingleVestingSchedule singleVestingSchedule = vAmmInfo.singleVestingSchedules[
                 _depositTokens[i].singleRewardIndex
             ];
-            Validate.singleHolder(vAmmInfo.mainHolder, singleVestingSchedule.singleHolder, i);
+            Validate.singleHolder(singleVestingSchedule.singleHolder, i);
             Validate.singleToken(_depositTokens[i].token, singleVestingSchedule.rewardToken, i);
             Valida.singleTokenBalance(_depositTokens[i].amount, IERC20(_depositTokens[i].token).balanceOf(msg.sender), i);
             Validate.signleDepositNotFinalized(singleVestingSchedule.finalizedDeposit, i);
@@ -236,17 +237,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
                 _removeSingleList[i].singleRewardIndex
             ];
             Validate.singleHolder(vAmmInfo.mainHolder, singleVestingSchedule.singleHolder, i);
-            uint256 mainHolderAmount = holderDeposits[vAmmInfo.mainHolder][_removeSingleList[i].singleRewardIndex];
             uint256 singleHolderAmount = holderDeposits[singleVestingSchedule.singleHolder][
                 _removeSingleList[i].singleRewardIndex
             ];
-            if (mainHolderAmount > 0) {
-                IERC20(singleRewards[_removeSingleList[i]].token).safeTransferFrom(
-                    address(this),
-                    vAmmInfo.mainHolder,
-                    mainHolderAmount
-                );
-            }
             if (singleHolderAmount > 0) {
                 IERC20(singleRewards[_removeSingleList[i]].token).safeTransferFrom(
                     address(this),
@@ -258,20 +251,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
                 _removeSingleList[i].singleRewardIndex,
                 singleRewards[_removeSingleList[i]].token,
                 singleRewards[_removeSingleList[i]].rewardTokenTotal,
-                mainHolderAmount,
                 singleHolderAmount
             );
         }
-        emit SingleRemoved(
-            _removeSingleList.singleRewardIndex,
-            _removeSingleList.lpScheduleIndex,
-            // singleRewards[_removeSingleList].token,
-            // singleRewards[_removeSingleList].rewardTokenTotal,
-            singleVestingSchedule.rewardToken,
-            singleVestingSchedule.totalSingleTokens,
-            mainHolderAmount,
-            singleHolderAmount
-        );
 
         if (singleVestingSchedule.finalizedDeposit) {
             singleRewardsComplete -= 1;
@@ -281,18 +263,12 @@ contract VestAMM is AelinVestingToken, IVestAMM {
                 vAmmInfo.singleVestingSchedules[_removeSingleList[i].singleRewardIndex] = vAmmInfo.singleVestingSchedules[
                     vAmmInfo.singleVestingSchedules.length - 1
                 ];
-                holderDeposits[vAmmInfo.mainHolder][_removeSingleList[i].singleRewardIndex] = holderDeposits[
-                    vAmmInfo.mainHolder
-                ][vAmmInfo.singleVestingSchedules.length - 1];
                 holderDeposits[singleVestingSchedule.singleHolder][_removeSingleList[i].singleRewardIndex] = holderDeposits[
                     singleVestingSchedule.singleHolder
                 ][vAmmInfo.singleVestingSchedules.length - 1];
             }
             delete vAmmInfo.singleVestingSchedules[vAmmInfo.singleVestingSchedules.length - 1];
             delete holderDeposits[singleVestingSchedule.singleHolder][vAmmInfo.singleVestingSchedules.length - 1];
-            delete holderDeposits[vAmmInfo.mainHolder][_removeSingleList[i].vestingScheduleIndex][
-                vAmmInfo.singleVestingSchedules.length - 1
-            ];
         }
     }
 
@@ -343,15 +319,15 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         uint256 balanceAfterTransfer = IERC20(vAmmInfo.ammData.investmentToken).balanceOf(address(this));
         uint256 depositTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
         totalInvTokensDeposited += depositTokenAmount;
-        // TODO check if there is a cap and reject if there is and it is above the cap
+        require(totalInvTokensDeposited > maxInvTokens, "investment cap exceeded");
         
-        // stake your virtual token so the rewards distribution contract can track all the investors
 
         // TODO
+        // stake your virtual token so the rewards distribution contract can track all the investors
         // VestAMMMultiRewards.stake(depositTokenAmount);
-        // mintVestingToken(msg.sender, depositTokenAmount, _vestingScheduleIndex);
+        mintVestingToken(msg.sender, depositTokenAmount);
 
-        emit AcceptVestDeal(msg.sender, depositTokenAmount, _vestingScheduleIndex);
+        emit AcceptVestDeal(msg.sender, depositTokenAmount);
     }
 
     function createInitialLiquidity() external onlyHolder lpFundingWindow {
@@ -789,17 +765,15 @@ contract VestAMM is AelinVestingToken, IVestAMM {
      * their index will be set to 1. This system gets rid of the need to have a settle step where the
      * deallocation is managed like we do in the regular Aelin pools.
      */
-    // function mintVestingToken(
-    //     address _to,
-    //     uint256 _amount,
-    //     uint8 _vestingScheduleIndex
-    // ) internal {
-    //     uint256[] memory singleRewardTimestamps = new uint256[](
-    //         vAmmInfo.lpVestingSchedules[_vestingScheduleIndex].singleVestingSchedules.length
-    //     );
-    //     // TODO
-    //     // _mintVestingToken(_to, _amount, 0, singleRewardTimestamps, _vestingScheduleIndex);
-    // }
+    function mintVestingToken(
+        address _to,
+        uint256 _amount
+    ) internal {
+        // uint256[] memory singleRewardTimestamps = new uint256[](
+        //     vAmmInfo.lpVestingSchedules[_vestingScheduleIndex].singleVestingSchedules.length
+        // );
+        _mintVestingToken(_to, _amount, 0, singleRewardTimestamps);
+    }
 
     // // Does not like returning the array name
     function singleRewardsToDeposit(address _holder) external view returns (DepositToken[] memory) {

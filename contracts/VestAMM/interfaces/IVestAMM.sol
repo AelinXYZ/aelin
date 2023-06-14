@@ -137,11 +137,5 @@ interface IVestAMM {
         uint8 singleRewardsIndex
     );
 
-    event SingleRemoved(
-        uint8 singleIndex,
-        address indexed token,
-        uint256 tokenTotal,
-        uint256 mainHolderRefund,
-        uint256 singleHolderRefund
-    );
+    event SingleRemoved(uint8 singleIndex, address indexed token, uint256 tokenTotal, uint256 singleHolderRefund);
 }
