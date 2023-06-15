@@ -653,7 +653,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         _claimLPTokens(_tokenId, lpAmount, lpAddress);
         for (uint256 i; i < lpVestingSchedule.singleVestingSchedules.length; i++) {
             (uint256 singleAmount, address singleAddress) = claimableSingleTokens(_tokenId);
-            _claimSingleTokens(_tokenId, i, singleAmount, singleAddress);
+            _claimSingleTokens(_tokenId, singleAmount, singleAddress, i);
         }
     }
 
@@ -667,50 +667,42 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     // TODO think about when to call collect all fees
-    function _claimTokens(
+    function _claimLPTokens(
         uint256 _tokenId,
-        ClaimType _claimType,
-        uint8 _singleRewardsIndex
+        uint256 amount,
+        address token
     ) internal {
-        if (_claimType == ClaimType.LP) {
-            // TODO claim fees for the protocol. this fee amount should be the global total for all LP tokens
-            // we want to know how many fees ALL the LP tokens have earned since the last time someone claimed
-            // or since we called a public function which captures the fees
-            collectAllFees();
-        }
-        uint256 claimableAmount = claimableTokens(_tokenId, _claimType, _singleRewardsIndex);
-        Validate.hasClaimBalance(claimableAmount);
+        collectAllFees();
+        Validate.hasClaimBalance(amount);
         VestVestingToken memory schedule = vestingDetails[_tokenId];
-        address claimToken = _claimType == ClaimType.Single // How do you know which lpVestingSchedule to use?
-            ? vAmmInfo.lpVestingSchedule.singleVestingSchedules[_singleRewardsIndex].token
-            : depositData.lpToken;
-        if (_claimType == ClaimType.Single) {
-            vestingDetails[_tokenId].lastClaimedAtRewardList[_singleRewardsIndex] = block.timestamp;
-            singleClaimedPerVestSchedule[schedule.vestingScheduleIndex][_singleRewardsIndex] += claimableAmount;
-            totalSingleClaimed[claimToken] += claimableAmount;
-        } else {
-            vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
-            totalLPClaimed += claimableAmount;
-            lpClaimedPerVestSchedule[schedule.vestingScheduleIndex] += claimableAmount;
-        }
-        // TODO indicate to the VestAMMMultiRewards staking rewards contract that
-        // a withdraw has occured and they now have less funds locked
-        // the difficulty here is when you go to stake them you are using investment tokens
-        // when you go to withdraw you are using LP units so they are not the same.
-        if (_claimType == ClaimType.LP) {
-            // TODO implement this logic to calculate the % of LP tokens you are withdrawing
-            // since the rewards contract knows the % you invested they want to know the % you
-            // are removing even though they are in different token formats. going in you have investment tokens
-            // going out you have LP tokens
-            VestAMMMultiRewards.withdraw(claimableAmount, depositData.lpTokenAmount);
-        }
-        IERC20(claimToken).safeTransfer(msg.sender, claimableAmount);
+        vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
+        totalLPClaimed += claimableAmount;
+        VestAMMMultiRewards.withdraw(claimableAmount, depositData.lpTokenAmount);
         emit ClaimedToken(
-            claimToken,
+            token,
             msg.sender,
-            claimableAmount,
-            _claimType,
-            schedule.vestingScheduleIndex,
+            amount,
+            ClaimType.LP,
+            -1
+        );
+    }
+
+    // TODO think about when to call collect all fees
+    function _claimSingleTokens(
+        uint256 _tokenId,
+        uint256 amount,
+        address token,
+        uint256 index
+    ) internal {
+        Validate.hasClaimBalance(amount);
+        VestVestingToken memory schedule = vestingDetails[_tokenId];
+        totalSingleClaimed[token] += amount;
+        IERC20(token).safeTransfer(msg.sender, amount);
+        emit ClaimedToken(
+            token,
+            msg.sender,
+            amount,
+            ClaimType.Single,
             _singleRewardsIndex
         );
     }
