@@ -583,18 +583,42 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // NOTE will collect the fees and then call the method sendAelinFees(amounts...)
     }
 
-    function claimableSingleTokens(uint256 _tokenId, uint256 _singleRewardIndex) {
-        if (depositData.lpDepositTime == 0) {
-            return 0;
+    function claimableSingleTokens(uint256 _tokenId, uint256 _singleRewardIndex) public view returns (uint256, address) {
+        if (depositData.lpDepositTime == 0 || _singleRewardIndex >= vAmmInfo.singleVestingSchedules.length) {
+            return (0, address(0));
         }
+        SingleVestingSchedule singleVestingSchedule = vAmmInfo.singleVestingSchedules[_singleRewardIndex];
+        VestVestingToken memory schedule = vestingDetails[_tokenId];
+        LPVestingSchedule lpVestingSchedule = vAmmInfo.lpVestingSchedule;
+
+        uint256 vestingCliff = depositData.lpDepositTime + vAmmInfo.lpVestingSchedule.vestingCliffPeriod;
+        uint256 vestingExpiry = vestingCliff + vAmmInfo.lpVestingSchedule.vestingPeriod;
+        uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+
+        if (
+            schedule.lastClaimedAt < maxTime && block.timestamp > vestingCliff ||
+            singleVestingSchedule.isLiquid && schedule.lastClaimedAt > 0
+            ) {
+            uint256 minTime = schedule.lastClaimedAt == 0 ? vestingCliff : schedule.lastClaimedAt;
+
+            uint256 totalShare = singleVestingSchedule.totalSingleTokens * schedule.amountDeposited / totalInvTokensDeposited;
+
+            uint256 claimableAmount = (vestingPeriod == 0 || singleVestingSchedule.isLiquid) ? totalShare : (totalShare * (maxTime - minTime)) / vestingPeriod;
+
+            uint256 precisionAdjustedClaimable = tokensClaimable > IERC20(singleVestingSchedule.token).balanceOf(address(this))
+                ? IERC20(singleVestingSchedule.token).balanceOf(address(this))
+                : tokensClaimable;
+
+            return (precisionAdjustedClaimable, singleVestingSchedule.token);
+        }
+        return (0, singleVestingSchedule.token);
     }
 
-    // WIP TODO fix this section tomorrow
     function claimableLPTokens(
         uint256 _tokenId
-    ) public view returns (uint256) {
+    ) public view returns (uint256, address) {
         if (depositData.lpDepositTime == 0) {
-            return 0;
+            return (0, depositData.lpToken);
         }
         VestVestingToken memory schedule = vestingDetails[_tokenId];
         LPVestingSchedule lpVestingSchedule = vAmmInfo.lpVestingSchedule;
@@ -610,17 +634,19 @@ contract VestAMM is AelinVestingToken, IVestAMM {
 
             uint256 claimableAmount = vestingPeriod == 0 ? totalShare : (totalShare * (maxTime - minTime)) / vestingPeriod;
 
-            return tokensClaimable > IERC20(depositData.lpToken).balanceOf(address(this))
+            uint256 precisionAdjustedClaimable = tokensClaimable > IERC20(depositData.lpToken).balanceOf(address(this))
                 ? IERC20(depositData.lpToken).balanceOf(address(this))
                 : tokensClaimable;
+
+            return (precisionAdjustedClaimable, depositData.lpToken);
         }
-        return 0;
+        return (0, depositData.lpToken);
     }
 
     /**
      * @dev allows a user to claim their all their vested tokens across a single NFT
      */
-    function claimAllTokensSingleNFT(uint256 _tokenId) public {
+    function claimAllTokens(uint256 _tokenId) public {
         claimLPTokens(_tokenId);
         VestVestingToken memory schedule = vestingDetails[_tokenId];
         LPVestingSchedule lpVestingSchedule = vAmmInfo.[schedule.vestingScheduleIndex];
@@ -636,23 +662,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         for (uint256 i; i < _tokenIds.length; i++) {
             claimAllTokensSingleNFT(_tokenIds[i]);
         }
-    }
-
-    /**
-     * @dev allows a user to claim their LP tokens or a partial amount
-     * of their LP tokens once they have vested according to the schedule
-     * created by the protocol
-     */
-    function claimLPTokens(uint256 _tokenId) public {
-        _claimTokens(_tokenId, ClaimType.LP, 0);
-    }
-
-    /**
-     * @dev allows a user to claim their single sided reward tokens or a partial amount
-     * of their single sided reward tokens once they have vested according to the schedule
-     */
-    function claimRewardToken(uint256 _tokenId, uint256 _singleRewardsIndex) external {
-        _claimTokens(_tokenId, ClaimType.Single, _singleRewardsIndex);
     }
 
     function _claimTokens(
