@@ -583,17 +583,22 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // NOTE will collect the fees and then call the method sendAelinFees(amounts...)
     }
 
+    function calcVestTimes(uint256 _tokenId) internal view returns (uint256 vestingCliff, uint256 vestingExpiry, uint256 maxTime) {
+        VestVestingToken memory schedule = vestingDetails[_tokenId];
+        LPVestingSchedule lpVestingSchedule = vAmmInfo.lpVestingSchedule;
+
+        vestingCliff = depositData.lpDepositTime + vAmmInfo.lpVestingSchedule.vestingCliffPeriod;
+        vestingExpiry = vestingCliff + vAmmInfo.lpVestingSchedule.vestingPeriod;
+        maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+    }
+
     function claimableSingleTokens(uint256 _tokenId, uint256 _singleRewardIndex) public view returns (uint256, address) {
         if (depositData.lpDepositTime == 0 || _singleRewardIndex >= vAmmInfo.singleVestingSchedules.length) {
             return (0, address(0));
         }
         SingleVestingSchedule singleVestingSchedule = vAmmInfo.singleVestingSchedules[_singleRewardIndex];
         VestVestingToken memory schedule = vestingDetails[_tokenId];
-        LPVestingSchedule lpVestingSchedule = vAmmInfo.lpVestingSchedule;
-
-        uint256 vestingCliff = depositData.lpDepositTime + vAmmInfo.lpVestingSchedule.vestingCliffPeriod;
-        uint256 vestingExpiry = vestingCliff + vAmmInfo.lpVestingSchedule.vestingPeriod;
-        uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        (uint256 vestingCliff, uint256 vestingExpiry, uint256 maxTime) = calcVestTimes(_tokenId);
 
         if (
             schedule.lastClaimedAt < maxTime && block.timestamp > vestingCliff ||
@@ -621,11 +626,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             return (0, depositData.lpToken);
         }
         VestVestingToken memory schedule = vestingDetails[_tokenId];
-        LPVestingSchedule lpVestingSchedule = vAmmInfo.lpVestingSchedule;
-
-        uint256 vestingCliff = depositData.lpDepositTime + vAmmInfo.lpVestingSchedule.vestingCliffPeriod;
-        uint256 vestingExpiry = vestingCliff + vAmmInfo.lpVestingSchedule.vestingPeriod;
-        uint256 maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
+        (uint256 vestingCliff, uint256 vestingExpiry, uint256 maxTime) = calcVestTimes(_tokenId);
 
         if (schedule.lastClaimedAt < maxTime && block.timestamp > vestingCliff) {
             uint256 minTime = schedule.lastClaimedAt == 0 ? vestingCliff : schedule.lastClaimedAt;
@@ -665,6 +666,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         }
     }
 
+    // TODO think about when to call collect all fees
     function _claimTokens(
         uint256 _tokenId,
         ClaimType _claimType,
