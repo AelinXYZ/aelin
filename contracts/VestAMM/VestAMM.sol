@@ -63,7 +63,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     mapping(address => uint256) totalSingleClaimed;
     mapping(uint8 => mapping(uint8 => uint256)) public holderDeposits;
     uint8 private singleRewardsComplete;
-    uint8 constant MAX_SINGLE_REWARDS = 10;
+    uint8 constant MAX_SINGLE_REWARDS = 6;
 
     MerkleTree.TrackClaimed private trackClaimed;
     AelinAllowList.AllowList public allowList;
@@ -647,11 +647,12 @@ contract VestAMM is AelinVestingToken, IVestAMM {
      * @dev allows a user to claim their all their vested tokens across a single NFT
      */
     function claimAllTokens(uint256 _tokenId) public {
-        claimLPTokens(_tokenId);
-        VestVestingToken memory schedule = vestingDetails[_tokenId];
-        LPVestingSchedule lpVestingSchedule = vAmmInfo.[schedule.vestingScheduleIndex];
+        Validate.owner(ownerOf(_tokenId));
+        (uint256 lpAmount, address lpAddress) = claimableLPTokens(_tokenId);
+        _claimLPTokens(_tokenId, lpAmount, lpAddress);
         for (uint256 i; i < lpVestingSchedule.singleVestingSchedules.length; i++) {
-            claimRewardToken(_tokenId, i);
+            (uint256 singleAmount, address singleAddress) = claimableSingleTokens(_tokenId);
+            _claimSingleTokens(_tokenId, i, singleAmount, singleAddress);
         }
     }
 
@@ -669,7 +670,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         ClaimType _claimType,
         uint8 _singleRewardsIndex
     ) internal {
-        Validate.owner(ownerOf(_tokenId));
         if (_claimType == ClaimType.LP) {
             // TODO claim fees for the protocol. this fee amount should be the global total for all LP tokens
             // we want to know how many fees ALL the LP tokens have earned since the last time someone claimed
