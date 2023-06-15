@@ -167,6 +167,19 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
     }
 
     /**
+     * @dev a view showing the amount of the underlying deal token that ERC721 deal tokens holder can claim
+     * @param _tokenIds token ids to check the quantity of claimable underlying tokens
+     */
+
+    function claimableUnderlyingTokensMultipleEntries(uint256[] memory _tokenIds) public view returns (uint256) {
+        uint256 totalToClaim = 0;
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            totalToClaim += claimableUnderlyingTokens(_tokenIds[i]);
+        }
+        return totalToClaim;
+    }
+
+    /**
      * @dev a view showing the number of claimable underlying deal
      */
 
