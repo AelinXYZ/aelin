@@ -182,7 +182,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             SingleVestingSchedule singleVestingSchedule = vAmmInfo.singleVestingSchedules[
                 _depositTokens[i].singleRewardIndex
             ];
-            Validate.singleHolder(singleVestingSchedule.singleHolder, i);
+            Validate.singleHolder(singleVestingSchedule.singleHolder == msg.sender);
             Validate.singleToken(_depositTokens[i].token, singleVestingSchedule.rewardToken, i);
             Valida.singleTokenBalance(_depositTokens[i].amount, IERC20(_depositTokens[i].token).balanceOf(msg.sender), i);
             Validate.signleDepositNotFinalized(singleVestingSchedule.finalizedDeposit, i);
@@ -319,6 +319,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         uint256 balanceAfterTransfer = IERC20(vAmmInfo.ammData.investmentToken).balanceOf(address(this));
         uint256 depositTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
         totalInvTokensDeposited += depositTokenAmount;
+        // NOTE no deallocation allowed for v1
         require(totalInvTokensDeposited >= maxInvTokens, "investment cap exceeded");
         
 
@@ -760,19 +761,17 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     // // Does not like returning the array name
     function singleRewardsToDeposit(address _holder) external view returns (DepositToken[] memory) {
         DepositToken[] memory rewardsToDeposit = new DepositToken[](numSingleRewards);
-        for (uint8 i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
-            for (uint8 j = 0; j < vAmmInfo.lpVestingSchedules[i].singleVestingSchedules.length; j++) {
-                address singleHolder = vAmmInfo.lpVestingSchedules[i].singleVestingSchedules[j].singleHolder;
-                if (_holder == vAmmInfo.mainHolder || _holder == singleHolder) {
-                    uint256 amountDeposited = holderDeposits[vAmmInfo.mainHolder][i][j] + holderDeposits[singleHolder][i][j];
-                    DepositToken memory rewardToDeposit = DepositToken(
-                        i,
-                        j,
-                        vAmmInfo.lpVestingSchedules[i].singleVestingSchedules[j].rewardToken,
-                        vAmmInfo.lpVestingSchedules[i].singleVestingSchedules[j].totalSingleTokens - amountDeposited
-                    );
-                    rewardsToDeposit[i * vAmmInfo.lpVestingSchedules[i].singleVestingSchedules.length + j] = rewardToDeposit;
-                }
+        for (uint8 j = 0; j < vAmmInfo.singleVestingSchedules.length; j++) {
+            address singleHolder = vAmmInfo.singleVestingSchedules[j].singleHolder;
+            if (_holder == vAmmInfo.mainHolder || _holder == singleHolder) {
+                uint256 amountDeposited = holderDeposits[vAmmInfo.mainHolder][i][j] + holderDeposits[singleHolder][i][j];
+                DepositToken memory rewardToDeposit = DepositToken(
+                    i,
+                    j,
+                    vAmmInfo.singleVestingSchedules[j].rewardToken,
+                    vAmmInfo.singleVestingSchedules[j].totalSingleTokens - amountDeposited
+                );
+                rewardsToDeposit[i * vAmmInfo.singleVestingSchedules.length + j] = rewardToDeposit;
             }
         }
         return rewardsToDeposit;
