@@ -172,11 +172,11 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
      */
 
     function claimableUnderlyingTokensMultipleEntries(uint256[] memory _tokenIds) public view returns (uint256) {
-        uint256 totalToClaim = 0;
+        uint256 totalClaimable;
         for (uint256 i = 0; i < _tokenIds.length; i++) {
-            totalToClaim += claimableUnderlyingTokens(_tokenIds[i]);
+            totalClaimable += claimableUnderlyingTokens(_tokenIds[i]);
         }
-        return totalToClaim;
+        return totalClaimable;
     }
 
     /**
