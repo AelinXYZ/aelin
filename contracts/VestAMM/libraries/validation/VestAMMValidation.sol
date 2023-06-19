@@ -12,7 +12,6 @@ library Validate {
     error InFundingWindowError();
     error FundingCompleteError();
     error DealOpenError();
-    error PurchaseAmountError();
     error PoolExistsError();
     error AllowListAndNFTListNotAllowedError();
     error AllowListAndMerkleNotAllowedError();
@@ -26,7 +25,6 @@ library Validate {
     error MaxSingleRewardError();
     error BaseDepositNotCompletedError();
     error BaseTokenBalanceError();
-    error VestingScheduleExistsError();
     error InvestmentTokenBalanceError();
     error InvestorAllocationError();
     error LiquidityLaunchError();
@@ -231,21 +229,9 @@ library Validate {
         }
     }
 
-    function lpVestingAndSingleArrayLength(bool _conditionMet) external pure {
-        if (!_conditionMet) {
-            revert LpVestingAndSingleArrayLengthError();
-        }
-    }
-
     function baseDepositNotCompleted(bool _conditionMet) external pure {
         if (!_conditionMet) {
             revert BaseDepositNotCompletedError();
-        }
-    }
-
-    function vestingScheduleExists(bool _conditionMet) external pure {
-        if (!_conditionMet) {
-            revert VestingScheduleExistsError();
         }
     }
 
@@ -270,12 +256,6 @@ library Validate {
     function dealOpen(bool _conditionMet) external pure {
         if (!_conditionMet) {
             revert DealOpenError();
-        }
-    }
-
-    function purchaseAmount(bool _conditionMet) external pure {
-        if (!_conditionMet) {
-            revert PurchaseAmountError();
         }
     }
 

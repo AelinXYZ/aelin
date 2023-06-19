@@ -16,18 +16,11 @@ contract VestVestingToken is VestERC721, IVestVestingToken {
     function _mintVestingToken(
         address _to,
         uint256 _amount,
-        uint256 _lpTimestamp,
-        uint256[] memory _singleRewardTimestamps,
-        uint8 _vestingScheduleIndex
+        uint256 _lastClaimed
     ) internal {
         _mint(_to, tokenCount);
-        vestVestingToken[tokenCount] = VestVestingToken(
-            _amount,
-            _lpTimestamp,
-            _singleRewardTimestamps,
-            _vestingScheduleIndex
-        );
-        emit VestingTokenMinted(_to, tokenCount, _amount, _lpTimestamp, _singleRewardTimestamps, _vestingScheduleIndex);
+        vestVestingToken[tokenCount] = VestVestingToken(_amount, _lastClaimed);
+        emit VestingTokenMinted(_to, tokenCount, _amount, _lastClaimed);
         tokenCount += 1;
     }
 
@@ -40,19 +33,8 @@ contract VestVestingToken is VestERC721, IVestVestingToken {
         require(schedule.amountDeposited > 0, "schedule does not exist");
         require(_shareAmount > 0, "share amount should be > 0");
         require(schedule.amountDeposited > _shareAmount, "cant transfer more than share");
-        vestVestingToken[_tokenId] = VestVestingToken(
-            schedule.amountDeposited - _shareAmount,
-            schedule.lastClaimedAt,
-            schedule.lastClaimedAtRewardList,
-            schedule.vestingScheduleIndex
-        );
-        _mintVestingToken(
-            _to,
-            _shareAmount,
-            schedule.lastClaimedAt,
-            schedule.lastClaimedAtRewardList,
-            schedule.vestingScheduleIndex
-        );
+        vestVestingToken[_tokenId] = VestVestingToken(schedule.amountDeposited - _shareAmount, schedule.lastClaimedAt);
+        _mintVestingToken(_to, _shareAmount, schedule.lastClaimedAt);
     }
 
     // NOTE I am not sure we can just leave transfer like this. Circle back later when have time
