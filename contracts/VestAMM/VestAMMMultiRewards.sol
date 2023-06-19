@@ -402,26 +402,7 @@ library SafeMath {
     }
 }
 
-// NOTE this contract is normally used to stake a single token like AELIN
-// and receive many rewards emitted over different durations and then as a staker
-// you can claim your reward fees. The reason why we are going to use this contract
-// inside of VestAMM is that we want to give protocols the option of emitting protocol
-// fees to locked LPs over the course of the vesting schedule. However, there are no
-// stakers in VestAMM. Instead of using a staking token `IERC20 public stakingToken;`
-// and tracking a depositors share of the overall total, VestAMM will track each LP
-// locked in VestAMM and their share of the total
-// so in a usual case if you have 100 AELIN staked in the rewards contract out of 1000 total staked
-// you would get 10% of every reward added and emitted from this contract
-// with VestAMM instead if you own 10% of the LP tokens you will get 10% of the rewards
-// there is no more staking and unstaking with VestAMM MultiRewards.sol. there is only tracking of the LP balances
-
-// example
-// 10 people accept the deal. and you have 100 sUSD against 10 ABC tokens
-// 1 person did half the pool. the other 9 did the other half
-// so using this contract anyone can send rewards to locked LPs
-// the large LP will earn half of all the rewards emitted
-// the smaller LPs will split the other half
-contract VestAMMMultiRewards is ReentrancyGuard, Pausable {
+contract MultiRewards is ReentrancyGuard, Pausable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -435,10 +416,6 @@ contract VestAMMMultiRewards is ReentrancyGuard, Pausable {
         uint256 lastUpdateTime;
         uint256 rewardPerTokenStored;
     }
-    // option 1: we take the LP tokens held by our contracts and we stake them here
-    // option 2: we dont let anyone stake and instead of using the stake/unstake
-    // we just use our own custom tracking solution
-    // IERC20 public stakingToken;
     mapping(address => Reward) public rewardData;
     address[] public rewardTokens;
 
@@ -448,14 +425,15 @@ contract VestAMMMultiRewards is ReentrancyGuard, Pausable {
 
     uint256 private _totalSupply;
     mapping(address => uint256) private _balances;
+    bool private calledInitialize;
 
     /* ========== CONSTRUCTOR ========== */
 
-    // TODO make sure the protocol creating the vest amm instance is the owner of this contract
-    // this is important because only the owner can add rewards. so the protocol is responsible
-    // for distributing any additional rewards to LPs while they are locked in addition to any
-    // rewards in the vAMM single sided rewards and the potentially extra LP tokens investors get
-    constructor(address _owner) public Owned(_owner) {}
+    constructor() public {}
+
+    /* =========== INITIALIZE ========== */
+
+    function initialize(address _owner) public initOnce Owned(_owner) {}
 
     function addReward(
         address _rewardsToken,
@@ -514,39 +492,35 @@ contract VestAMMMultiRewards is ReentrancyGuard, Pausable {
         rewardData[_rewardsToken].rewardsDistributor = _rewardsDistributor;
     }
 
-    function stake(uint256 amount) external nonReentrant notPaused updateReward(msg.sender) {
+    function stake(uint256 amount, address account) external onlyOwner nonReentrant notPaused updateReward(account) {
         require(amount > 0, "Cannot stake 0");
         _totalSupply = _totalSupply.add(amount);
-        _balances[msg.sender] = _balances[msg.sender].add(amount);
-        // stakingToken.safeTransferFrom(msg.sender, address(this), amount);
-        emit Staked(msg.sender, amount);
+        _balances[account] = _balances[account].add(amount);
+        emit Staked(account, amount);
     }
 
-    function withdraw(uint256 amount) public nonReentrant updateReward(msg.sender) {
+    function withdraw(uint256 amount, address account) public onlyOwner nonReentrant updateReward(account) {
         require(amount > 0, "Cannot withdraw 0");
         _totalSupply = _totalSupply.sub(amount);
-        _balances[msg.sender] = _balances[msg.sender].sub(amount);
-        // stakingToken.safeTransfer(msg.sender, amount);
-        emit Withdrawn(msg.sender, amount);
+        _balances[account] = _balances[account].sub(amount);
+        emit Withdrawn(account, amount);
     }
 
-    function getReward() public nonReentrant updateReward(msg.sender) {
-        // NOTE because this is called in a function we have to limit the number of rewards tokens that can be emitted
-        // TODO figure out the limit and stop letting anyone send new rewards once the limit has been reached
+    function getReward(address account) public onlyOwner nonReentrant updateReward(account) {
         for (uint i; i < rewardTokens.length; i++) {
             address _rewardsToken = rewardTokens[i];
-            uint256 reward = rewards[msg.sender][_rewardsToken];
+            uint256 reward = rewards[account][_rewardsToken];
             if (reward > 0) {
-                rewards[msg.sender][_rewardsToken] = 0;
-                IERC20(_rewardsToken).safeTransfer(msg.sender, reward);
-                emit RewardPaid(msg.sender, _rewardsToken, reward);
+                rewards[account][_rewardsToken] = 0;
+                IERC20(_rewardsToken).safeTransfer(account, reward);
+                emit RewardPaid(account, _rewardsToken, reward);
             }
         }
     }
 
-    function exit() external {
-        withdraw(_balances[msg.sender]);
-        getReward();
+    function exit(address account) external onlyOwner {
+        withdraw(_balances[account]);
+        getReward(account);
     }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
@@ -572,7 +546,6 @@ contract VestAMMMultiRewards is ReentrancyGuard, Pausable {
 
     // Added to support recovering LP Rewards from other systems such as BAL to be distributed to holders
     function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyOwner {
-        // require(tokenAddress != address(stakingToken), "Cannot withdraw staking token");
         require(rewardData[tokenAddress].lastUpdateTime == 0, "Cannot withdraw reward token");
         IERC20(tokenAddress).safeTransfer(owner, tokenAmount);
         emit Recovered(tokenAddress, tokenAmount);
@@ -598,6 +571,12 @@ contract VestAMMMultiRewards is ReentrancyGuard, Pausable {
                 userRewardPerTokenPaid[account][token] = rewardData[token].rewardPerTokenStored;
             }
         }
+        _;
+    }
+
+    modifier initOnce() {
+        require(!calledInitialize, "called init already");
+        calledInitialize = true;
         _;
     }
 

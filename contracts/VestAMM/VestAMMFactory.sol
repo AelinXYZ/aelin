@@ -18,6 +18,7 @@ contract VestAMMDealFactory is IVestAMM {
 
     address public immutable VEST_AMM_LOGIC;
     address public immutable AELIN_FEE_MODULE;
+    address public immutable AELIN_MULTI_REWARDS;
     address public immutable VEST_DAO_FEES = 0x0000000000000000000000000000000000000000;
     IAelinLibraryList public immutable AELIN_LIBRARY_LIST;
 
@@ -52,15 +53,9 @@ contract VestAMMDealFactory is IVestAMM {
 
         vAmmAddress = Clones.clone(VEST_AMM_LOGIC);
 
-        VestAMM(vAmmAddress).initialize(_vAmmInfo, _dealAccess, AELIN_FEE_MODULE);
+        VestAMM(vAmmAddress).initialize(_vAmmInfo, _dealAccess, AELIN_FEE_MODULE, AELIN_MULTI_REWARDS);
 
         // TODO
         // emit NewVestAMM(_vAmmInfo, _dealAccess);
     }
-
-    // TODO a function that locks existing LP tokens
-    // or takes single sided tokens and LPs them, selling a % in the process
-    // to the other asset before LP'ing in exchange for single sided rewards
-    // which may be locked on a vesting schedule
-    function lockLiquidity() external {}
 }

@@ -75,7 +75,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     uint256 investmentTokenPerBase;
 
     // AmmData public ammData;
-    VestAMMMultiRewards public vestAmmMultiRewards;
+    address public vestAmmMultiRewards;
     VAmmInfo public vAmmInfo;
     DealAccess public dealAccess;
 
@@ -100,7 +100,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // AmmData calldata _ammData,
         VAmmInfo calldata _vAmmInfo,
         DealAccess calldata _dealAccess,
-        address _aelinFeeModule
+        address _aelinFeeModule,
+        address _aelinMultiRewards
     ) external initOnce {
         _validateLPSchedule(_vAmmInfo.lpVestingSchedule);
         // NOTE I don't like the current validation file that much. it is confusing
@@ -116,11 +117,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // TODO
         // aelinFeeModule = _aelinFeeModule;
 
-        // TODO work on the rewards logic
-        // TODO research the limit of how many rewards tokens you can distribute
-        // TODO emit the multi rewards distributor contract address
-        // TODO
-        // vestAmmMultiRewards = new VestAMMMultiRewards(address(this));
+        vestAmmMultiRewards = Clones.clone(_aelinMultiRewards);
+        VestAMMMultiRewards(vestAmmMultiRewardsAddress).initialize(address(this));
 
         // TODO if we are doing a liquidity growth round we need to read the prices of the assets
         // from onchain here and set the current price as the median price
