@@ -650,6 +650,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
      */
     function claimAllTokens(uint256 _tokenId) public {
         Validate.owner(ownerOf(_tokenId));
+        collectAllFees();
+        vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
         (uint256 lpAmount, address lpAddress) = claimableLPTokens(_tokenId);
         _claimLPTokens(_tokenId, lpAmount, lpAddress);
         for (uint256 i; i < lpVestingSchedule.singleVestingSchedules.length; i++) {
@@ -663,46 +665,41 @@ contract VestAMM is AelinVestingToken, IVestAMM {
      */
     function claimAllTokensManyNFTs(uint256[] _tokenIds) external {
         for (uint256 i; i < _tokenIds.length; i++) {
-            claimAllTokensSingleNFT(_tokenIds[i]);
+            claimAllTokens(_tokenIds[i]);
         }
     }
 
-    // TODO think about when to call collect all fees
     function _claimLPTokens(
         uint256 _tokenId,
-        uint256 amount,
-        address token
+        uint256 _claimableAmount,
+        address _token
     ) internal {
-        collectAllFees();
-        Validate.hasClaimBalance(amount);
-        VestVestingToken memory schedule = vestingDetails[_tokenId];
-        vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
-        totalLPClaimed += claimableAmount;
-        VestAMMMultiRewards.withdraw(claimableAmount, depositData.lpTokenAmount);
+        Validate.hasClaimBalance(_claimableAmount);
+        totalLPClaimed += _claimableAmount;
+        VestAMMMultiRewards.withdraw(_claimableAmount, depositData.lpTokenAmount);
+        IERC20(_token).safeTransfer(msg.sender, _claimableAmount);
         emit ClaimedToken(
-            token,
+            _token,
             msg.sender,
-            amount,
+            _claimableAmount,
             ClaimType.LP,
             -1
         );
     }
 
-    // TODO think about when to call collect all fees
     function _claimSingleTokens(
         uint256 _tokenId,
-        uint256 amount,
-        address token,
-        uint256 index
+        uint256 _claimableAmount,
+        address _token,
+        uint256 _singleRewardsIndex
     ) internal {
-        Validate.hasClaimBalance(amount);
-        VestVestingToken memory schedule = vestingDetails[_tokenId];
-        totalSingleClaimed[token] += amount;
-        IERC20(token).safeTransfer(msg.sender, amount);
+        Validate.hasClaimBalance(_claimableAmount);
+        totalSingleClaimed[_token] += _claimableAmount;
+        IERC20(_token).safeTransfer(msg.sender, _claimableAmount);
         emit ClaimedToken(
-            token,
+            _token,
             msg.sender,
-            amount,
+            _claimableAmount,
             ClaimType.Single,
             _singleRewardsIndex
         );
