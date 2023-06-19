@@ -180,7 +180,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
             SingleVestingSchedule singleVestingSchedule = vAmmInfo
                 .lpVestingSchedules[_depositTokens[i].lpScheduleIndex]
                 .singleVestingSchedules[_depositTokens[i].singleRewardIndex];
-            Validate.singleHolder(vAmmInfo.mainHolder == msg.sender || singleVestingSchedule.singleHolder == msg.sender);
+            Validate.singleHolder(singleVestingSchedule.singleHolder == msg.sender);
             Validate.singleToken(_depositTokens[i].token == singleVestingSchedule.rewardToken);
             Validate.singleTokenBalance(_depositTokens[i].amount <= IERC20(_depositTokens[i].token).balanceOf(msg.sender));
             Validate.singleDepositNotFinalized(!singleVestingSchedule.finalizedDeposit);
@@ -251,22 +251,22 @@ contract VestAMM is AelinVestingToken, IVestAMM {
                 singleRewards[_removeSingleList[i]].rewardTokenTotal,
                 singleHolderAmount
             );
-        }
 
-        if (singleVestingSchedule.finalizedDeposit) {
-            singleRewardsComplete -= 1;
-        }
+            if (singleVestingSchedule.finalizedDeposit) {
+                singleRewardsComplete -= 1;
+            }
 
-        if (_removeSingleList[i].singleRewardIndex != vAmmInfo.singleVestingSchedules.length - 1) {
-            vAmmInfo.singleVestingSchedules[_removeSingleList[i].singleRewardIndex] = vAmmInfo.singleVestingSchedules[
-                vAmmInfo.singleVestingSchedules.length - 1
-            ];
-            holderDeposits[singleVestingSchedule.singleHolder][_removeSingleList[i].singleRewardIndex] = holderDeposits[
-                singleVestingSchedule.singleHolder
-            ][vAmmInfo.singleVestingSchedules.length - 1];
+            if (_removeSingleList[i].singleRewardIndex != vAmmInfo.singleVestingSchedules.length - 1) {
+                vAmmInfo.singleVestingSchedules[_removeSingleList[i].singleRewardIndex] = vAmmInfo.singleVestingSchedules[
+                    vAmmInfo.singleVestingSchedules.length - 1
+                ];
+                holderDeposits[singleVestingSchedule.singleHolder][_removeSingleList[i].singleRewardIndex] = holderDeposits[
+                    singleVestingSchedule.singleHolder
+                ][vAmmInfo.singleVestingSchedules.length - 1];
+            }
+            delete vAmmInfo.singleVestingSchedules[vAmmInfo.singleVestingSchedules.length - 1];
+            delete holderDeposits[singleVestingSchedule.singleHolder][vAmmInfo.singleVestingSchedules.length - 1];
         }
-        delete vAmmInfo.singleVestingSchedules[vAmmInfo.singleVestingSchedules.length - 1];
-        delete holderDeposits[singleVestingSchedule.singleHolder][vAmmInfo.singleVestingSchedules.length - 1];
     }
 
     function removeSingles(RemoveSingle[] calldata _removeSingleList) external {
@@ -402,7 +402,9 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     //         // NOTE an important caveat is that when you add liquidity if they do not add enough excess tokens
     //         // then there will be excess sUSD that needs to be returned to investors. they will receive this amount
     //         // ideally by just calling the depositorDeallocWithdraw method when there is excess sUSD in a bucket
-    //     }
+    //     } else {
+    //          price is unchanged
+    // }
     //     saveDepositData(ammData.poolAddress);
     //     aelinFees(numInvTokensFee, numBaseTokensFee);
     // }
