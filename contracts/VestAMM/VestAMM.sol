@@ -466,37 +466,14 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     }
 
     // for when the lp is not funded in time
-    // function depositorWithdraw(uint256[] _tokenIds) external depositWindowEnded {
-    //     for (uint256 i; i < _tokenIds.length; i++) {
-    //         // NOTE make sure this properly tests ownership during testing
-    //         Validate.owner(ownerOf(_tokenIds[i]));
-    //         VestVestingToken memory schedule = vestingDetails[_tokenIds[i]];
-    //         IERC20(vAmmInfo.ammData.investmentToken).safeTransferFrom(address(this), msg.sender, schedule.amountDeposited);
-    //         // NOTE any reason to burn the NFT?
-    //         emit Withdraw(msg.sender, schedule.amountDeposited);
-    //     }
-    // }
-
-    // withdraw deallocated
-    // NOTE this function is when all the buckets are full and one or more
-    // buckets have overflown. the excess amount in the bucket needs to be
-    // proportionally returned to all investors in the pool. each investor
-    // can reclaim their excess investment tokens by calling this method in that case
-    // if the excess is too small it will be FCFS for the tiny amount of excess
-    // NOTE we have to be very careful with precision and not to let them remove more than the
-    // amount of excess in a bucket
-    // function depositorDeallocWithdraw(uint256[] _tokenIds) external {
-    //     Validate.withdrawAllowed(depositComplete, lpFundingExpiry);
-    //     for (uint256 i; i < _tokenIds.length; i++) {
-    //         VestVestingToken memory schedule = vestingDetails[_tokenId];
-    //         // TODO need to calculate and save this number during LP submission
-    //         // and store it as an 18 decimals percentage 5e17 is 50%
-    //         uint256 deallocationPercent;
-    //         uint256 excessWithdrawAmount = (schedule.amountDeposited * 1e18) / deallocationPercent;
-    //         IERC20(vAmmInfo.ammData.investmentToken).safeTransferFrom(address(this), msg.sender, excessWithdrawAmount);
-    //         emit Withdraw(msg.sender, excessWithdrawAmount);
-    //     }
-    // }
+    function depositorWithdraw(uint256[] _tokenIds) external neverDeposited {
+        for (uint256 i; i < _tokenIds.length; i++) {
+            Validate.owner(ownerOf(_tokenIds[i]));
+            VestVestingToken memory schedule = vestingDetails[_tokenIds[i]];
+            IERC20(vAmmInfo.ammData.investmentToken).safeTransferFrom(address(this), msg.sender, schedule.amountDeposited);
+            emit Withdraw(msg.sender, schedule.amountDeposited);
+        }
+    }
 
     // collect the fees from AMMs and send them to the Fee Module
     function collectAllFees(uint256 tokenId) public returns (uint256 amount0, uint256 amount1) {
@@ -734,7 +711,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         _;
     }
 
-    modifier depositWindowEnded() {
+    modifier neverDeposited() {
         //NOTE: double check logic
         Validate.depositWindowEnded(depositData.lpDepositTime == 0 && block.timestamp > lpFundingExpiry);
         _;
