@@ -163,4 +163,14 @@ contract CurveVestAMM {
 
         return pool != address(0) ? true : false;
     }
+
+    function getPriceRatio(IVestAMM.VAmmInfo calldata _vammInfo) external view returns (uint256) {
+        ICurveFactory curveFactory = ICurveFactory(curveFactoryAddress);
+
+        address pool = curveFactory.find_pool_for_coins(_vammInfo.ammData.investmentToken, _vammInfo.ammData.baseToken, 0);
+
+        ICurvePool curvePool = ICurvePool(pool);
+
+        return curvePool.get_dy(0, 1, 1 ether);
+    }
 }

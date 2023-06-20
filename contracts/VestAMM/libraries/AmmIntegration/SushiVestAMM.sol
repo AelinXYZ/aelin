@@ -155,4 +155,16 @@ contract SushiVestAMM {
     function _convertTokenToLP(uint256 _tokenAmount, uint256 _investmentTokenDecimals) internal pure returns (uint256) {
         return _tokenAmount * 10**(18 - _investmentTokenDecimals);
     }
+
+    function getPriceRatio(IVestAMM.VAmmInfo calldata _vammInfo) external view returns (uint256) {
+        ISushiRouter sushiRouterV2 = ISushiRouter(sushiRouterV2Address);
+
+        address[] memory path = new address[](2);
+        path[0] = _vammInfo.ammData.baseToken;
+        path[1] = _vammInfo.ammData.investmentToken;
+
+        uint256[] memory ratio = sushiRouterV2.getAmountsOut(10**18, path);
+
+        return ratio[1];
+    }
 }
