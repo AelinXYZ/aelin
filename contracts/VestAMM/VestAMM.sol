@@ -52,6 +52,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     uint256 constant BASE = 100 * 10**18;
     uint256 constant VEST_ASSET_FEE = 1 * 10**18;
     uint256 constant VEST_SWAP_FEE = 20 * 10**18;
+    uint256 constant VEST_BASE_FEE = 100 * 10**18;
     uint256 public depositExpiry;
     uint256 public lpFundingExpiry;
     uint256 public totalLPClaimed;
@@ -214,10 +215,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         for (uint8 i = 0; i < vAmmInfo.singleVestingSchedules; i++) {
             removeSingle(RemoveSingle(i, vAmmInfo.singleVestingSchedules[i].token));
         }
-        cancelVestAMM();
-    }
-
-    function cancelVestAMM() public onlyHolder depositIncomplete {
         isCancelled = true;
     }
 
@@ -280,7 +277,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         address baseToken = vAmmInfo.ammData.baseToken;
 
         // TODO add new validation for the base amount that they have enough
-        Validate.baseTokenBalance(IERC20(baseToken).balanceOf(msg.sender) == holderTokenTotal);
+        Validate.baseTokenBalance(IERC20(baseToken).balanceOf(msg.sender) >= holderTokenTotal);
 
         uint256 balanceBeforeTransfer = IERC20(baseToken).balanceOf(address(this));
         IERC20(baseToken).safeTransferFrom(msg.sender, address(this), holderTokenTotal);
@@ -319,10 +316,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // NOTE no deallocation allowed for v1
         require(totalInvTokensDeposited >= maxInvTokens, "investment cap exceeded");
 
-        // TODO
-        // stake your virtual token so the rewards distribution contract can track all the investors
-        // VestAMMMultiRewards.stake(depositTokenAmount);
-        mintVestingToken(msg.sender, depositTokenAmount);
+        VestAMMMultiRewards.stake(depositTokenAmount, msg.sender);
+        _mintVestingToken(msg.sender, depositTokenAmount, 0);
 
         emit AcceptVestDeal(msg.sender, depositTokenAmount);
     }
@@ -330,20 +325,12 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     function createInitialLiquidity() external onlyHolder lpFundingWindow {
         Validate.liquidityLaunch(vAmmInfo.hasLaunchPhase);
 
-        // DeployPool memory deployPool = createDeployPool();
         address poolAddress = vestAMMLibrary.deployPool(vAmmInfo.newPoolData);
-        // NOTE we can do this inside create add liquidity maybe instead where we calculate the fees
-        // basically what we need is to determine exactly how much we are going to LP and then take out 1% for fees and track that
         IVestAMMLibrary.AddLiquidity memory addLiquidity = createAddLiquidity(poolAddress);
-        // NOTE so imagine we have 100 ABC against 1000 sUSD that we are goign to LP into Balancer
-        // in reality we are taking a 1% fee of these tokens before we LP. So we will end up LP'ing 99 ABC against 990 sUSD
-        // and the fee will be 1 ABC against 10 sUSD
-        // (numInvTokensInLP, numBaseTokensInLP, numInvTokensFee, numBaseTokensFee)
         (, , numInvTokensFee, numBaseTokensFee) = vestAMMLibrary.addInitialLiquidity(addLiquidity);
         saveDepositData(poolAddress);
 
-        // TODO
-        // aelinFees(numInvTokensFee, numBaseTokensFee);
+        aelinFees(numInvTokensFee, numBaseTokensFee);
     }
 
     // to create the pool and deposit assets after phase 0 ends
@@ -443,31 +430,19 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         return DeployPool(investmentTokenAmount, baseTokenAmount);
     }
 
-    // function aelinFees(uint256 _invTokenFeeAmt, uint256 _baseTokenFeeAmt) internal {
-    //     sendFeesToAelin(ammData.baseToken, _baseTokenFeeAmt);
-    //     sendFeesToAelin(ammData.investmentAsset, _baseTokenFeeAmt);
+    function aelinFees(uint256 _invTokenFeeAmt, uint256 _baseTokenFeeAmt) internal {
+        sendFeesToAelin(ammData.baseToken, _baseTokenFeeAmt);
+        sendFeesToAelin(ammData.investmentAsset, _baseTokenFeeAmt);
 
-    //     // NOTE we need to DELETE or we just make it an admin call!!!! this part and figure out a more efficient way of sending single
-    //     // sided rewards to the AelinFeeModule. In addition to 1% of the tokens used to LP (base + investment)
-    //     // we are also taking 1% of each single sided reward
-    //     // BUT instead of sending them all here which could be up to 24 transfers which happen at the end
-    //     // of a lot of add liquidity logic
-    //     // NOTE instead of sending the single fees here what we can do is when an investor goes to claim their rewards
-    //     // we check if the fees have been sent yet and if not, we send the fees. So the first investor to claim any single
-    //     // rewards tokens will also pay to transfer all the fees to Aelin. After that no one else has to pay.
-    //     for (uint8 i = 0; i < vAmmInfo.lpVestingSchedules.length; i++) {
-    //         LPVestingSchedule lpVestingSchedule = vAmmInfo.lpVestingSchedules[i];
-    //         for (uint8 j = 0; j < lpVestingSchedule.singleVestingSchedules.length; j++) {
-    //             SingleVestingSchedule singleVestingSchedule = lpVestingSchedule.singleVestingSchedules[j];
+        for (uint8 i = 0; i < vAmmInfo.singleVestingSchedules.length; i++) {
+            SingleVestingSchedule singleVestingSchedule = vAmmInfo.singleVestingSchedules[i];
 
-    //             uint256 singleRewardsUsed = ((singleVestingSchedule.totalSingleTokens *
-    //                 depositedPerVestSchedule[_vestingScheduleIndex]) / maxInvTokensPerVestSchedule[_vestingScheduleIndex]);
+            uint256 singleRewardsUsed = (singleVestingSchedule.totalSingleTokens * totalInvTokensDeposited) / maxInvTokens;
 
-    //             uint256 feeAmount = (singleRewardsUsed * VEST_ASSET_FEE) / 1e18;
-    //             sendFeesToAelin(_singleRewards[i].token, feeAmount);
-    //         }
-    //     }
-    // }
+            uint256 feeAmount = (singleRewardsUsed * VEST_ASSET_FEE) / VEST_BASE_FEE;
+            sendFeesToAelin(_singleRewards[i].token, feeAmount);
+        }
+    }
 
     // TODO make sure the timestamp restrictions are set properly on these methods
     function withdrawAllExcessFunding() external {
@@ -741,12 +716,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
      * their index will be set to 1. This system gets rid of the need to have a settle step where the
      * deallocation is managed like we do in the regular Aelin pools.
      */
-    function mintVestingToken(address _to, uint256 _amount) internal {
-        uint256[] memory singleRewardTimestamps = new uint256[](
-            vAmmInfo.lpVestingSchedules[_vestingScheduleIndex].singleVestingSchedules.length
-        );
-        _mintVestingToken(_to, _amount, 0, singleRewardTimestamps);
-    }
+    function mintVestingToken(address _to, uint256 _amount) internal {}
 
     // // Does not like returning the array name
     function singleRewardsToDeposit(address _holder) external view returns (DepositToken[] memory) {
