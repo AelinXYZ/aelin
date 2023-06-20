@@ -237,11 +237,9 @@ contract BalancerVestAMM {
     function getPriceRatio(IVestAMM.VAmmInfo calldata _vammInfo) external view returns (uint256) {
         bytes32 poolId = IBalancerPool(_vammInfo.poolAddress).getPoolId();
 
-        (address poolAddress, ) = balancerVault.getPool(poolId);
+        (, uint256[] memory balances, ) = balancerVault.getPoolTokens(poolId);
 
-        (IERC20[] memory tokens, uint256[] memory balances, ) = balancerVault.getPoolTokens(poolId);
-
-        uint256[] memory normilizedWeights = IBalancerPool(poolAddress).getPoolIdgetNormilizedWeights();
+        uint256[] memory normilizedWeights = IBalancerPool(_vammInfo.poolAddress).getPoolIdgetNormilizedWeights();
 
         uint256 A = balances[0] / normilizedWeights[0];
         uint256 B = balances[1] / normilizedWeights[1];
