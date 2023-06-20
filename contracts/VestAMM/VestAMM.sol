@@ -251,22 +251,22 @@ contract VestAMM is AelinVestingToken, IVestAMM {
                 singleRewards[_removeSingleList[i]].rewardTokenTotal,
                 singleHolderAmount
             );
-
-            if (singleVestingSchedule.finalizedDeposit) {
-                singleRewardsComplete -= 1;
-            }
-
-            if (_removeSingleList[i].singleRewardIndex != vAmmInfo.singleVestingSchedules.length - 1) {
-                vAmmInfo.singleVestingSchedules[_removeSingleList[i].singleRewardIndex] = vAmmInfo.singleVestingSchedules[
-                    vAmmInfo.singleVestingSchedules.length - 1
-                ];
-                holderDeposits[singleVestingSchedule.singleHolder][_removeSingleList[i].singleRewardIndex] = holderDeposits[
-                    singleVestingSchedule.singleHolder
-                ][vAmmInfo.singleVestingSchedules.length - 1];
-            }
-            delete vAmmInfo.singleVestingSchedules[vAmmInfo.singleVestingSchedules.length - 1];
-            delete holderDeposits[singleVestingSchedule.singleHolder][vAmmInfo.singleVestingSchedules.length - 1];
         }
+
+        if (singleVestingSchedule.finalizedDeposit) {
+            singleRewardsComplete -= 1;
+        }
+            
+        if (_removeSingleList[i].singleRewardIndex != vAmmInfo.singleVestingSchedules.length - 1) {
+            vAmmInfo.singleVestingSchedules[_removeSingleList[i].singleRewardIndex] = vAmmInfo.singleVestingSchedules[
+                vAmmInfo.singleVestingSchedules.length - 1
+            ];
+            holderDeposits[singleVestingSchedule.singleHolder][_removeSingleList[i].singleRewardIndex] = holderDeposits[
+                singleVestingSchedule.singleHolder
+            ][vAmmInfo.singleVestingSchedules.length - 1];
+        }
+        delete vAmmInfo.singleVestingSchedules[vAmmInfo.singleVestingSchedules.length - 1];
+        delete holderDeposits[singleVestingSchedule.singleHolder][vAmmInfo.singleVestingSchedules.length - 1];
     }
 
     function removeSingles(RemoveSingle[] calldata _removeSingleList) external {
