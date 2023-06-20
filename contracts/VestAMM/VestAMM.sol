@@ -69,8 +69,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     MerkleTree.TrackClaimed private trackClaimed;
     AelinAllowList.AllowList public allowList;
     AelinNftGating.NftGatingData public nftGating;
-    // TODO
-    // AelinFeeModule public aelinFeeModule;
+    address public aelinFeeModule;
 
     uint256 public totalInvTokensDeposited;
     uint256 investmentTokenPerBase;
@@ -116,7 +115,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         dealAccess = _dealAccess;
         vestAMMLibrary = IVestAMMLibrary(_vAmmInfo.ammData.ammLibrary);
         // TODO
-        // aelinFeeModule = _aelinFeeModule;
+        aelinFeeModule = _aelinFeeModule;
 
         vestAmmMultiRewards = Clones.clone(_aelinMultiRewards);
         VestAMMMultiRewards(vestAmmMultiRewardsAddress).initialize(address(this));
@@ -632,9 +631,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     function sendFeesToAelin(address _token, uint256 _amount) public {
         // NOTE you don't just transfer fees to the AelinFeeModule because you need to track
         // which period they came in for AELIN stakers to be able to claim correctly from the AelinFeeModule
-
-        // TODO
-        // AelinFeeModule(aelinFeeModule).sendFees(_token, _amount);
+        IERC20(_token).approve(aelinFeeModule, _amount);
+        AelinFeeModule(aelinFeeModule).sendFees(_token, _amount);
         emit SentFees(_token, _amount);
     }
 
