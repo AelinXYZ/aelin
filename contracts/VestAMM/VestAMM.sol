@@ -252,7 +252,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         if (singleVestingSchedule.finalizedDeposit) {
             singleRewardsComplete -= 1;
         }
-            
+
         if (_removeSingleList[i].singleRewardIndex != vAmmInfo.singleVestingSchedules.length - 1) {
             vAmmInfo.singleVestingSchedules[_removeSingleList[i].singleRewardIndex] = vAmmInfo.singleVestingSchedules[
                 vAmmInfo.singleVestingSchedules.length - 1
@@ -655,34 +655,18 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         }
     }
 
-    /**
-     * @dev allows the purchaser to mint a NFT representing their share of the LP tokens
-     * the NFT will be tied to storage data in this contract. We need 4 numbers for the
-     * vesting system to work. 1) the investors amount contributed. 2) the total target raise.
-     * 3) the total amount contributed and 4) the number of LP tokens they earn.
-     * After the LP funding window is done whenever a user calls transfer or claim for the
-     * first time we can update all the NFT object data to show their exact vesting amounts.
-     * we can use a bitmap to efficiently calculate if they have claimed or transferred their NFT yet.
-     * the bitmap will use the ID of the NFT we issued them as the index. if they have claimed
-     * their index will be set to 1. This system gets rid of the need to have a settle step where the
-     * deallocation is managed like we do in the regular Aelin pools.
-     */
-    function mintVestingToken(address _to, uint256 _amount) internal {}
-
-    // // Does not like returning the array name
     function singleRewardsToDeposit(address _holder) external view returns (DepositToken[] memory) {
-        DepositToken[] memory rewardsToDeposit = new DepositToken[](numSingleRewards);
-        for (uint8 j = 0; j < vAmmInfo.singleVestingSchedules.length; j++) {
-            address singleHolder = vAmmInfo.singleVestingSchedules[j].singleHolder;
-            if (_holder == vAmmInfo.mainHolder || _holder == singleHolder) {
-                uint256 amountDeposited = holderDeposits[vAmmInfo.mainHolder][i][j] + holderDeposits[singleHolder][i][j];
+        DepositToken[] memory rewardsToDeposit = new DepositToken[]();
+        for (uint8 i = 0; i < vAmmInfo.singleVestingSchedules.length; i++) {
+            address singleHolder = vAmmInfo.singleVestingSchedules[i].singleHolder;
+            if (_holder == singleHolder && !vAmmInfo.singleVestingSchedules[i].finalizedDeposit) {
+                uint256 amountDeposited = holderDeposits[singleHolder][i];
                 DepositToken memory rewardToDeposit = DepositToken(
                     i,
-                    j,
-                    vAmmInfo.singleVestingSchedules[j].rewardToken,
-                    vAmmInfo.singleVestingSchedules[j].totalSingleTokens - amountDeposited
+                    vAmmInfo.singleVestingSchedules[i].rewardToken,
+                    vAmmInfo.singleVestingSchedules[i].totalSingleTokens - amountDeposited
                 );
-                rewardsToDeposit[i * vAmmInfo.singleVestingSchedules.length + j] = rewardToDeposit;
+                rewardsToDeposit.push(rewardToDeposit);
             }
         }
         return rewardsToDeposit;
