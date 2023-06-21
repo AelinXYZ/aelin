@@ -6,7 +6,7 @@ import "forge-std/console.sol";
 import "./VestVestingToken.sol";
 
 // import "./VestAMMMultiRewards.sol";
-import {AelinVestingToken} from "contracts/AelinVestingToken.sol";
+import {VestVestingToken} from "./VestVestingToken.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -42,7 +42,7 @@ contract VestAMMMultiRewards {
 // TODO write an initial test that checks the ability to start a vAMM and deposit base and single reward tokens
 // TODO make sure the logic works with 80/20 balancer pools and not just when its 50/50
 // TODO triple check all arguments start with _, casing is correct. well commented, etc
-contract VestAMM is AelinVestingToken, IVestAMM {
+contract VestAMM is VestVestingToken, IVestAMM {
     using SafeERC20 for IERC20;
 
     //  - we create the pool with the given ratios and tokens (only for liquidity launch)
@@ -94,7 +94,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     bool public locked = false;
 
     /**
-     * @dev initializes the contract configuration, called from the factory contract when creating a new Up Front Deal
+     * @dev initializes the contract configuration, called from the factory contract
+     * when creating a new Vest AMM (vAMM) instance
      */
     function initialize(
         // AmmData calldata _ammData,
@@ -104,51 +105,41 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         address _aelinMultiRewards
     ) external initOnce {
         _validateLPSchedule(_vAmmInfo.lpVestingSchedule);
-        // NOTE I don't like the current validation file that much. it is confusing
         _validateSingleSchedules(_vAmmInfo.singleVestingSchedules);
-        // pool initialization checks
-        // TODO how to name these
-        // _setNameAndSymbol(string(abi.encodePacked("vAMM-", TBD)), string(abi.encodePacked("v-", TBD)));
-        // added ammData to VAmmInfo
-        // ammData = _ammData;
+        _setNameAndSymbol(
+            string(abi.encodePacked("vAMM-", _vAmmInfo.name)),
+            string(abi.encodePacked("v-", _vAmmInfo.symbol))
+        );
         vAmmInfo = _vAmmInfo;
         dealAccess = _dealAccess;
         vestAMMLibrary = IVestAMMLibrary(_vAmmInfo.ammData.ammLibrary);
-        // TODO
         aelinFeeModule = _aelinFeeModule;
 
         vestAmmMultiRewards = Clones.clone(_aelinMultiRewards);
-        VestAMMMultiRewards(vestAmmMultiRewardsAddress).initialize(address(this));
+        VestAMMMultiRewards(vestAmmMultiRewards).initialize(address(this));
+        emit MultiRewardsCreated(vestAmmMultiRewards);
 
-        // TODO if we are doing a liquidity growth round we need to read the prices of the assets
-        // from onchain here and set the current price as the median price
-        // TODO do a require check to make sure the pool exists if they are doing a liquidity growth
-        // TODO research how to solve a new pool where liquidity exists elsewhere
+        // TODO when a new pool is for a token that has liquidity elsewhere
+        // we prob want to have another price check somehow
+        // maybe both now and when the liquidity is added. we can ask for the
+        // address and AMM where liquidity is already or check it ourselves in the contract
         if (!_vAmmInfo.hasLaunchPhase) {
-            // we need to pass in data to check if the pool exists. ammData is a placeholder but not the right argument
-            Validate.poolExists(vestAMMLibrary.checkPoolExists(vAmmInfo)); // NOTE: Check if poolAddress is required if hasLaunchPhase is false
-            // initial price ratio between the two assets
-            // TODO slippage check
+            Validate.poolExists(vestAMMLibrary.checkPoolExists(vAmmInfo));
             investmentTokenPerBase = vestAMMLibrary.getPriceRatio(
                 vAmmInfo.poolAddress,
                 vAmmInfo.ammData.investmentToken,
                 vAmmInfo.ammData.baseToken
             );
         }
-        // TODO if its a launch make sure pool doesn't exist for certain AMMs
-        // LP vesting schedule array up to 4 buckets
-        // each bucket will have a token total in the protocol tokens
-        // this loop calculates the maximum number of investment tokens that will be accepted
-        // based on the price ratio at the time of creation or the price defined in the
-        // launch struct for new protocols without liquidity
         uint256 invPerBase = _vAmmInfo.hasLaunchPhase ? _vAmmInfo.investmentPerBase : investmentTokenPerBase;
 
-        maxInvTokens = (vAmmInfo.lpVestingSchedule.totalBaseTokens * invPerBase) / 10**IERC20(ammData.baseToken).decimals();
+        uint256 totalBaseTokens = vAmmInfo.lpVestingSchedule.totalBaseTokens;
 
-        // NOTE: We need to approve the lirbary to use base/investment tokens
-        // instead of type(uint256).max we should use the max amount of tokens set by the user
-        IERC20(vAmmInfo.ammData.baseToken).approve(address(vestAMMLibrary), type(uint256).max);
-        IERC20(vAmmInfo.ammData.investmentToken).approve(address(vestAMMLibrary), type(uint256).max);
+        maxInvTokens = (totalBaseTokens * invPerBase) / 10**IERC20(ammData.baseToken).decimals();
+
+        // NOTE can just approve later before we provide liquidity. this is probably better
+        IERC20(vAmmInfo.ammData.baseToken).approve(address(vestAMMLibrary), totalBaseTokens);
+        IERC20(vAmmInfo.ammData.investmentToken).approve(address(vestAMMLibrary), maxInvTokens);
 
         // Allow list logic
         // check if there's allowlist and amounts,

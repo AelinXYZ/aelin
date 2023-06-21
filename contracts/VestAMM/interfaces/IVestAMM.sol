@@ -60,6 +60,8 @@ interface IVestAMM {
     }
 
     struct VAmmInfo {
+        string name;
+        string symbol;
         AmmData ammData;
         bool hasLaunchPhase;
         // TODO use this as a slippage parameter when the pool already exists
@@ -98,9 +100,9 @@ interface IVestAMM {
 
     struct RemoveSingle {
         uint8 singleRewardIndex;
-        // NOTE: not needed
-        // address token;
     }
+
+    event MultiRewardsCreated(address indexed rewardsContract);
 
     event AcceptVestDeal(address indexed depositor, uint256 depositTokenAmount, uint8 vestingScheduleIndex);
 
