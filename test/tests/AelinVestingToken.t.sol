@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.6;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.19;
 
 import "forge-std/Test.sol";
 import {AelinTestUtils} from "../utils/AelinTestUtils.sol";
@@ -101,7 +101,7 @@ contract AelinVestingTokenTest is Test, AelinTestUtils {
         vm.assume(_shareAmount > share);
 
         vm.startPrank(vestingToken.ownerOf(_tokenId));
-        vm.expectRevert("cant transfer more than current share");
+        vm.expectRevert("amout gte than current share");
         vestingToken.transferVestingShare(_to, _tokenId, _shareAmount);
         vm.stopPrank();
     }

@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
-
-import {IAelinPool} from "./IAelinPool.sol";
+pragma solidity 0.8.19;
 
 interface IAelinUpFrontDeal {
     struct UpFrontDealData {
@@ -26,30 +24,6 @@ interface IAelinUpFrontDeal {
         bool allowDeallocation;
     }
 
-    event CreateUpFrontDeal(
-        address indexed dealAddress,
-        string name,
-        string symbol,
-        address purchaseToken,
-        address underlyingDealToken,
-        address indexed holder,
-        address indexed sponsor,
-        uint256 sponsorFee,
-        bytes32 merkleRoot,
-        string ipfsHash
-    );
-
-    event CreateUpFrontDealConfig(
-        address indexed dealAddress,
-        uint256 underlyingDealTokenTotal,
-        uint256 purchaseTokenPerDealToken,
-        uint256 purchaseRaiseMinimum,
-        uint256 purchaseDuration,
-        uint256 vestingPeriod,
-        uint256 vestingCliffPeriod,
-        bool allowDeallocation
-    );
-
     event DepositDealToken(
         address indexed underlyingDealTokenAddress,
         address indexed depositor,
@@ -64,7 +38,7 @@ interface IAelinUpFrontDeal {
         uint256 vestingExpiryTimestamp
     );
 
-    event WithdrewExcess(address UpFrontDealAddress, uint256 amountWithdrawn);
+    event WithdrewExcess(address upFrontDealAddress, uint256 amountWithdrawn);
 
     event AcceptDeal(
         address indexed user,

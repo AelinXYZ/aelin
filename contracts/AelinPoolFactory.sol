@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+pragma solidity 0.8.19;
 
-import "./MinimalProxyFactory.sol";
-import "./AelinPool.sol";
+import {AelinPool, IAelinPool} from "./AelinPool.sol";
+import {MinimalProxyFactory} from "./MinimalProxyFactory.sol";
 
 /**
  * @dev the factory contract allows an Aelin sponsor to permissionlessly create new pools

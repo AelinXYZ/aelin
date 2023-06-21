@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.6;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.19;
 
 import "forge-std/Test.sol";
 import {MerkleFeeDistributor} from "contracts/MerkleFeeDistributor.sol";
@@ -93,7 +93,7 @@ contract MerkleFeeDistributorTest is Test {
         assertEq(MockERC20(token3).balanceOf(user1), claimableToken3);
         assertEq(MockERC20(token4).balanceOf(user1), claimableToken4);
 
-        vm.expectRevert("MerkleDistributor: Drop already claimed.");
+        vm.expectRevert("already claimed");
         feeDistributor.claim(0, user1, share, merkleProof);
         vm.stopPrank();
     }
@@ -106,16 +106,16 @@ contract MerkleFeeDistributorTest is Test {
         merkleProof[0] = 0x0a7e356738486e70683cadf436a6f14789f356637327b190e17ab338af7f0910;
         merkleProof[1] = 0xac1fe0856a9ea8b0b37641df7cdd623f456573a64be32e4b28bb7bdf48024e48;
 
-        vm.expectRevert("MerkleDistributor: Invalid proof.");
+        vm.expectRevert("invalid proof");
         feeDistributor.claim(1, user1, share, merkleProof);
 
-        vm.expectRevert("MerkleDistributor: Invalid proof.");
+        vm.expectRevert("invalid proof");
         feeDistributor.claim(0, user2, share, merkleProof);
 
-        vm.expectRevert("MerkleDistributor: Invalid proof.");
+        vm.expectRevert("invalid proof");
         feeDistributor.claim(0, user1, 1, merkleProof);
 
-        vm.expectRevert("MerkleDistributor: Invalid proof.");
+        vm.expectRevert("invalid proof");
         merkleProof[1] = 0xac1fe0856a9ea8b0b37641df7cdd623f456573a64be32e4b28bb7bdf48024e43;
         feeDistributor.claim(0, user1, 1, merkleProof);
 

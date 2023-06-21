@@ -1,27 +1,22 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+pragma solidity 0.8.19;
 
-import {ERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-
-interface IERC20Decimals {
-    function decimals() external view returns (uint8);
-}
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /**
  * @dev a standard ERC20 contract that is extended with a few methods
  * described in detail below
  */
-contract AelinERC20 is ERC20, ReentrancyGuard {
-    bool setInfo;
+contract AelinERC20 is ERC20 {
+    bool private setInfo;
     /**
      * @dev Due to the constructor being empty for the MinimalProxy architecture we need
      * to set the name and symbol in the initializer which requires these custom variables
      */
-    string private _custom_name;
-    string private _custom_symbol;
-    uint8 private _custom_decimals;
-    bool private locked;
+    string private customName;
+    string private customSymbol;
+    uint8 private customDecimals;
+
     uint8 constant DEAL_TOKEN_DECIMALS = 18;
 
     constructor() ERC20("", "") {}
@@ -37,15 +32,15 @@ contract AelinERC20 is ERC20, ReentrancyGuard {
      * custom logic for name(), symbol(), decimals(), and _setNameSymbolAndDecimals()
      */
     function name() public view virtual override returns (string memory) {
-        return _custom_name;
+        return customName;
     }
 
     function symbol() public view virtual override returns (string memory) {
-        return _custom_symbol;
+        return customSymbol;
     }
 
     function decimals() public view virtual override returns (uint8) {
-        return _custom_decimals;
+        return customDecimals;
     }
 
     function _setNameSymbolAndDecimals(
@@ -53,9 +48,9 @@ contract AelinERC20 is ERC20, ReentrancyGuard {
         string memory _symbol,
         uint8 _decimals
     ) internal initInfoOnce returns (bool) {
-        _custom_name = _name;
-        _custom_symbol = _symbol;
-        _custom_decimals = _decimals;
+        customName = _name;
+        customSymbol = _symbol;
+        customDecimals = _decimals;
         setInfo = true;
         emit AelinToken(_name, _symbol, _decimals);
         return true;

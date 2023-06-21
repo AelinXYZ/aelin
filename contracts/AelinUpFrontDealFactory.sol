@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+pragma solidity 0.8.19;
 
-import "./MinimalProxyFactory.sol";
-import "./AelinUpFrontDeal.sol";
-import "./libraries/AelinNftGating.sol";
-import "./libraries/AelinAllowList.sol";
-import {IAelinUpFrontDeal} from "./interfaces/IAelinUpFrontDeal.sol";
+import {AelinUpFrontDeal, IAelinUpFrontDeal} from "./AelinUpFrontDeal.sol";
+import {MinimalProxyFactory} from "./MinimalProxyFactory.sol";
+import {AelinAllowList} from "./libraries/AelinAllowList.sol";
+import {AelinNftGating} from "./libraries/AelinNftGating.sol";
 
-contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
-    using SafeERC20 for IERC20;
-
+contract AelinUpFrontDealFactory is MinimalProxyFactory {
     address public immutable UP_FRONT_DEAL_LOGIC;
     address public immutable AELIN_ESCROW_LOGIC;
     address public immutable AELIN_TREASURY;
@@ -24,8 +21,8 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
     }
 
     function createUpFrontDeal(
-        UpFrontDealData calldata _dealData,
-        UpFrontDealConfig calldata _dealConfig,
+        IAelinUpFrontDeal.UpFrontDealData calldata _dealData,
+        IAelinUpFrontDeal.UpFrontDealConfig calldata _dealConfig,
         AelinNftGating.NftCollectionRules[] calldata _nftCollectionRules,
         AelinAllowList.InitData calldata _allowListInit
     ) external returns (address upFrontDealAddress) {
@@ -65,4 +62,28 @@ contract AelinUpFrontDealFactory is MinimalProxyFactory, IAelinUpFrontDeal {
             _dealConfig.allowDeallocation
         );
     }
+
+    event CreateUpFrontDeal(
+        address indexed dealAddress,
+        string name,
+        string symbol,
+        address purchaseToken,
+        address underlyingDealToken,
+        address indexed holder,
+        address indexed sponsor,
+        uint256 sponsorFee,
+        bytes32 merkleRoot,
+        string ipfsHash
+    );
+
+    event CreateUpFrontDealConfig(
+        address indexed dealAddress,
+        uint256 underlyingDealTokenTotal,
+        uint256 purchaseTokenPerDealToken,
+        uint256 purchaseRaiseMinimum,
+        uint256 purchaseDuration,
+        uint256 vestingPeriod,
+        uint256 vestingCliffPeriod,
+        bool allowDeallocation
+    );
 }

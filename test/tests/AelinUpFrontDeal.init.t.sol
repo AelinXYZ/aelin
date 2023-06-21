@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.6;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.19;
 
 import "forge-std/Test.sol";
 import {AelinTestUtils} from "../utils/AelinTestUtils.sol";
@@ -24,8 +24,8 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
     address dealAddressAllowList;
     address dealAddressNftGating721;
     address dealAddressNftGating1155;
-    address dealAddressNftGatingPunks;
     address dealAddressLowDecimals;
+    address dealAddressNftGating721IdRanges;
 
     function setUp() public {
         AelinAllowList.InitData memory allowListEmpty;
@@ -45,8 +45,11 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         dealDataLowDecimals.underlyingDealToken = address(underlyingDealTokenLowDecimals);
 
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules721 = getERC721Collection();
-        AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = getPunksCollection();
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules1155 = getERC1155Collection();
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRules721IdRanges = getERC721Collection();
+
+        nftCollectionRules721IdRanges[0].idRanges = getERC721IdRanges();
+        nftCollectionRules721IdRanges[1].idRanges = getERC721IdRanges();
 
         dealAddressNoDeallocationNoDeposit = upFrontDealFactory.createUpFrontDeal(
             dealData,
@@ -97,17 +100,17 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
             allowListEmpty
         );
 
-        dealAddressNftGatingPunks = upFrontDealFactory.createUpFrontDeal(
-            dealData,
-            dealConfig,
-            nftCollectionRulesPunks,
-            allowListEmpty
-        );
-
         dealAddressLowDecimals = upFrontDealFactory.createUpFrontDeal(
             dealDataLowDecimals,
             dealConfig,
             nftCollectionRulesEmpty,
+            allowListEmpty
+        );
+
+        dealAddressNftGating721IdRanges = upFrontDealFactory.createUpFrontDeal(
+            dealData,
+            dealConfig,
+            nftCollectionRules721IdRanges,
             allowListEmpty
         );
 
@@ -134,11 +137,11 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         underlyingDealToken.approve(address(dealAddressNftGating721), type(uint256).max);
         AelinUpFrontDeal(dealAddressNftGating721).depositUnderlyingTokens(1e35);
 
-        underlyingDealToken.approve(address(dealAddressNftGatingPunks), type(uint256).max);
-        AelinUpFrontDeal(dealAddressNftGatingPunks).depositUnderlyingTokens(1e35);
-
         underlyingDealToken.approve(address(dealAddressNftGating1155), type(uint256).max);
         AelinUpFrontDeal(dealAddressNftGating1155).depositUnderlyingTokens(1e35);
+
+        underlyingDealToken.approve(address(dealAddressNftGating721IdRanges), type(uint256).max);
+        AelinUpFrontDeal(dealAddressNftGating721IdRanges).depositUnderlyingTokens(1e35);
 
         vm.stopPrank();
     }
@@ -191,7 +194,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
 
         dealData.purchaseToken = address(purchaseToken);
         dealData.underlyingDealToken = address(0);
-        vm.expectRevert("cant pass null underlying address");
+        vm.expectRevert("cant pass null underlying addr");
         upFrontDealFactory.createUpFrontDeal(dealData, dealConfig, nftCollectionRulesEmpty, allowListEmpty);
 
         vm.stopPrank();
@@ -344,32 +347,6 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         vm.stopPrank();
     }
 
-    function test_CreateUpFrontDeal_RevertWhen_UsePunksAnd1155() public {
-        vm.startPrank(dealCreatorAddress);
-
-        AelinAllowList.InitData memory allowListEmpty;
-        AelinNftGating.NftCollectionRules[] memory nftCollectionRulesPunks = getPunksCollection();
-        AelinNftGating.NftCollectionRules[] memory nftCollectionRules1155 = getERC1155Collection();
-
-        AelinNftGating.NftCollectionRules[] memory nftCollectionRules = new AelinNftGating.NftCollectionRules[](3);
-
-        nftCollectionRules[0] = nftCollectionRulesPunks[0];
-        nftCollectionRules[1] = nftCollectionRules1155[0];
-        nftCollectionRules[2] = nftCollectionRules1155[1];
-
-        vm.expectRevert("can only contain 721");
-        upFrontDealFactory.createUpFrontDeal(getDealData(), getDealConfig(), nftCollectionRules, allowListEmpty);
-
-        nftCollectionRules[0] = nftCollectionRules1155[0];
-        nftCollectionRules[1] = nftCollectionRules1155[1];
-        nftCollectionRules[2] = nftCollectionRulesPunks[0];
-
-        vm.expectRevert("can only contain 1155");
-        upFrontDealFactory.createUpFrontDeal(getDealData(), getDealConfig(), nftCollectionRules, allowListEmpty);
-
-        vm.stopPrank();
-    }
-
     function test_CreateUpFrontDeal_RevertWhen_UseIncompatibleERCType() public {
         vm.startPrank(dealCreatorAddress);
 
@@ -456,6 +433,100 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         vm.startPrank(dealCreatorAddress);
         vm.expectRevert("cant have allow list & merkle");
         upFrontDealFactory.createUpFrontDeal(merkleDealData, getDealConfig(), nftCollectionRulesEmpty, allowListInit);
+        vm.stopPrank();
+    }
+
+    function test_CreateUpFrontDeal_RevertWhen_MaxIdRangesExceeded() public {
+        vm.startPrank(dealCreatorAddress);
+
+        AelinAllowList.InitData memory allowListEmpty;
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRules721 = getERC721Collection();
+
+        AelinNftGating.IdRange[] memory idRanges = new AelinNftGating.IdRange[](11);
+
+        for (uint256 i; i < 11; i++) {
+            idRanges[i].begin = 0;
+            idRanges[i].end = 1;
+        }
+
+        nftCollectionRules721[0].idRanges = idRanges;
+
+        vm.expectRevert("too many ranges");
+        upFrontDealFactory.createUpFrontDeal(getDealData(), getDealConfig(), nftCollectionRules721, allowListEmpty);
+        vm.stopPrank();
+    }
+
+    function test_CreateUpFrontDeal_RevertWhen_IdRangesAreIncorrect() public {
+        AelinAllowList.InitData memory allowListEmpty;
+
+        //First element of CollectionRules, first element of idRanges
+        vm.startPrank(dealCreatorAddress);
+
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRules721A = getERC721Collection();
+
+        nftCollectionRules721A[0].idRanges = getERC721IdRanges();
+        nftCollectionRules721A[0].idRanges[0].begin = 1;
+        nftCollectionRules721A[0].idRanges[0].end = 0;
+
+        vm.expectRevert("begin greater than end");
+        upFrontDealFactory.createUpFrontDeal(getDealData(), getDealConfig(), nftCollectionRules721A, allowListEmpty);
+        vm.stopPrank();
+
+        //First element of CollectionRules, second element of idRanges
+        vm.startPrank(dealCreatorAddress);
+
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRules721B = getERC721Collection();
+
+        nftCollectionRules721B[0].idRanges = getERC721IdRanges();
+        nftCollectionRules721B[0].idRanges[1].begin = 1;
+        nftCollectionRules721B[0].idRanges[1].end = 0;
+
+        vm.expectRevert("begin greater than end");
+        upFrontDealFactory.createUpFrontDeal(getDealData(), getDealConfig(), nftCollectionRules721B, allowListEmpty);
+        vm.stopPrank();
+
+        //Second element of CollectionRules, first element of idRanges
+        vm.startPrank(dealCreatorAddress);
+
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRules721C = getERC721Collection();
+
+        nftCollectionRules721C[1].idRanges = getERC721IdRanges();
+        nftCollectionRules721C[1].idRanges[0].begin = 1;
+        nftCollectionRules721C[1].idRanges[0].end = 0;
+
+        vm.expectRevert("begin greater than end");
+        upFrontDealFactory.createUpFrontDeal(getDealData(), getDealConfig(), nftCollectionRules721C, allowListEmpty);
+        vm.stopPrank();
+
+        //Second element of CollectionRules, second element of idRanges
+        vm.startPrank(dealCreatorAddress);
+
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRules721D = getERC721Collection();
+
+        nftCollectionRules721D[1].idRanges = getERC721IdRanges();
+        nftCollectionRules721D[1].idRanges[1].begin = 1;
+        nftCollectionRules721D[1].idRanges[1].end = 0;
+
+        vm.expectRevert("begin greater than end");
+        upFrontDealFactory.createUpFrontDeal(getDealData(), getDealConfig(), nftCollectionRules721D, allowListEmpty);
+        vm.stopPrank();
+    }
+
+    function test_CreateUpFrontDeal_RevertWHen_RangeOverlap() public {
+        AelinAllowList.InitData memory allowListEmpty;
+
+        vm.startPrank(dealCreatorAddress);
+
+        AelinNftGating.NftCollectionRules[] memory nftCollectionRules721A = getERC721Collection();
+
+        nftCollectionRules721A[0].idRanges = getERC721IdRanges();
+        nftCollectionRules721A[0].idRanges[0].begin = 0;
+        nftCollectionRules721A[0].idRanges[0].end = 2;
+        nftCollectionRules721A[0].idRanges[1].begin = 1; //Overlaps
+        nftCollectionRules721A[0].idRanges[1].end = 10;
+
+        vm.expectRevert("range overlap");
+        upFrontDealFactory.createUpFrontDeal(getDealData(), getDealConfig(), nftCollectionRules721A, allowListEmpty);
         vm.stopPrank();
     }
 
@@ -826,45 +897,62 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         uint256[] memory tempUintArray2;
         (, tempBool) = AelinUpFrontDeal(dealAddressNftGating721).getNftGatingDetails(address(0), 0);
         assertTrue(tempBool);
-        (tempUint, tempAddress, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating721)
+        (tempUint, tempAddress, , tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating721)
             .getNftCollectionDetails(address(collection721_1));
         assertEq(tempUint, 1e20);
         assertEq(tempAddress, address(collection721_1));
-        (tempUint, tempAddress, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating721)
+        (tempUint, tempAddress, , tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating721)
             .getNftCollectionDetails(address(collection721_2));
         assertEq(tempUint, 1e22);
         assertEq(tempAddress, address(collection721_2));
     }
 
-    function test_CreateUpFrontDeal_NftGatingPunks() public {
+    function test_CreateUpFrontDeal_NftGating721IdRanges() public {
         address tempAddress;
         uint256 tempUint;
         bool tempBool;
         // balance
-        assertEq(underlyingDealToken.balanceOf(address(dealAddressNftGatingPunks)), 1e35);
+        assertEq(underlyingDealToken.balanceOf(address(dealAddressNftGating721IdRanges)), 1e35);
         // deal contract storage
-        assertEq(AelinUpFrontDeal(dealAddressNftGatingPunks).dealFactory(), address(upFrontDealFactory));
-        assertEq(AelinUpFrontDeal(dealAddressNftGatingPunks).name(), "aeUpFrontDeal-DEAL");
-        assertEq(AelinUpFrontDeal(dealAddressNftGatingPunks).symbol(), "aeUD-DEAL");
-        assertEq(AelinUpFrontDeal(dealAddressNftGatingPunks).dealStart(), block.timestamp);
-        assertEq(AelinUpFrontDeal(dealAddressNftGatingPunks).aelinEscrowLogicAddress(), address(testEscrow));
-        assertEq(AelinUpFrontDeal(dealAddressNftGatingPunks).aelinTreasuryAddress(), aelinTreasury);
-        assertEq(AelinUpFrontDeal(dealAddressNftGatingPunks).tokenCount(), 0);
+        assertEq(AelinUpFrontDeal(dealAddressNftGating721IdRanges).dealFactory(), address(upFrontDealFactory));
+        assertEq(AelinUpFrontDeal(dealAddressNftGating721IdRanges).name(), "aeUpFrontDeal-DEAL");
+        assertEq(AelinUpFrontDeal(dealAddressNftGating721IdRanges).symbol(), "aeUD-DEAL");
+        assertEq(AelinUpFrontDeal(dealAddressNftGating721IdRanges).dealStart(), block.timestamp);
+        assertEq(AelinUpFrontDeal(dealAddressNftGating721IdRanges).aelinEscrowLogicAddress(), address(testEscrow));
+        assertEq(AelinUpFrontDeal(dealAddressNftGating721IdRanges).aelinTreasuryAddress(), aelinTreasury);
+        assertEq(AelinUpFrontDeal(dealAddressNftGating721IdRanges).tokenCount(), 0);
         // underlying has deposited so deal has started
-        assertEq(AelinUpFrontDeal(dealAddressNftGatingPunks).purchaseExpiry(), block.timestamp + 10 days);
-        assertEq(AelinUpFrontDeal(dealAddressNftGatingPunks).vestingCliffExpiry(), block.timestamp + 10 days + 60 days);
+        assertEq(AelinUpFrontDeal(dealAddressNftGating721IdRanges).purchaseExpiry(), block.timestamp + 10 days);
+        assertEq(
+            AelinUpFrontDeal(dealAddressNftGating721IdRanges).vestingCliffExpiry(),
+            block.timestamp + 10 days + 60 days
+        );
         // test allow list
-        (, , , tempBool) = AelinUpFrontDeal(dealAddressNftGatingPunks).getAllowList(address(0));
+        (, , , tempBool) = AelinUpFrontDeal(dealAddressNftGating721IdRanges).getAllowList(address(0));
         assertFalse(tempBool);
         // test nft gating
+        AelinNftGating.IdRange[] memory idRanges;
         uint256[] memory tempUintArray1;
         uint256[] memory tempUintArray2;
-        (, tempBool) = AelinUpFrontDeal(dealAddressNftGatingPunks).getNftGatingDetails(address(0), 0);
+        (, tempBool) = AelinUpFrontDeal(dealAddressNftGating721IdRanges).getNftGatingDetails(address(0), 0);
         assertTrue(tempBool);
-        (tempUint, tempAddress, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGatingPunks)
-            .getNftCollectionDetails(address(punks));
+        (tempUint, tempAddress, idRanges, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating721IdRanges)
+            .getNftCollectionDetails(address(collection721_1));
+        assertEq(tempUint, 1e20);
+        assertEq(tempAddress, address(collection721_1));
+        assertEq(idRanges[0].begin, 1);
+        assertEq(idRanges[0].end, 2);
+        assertEq(idRanges[1].begin, 1e20);
+        assertEq(idRanges[1].end, 1e21);
+
+        (tempUint, tempAddress, idRanges, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating721IdRanges)
+            .getNftCollectionDetails(address(collection721_2));
         assertEq(tempUint, 1e22);
-        assertEq(tempAddress, address(punks));
+        assertEq(tempAddress, address(collection721_2));
+        assertEq(idRanges[0].begin, 1);
+        assertEq(idRanges[0].end, 2);
+        assertEq(idRanges[1].begin, 1e20);
+        assertEq(idRanges[1].end, 1e21);
     }
 
     function test_CreateUpFrontDeal_NftGating1155() public {
@@ -888,11 +976,12 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         (, , , tempBool) = AelinUpFrontDeal(dealAddressNftGating1155).getAllowList(address(0));
         assertFalse(tempBool);
         // test nft gating
+        AelinNftGating.IdRange[] memory idRanges;
         uint256[] memory tempUintArray1;
         uint256[] memory tempUintArray2;
         (, tempBool) = AelinUpFrontDeal(dealAddressNftGating1155).getNftGatingDetails(address(0), 0);
         assertTrue(tempBool);
-        (tempUint, tempAddress, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating1155)
+        (tempUint, tempAddress, idRanges, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating1155)
             .getNftCollectionDetails(address(collection1155_1));
         assertEq(tempUint, 0);
         assertEq(tempAddress, address(collection1155_1));
@@ -900,7 +989,7 @@ contract AelinUpFrontDealInitTest is Test, AelinTestUtils, IAelinUpFrontDeal {
         assertEq(tempUintArray1[1], 2);
         assertEq(tempUintArray2[0], 10);
         assertEq(tempUintArray2[1], 20);
-        (tempUint, tempAddress, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating1155)
+        (tempUint, tempAddress, idRanges, tempUintArray1, tempUintArray2) = AelinUpFrontDeal(dealAddressNftGating1155)
             .getNftCollectionDetails(address(collection1155_2));
         assertEq(tempUint, 0);
         assertEq(tempAddress, address(collection1155_2));

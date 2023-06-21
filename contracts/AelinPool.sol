@@ -1,19 +1,22 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+pragma solidity 0.8.19;
 
-import "./AelinERC20.sol";
-import "./AelinDeal.sol";
-import "./interfaces/IAelinPool.sol";
-import "./interfaces/ICryptoPunks.sol";
-import "./libraries/NftCheck.sol";
+import {AelinDeal, IAelinDeal} from "./AelinDeal.sol";
+import {AelinERC20} from "./AelinERC20.sol";
+import {MinimalProxyFactory} from "./MinimalProxyFactory.sol";
+import {IAelinPool} from "./interfaces/IAelinPool.sol";
+import {IERC20Extended} from "./interfaces/IERC20Extended.sol";
+import {NftCheck, IERC721, IERC1155} from "./libraries/NftCheck.sol";
+import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
+contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool, ReentrancyGuard {
     using SafeERC20 for IERC20;
-    address constant CRYPTO_PUNKS = address(0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB);
-    uint256 constant BASE = 100 * 10 ** 18;
-    uint256 constant MAX_SPONSOR_FEE = 15 * 10 ** 18;
-    uint256 constant AELIN_FEE = 2 * 10 ** 18;
-    uint8 constant MAX_DEALS = 5;
+    uint256 public constant BASE = 100 * 10 ** 18;
+    uint256 public constant MAX_SPONSOR_FEE = 15 * 10 ** 18;
+    uint256 public constant AELIN_FEE = 2 * 10 ** 18;
+    uint256 public constant ID_RANGES_MAX_LENGTH = 10;
+    uint8 public constant MAX_DEALS = 5;
 
     uint8 public numberOfDeals;
     uint8 public purchaseTokenDecimals;
@@ -63,13 +66,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     string private storedSymbol;
 
     /**
-     * @dev the constructor will always be blank due to the MinimalProxyFactory pattern
-     * this allows the underlying logic of this contract to only be deployed once
-     * and each new pool created is simply a storage wrapper
-     */
-    constructor() {}
-
-    /**
      * @dev the initialize method replaces the constructor setup and can only be called once
      *
      * Requirements:
@@ -90,7 +86,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         );
         require(365 days >= _poolData.duration, "max 1 year duration");
         require(_poolData.sponsorFee <= MAX_SPONSOR_FEE, "exceeds max sponsor fee");
-        purchaseTokenDecimals = IERC20Decimals(_poolData.purchaseToken).decimals();
+        purchaseTokenDecimals = IERC20Extended(_poolData.purchaseToken).decimals();
         require(purchaseTokenDecimals <= DEAL_TOKEN_DECIMALS, "too many token decimals");
         storedName = _poolData.name;
         storedSymbol = _poolData.symbol;
@@ -116,10 +112,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256[] memory allowListAmounts = _poolData.allowListAmounts;
 
         if (allowListAddresses.length > 0 || allowListAmounts.length > 0) {
-            require(
-                allowListAddresses.length == allowListAmounts.length,
-                "allowListAddresses and allowListAmounts arrays should have the same length"
-            );
+            require(allowListAddresses.length == allowListAmounts.length, "arrays should be same length");
             for (uint256 i; i < allowListAddresses.length; ++i) {
                 allowList[allowListAddresses[i]] = allowListAmounts[i];
                 emit AllowlistAddress(allowListAddresses[i], allowListAmounts[i]);
@@ -127,20 +120,33 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
             hasAllowList = true;
         }
 
-        NftCollectionRules[] memory nftCollectionRules = _poolData.nftCollectionRules;
+        NftCollectionRules[] calldata nftCollectionRules = _poolData.nftCollectionRules;
 
         if (nftCollectionRules.length > 0) {
-            // if the first address supports punks or 721, the entire pool only supports 721 or punks
-            if (
-                nftCollectionRules[0].collectionAddress == CRYPTO_PUNKS ||
-                NftCheck.supports721(nftCollectionRules[0].collectionAddress)
-            ) {
+            // if the first address supports 721, the entire pool only supports 721
+            if (NftCheck.supports721(nftCollectionRules[0].collectionAddress)) {
                 for (uint256 i; i < nftCollectionRules.length; ++i) {
-                    require(
-                        nftCollectionRules[i].collectionAddress == CRYPTO_PUNKS ||
-                            NftCheck.supports721(nftCollectionRules[i].collectionAddress),
-                        "can only contain 721"
-                    );
+                    if (i != 0) {
+                        require(NftCheck.supports721(nftCollectionRules[i].collectionAddress), "can only contain 721");
+                    }
+
+                    uint256 rangesLength = nftCollectionRules[i].idRanges.length;
+                    require(rangesLength <= ID_RANGES_MAX_LENGTH, "too many ranges");
+
+                    for (uint256 j; j < rangesLength; j++) {
+                        require(
+                            nftCollectionRules[i].idRanges[j].begin <= nftCollectionRules[i].idRanges[j].end,
+                            "begin greater than end"
+                        );
+
+                        if (j > 0) {
+                            require(
+                                nftCollectionRules[i].idRanges[j].begin >= nftCollectionRules[i].idRanges[j - 1].end,
+                                "range overlap"
+                            );
+                        }
+                    }
+
                     nftCollectionDetails[nftCollectionRules[i].collectionAddress] = nftCollectionRules[i];
                     emit PoolWith721(nftCollectionRules[i].collectionAddress, nftCollectionRules[i].purchaseAmount);
                 }
@@ -149,7 +155,9 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
             // if the first address supports 1155, the entire pool only supports 1155
             else if (NftCheck.supports1155(nftCollectionRules[0].collectionAddress)) {
                 for (uint256 i; i < nftCollectionRules.length; ++i) {
-                    require(NftCheck.supports1155(nftCollectionRules[i].collectionAddress), "can only contain 1155");
+                    if (i != 0) {
+                        require(NftCheck.supports1155(nftCollectionRules[i].collectionAddress), "can only contain 1155");
+                    }
                     require(nftCollectionRules[i].purchaseAmount == 0, "purchase amt must be 0 for 1155");
                     nftCollectionDetails[nftCollectionRules[i].collectionAddress] = nftCollectionRules[i];
 
@@ -209,49 +217,93 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
      *
      * Scenarios:
      * 1. each wallet holding a qualified NFT to deposit an unlimited amount of purchase tokens
-     * 2. certain amount of purchase tokens per wallet regardless of the number of qualified NFTs held
-     * 3. certain amount of Investment tokens per qualified NFT held
+     * 2. certain amount of Investment tokens per qualified NFT held
      */
 
     function purchasePoolTokensWithNft(
         NftPurchaseList[] calldata _nftPurchaseList,
         uint256 _purchaseTokenAmount
     ) external nonReentrant {
+        uint256 nftPurchaseListLength = _nftPurchaseList.length;
+
         require(hasNftList, "pool does not have an NFT list");
         require(block.timestamp < purchaseExpiry, "not in purchase window");
+        require(nftPurchaseListLength > 0, "must provide purchase list");
 
+        NftPurchaseList memory nftPurchaseList;
+        address collectionAddress;
+        uint256[] memory tokenIds;
+        uint256 tokenIdsLength;
+        NftCollectionRules memory nftCollectionRules;
+        bool isCollectionERC721;
+
+        //The running total for 721 tokens
         uint256 maxPurchaseTokenAmount;
 
-        for (uint256 i; i < _nftPurchaseList.length; ++i) {
-            NftPurchaseList memory nftPurchaseList = _nftPurchaseList[i];
-            address collectionAddress = nftPurchaseList.collectionAddress;
-            uint256[] memory tokenIds = nftPurchaseList.tokenIds;
+        //Iterate over the collections
+        for (uint256 i; i < nftPurchaseListLength; ++i) {
+            nftPurchaseList = _nftPurchaseList[i];
+            collectionAddress = nftPurchaseList.collectionAddress;
+            tokenIds = nftPurchaseList.tokenIds;
+            tokenIdsLength = tokenIds.length;
+            nftCollectionRules = nftCollectionDetails[collectionAddress];
 
             require(collectionAddress != address(0), "collection should not be null");
-
-            NftCollectionRules memory nftCollectionRules = nftCollectionDetails[collectionAddress];
             require(nftCollectionRules.collectionAddress == collectionAddress, "collection not in the pool");
 
+            if (i == 0) {
+                isCollectionERC721 = NftCheck.supports721(collectionAddress);
+            }
+
+            //Iterate over the token ids
+            for (uint256 j; j < tokenIdsLength; ++j) {
+                if (isCollectionERC721) {
+                    require(IERC721(collectionAddress).ownerOf(tokenIds[j]) == msg.sender, "has to be the token owner");
+
+                    // If there are no ranges then no need to check whether token Id is within them
+                    if (nftCollectionRules.idRanges.length > 0) {
+                        require(isTokenIdInRange(tokenIds[j], nftCollectionRules.idRanges), "tokenId not in range");
+                    }
+
+                    // Only blacklist if purchase amount not unlimited
+                    if (nftCollectionRules.purchaseAmount != 0) {
+                        require(!nftId[collectionAddress][tokenIds[j]], "tokenId already used");
+                        nftId[collectionAddress][tokenIds[j]] = true;
+                        emit BlacklistNFT(collectionAddress, tokenIds[j]);
+                    }
+                } else {
+                    //Must otherwise be an 1155 given initialise function
+                    require(nftId[collectionAddress][tokenIds[j]], "tokenId not in the pool");
+                    require(
+                        IERC1155(collectionAddress).balanceOf(msg.sender, tokenIds[j]) >=
+                            nftCollectionRules.minTokensEligible[j],
+                        "erc1155 balance too low"
+                    );
+                }
+            }
+
             if (nftCollectionRules.purchaseAmount > 0) {
-                maxPurchaseTokenAmount += nftCollectionRules.purchaseAmount * tokenIds.length;
-            }
-
-            if (nftCollectionRules.purchaseAmount == 0) {
-                maxPurchaseTokenAmount = _purchaseTokenAmount;
-            }
-
-            if (NftCheck.supports721(collectionAddress)) {
-                _blackListCheck721(collectionAddress, tokenIds);
-            }
-            if (NftCheck.supports1155(collectionAddress)) {
-                _eligibilityCheck1155(collectionAddress, tokenIds, nftCollectionRules);
-            }
-            if (collectionAddress == CRYPTO_PUNKS) {
-                _blackListCheckPunks(collectionAddress, tokenIds);
+                unchecked {
+                    uint256 collectionAllowance = nftCollectionRules.purchaseAmount * tokenIdsLength;
+                    // if there is an overflow of the previous calculation, allow the max purchase token amount
+                    if (collectionAllowance / nftCollectionRules.purchaseAmount != tokenIdsLength) {
+                        maxPurchaseTokenAmount = type(uint256).max;
+                        break;
+                    } else {
+                        maxPurchaseTokenAmount += collectionAllowance;
+                        if (maxPurchaseTokenAmount < collectionAllowance) {
+                            maxPurchaseTokenAmount = type(uint256).max;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                maxPurchaseTokenAmount = type(uint256).max;
+                break;
             }
         }
 
-        require(_purchaseTokenAmount <= maxPurchaseTokenAmount, "purchase amount should be less the max allocation");
+        require(_purchaseTokenAmount <= maxPurchaseTokenAmount, "purchase amount greater than max");
 
         uint256 amountBefore = IERC20(purchaseToken).balanceOf(address(this));
         IERC20(purchaseToken).safeTransferFrom(msg.sender, address(this), _purchaseTokenAmount);
@@ -268,6 +320,15 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
 
         _mint(msg.sender, purchaseTokenAmount);
         emit PurchasePoolToken(msg.sender, purchaseTokenAmount);
+    }
+
+    function isTokenIdInRange(uint256 _tokenId, IdRange[] memory _idRanges) internal pure returns (bool) {
+        for (uint256 i; i < _idRanges.length; i++) {
+            if (_tokenId >= _idRanges[i].begin && _tokenId <= _idRanges[i].end) {
+                return true;
+            }
+        }
+        return false;
     }
 
     function _blackListCheck721(address _collectionAddress, uint256[] memory _tokenIds) internal {
@@ -290,15 +351,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
                 IERC1155(_collectionAddress).balanceOf(msg.sender, _tokenIds[i]) >= _nftCollectionRules.minTokensEligible[i],
                 "erc1155 balance too low"
             );
-        }
-    }
-
-    function _blackListCheckPunks(address _punksAddress, uint256[] memory _tokenIds) internal {
-        for (uint256 i; i < _tokenIds.length; ++i) {
-            require(ICryptoPunks(_punksAddress).punkIndexToAddress(_tokenIds[i]) == msg.sender, "not the owner");
-            require(!nftId[_punksAddress][_tokenIds[i]], "tokenId already used");
-            nftId[_punksAddress][_tokenIds[i]] = true;
-            emit BlacklistNFT(_punksAddress, _tokenIds[i]);
         }
     }
 
@@ -601,7 +653,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
      * @dev the sponsor may change addresses
      */
     function setSponsor(address _sponsor) external onlySponsor {
-        require(_sponsor != address(0));
+        require(_sponsor != address(0), "cant pass null sponsor address");
         futureSponsor = _sponsor;
     }
 

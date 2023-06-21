@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+pragma solidity 0.8.19;
 
 library AelinAllowList {
     struct InitData {
@@ -16,10 +16,7 @@ library AelinAllowList {
 
     function initialize(InitData calldata _init, AllowList storage _self) external {
         if (_init.allowListAddresses.length > 0 || _init.allowListAmounts.length > 0) {
-            require(
-                _init.allowListAddresses.length == _init.allowListAmounts.length,
-                "allowListAddresses and allowListAmounts arrays should have the same length"
-            );
+            require(_init.allowListAddresses.length == _init.allowListAmounts.length, "arrays should be same length");
             _self.allowListAddresses = _init.allowListAddresses;
             _self.allowListAmounts = _init.allowListAmounts;
             for (uint256 i; i < _init.allowListAddresses.length; ++i) {

@@ -1,24 +1,22 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+pragma solidity 0.8.19;
 
-import "./AelinVestingToken.sol";
-import "./MinimalProxyFactory.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {AelinFeeEscrow} from "./AelinFeeEscrow.sol";
+import {AelinVestingToken} from "./AelinVestingToken.sol";
+import {MinimalProxyFactory} from "./MinimalProxyFactory.sol";
+import {AelinAllowList} from "./libraries/AelinAllowList.sol";
+import {AelinNftGating} from "./libraries/AelinNftGating.sol";
+import {MerkleTree} from "./libraries/MerkleTree.sol";
 import {IAelinUpFrontDeal} from "./interfaces/IAelinUpFrontDeal.sol";
 import {IERC20Extended} from "./interfaces/IERC20Extended.sol";
-import "./libraries/AelinNftGating.sol";
-import "./libraries/AelinAllowList.sol";
-import "./libraries/MerkleTree.sol";
+import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestingToken {
     using SafeERC20 for IERC20;
 
-    uint256 constant BASE = 100 * 10 ** 18;
-    uint256 constant MAX_SPONSOR_FEE = 15 * 10 ** 18;
-    uint256 constant AELIN_FEE = 2 * 10 ** 18;
+    uint256 public constant BASE = 100 * 10 ** 18;
+    uint256 public constant MAX_SPONSOR_FEE = 15 * 10 ** 18;
+    uint256 public constant AELIN_FEE = 2 * 10 ** 18;
 
     UpFrontDealData public dealData;
     UpFrontDealConfig public dealConfig;
@@ -65,7 +63,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
         // pool initialization checks
         require(_dealData.purchaseToken != _dealData.underlyingDealToken, "purchase & underlying the same");
         require(_dealData.purchaseToken != address(0), "cant pass null purchase address");
-        require(_dealData.underlyingDealToken != address(0), "cant pass null underlying address");
+        require(_dealData.underlyingDealToken != address(0), "cant pass null underlying addr");
         require(_dealData.holder != address(0), "cant pass null holder address");
 
         require(_dealConfig.purchaseDuration >= 30 minutes && _dealConfig.purchaseDuration <= 30 days, "not within limit");
@@ -522,15 +520,17 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
      * @param _collection NFT collection address to get the collection details for
      * @return uint256 purchase amount, if 0 then unlimited purchase
      * @return address collection address used for configuration
+     * @return IdRange[] for ERC721, an array of token Id ranges
      * @return uint256[] for ERC1155, included token IDs for this collection
      * @return uint256[] for ERC1155, min number of tokens required for participating
      */
     function getNftCollectionDetails(
         address _collection
-    ) public view returns (uint256, address, uint256[] memory, uint256[] memory) {
+    ) public view returns (uint256, address, AelinNftGating.IdRange[] memory, uint256[] memory, uint256[] memory) {
         return (
             nftGating.nftCollectionDetails[_collection].purchaseAmount,
             nftGating.nftCollectionDetails[_collection].collectionAddress,
+            nftGating.nftCollectionDetails[_collection].idRanges,
             nftGating.nftCollectionDetails[_collection].tokenIds,
             nftGating.nftCollectionDetails[_collection].minTokensEligible
         );
@@ -539,8 +539,8 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
     /**
      * @dev returns various details about the NFT gating storage
      * @param _collection NFT collection address to check
-     * @param _nftId if _collection is ERC721 or CryptoPunks check if this ID has been used, if ERC1155 check if this ID is included
-     * @return bool if _collection is ERC721 or CryptoPunks true if this ID has been used, if ERC1155 true if this ID is included
+     * @param _nftId if _collection is ERC721 check if this ID has been used, if ERC1155 check if this ID is included
+     * @return bool if _collection is ERC721 true if this ID has been used, if ERC1155 true if this ID is included
      * @return bool returns hasNftList, true if this deal has a valid NFT gating list
      */
     function getNftGatingDetails(address _collection, uint256 _nftId) public view returns (bool, bool) {

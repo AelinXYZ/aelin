@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.6;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.19;
 
 import "forge-std/Test.sol";
 import {AelinTestUtils} from "../utils/AelinTestUtils.sol";
@@ -199,7 +199,7 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
 
         AelinPool pool = new AelinPool();
         AelinFeeEscrow escrow = new AelinFeeEscrow();
-        vm.expectRevert("allowListAddresses and allowListAmounts arrays should have the same length");
+        vm.expectRevert("arrays should be same length");
         pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
     }
 
@@ -305,6 +305,146 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
         pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
     }
 
+    function test_Initialize_RevertWhen_MaxIdRangesExceeded() public {
+        address[] memory allowListAddressesEmpty;
+        uint256[] memory allowListAmountsEmpty;
+
+        IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](1);
+        nftCollectionRules[0].collectionAddress = address(collection721_1);
+        nftCollectionRules[0].purchaseAmount = 0;
+
+        IAelinPool.IdRange[] memory idRanges = new IAelinPool.IdRange[](11);
+
+        for (uint256 i; i < 11; i++) {
+            idRanges[i].begin = 0;
+            idRanges[i].end = 1;
+        }
+
+        nftCollectionRules[0].idRanges = idRanges;
+
+        IAelinPool.PoolData memory poolData = getPoolData({
+            purchaseTokenCap: 1e35,
+            duration: 10 days,
+            sponsorFee: 2e18,
+            purchaseDuration: 1 days,
+            allowListAddresses: allowListAddressesEmpty,
+            allowListAmounts: allowListAmountsEmpty,
+            nftCollectionRules: nftCollectionRules
+        });
+
+        AelinPool pool = new AelinPool();
+        AelinFeeEscrow escrow = new AelinFeeEscrow();
+        vm.expectRevert("too many ranges");
+        pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
+    }
+
+    function test_Initialize_RevertWhen_IdRangesAreIncorrect() public {
+        address[] memory allowListAddressesEmpty;
+        uint256[] memory allowListAmountsEmpty;
+
+        IAelinPool.NftCollectionRules[] memory nftCollectionRulesA = getNft721CollectionRules();
+
+        //First element of CollectionRules, first element of idRanges
+        nftCollectionRulesA[0].idRanges[0].begin = 1;
+        nftCollectionRulesA[0].idRanges[0].end = 0;
+
+        IAelinPool.PoolData memory poolData = getPoolData({
+            purchaseTokenCap: 1e35,
+            duration: 10 days,
+            sponsorFee: 2e18,
+            purchaseDuration: 1 days,
+            allowListAddresses: allowListAddressesEmpty,
+            allowListAmounts: allowListAmountsEmpty,
+            nftCollectionRules: nftCollectionRulesA
+        });
+
+        AelinPool pool = new AelinPool();
+        AelinFeeEscrow escrow = new AelinFeeEscrow();
+        vm.expectRevert("begin greater than end");
+        pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
+
+        //First element of CollectionRules, second element of idRanges
+        IAelinPool.NftCollectionRules[] memory nftCollectionRulesB = getNft721CollectionRules();
+        nftCollectionRulesB[0].idRanges[1].begin = 1;
+        nftCollectionRulesB[0].idRanges[1].end = 0;
+
+        poolData = getPoolData({
+            purchaseTokenCap: 1e35,
+            duration: 10 days,
+            sponsorFee: 2e18,
+            purchaseDuration: 1 days,
+            allowListAddresses: allowListAddressesEmpty,
+            allowListAmounts: allowListAmountsEmpty,
+            nftCollectionRules: nftCollectionRulesB
+        });
+
+        vm.expectRevert("begin greater than end");
+        pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
+
+        //Second element of CollectionRules, first element of idRanges
+        IAelinPool.NftCollectionRules[] memory nftCollectionRulesC = getNft721CollectionRules();
+        nftCollectionRulesC[1].idRanges[0].begin = 1;
+        nftCollectionRulesC[1].idRanges[0].end = 0;
+
+        poolData = getPoolData({
+            purchaseTokenCap: 1e35,
+            duration: 10 days,
+            sponsorFee: 2e18,
+            purchaseDuration: 1 days,
+            allowListAddresses: allowListAddressesEmpty,
+            allowListAmounts: allowListAmountsEmpty,
+            nftCollectionRules: nftCollectionRulesC
+        });
+
+        vm.expectRevert("begin greater than end");
+        pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
+
+        //Second element of CollectionRules, first element of idRanges
+        IAelinPool.NftCollectionRules[] memory nftCollectionRulesD = getNft721CollectionRules();
+        nftCollectionRulesD[1].idRanges[1].begin = 1;
+        nftCollectionRulesD[1].idRanges[1].end = 0;
+
+        poolData = getPoolData({
+            purchaseTokenCap: 1e35,
+            duration: 10 days,
+            sponsorFee: 2e18,
+            purchaseDuration: 1 days,
+            allowListAddresses: allowListAddressesEmpty,
+            allowListAmounts: allowListAmountsEmpty,
+            nftCollectionRules: nftCollectionRulesD
+        });
+
+        vm.expectRevert("begin greater than end");
+        pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
+    }
+
+    function test_Initialize_RevertWhen_RangeOverlap() public {
+        address[] memory allowListAddressesEmpty;
+        uint256[] memory allowListAmountsEmpty;
+
+        IAelinPool.NftCollectionRules[] memory nftCollectionRulesA = getNft721CollectionRules();
+
+        nftCollectionRulesA[0].idRanges[0].begin = 0;
+        nftCollectionRulesA[0].idRanges[0].end = 2;
+        nftCollectionRulesA[0].idRanges[1].begin = 1;
+        nftCollectionRulesA[0].idRanges[1].end = 10;
+
+        IAelinPool.PoolData memory poolData = getPoolData({
+            purchaseTokenCap: 1e35,
+            duration: 10 days,
+            sponsorFee: 2e18,
+            purchaseDuration: 1 days,
+            allowListAddresses: allowListAddressesEmpty,
+            allowListAmounts: allowListAmountsEmpty,
+            nftCollectionRules: nftCollectionRulesA
+        });
+
+        AelinPool pool = new AelinPool();
+        AelinFeeEscrow escrow = new AelinFeeEscrow();
+        vm.expectRevert("range overlap");
+        pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
+    }
+
     function testFuzz_Initialize_Pool(
         uint256 _purchaseTokenCap,
         uint256 _poolDuration,
@@ -360,9 +500,9 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
         uint256 _allowListLength
     ) public {
         vm.assume(_sponsorFee <= MAX_SPONSOR_FEE);
-        vm.assume(_purchaseDuration >= 30 minutes && _purchaseDuration <= 30 days);
+        _purchaseDuration = bound(_purchaseDuration, 30 minutes, 30 days);
         vm.assume(_poolDuration <= 365 days);
-        vm.assume(_allowListLength < 100 && _allowListLength > 0); // Otherwise will run out of gas
+        _allowListLength = bound(_allowListLength, 1, 99); //quicker than vm.assuming an upper and lower bound
 
         address[] memory allowListAddresses = getAllowListAddresses(_allowListLength);
         uint256[] memory allowListAmounts = getAllowListAmounts(_allowListLength);
@@ -482,100 +622,6 @@ contract AelinPoolInitTest is Test, AelinTestUtils {
         }
         pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
         for (uint256 i; i < 3; ++i) {
-            (uint256 purchaseAmount, address collectionAddress) = pool.nftCollectionDetails(
-                nftCollectionRules[i].collectionAddress
-            );
-            assertEq(collectionAddress, nftCollectionRules[i].collectionAddress, "Should have same collection address");
-            assertEq(purchaseAmount, nftCollectionRules[i].purchaseAmount, "Should have same purchaseAmount");
-        }
-
-        assertTrue(pool.hasNftList());
-    }
-
-    function testFuzz_Initialize_PoolPunks(
-        uint256 _purchaseTokenCap,
-        uint256 _poolDuration,
-        uint256 _sponsorFee,
-        uint256 _purchaseDuration
-    ) public {
-        vm.assume(_sponsorFee <= MAX_SPONSOR_FEE);
-        vm.assume(_purchaseDuration >= 30 minutes && _purchaseDuration <= 30 days);
-        vm.assume(_poolDuration <= 365 days);
-
-        address[] memory allowListAddressesEmpty;
-        uint256[] memory allowListAmountsEmpty;
-
-        IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](1);
-        uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp))) % 100_000_000;
-        nftCollectionRules[0].collectionAddress = punks;
-        nftCollectionRules[0].purchaseAmount = pseudoRandom;
-
-        IAelinPool.PoolData memory poolData = getPoolData({
-            purchaseTokenCap: _purchaseTokenCap,
-            duration: _poolDuration,
-            sponsorFee: _sponsorFee,
-            purchaseDuration: _purchaseDuration,
-            allowListAddresses: allowListAddressesEmpty,
-            allowListAmounts: allowListAmountsEmpty,
-            nftCollectionRules: nftCollectionRules
-        });
-
-        AelinPool pool = new AelinPool();
-        AelinFeeEscrow escrow = new AelinFeeEscrow();
-
-        vm.expectEmit(true, true, true, true, address(pool));
-        emit PoolWith721(nftCollectionRules[0].collectionAddress, nftCollectionRules[0].purchaseAmount);
-
-        pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
-        (uint256 purchaseAmount, address collectionAddress) = pool.nftCollectionDetails(
-            nftCollectionRules[0].collectionAddress
-        );
-        assertEq(collectionAddress, nftCollectionRules[0].collectionAddress, "Should have same collection address");
-        assertEq(purchaseAmount, nftCollectionRules[0].purchaseAmount, "Should have same purchaseAmount");
-
-        assertTrue(pool.hasNftList());
-    }
-
-    function testFuzz_Initialize_PoolERC721AndPunks(
-        uint256 _purchaseTokenCap,
-        uint256 _poolDuration,
-        uint256 _sponsorFee,
-        uint256 _purchaseDuration
-    ) public {
-        vm.assume(_sponsorFee <= MAX_SPONSOR_FEE);
-        vm.assume(_purchaseDuration >= 30 minutes && _purchaseDuration <= 30 days);
-        vm.assume(_poolDuration <= 365 days);
-
-        address[] memory allowListAddressesEmpty;
-        uint256[] memory allowListAmountsEmpty;
-
-        IAelinPool.NftCollectionRules[] memory nftCollectionRules = new IAelinPool.NftCollectionRules[](2);
-        uint256 pseudoRandom = uint256(keccak256(abi.encodePacked(block.timestamp))) % 100_000_000;
-        nftCollectionRules[0].collectionAddress = punks;
-        nftCollectionRules[0].purchaseAmount = pseudoRandom;
-
-        nftCollectionRules[1].collectionAddress = address(collection721_1);
-        nftCollectionRules[1].purchaseAmount = pseudoRandom;
-
-        IAelinPool.PoolData memory poolData = getPoolData({
-            purchaseTokenCap: _purchaseTokenCap,
-            duration: _poolDuration,
-            sponsorFee: _sponsorFee,
-            purchaseDuration: _purchaseDuration,
-            allowListAddresses: allowListAddressesEmpty,
-            allowListAmounts: allowListAmountsEmpty,
-            nftCollectionRules: nftCollectionRules
-        });
-
-        AelinPool pool = new AelinPool();
-        AelinFeeEscrow escrow = new AelinFeeEscrow();
-
-        vm.expectEmit(true, true, true, true, address(pool));
-        for (uint256 i; i < 2; ++i) {
-            emit PoolWith721(nftCollectionRules[i].collectionAddress, nftCollectionRules[i].purchaseAmount);
-        }
-        pool.initialize(poolData, user1, address(testDeal), aelinTreasury, address(escrow));
-        for (uint256 i; i < 2; ++i) {
             (uint256 purchaseAmount, address collectionAddress) = pool.nftCollectionDetails(
                 nftCollectionRules[i].collectionAddress
             );

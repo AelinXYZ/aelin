@@ -3,4 +3,4 @@ node_modules/
 **/contracts/generated
 **/contracts/routers
 **/typechain-types
-contracts/deprecated
+contracts.old/

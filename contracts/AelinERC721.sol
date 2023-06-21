@@ -1,21 +1,22 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+pragma solidity 0.8.19;
 
-import {IAelinERC721} from "./interfaces/IAelinERC721.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract AelinERC721 is ERC721, ReentrancyGuard, IAelinERC721 {
+contract AelinERC721 is ERC721, ReentrancyGuard {
     /**
      * @dev Due to the constructor being empty for the MinimalProxy architecture we need
      * to set the name and symbol in the initializer which requires these custom variables
      */
-    string private _custom_name;
-    string private _custom_symbol;
+    string private customName;
+    string private customSymbol;
 
-    bool infoSet;
+    bool private infoSet;
 
     constructor() ERC721("", "") {}
+
+    event SetAelinERC721(string name, string symbol);
 
     modifier initInfoOnce() {
         require(!infoSet, "can only initialize once");
@@ -28,16 +29,16 @@ contract AelinERC721 is ERC721, ReentrancyGuard, IAelinERC721 {
      * custom logic for name(), symbol(), and _setNameAndSymbol()
      */
     function name() public view virtual override returns (string memory) {
-        return _custom_name;
+        return customName;
     }
 
     function symbol() public view virtual override returns (string memory) {
-        return _custom_symbol;
+        return customSymbol;
     }
 
     function _setNameAndSymbol(string memory _name, string memory _symbol) internal initInfoOnce returns (bool) {
-        _custom_name = _name;
-        _custom_symbol = _symbol;
+        customName = _name;
+        customSymbol = _symbol;
         infoSet = true;
         emit SetAelinERC721(_name, _symbol);
         return true;

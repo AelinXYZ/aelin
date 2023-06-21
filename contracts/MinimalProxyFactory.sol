@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.6.0 <0.8.7;
+pragma solidity 0.8.19;
 
 // https://docs.synthetix.io/contracts/source/contracts/minimalproxyfactory
 // https://blog.openzeppelin.com/deep-dive-into-the-minimal-proxy-contract/

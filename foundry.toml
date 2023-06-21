@@ -1,4 +1,5 @@
 [profile.default]
+solc-version = "0.8.19"
 src = 'contracts'
 out = 'artifacts'
 libs = ['lib']
