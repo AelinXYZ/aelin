@@ -12,8 +12,9 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
 
     address public underlyingDealToken;
     uint256 public underlyingDealTokenTotal;
-    uint256 public totalUnderlyingAccepted;
+    uint256 public totalDealTokenAccepted;
     uint256 public totalUnderlyingClaimed;
+    uint256 public totalProtocolFee;
     address public holder;
     address public futureHolder;
     address public aelinTreasuryAddress;
@@ -136,7 +137,9 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
         } else {
             withdrawAmount =
                 IERC20(underlyingDealToken).balanceOf(address(this)) -
-                (underlyingDealTokenTotal - totalUnderlyingClaimed);
+                (underlyingDealTokenTotal -
+                    totalUnderlyingClaimed -
+                    ((underlyingPerDealExchangeRate * totalProtocolFee) / 1e18));
         }
         IERC20(underlyingDealToken).safeTransfer(holder, withdrawAmount);
         emit WithdrawUnderlyingDealToken(underlyingDealToken, holder, withdrawAmount);
@@ -157,8 +160,8 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
                 : block.timestamp >= proRataRedemption.expiry,
             "redeem window still active"
         );
-        uint256 withdrawAmount = IERC20(underlyingDealToken).balanceOf(address(this)) -
-            ((underlyingPerDealExchangeRate * totalUnderlyingAccepted) / 1e18);
+        uint256 withdrawAmount = underlyingDealTokenTotal -
+            ((underlyingPerDealExchangeRate * totalDealTokenAccepted) / 1e18);
         IERC20(underlyingDealToken).safeTransfer(holder, withdrawAmount);
         emit WithdrawUnderlyingDealToken(underlyingDealToken, holder, withdrawAmount);
     }
@@ -230,13 +233,24 @@ contract AelinDeal is AelinVestingToken, MinimalProxyFactory, IAelinDeal {
     }
 
     /**
-     * @dev allows the purchaser to mint deal tokens. this method is also used
-     * to send deal tokens to the sponsor. It may only be called from the pool
-     * contract that created this deal
+     * @dev allows the sponsor to mint their vesting tokens
      */
-    function mintVestingToken(address _to, uint256 _amount) external depositCompleted onlyPool {
-        totalUnderlyingAccepted += _amount;
-        _mintVestingToken(_to, _amount, vestingCliffExpiry);
+    function createSponsorVestingSchedule(address _to, uint256 _tokenAmount) external depositCompleted onlyPool {
+        _mintVestingToken(_to, _tokenAmount, vestingCliffExpiry);
+    }
+
+    /**
+     * @dev allows the purchaser to mint their vesting tokens
+     */
+    function createVestingSchedule(
+        address _to,
+        uint256 _underlyingAmount,
+        uint256 _sponsorFee,
+        uint256 _protocolFee
+    ) external depositCompleted onlyPool {
+        totalDealTokenAccepted += _underlyingAmount;
+        totalProtocolFee += _protocolFee;
+        _mintVestingToken(_to, _underlyingAmount - _sponsorFee - _protocolFee, vestingCliffExpiry);
     }
 
     /**
