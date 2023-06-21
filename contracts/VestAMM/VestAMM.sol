@@ -157,12 +157,11 @@ contract VestAMM is VestVestingToken, IVestAMM {
 
     function depositSingle(DepositToken[] calldata _depositTokens) external depositIncomplete dealOpen {
         for (uint i = 0; i < _depositTokens.length; i++) {
-            SingleVestingSchedule singleVestingSchedule = vAmmInfo
-                .lpVestingSchedules[_depositTokens[i].lpScheduleIndex]
-                .singleVestingSchedules[_depositTokens[i].singleRewardIndex];
+            SingleVestingSchedule singleVestingSchedule = vAmmInfo.singleVestingSchedules[
+                _depositTokens[i].singleRewardIndex
+            ];
             Validate.singleHolder(singleVestingSchedule.singleHolder == msg.sender);
             Validate.singleToken(_depositTokens[i].token == singleVestingSchedule.rewardToken);
-            Validate.singleTokenBalance(_depositTokens[i].amount <= IERC20(_depositTokens[i].token).balanceOf(msg.sender));
             Validate.singleDepositNotFinalized(!singleVestingSchedule.finalizedDeposit);
 
             uint256 balanceBeforeTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
@@ -178,7 +177,10 @@ contract VestAMM is VestVestingToken, IVestAMM {
                 _depositTokens[i].token,
                 amountPostTransfer
             );
-            if (holderDeposits[msg.sender][_depositTokens[i].singleRewardIndex] >= singleVestingSchedule.totalSingleTokens) {
+            if (
+                !singleVestingSchedule.finalizedDeposit &&
+                holderDeposits[msg.sender][_depositTokens[i].singleRewardIndex] >= singleVestingSchedule.totalSingleTokens
+            ) {
                 singleRewardsComplete += 1;
                 singleVestingSchedule.finalizedDeposit = true;
                 emit SingleDepositComplete(_depositTokens[i].token, _depositTokens[i].singleRewardIndex);
