@@ -6,7 +6,7 @@ import "forge-std/console.sol";
 import "./VestVestingToken.sol";
 
 // import "./VestAMMMultiRewards.sol";
-import {AelinVestingToken} from "contracts/AelinVestingToken.sol";
+import {VestVestingToken} from "./VestVestingToken.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -20,7 +20,7 @@ import "../libraries/MerkleTree.sol";
 import "./interfaces/IVestAMM.sol";
 import "./interfaces/IVestAMMLibrary.sol";
 
-import "../libraries/validation/VestAMMValidation.sol";
+import "./libraries/validation/VestAMMValidation.sol";
 
 interface IERC20Decimals {
     function decimals() external view returns (uint8);
@@ -34,20 +34,11 @@ contract VestAMMMultiRewards {
     function withdraw(uint256 _amount) external {}
 }
 
-// we will have a modified staking rewards contract that reads the balances of each investor in the locked LP alongside which bucket they are in
-// so you can distribute protocol fees to locked LPs and also do highly targeted rewards just to specific buckets if you want
-// TODO add in a curve multi rewards contract to the VestAMM so that you can distribute protocol fees to holders
-// NOTE can we do this without any restrictions???
 // TODO proper commenting everywhere in the natspec format
-// TODO write an initial test that checks the ability to start a vAMM and deposit base and single reward tokens
 // TODO make sure the logic works with 80/20 balancer pools and not just when its 50/50
-// TODO triple check all arguments start with _, casing is correct. well commented, etc
-contract VestAMM is AelinVestingToken, IVestAMM {
+// TODO triple check all arguments start with _, casing is correct
+contract VestAMM is VestVestingToken, IVestAMM {
     using SafeERC20 for IERC20;
-
-    //  - we create the pool with the given ratios and tokens (only for liquidity launch)
-    //  - we deposit the LP tokens
-    //  - we have to track the amount of tokens we deposited vs the amount we allocated per main bucket (up to 4)
 
     uint256 constant BASE = 100 * 10**18;
     uint256 constant VEST_ASSET_FEE = 1 * 10**18;
@@ -56,7 +47,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     uint256 public depositExpiry;
     uint256 public lpFundingExpiry;
     uint256 public totalLPClaimed;
-    uint256 public holderTokenTotal;
+    uint256 public totalBaseTokens;
     uint256 public maxInvTokens;
     uint256 public amountBaseDeposited;
     uint256 public lpClaimed;
@@ -74,7 +65,6 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     uint256 public totalInvTokensDeposited;
     uint256 investmentTokenPerBase;
 
-    // AmmData public ammData;
     address public vestAmmMultiRewards;
     VAmmInfo public vAmmInfo;
     DealAccess public dealAccess;
@@ -94,61 +84,51 @@ contract VestAMM is AelinVestingToken, IVestAMM {
     bool public locked = false;
 
     /**
-     * @dev initializes the contract configuration, called from the factory contract when creating a new Up Front Deal
+     * @dev initializes the contract configuration, called from the factory contract
+     * when creating a new Vest AMM (vAMM) instance
      */
     function initialize(
-        // AmmData calldata _ammData,
         VAmmInfo calldata _vAmmInfo,
         DealAccess calldata _dealAccess,
         address _aelinFeeModule,
         address _aelinMultiRewards
     ) external initOnce {
         _validateLPSchedule(_vAmmInfo.lpVestingSchedule);
-        // NOTE I don't like the current validation file that much. it is confusing
         _validateSingleSchedules(_vAmmInfo.singleVestingSchedules);
-        // pool initialization checks
-        // TODO how to name these
-        // _setNameAndSymbol(string(abi.encodePacked("vAMM-", TBD)), string(abi.encodePacked("v-", TBD)));
-        // added ammData to VAmmInfo
-        // ammData = _ammData;
+        _setNameAndSymbol(
+            string(abi.encodePacked("vAMM-", _vAmmInfo.name)),
+            string(abi.encodePacked("v-", _vAmmInfo.symbol))
+        );
         vAmmInfo = _vAmmInfo;
         dealAccess = _dealAccess;
         vestAMMLibrary = IVestAMMLibrary(_vAmmInfo.ammData.ammLibrary);
-        // TODO
         aelinFeeModule = _aelinFeeModule;
 
         vestAmmMultiRewards = Clones.clone(_aelinMultiRewards);
-        VestAMMMultiRewards(vestAmmMultiRewardsAddress).initialize(address(this));
+        VestAMMMultiRewards(vestAmmMultiRewards).initialize(address(this));
+        emit MultiRewardsCreated(vestAmmMultiRewards);
 
-        // TODO if we are doing a liquidity growth round we need to read the prices of the assets
-        // from onchain here and set the current price as the median price
-        // TODO do a require check to make sure the pool exists if they are doing a liquidity growth
-        // TODO research how to solve a new pool where liquidity exists elsewhere
+        // TODO when a new pool is for a token that has liquidity elsewhere
+        // we prob want to have another price check somehow
+        // maybe both now and when the liquidity is added. we can ask for the
+        // address and AMM where liquidity is already or check it ourselves in the contract
         if (!_vAmmInfo.hasLaunchPhase) {
-            // we need to pass in data to check if the pool exists. ammData is a placeholder but not the right argument
-            Validate.poolExists(vestAMMLibrary.checkPoolExists(vAmmInfo)); // NOTE: Check if poolAddress is required if hasLaunchPhase is false
-            // initial price ratio between the two assets
-            // TODO slippage check
+            Validate.poolExists(vestAMMLibrary.checkPoolExists(vAmmInfo));
             investmentTokenPerBase = vestAMMLibrary.getPriceRatio(
                 vAmmInfo.poolAddress,
                 vAmmInfo.ammData.investmentToken,
                 vAmmInfo.ammData.baseToken
             );
         }
-        // TODO if its a launch make sure pool doesn't exist for certain AMMs
-        // LP vesting schedule array up to 4 buckets
-        // each bucket will have a token total in the protocol tokens
-        // this loop calculates the maximum number of investment tokens that will be accepted
-        // based on the price ratio at the time of creation or the price defined in the
-        // launch struct for new protocols without liquidity
         uint256 invPerBase = _vAmmInfo.hasLaunchPhase ? _vAmmInfo.investmentPerBase : investmentTokenPerBase;
 
-        maxInvTokens = (vAmmInfo.lpVestingSchedule.totalBaseTokens * invPerBase) / 10**IERC20(ammData.baseToken).decimals();
+        totalBaseTokens = vAmmInfo.lpVestingSchedule.totalBaseTokens;
 
-        // NOTE: We need to approve the lirbary to use base/investment tokens
-        // instead of type(uint256).max we should use the max amount of tokens set by the user
-        IERC20(vAmmInfo.ammData.baseToken).approve(address(vestAMMLibrary), type(uint256).max);
-        IERC20(vAmmInfo.ammData.investmentToken).approve(address(vestAMMLibrary), type(uint256).max);
+        maxInvTokens = (totalBaseTokens * invPerBase) / 10**IERC20(ammData.baseToken).decimals();
+
+        // NOTE can just approve later before we provide liquidity. this is probably better
+        IERC20(vAmmInfo.ammData.baseToken).approve(address(vestAMMLibrary), totalBaseTokens);
+        IERC20(vAmmInfo.ammData.investmentToken).approve(address(vestAMMLibrary), maxInvTokens);
 
         // Allow list logic
         // check if there's allowlist and amounts,
@@ -252,7 +232,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         if (singleVestingSchedule.finalizedDeposit) {
             singleRewardsComplete -= 1;
         }
-            
+
         if (_removeSingleList[i].singleRewardIndex != vAmmInfo.singleVestingSchedules.length - 1) {
             vAmmInfo.singleVestingSchedules[_removeSingleList[i].singleRewardIndex] = vAmmInfo.singleVestingSchedules[
                 vAmmInfo.singleVestingSchedules.length - 1
@@ -276,15 +256,15 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         address baseToken = vAmmInfo.ammData.baseToken;
 
         // TODO add new validation for the base amount that they have enough
-        Validate.baseTokenBalance(IERC20(baseToken).balanceOf(msg.sender) >= holderTokenTotal);
+        Validate.baseTokenBalance(IERC20(baseToken).balanceOf(msg.sender) >= totalBaseTokens);
 
         uint256 balanceBeforeTransfer = IERC20(baseToken).balanceOf(address(this));
-        IERC20(baseToken).safeTransferFrom(msg.sender, address(this), holderTokenTotal);
+        IERC20(baseToken).safeTransferFrom(msg.sender, address(this), totalBaseTokens);
         uint256 balanceAfterTransfer = IERC20(baseToken).balanceOf(address(this));
         uint256 amountPostTransfer = balanceAfterTransfer - balanceBeforeTransfer;
         amountBaseDeposited += amountPostTransfer;
         emit BaseDepositComplete(baseToken, msg.sender, amountPostTransfer);
-        if (amountBaseDeposited >= holderTokenTotal) {
+        if (amountBaseDeposited >= totalBaseTokens) {
             baseComplete = true;
         }
 
@@ -404,8 +384,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // TODO add in the other variables needed to deploy a pool and return these values
         uint256 investmentTokenAmount = totalInvTokensDeposited < maxInvTokens ? totalInvTokensDeposited : maxInvTokens;
         uint256 baseTokenAmount = totalInvTokensDeposited < maxInvTokens
-            ? (holderTokenTotal * totalInvTokensDeposited) / maxInvTokens
-            : holderTokenTotal;
+            ? (totalBaseTokens * totalInvTokensDeposited) / maxInvTokens
+            : totalBaseTokens;
 
         uint256[] memory tokensAmtsIn = new uint256[](2);
         tokensAmtsIn[0] = investmentTokenAmount;
@@ -423,8 +403,8 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         // TODO add in the other variables needed to deploy a pool and return these values
         uint256 investmentTokenAmount = totalInvTokensDeposited < maxInvTokens ? totalInvTokensDeposited : maxInvTokens;
         uint256 baseTokenAmount = totalInvTokensDeposited < maxInvTokens
-            ? (holderTokenTotal * totalInvTokensDeposited) / maxInvTokens
-            : holderTokenTotal;
+            ? (totalBaseTokens * totalInvTokensDeposited) / maxInvTokens
+            : totalBaseTokens;
 
         return DeployPool(investmentTokenAmount, baseTokenAmount);
     }
@@ -567,7 +547,7 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         if (schedule.lastClaimedAt < maxTime && block.timestamp > vestingCliff) {
             uint256 minTime = schedule.lastClaimedAt == 0 ? vestingCliff : schedule.lastClaimedAt;
 
-            uint256 totalShare = (holderTokenTotal * schedule.amountDeposited) / totalInvTokensDeposited;
+            uint256 totalShare = (totalBaseTokens * schedule.amountDeposited) / totalInvTokensDeposited;
 
             uint256 claimableAmount = vestingPeriod == 0 ? totalShare : (totalShare * (maxTime - minTime)) / vestingPeriod;
 
@@ -655,34 +635,18 @@ contract VestAMM is AelinVestingToken, IVestAMM {
         }
     }
 
-    /**
-     * @dev allows the purchaser to mint a NFT representing their share of the LP tokens
-     * the NFT will be tied to storage data in this contract. We need 4 numbers for the
-     * vesting system to work. 1) the investors amount contributed. 2) the total target raise.
-     * 3) the total amount contributed and 4) the number of LP tokens they earn.
-     * After the LP funding window is done whenever a user calls transfer or claim for the
-     * first time we can update all the NFT object data to show their exact vesting amounts.
-     * we can use a bitmap to efficiently calculate if they have claimed or transferred their NFT yet.
-     * the bitmap will use the ID of the NFT we issued them as the index. if they have claimed
-     * their index will be set to 1. This system gets rid of the need to have a settle step where the
-     * deallocation is managed like we do in the regular Aelin pools.
-     */
-    function mintVestingToken(address _to, uint256 _amount) internal {}
-
-    // // Does not like returning the array name
     function singleRewardsToDeposit(address _holder) external view returns (DepositToken[] memory) {
-        DepositToken[] memory rewardsToDeposit = new DepositToken[](numSingleRewards);
-        for (uint8 j = 0; j < vAmmInfo.singleVestingSchedules.length; j++) {
-            address singleHolder = vAmmInfo.singleVestingSchedules[j].singleHolder;
-            if (_holder == vAmmInfo.mainHolder || _holder == singleHolder) {
-                uint256 amountDeposited = holderDeposits[vAmmInfo.mainHolder][i][j] + holderDeposits[singleHolder][i][j];
+        DepositToken[] memory rewardsToDeposit = new DepositToken[]();
+        for (uint8 i = 0; i < vAmmInfo.singleVestingSchedules.length; i++) {
+            address singleHolder = vAmmInfo.singleVestingSchedules[i].singleHolder;
+            if (_holder == singleHolder && !vAmmInfo.singleVestingSchedules[i].finalizedDeposit) {
+                uint256 amountDeposited = holderDeposits[singleHolder][i];
                 DepositToken memory rewardToDeposit = DepositToken(
                     i,
-                    j,
-                    vAmmInfo.singleVestingSchedules[j].rewardToken,
-                    vAmmInfo.singleVestingSchedules[j].totalSingleTokens - amountDeposited
+                    vAmmInfo.singleVestingSchedules[i].rewardToken,
+                    vAmmInfo.singleVestingSchedules[i].totalSingleTokens - amountDeposited
                 );
-                rewardsToDeposit[i * vAmmInfo.singleVestingSchedules.length + j] = rewardToDeposit;
+                rewardsToDeposit.push(rewardToDeposit);
             }
         }
         return rewardsToDeposit;
