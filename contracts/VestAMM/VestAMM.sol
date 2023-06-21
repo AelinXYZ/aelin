@@ -20,7 +20,7 @@ import "../libraries/MerkleTree.sol";
 import "./interfaces/IVestAMM.sol";
 import "./interfaces/IVestAMMLibrary.sol";
 
-import "../libraries/validation/VestAMMValidation.sol";
+import "./libraries/validation/VestAMMValidation.sol";
 
 interface IERC20Decimals {
     function decimals() external view returns (uint8);
@@ -34,20 +34,11 @@ contract VestAMMMultiRewards {
     function withdraw(uint256 _amount) external {}
 }
 
-// we will have a modified staking rewards contract that reads the balances of each investor in the locked LP alongside which bucket they are in
-// so you can distribute protocol fees to locked LPs and also do highly targeted rewards just to specific buckets if you want
-// TODO add in a curve multi rewards contract to the VestAMM so that you can distribute protocol fees to holders
-// NOTE can we do this without any restrictions???
 // TODO proper commenting everywhere in the natspec format
-// TODO write an initial test that checks the ability to start a vAMM and deposit base and single reward tokens
 // TODO make sure the logic works with 80/20 balancer pools and not just when its 50/50
-// TODO triple check all arguments start with _, casing is correct. well commented, etc
+// TODO triple check all arguments start with _, casing is correct
 contract VestAMM is VestVestingToken, IVestAMM {
     using SafeERC20 for IERC20;
-
-    //  - we create the pool with the given ratios and tokens (only for liquidity launch)
-    //  - we deposit the LP tokens
-    //  - we have to track the amount of tokens we deposited vs the amount we allocated per main bucket (up to 4)
 
     uint256 constant BASE = 100 * 10**18;
     uint256 constant VEST_ASSET_FEE = 1 * 10**18;
@@ -56,7 +47,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
     uint256 public depositExpiry;
     uint256 public lpFundingExpiry;
     uint256 public totalLPClaimed;
-    uint256 public holderTokenTotal;
+    uint256 public totalBaseTokens;
     uint256 public maxInvTokens;
     uint256 public amountBaseDeposited;
     uint256 public lpClaimed;
@@ -74,7 +65,6 @@ contract VestAMM is VestVestingToken, IVestAMM {
     uint256 public totalInvTokensDeposited;
     uint256 investmentTokenPerBase;
 
-    // AmmData public ammData;
     address public vestAmmMultiRewards;
     VAmmInfo public vAmmInfo;
     DealAccess public dealAccess;
@@ -98,7 +88,6 @@ contract VestAMM is VestVestingToken, IVestAMM {
      * when creating a new Vest AMM (vAMM) instance
      */
     function initialize(
-        // AmmData calldata _ammData,
         VAmmInfo calldata _vAmmInfo,
         DealAccess calldata _dealAccess,
         address _aelinFeeModule,
@@ -133,7 +122,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
         }
         uint256 invPerBase = _vAmmInfo.hasLaunchPhase ? _vAmmInfo.investmentPerBase : investmentTokenPerBase;
 
-        uint256 totalBaseTokens = vAmmInfo.lpVestingSchedule.totalBaseTokens;
+        totalBaseTokens = vAmmInfo.lpVestingSchedule.totalBaseTokens;
 
         maxInvTokens = (totalBaseTokens * invPerBase) / 10**IERC20(ammData.baseToken).decimals();
 
@@ -267,15 +256,15 @@ contract VestAMM is VestVestingToken, IVestAMM {
         address baseToken = vAmmInfo.ammData.baseToken;
 
         // TODO add new validation for the base amount that they have enough
-        Validate.baseTokenBalance(IERC20(baseToken).balanceOf(msg.sender) >= holderTokenTotal);
+        Validate.baseTokenBalance(IERC20(baseToken).balanceOf(msg.sender) >= totalBaseTokens);
 
         uint256 balanceBeforeTransfer = IERC20(baseToken).balanceOf(address(this));
-        IERC20(baseToken).safeTransferFrom(msg.sender, address(this), holderTokenTotal);
+        IERC20(baseToken).safeTransferFrom(msg.sender, address(this), totalBaseTokens);
         uint256 balanceAfterTransfer = IERC20(baseToken).balanceOf(address(this));
         uint256 amountPostTransfer = balanceAfterTransfer - balanceBeforeTransfer;
         amountBaseDeposited += amountPostTransfer;
         emit BaseDepositComplete(baseToken, msg.sender, amountPostTransfer);
-        if (amountBaseDeposited >= holderTokenTotal) {
+        if (amountBaseDeposited >= totalBaseTokens) {
             baseComplete = true;
         }
 
@@ -395,8 +384,8 @@ contract VestAMM is VestVestingToken, IVestAMM {
         // TODO add in the other variables needed to deploy a pool and return these values
         uint256 investmentTokenAmount = totalInvTokensDeposited < maxInvTokens ? totalInvTokensDeposited : maxInvTokens;
         uint256 baseTokenAmount = totalInvTokensDeposited < maxInvTokens
-            ? (holderTokenTotal * totalInvTokensDeposited) / maxInvTokens
-            : holderTokenTotal;
+            ? (totalBaseTokens * totalInvTokensDeposited) / maxInvTokens
+            : totalBaseTokens;
 
         uint256[] memory tokensAmtsIn = new uint256[](2);
         tokensAmtsIn[0] = investmentTokenAmount;
@@ -414,8 +403,8 @@ contract VestAMM is VestVestingToken, IVestAMM {
         // TODO add in the other variables needed to deploy a pool and return these values
         uint256 investmentTokenAmount = totalInvTokensDeposited < maxInvTokens ? totalInvTokensDeposited : maxInvTokens;
         uint256 baseTokenAmount = totalInvTokensDeposited < maxInvTokens
-            ? (holderTokenTotal * totalInvTokensDeposited) / maxInvTokens
-            : holderTokenTotal;
+            ? (totalBaseTokens * totalInvTokensDeposited) / maxInvTokens
+            : totalBaseTokens;
 
         return DeployPool(investmentTokenAmount, baseTokenAmount);
     }
@@ -558,7 +547,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
         if (schedule.lastClaimedAt < maxTime && block.timestamp > vestingCliff) {
             uint256 minTime = schedule.lastClaimedAt == 0 ? vestingCliff : schedule.lastClaimedAt;
 
-            uint256 totalShare = (holderTokenTotal * schedule.amountDeposited) / totalInvTokensDeposited;
+            uint256 totalShare = (totalBaseTokens * schedule.amountDeposited) / totalInvTokensDeposited;
 
             uint256 claimableAmount = vestingPeriod == 0 ? totalShare : (totalShare * (maxTime - minTime)) / vestingPeriod;
 
