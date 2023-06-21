@@ -24,7 +24,6 @@ library Validate {
     error LpVestingAndSingleArrayLengthError();
     error MaxSingleRewardError();
     error BaseDepositNotCompletedError();
-    error BaseTokenBalanceError();
     error InvestmentTokenBalanceError();
     error InvestorAllocationError();
     error LiquidityLaunchError();
@@ -262,12 +261,6 @@ library Validate {
     function fundingComplete(bool _conditionMet) external pure {
         if (!_conditionMet) {
             revert FundingCompleteError();
-        }
-    }
-
-    function baseTokenBalance(bool _conditionMet) external pure {
-        if (!_conditionMet) {
-            revert BaseTokenBalanceError();
         }
     }
 }

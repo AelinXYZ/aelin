@@ -255,15 +255,12 @@ contract VestAMM is VestVestingToken, IVestAMM {
         Validate.baseDepositNotCompleted(!baseComplete);
         address baseToken = vAmmInfo.ammData.baseToken;
 
-        // TODO add new validation for the base amount that they have enough
-        Validate.baseTokenBalance(IERC20(baseToken).balanceOf(msg.sender) >= totalBaseTokens);
-
         uint256 balanceBeforeTransfer = IERC20(baseToken).balanceOf(address(this));
         IERC20(baseToken).safeTransferFrom(msg.sender, address(this), totalBaseTokens);
         uint256 balanceAfterTransfer = IERC20(baseToken).balanceOf(address(this));
         uint256 amountPostTransfer = balanceAfterTransfer - balanceBeforeTransfer;
         amountBaseDeposited += amountPostTransfer;
-        emit BaseDepositComplete(baseToken, msg.sender, amountPostTransfer);
+        emit BaseDeposited(baseToken, msg.sender, amountPostTransfer, amountBaseDeposited);
         if (amountBaseDeposited >= totalBaseTokens) {
             baseComplete = true;
         }
@@ -694,14 +691,14 @@ contract VestAMM is VestVestingToken, IVestAMM {
     }
 
     modifier acceptDealOpen() {
-        Validate.notCancelled(isCancelled == false);
+        Validate.notCancelled(!isCancelled);
         // TODO double check < vs <= matches everywhere
         Validate.inDepositWindow(depositComplete && block.timestamp <= depositExpiry);
         _;
     }
 
     modifier lock() {
-        Validate.contractUnlocked(locked == false);
+        Validate.contractUnlocked(!locked);
         locked = true;
         _;
         locked = false;
