@@ -1360,7 +1360,7 @@ contract AelinDealTest is Test, AelinTestUtils, IAelinDeal, IAelinVestingToken {
 
         (uint256 share, ) = AelinDeal(dealNoOpenRedemptionAddress).vestingDetails(0);
         // dealCreator user sends more than their share
-        vm.expectRevert("amout gt than current share");
+        vm.expectRevert("amout gte than current share");
         AelinDeal(dealNoOpenRedemptionAddress).transferVestingShare(user2, 0, share + 1);
         vm.stopPrank();
     }

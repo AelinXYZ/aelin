@@ -13,7 +13,7 @@ contract Aelin is ERC20, Ownable {
 
     address public authorizedMinter;
 
-    constructor(address _initialHolder) ERC20("Aelin", "AELIN") Ownable() {
+    constructor(address _initialHolder) ERC20("Aelin", "AELIN") {
         _mint(_initialHolder, INITIAL_SUPPLY);
     }
 

@@ -25,7 +25,7 @@ contract AelinVestingToken is AelinERC721, IAelinVestingToken {
         require(ownerOf(_tokenId) == msg.sender, "must be owner to transfer");
         VestingDetails memory schedule = vestingDetails[_tokenId];
         require(_shareAmount > 0, "share amount should be > 0");
-        require(_shareAmount < schedule.share, "amout gt than current share");
+        require(_shareAmount < schedule.share, "amout gte than current share");
         vestingDetails[_tokenId] = VestingDetails(schedule.share - _shareAmount, schedule.lastClaimedAt);
         _mintVestingToken(_to, _shareAmount, schedule.lastClaimedAt);
         emit VestingShareTransferred(msg.sender, _to, _tokenId, _shareAmount);

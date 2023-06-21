@@ -101,7 +101,7 @@ contract AelinVestingTokenTest is Test, AelinTestUtils {
         vm.assume(_shareAmount > share);
 
         vm.startPrank(vestingToken.ownerOf(_tokenId));
-        vm.expectRevert("amout gt than current share");
+        vm.expectRevert("amout gte than current share");
         vestingToken.transferVestingShare(_to, _tokenId, _shareAmount);
         vm.stopPrank();
     }
