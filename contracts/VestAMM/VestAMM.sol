@@ -7,6 +7,7 @@ import "./VestVestingToken.sol";
 
 // import "./VestAMMMultiRewards.sol";
 import {VestVestingToken} from "./VestVestingToken.sol";
+import {VestAMMMultiRewards} from "./VestAMMMultiRewards.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -24,14 +25,6 @@ import "./libraries/validation/VestAMMValidation.sol";
 
 interface IERC20Decimals {
     function decimals() external view returns (uint8);
-}
-
-contract VestAMMMultiRewards {
-    constructor(address _vestAMM) {}
-
-    function stake(uint256 _amount) external {}
-
-    function withdraw(uint256 _amount) external {}
 }
 
 // TODO ability to claim external weekly rewards from AMMs e.g balancer merkle distributor
@@ -295,7 +288,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
         // NOTE no deallocation allowed for v1
         require(totalInvTokensDeposited >= maxInvTokens, "investment cap exceeded");
 
-        VestAMMMultiRewards.stake(depositTokenAmount, msg.sender);
+        VestAMMMultiRewards(vestAmmMultiRewards).stake(depositTokenAmount, msg.sender);
         _mintVestingToken(msg.sender, depositTokenAmount, 0);
 
         emit AcceptVestDeal(msg.sender, depositTokenAmount);
@@ -560,6 +553,12 @@ contract VestAMM is VestVestingToken, IVestAMM {
         return (0, depositData.lpToken);
     }
 
+    // NOTE we need to update the multi rewards contract when a NFT transfer happens
+    function claimMultiRewards(uint256 _tokenId) {
+        Validate.owner(ownerOf(_tokenId));
+        getReward(msg.sender);
+    }
+
     /**
      * @dev allows a user to claim their all their vested tokens across a single NFT
      */
@@ -592,7 +591,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
         Validate.hasClaimBalance(_claimableAmount);
         totalLPClaimed += _claimableAmount;
         uint256 withdrawAmount = (totalInvTokensDeposited * _claimableAmount) / depositData.lpTokenAmount;
-        VestAMMMultiRewards.amountExit(withdrawAmount, msg.sender);
+        VestAMMMultiRewards(vestAmmMultiRewards).amountExit(withdrawAmount, msg.sender);
         IERC20(_token).safeTransfer(msg.sender, _claimableAmount);
         emit ClaimedToken(_token, msg.sender, _claimableAmount, ClaimType.LP, -1);
     }
@@ -634,6 +633,23 @@ contract VestAMM is VestVestingToken, IVestAMM {
             Validate.singleHolderNotNull(_singleVestingSchedules[i].singleHolder != address(0));
             Validate.depositNotFinalized(_singleVestingSchedules[i].finalizedDeposit);
         }
+    }
+
+    function transferVestingShare(
+        address _to,
+        uint256 _tokenId,
+        uint256 _shareAmount
+    ) {
+        VestAMMMultiRewards(vestAmmMultiRewards).amountExit(_withdrawAmount, _from);
+        VestAMMMultiRewards(vestAmmMultiRewards).stake(_withdrawAmount, _to);
+        _transferVestingShare(_to, _tokenId, _shareAmount);
+    }
+
+    function transfer(_to, _tokenId) {
+        VestVestingToken memory schedule = vestingDetails[_tokenId];
+        VestAMMMultiRewards(vestAmmMultiRewards).amountExit(schedule.amountDeposited, msg.sender);
+        VestAMMMultiRewards(vestAmmMultiRewards).stake(schedule.amountDeposited, _to);
+        _transfer(_to, _tokenId, []);
     }
 
     function singleRewardsToDeposit(address _holder) external view returns (DepositToken[] memory) {
