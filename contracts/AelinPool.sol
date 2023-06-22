@@ -498,6 +498,8 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
 
         sponsorClaimed = true;
         aelinDeal.createSponsorVestingSchedule(sponsor, totalSponsorFeeAmount);
+
+        emit SponsorClaim(sponsor, totalSponsorFeeAmount);
     }
 
     /**
@@ -667,6 +669,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256 sponsorFee,
         uint256 aelinFee
     );
+    event SponsorClaim(address indexed sponsor, uint256 sponsorFeeAmount);
     event CreateDeal(string name, string symbol, address indexed sponsor, address indexed dealContract);
     event DealDetail(
         address indexed dealContract,

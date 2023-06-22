@@ -87,6 +87,7 @@ contract AelinPoolMiscTest is Test, AelinTestUtils {
     event WithdrawFromPool(address indexed purchaser, uint256 purchaseTokenAmount);
     event Transfer(address indexed from, address indexed to, uint256 value);
     event SetSponsor(address indexed sponsor);
+    event SponsorClaim(address indexed sponsor, uint256 sponsorFeeAmount);
     event Vouch(address indexed voucher);
     event Disavow(address indexed voucher);
     event VestingTokenMinted(address indexed user, uint256 indexed tokenId, uint256 amount, uint256 lastClaimedAt);
@@ -3580,6 +3581,8 @@ contract AelinPoolMiscTest is Test, AelinTestUtils {
         (, , uint256 proRataRedemptionExpiry) = AelinDeal(address(poolVars.dealAddress)).proRataRedemption();
         vm.warp(proRataRedemptionExpiry + boundedVars.openRedemptionPeriod);
 
+        vm.expectEmit(true, false, false, true);
+        emit SponsorClaim(user1, poolVars.pool.totalSponsorFeeAmount());
         poolVars.pool.sponsorClaim();
 
         vm.expectRevert("sponsor already claimed");
@@ -3748,6 +3751,9 @@ contract AelinPoolMiscTest is Test, AelinTestUtils {
             poolVars.pool.totalSponsorFeeAmount(),
             AelinDeal(poolVars.dealAddress).vestingCliffExpiry()
         );
+
+        vm.expectEmit(true, false, false, true);
+        emit SponsorClaim(user1, poolVars.pool.totalSponsorFeeAmount());
         poolVars.pool.sponsorClaim();
         vm.stopPrank();
     }
