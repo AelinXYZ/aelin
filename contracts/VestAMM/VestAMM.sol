@@ -34,6 +34,7 @@ contract VestAMMMultiRewards {
     function withdraw(uint256 _amount) external {}
 }
 
+// TODO ability to claim external weekly rewards from AMMs e.g balancer merkle distributor
 // TODO proper commenting everywhere in the natspec format
 // TODO make sure the logic works with 80/20 balancer pools and not just when its 50/50
 // TODO triple check all arguments start with _, casing is correct
@@ -105,7 +106,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
         aelinFeeModule = _aelinFeeModule;
 
         vestAmmMultiRewards = Clones.clone(_aelinMultiRewards);
-        VestAMMMultiRewards(vestAmmMultiRewards).initialize(address(this));
+        VestAMMMultiRewards(vestAmmMultiRewards).initialize(vAmmInfo.mainHolder);
         emit MultiRewardsCreated(vestAmmMultiRewards);
 
         // TODO when a new pool is for a token that has liquidity elsewhere
@@ -590,7 +591,8 @@ contract VestAMM is VestVestingToken, IVestAMM {
     ) internal {
         Validate.hasClaimBalance(_claimableAmount);
         totalLPClaimed += _claimableAmount;
-        VestAMMMultiRewards.withdraw(_claimableAmount, depositData.lpTokenAmount);
+        uint256 withdrawAmount = (totalInvTokensDeposited * _claimableAmount) / depositData.lpTokenAmount;
+        VestAMMMultiRewards.amountExit(withdrawAmount, msg.sender);
         IERC20(_token).safeTransfer(msg.sender, _claimableAmount);
         emit ClaimedToken(_token, msg.sender, _claimableAmount, ClaimType.LP, -1);
     }

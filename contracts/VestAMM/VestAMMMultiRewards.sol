@@ -418,6 +418,7 @@ contract MultiRewards is ReentrancyGuard, Pausable {
     }
     mapping(address => Reward) public rewardData;
     address[] public rewardTokens;
+    address public holder;
 
     // user -> reward token -> amount
     mapping(address => mapping(address => uint256)) public userRewardPerTokenPaid;
@@ -432,14 +433,18 @@ contract MultiRewards is ReentrancyGuard, Pausable {
     constructor() public {}
 
     /* =========== INITIALIZE ========== */
+    // the owner is the VestAMM minimal proxy instance
+    // the holder is the main asset holder creating the instance
+    function initialize(address _holder) public initOnce Owned(msg.sender) {
+        holder = _holder
+    }
 
-    function initialize(address _owner) public initOnce Owned(_owner) {}
-
+    // we are making it so that only the holder can call this method instead of the owner
     function addReward(
         address _rewardsToken,
         address _rewardsDistributor,
         uint256 _rewardsDuration
-    ) public onlyOwner {
+    ) public onlyHolder {
         require(rewardData[_rewardsToken].rewardsDuration == 0);
         rewardTokens.push(_rewardsToken);
         rewardData[_rewardsToken].rewardsDistributor = _rewardsDistributor;
@@ -518,8 +523,13 @@ contract MultiRewards is ReentrancyGuard, Pausable {
         }
     }
 
+    function amountExit(uint256 amount, address account) external onlyOwner {
+        withdraw(amount, account);
+        getReward(account);
+    }
+
     function exit(address account) external onlyOwner {
-        withdraw(_balances[account]);
+        withdraw(_balances[account], account);
         getReward(account);
     }
 
@@ -577,6 +587,12 @@ contract MultiRewards is ReentrancyGuard, Pausable {
     modifier initOnce() {
         require(!calledInitialize, "called init already");
         calledInitialize = true;
+        _;
+    }
+
+
+    modifier onlyHolder() {
+        require(msg.sender == holder, "Only the holder may access");
         _;
     }
 
