@@ -640,8 +640,8 @@ contract VestAMM is VestVestingToken, IVestAMM {
         uint256 _tokenId,
         uint256 _shareAmount
     ) {
-        VestAMMMultiRewards(vestAmmMultiRewards).amountExit(_withdrawAmount, _from);
-        VestAMMMultiRewards(vestAmmMultiRewards).stake(_withdrawAmount, _to);
+        VestAMMMultiRewards(vestAmmMultiRewards).amountExit(_shareAmount, msg.sender);
+        VestAMMMultiRewards(vestAmmMultiRewards).stake(_shareAmount, _to);
         _transferVestingShare(_to, _tokenId, _shareAmount);
     }
 
