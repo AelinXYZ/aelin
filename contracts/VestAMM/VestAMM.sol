@@ -55,7 +55,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
     mapping(address => uint256) totalSingleClaimed;
     mapping(uint8 => mapping(uint8 => uint256)) public holderDeposits;
     uint8 private singleRewardsComplete;
-    uint8 constant MAX_SINGLE_REWARDS = 6;
+    uint8 maxSingleRewards = 6;
 
     MerkleTree.TrackClaimed private trackClaimed;
     AelinAllowList.AllowList public allowList;
@@ -114,17 +114,13 @@ contract VestAMM is VestVestingToken, IVestAMM {
         // address and AMM where liquidity is already or check it ourselves in the contract
         if (!_vAmmInfo.hasLaunchPhase) {
             Validate.poolExists(vestAMMLibrary.checkPoolExists(vAmmInfo));
-            investmentTokenPerBase = vestAMMLibrary.getPriceRatio(
-                vAmmInfo.poolAddress,
-                vAmmInfo.ammData.investmentToken,
-                vAmmInfo.ammData.baseToken
-            );
+            investmentTokenPerBase = vestAMMLibrary.getPriceRatio(vAmmInfo);
         }
         uint256 invPerBase = _vAmmInfo.hasLaunchPhase ? _vAmmInfo.investmentPerBase : investmentTokenPerBase;
 
         totalBaseTokens = vAmmInfo.lpVestingSchedule.totalBaseTokens;
 
-        maxInvTokens = (totalBaseTokens * invPerBase) / 10**IERC20(ammData.baseToken).decimals();
+        maxInvTokens = (totalBaseTokens * invPerBase) / 10**IERC20(vAmmInfo.ammData.baseToken).decimals();
 
         // NOTE can just approve later before we provide liquidity. this is probably better
         IERC20(vAmmInfo.ammData.baseToken).approve(address(vestAMMLibrary), totalBaseTokens);
@@ -198,7 +194,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
     }
 
     function addSingle(SingleVestingSchedule[] calldata _newSingleRewards) external onlyHolder depositIncomplete dealOpen {
-        Validate.maxSingleRewards(MAX_SINGLE_REWARDS <= vAmmInfo.singleVestingSchedules.length + _newSingleRewards.length);
+        Validate.maxSingleRewards(maxSingleRewards <= vAmmInfo.singleVestingSchedules.length + _newSingleRewards.length);
         _validateSingleSchedules(_newSingleRewards);
         for (uint8 i = 0; i < _newSingleRewards; i++) {
             vAmmInfo.singleVestingSchedules[vAmmInfo.singleVestingSchedules.length] = _newSingleRewards[i];
@@ -282,7 +278,9 @@ contract VestAMM is VestVestingToken, IVestAMM {
         if (nftGating.hasNftList || _nftPurchaseList.length > 0) {
             AelinNftGating.purchaseDealTokensWithNft(_nftPurchaseList, nftGating, _investmentTokenAmount);
         } else if (allowList.hasAllowList) {
-            Validate.investorAllocation(allowList.amountPerAddress[msg.sender] >= _investmentTokenAmount);
+            Validate.investorAllocation(
+                allowList.amounsingleVestingSchedulesPerAddress[msg.sender] >= _investmentTokenAmount
+            );
             allowList.amountPerAddress[msg.sender] -= _investmentTokenAmount;
         } else if (dealAccess.merkleRoot != 0) {
             MerkleTree.purchaseMerkleAmount(_merkleData, trackClaimed, _investmentTokenAmount, dealAccess.merkleRoot);
@@ -312,68 +310,68 @@ contract VestAMM is VestVestingToken, IVestAMM {
         aelinFees(numInvTokensFee, numBaseTokensFee);
     }
 
-    // to create the pool and deposit assets after phase 0 ends
-    // TODO add a view that calculates max extra base tokens and have a wrapper around that is called createLiquidityMax
-    // which calls the view and passes in the max value to this method
-    // function createLiquidity(uint256 _extraBaseTokens) external onlyHolder lpFundingWindow {
-    //     Validate.notLiquidityLaunch(vAmmInfo.hasLiquidityLaunch);
-    //     // If the price starts at 10 sUSD/ ABC and goes up to 20 sUSD per ABC then we need to add the extra ABC as single sided rewards
-    //     // or if the price goes down to 5 sUSD / ABC we need to let the protocol add more tokens if they want
-    //     uint256 currentRaio = ammData.ammLibrary.getPriceRatio(
-    //         ammData.poolAddress,
-    //         ammData.investmentToken,
-    //         ammData.baseToken
-    //     );
-    //     LiquidityRatio liquidityRatio = createLiquidityRatio();
-    //     (
-    //         numInvTokensInLP, // example 1: 1000 sUSD (price up); example 2: 1000 sUSD (price down)
-    //         numBaseTokensInLP, // example 1: 50 ABC (price up); example 2: 200 ABC (price down)
-    //         initialNumInvTokensInLP, // 1000 sUSD
-    //         initialNumBaseTokensInLP, // 100 ABC
+    function createLiquidity(uint256 _extraBaseTokens) external onlyHolder lpFundingWindow {
+        address baseToken = vAmmInfo.ammData.baseToken;
+        Validate.notLiquidityLaunch(vAmmInfo.hasLiquidityLaunch);
+        uint256 currentRatio = vestAMMLibrary.getPriceRatio(vAmmInfo);
+        (
+            uint256 excessBaseTokensInLP,
+            uint256 currentBaseTokensInLP,
+            uint256 baseTokensDeposited
+        ) = _getExcessBaseTokensData(currentRatio);
 
-    //     ) = IVestAMMLibrary(ammData.ammLibrary).getLiquidityRatios(liquidityRatio);
-    //     // NOTE the initial price was 10 sUSD per ABC and the total in LP is 100 ABC to 1000 sUSD if the price doesn't change
-    //     // NOTE if the price is the same then nothing changes and it should look just like a launch
-    //     if (currentRatio > investmentTokenPerBase) {
-    //         // NOTE the price has shifted to 20 sUSD per ABC
-    //         // instead of doing 100 ABC to 1000 sUSD we are doing 50 ABC to 1000 sUSD
-    //         // TODO add more single sided rewards from the base tokens
-    //         uint256 excessTokens = initialNumBaseTokensInLP - numBaseTokensInLP;
-    //         // TODO add another single sided reward with these amounts included spread across every vesting schedule
-    //         // NOTE be wary of 2 things. we might have to track how full bucket is but maybe not. if you just put it in all the buckets
-    //         // equally then the protocol can get their excess amount by calling withdrawExcessFunding
-    //         // the other thing to be wary of is if we have the maximum number of single rewards we are going to add a 7th single sided reward
-    //         // NOTE that we have to make sure that we override any maximum single rewards settings for this reward
-    //         // NOTE might need a different function than addSingle() which shares most logic but allows you to add a 7th reward
-    //         AddLiquidity addLiquidity = createAddLiquidity();
-    //         (numInvTokensFee, numBaseTokensFee) = IVestAMMLibrary(ammData.ammLibrary).addLiquidity(addLiquidity);
-    //         // and also allows you to add rewards this late in the process when all the rewards are already locked
-    //     } else if (currentRatio < investmentTokenPerBase) {
-    //         // NOTE the price has shifted to 5 sUSD per ABC. Now you get  200 - 100
-    //         uint256 maxExcessBaseTokens = numBaseTokensInLP - initialNumBaseTokensInLP;
-    //         // TODO add validation
-    //         require(_excessBaseTokens <= maxExcessBaseTokens, "too many base tokens");
-    //         Validate.baseTokenBalance(_excessBaseTokens, IERC20(baseToken).balanceOf(msg.sender));
-    //         uint256 balanceBeforeTransfer = IERC20(baseToken).balanceOf(address(this));
-    //         IERC20(baseToken).safeTransferFrom(msg.sender, address(this), _excessBaseTokens);
-    //         uint256 balanceAfterTransfer = IERC20(baseToken).balanceOf(address(this));
-    //         uint256 excessTransferred = balanceAfterTransfer - balanceBeforeTransfer;
-    //         // NOTE when we create the new add liquidity struct
+        if (currentRatio > investmentTokenPerBase) {
+            uint256 holderRefundAmt = baseTokensDeposited - (excessBaseTokensInLP + currentBaseTokensInLP);
+            IERC20(baseToken).safeTransferFrom(address(this), vAmmInfo.mainHolder, holderRefundAmt);
 
-    //         // first we have to deposit those extra tokens and then we
-    //         // create a new AddLiquidity struct but isntead of using amountBaseDeposited
-    //         // we use amountBaseDeposited + excessTransferred and we LP with more ABC tokens
-    //         AddLiquidity addLiquidity = createAddLiquidity();
-    //         (numInvTokensFee, numBaseTokensFee) = IVestAMMLibrary(ammData.ammLibrary).addLiquidity(addLiquidity);
-    //         // NOTE an important caveat is that when you add liquidity if they do not add enough excess tokens
-    //         // then there will be excess sUSD that needs to be returned to investors. they will receive this amount
-    //         // ideally by just calling the depositorDeallocWithdraw method when there is excess sUSD in a bucket
-    //     } else {
-    //          price is unchanged
-    // }
-    //     saveDepositData(ammData.poolAddress);
-    //     aelinFees(numInvTokensFee, numBaseTokensFee);
-    // }
+            IVestAMM.SingleVestingSchedule memory extraSingleVestingSchedule = IVestAMM.SingleVestingSchedule(
+                baseToken,
+                vAmmInfo.mainHolder,
+                excessBaseTokensInLP,
+                0,
+                false,
+                true
+            );
+
+            vAmmInfo.singleVestingSchedules.push(extraSingleVestingSchedule);
+            maxSingleRewards += 1;
+        } else if (currentRatio < investmentTokenPerBase) {
+            Validate.maxExcessBaseTokens(excessBaseTokensInLP >= _extraBaseTokens);
+            uint256 balanceBeforeTransfer = IERC20(baseToken).balanceOf(address(this));
+            IERC20(baseToken).safeTransferFrom(msg.sender, address(this), _extraBaseTokens);
+            uint256 balanceAfterTransfer = IERC20(baseToken).balanceOf(address(this));
+            uint256 excessTransferred = balanceAfterTransfer - balanceBeforeTransfer;
+        }
+
+        AddLiquidity addLiquidity = createAddLiquidity();
+        (numInvTokensFee, numBaseTokensFee) = vestAMMLibrary.addLiquidity(addLiquidity);
+
+        saveDepositData(vAmmInfo.poolAddress);
+        aelinFees(numInvTokensFee, numBaseTokensFee);
+    }
+
+    function _getExcessBaseTokensData(uint256 _currentRatio)
+        internal
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        uint256 investmentTokenTarget = vAmmInfo.lpVestingSchedule.totalBaseTokens * vAmmInfo.investmentPerBase;
+        uint256 investmentTokenRaised = IERC20(vAmmInfo.ammData.investmentToken).balanceOf(address(this));
+        uint256 baseTokenDeposited = IERC20(vAmmInfo.ammData.baseToken).balanceOf(address(this));
+
+        uint256 initialBaseTokensInLP = baseTokenDeposited * (investmentTokenRaised / investmentTokenTarget);
+        uint256 currentBaseTokensInLP = investmentTokenRaised / (_currentRatio);
+
+        uint256 excessBaseTokens = _currentRatio > investmentTokenPerBase
+            ? initialBaseTokensInLP - currentBaseTokensInLP
+            : currentBaseTokensInLP;
+
+        return (excessBaseTokens, currentBaseTokensInLP, baseTokenDeposited);
+    }
 
     function saveDepositData(address _poolAddress) internal {
         // We might have to add a method to the librariers IVestAMMLibrary.balanceOf
@@ -623,7 +621,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
         Validate.hasTotalBaseTokens(_vestingSchedule.totalBaseTokens > 0);
         Validate.lpNotZero(_vestingSchedule.totalLPTokens > 0);
         Validate.nothingClaimed(_vestingSchedule.claimed == 0);
-        Validate.maxSingleReward(MAX_SINGLE_REWARDS >= _vestingSchedule.singleVestingSchedules.length);
+        Validate.maxSingleReward(maxSingleRewards >= _vestingSchedule.singleVestingSchedules.length);
     }
 
     function _validateSingleSchedules(SingleVestingSchedule[] _singleVestingSchedules) internal {
