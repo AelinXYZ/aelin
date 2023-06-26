@@ -40,6 +40,7 @@ library Validate {
     error SingleDepositNotCompleted();
     error DepositNotFinalizedError();
     error MaxVestingPeriodsError();
+    error MaxExcessBaseTokensError();
 
     function singleHolderNotNull(bool _conditionMet) external pure {
         if (!_conditionMet) {
@@ -254,6 +255,18 @@ library Validate {
     function fundingComplete(bool _conditionMet) external pure {
         if (!_conditionMet) {
             revert FundingCompleteError();
+        }
+    }
+
+    function baseTokenBalance(bool _conditionMet) external pure {
+        if (!_conditionMet) {
+            revert BaseTokenBalanceError();
+        }
+    }
+
+    function maxExcessBaseTokens(bool _conditionMet) external pure {
+        if (!_conditionMet) {
+            revert MaxExcessBaseTokensError();
         }
     }
 }
