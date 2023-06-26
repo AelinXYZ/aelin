@@ -27,14 +27,9 @@ interface IERC20Decimals {
     function decimals() external view returns (uint8);
 }
 
-// TODO ability to claim external weekly rewards from AMMs e.g balancer merkle distributor
-// TODO proper commenting everywhere in the natspec format
-// TODO make sure the logic works with 80/20 balancer pools and not just when its 50/50
-// TODO triple check all arguments start with _, casing is correct
 contract VestAMM is VestVestingToken, IVestAMM {
     using SafeERC20 for IERC20;
 
-    uint256 constant BASE = 100 * 10**18;
     uint256 constant VEST_ASSET_FEE = 1 * 10**18;
     uint256 constant VEST_SWAP_FEE = 20 * 10**18;
     uint256 constant VEST_BASE_FEE = 100 * 10**18;
@@ -45,7 +40,6 @@ contract VestAMM is VestVestingToken, IVestAMM {
     uint256 public maxInvTokens;
     uint256 public amountBaseDeposited;
     uint256 public lpClaimed;
-    mapping(uint8 => uint256) public singleClaimed;
     mapping(address => uint256) totalSingleClaimed;
     mapping(uint8 => mapping(uint8 => uint256)) public holderDeposits;
     uint8 private singleRewardsComplete;
@@ -68,12 +62,8 @@ contract VestAMM is VestVestingToken, IVestAMM {
     bool public isCancelled;
     bool public depositComplete;
     DepositData public depositData;
-    uint256 public totalLPTokens;
 
     IVestAMMLibrary internal vestAMMLibrary;
-
-    uint256 public numInvTokensFee;
-    uint256 public numBaseTokensFee;
 
     bool public locked = false;
 
@@ -607,8 +597,6 @@ contract VestAMM is VestVestingToken, IVestAMM {
     }
 
     function sendFeesToAelin(address _token, uint256 _amount) public {
-        // NOTE you don't just transfer fees to the AelinFeeModule because you need to track
-        // which period they came in for AELIN stakers to be able to claim correctly from the AelinFeeModule
         IERC20(_token).approve(aelinFeeModule, _amount);
         AelinFeeModule(aelinFeeModule).sendFees(_token, _amount);
         emit SentFees(_token, _amount);
