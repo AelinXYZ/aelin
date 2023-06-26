@@ -19,12 +19,10 @@ library Validate {
     error MerkleHasIPFSHashError();
     error SingleHolderError();
     error SingleTokenError();
-    error SingleTokenBalance();
     error SingleDepositNotFinalizedError();
     error LpVestingAndSingleArrayLengthError();
     error MaxSingleRewardError();
     error BaseDepositNotCompletedError();
-    error BaseTokenBalanceError();
     error InvestmentTokenBalanceError();
     error InvestorAllocationError();
     error LiquidityLaunchError();
@@ -215,12 +213,6 @@ library Validate {
     function singleToken(bool _conditionMet) external pure {
         if (!_conditionMet) {
             revert SingleTokenError();
-        }
-    }
-
-    function singleTokenBalance(bool _conditionMet) external pure {
-        if (!_conditionMet) {
-            revert SingleTokenBalance();
         }
     }
 

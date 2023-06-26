@@ -7,6 +7,7 @@ import "./VestVestingToken.sol";
 
 // import "./VestAMMMultiRewards.sol";
 import {VestVestingToken} from "./VestVestingToken.sol";
+import {VestAMMMultiRewards} from "./VestAMMMultiRewards.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -26,14 +27,7 @@ interface IERC20Decimals {
     function decimals() external view returns (uint8);
 }
 
-contract VestAMMMultiRewards {
-    constructor(address _vestAMM) {}
-
-    function stake(uint256 _amount) external {}
-
-    function withdraw(uint256 _amount) external {}
-}
-
+// TODO ability to claim external weekly rewards from AMMs e.g balancer merkle distributor
 // TODO proper commenting everywhere in the natspec format
 // TODO make sure the logic works with 80/20 balancer pools and not just when its 50/50
 // TODO triple check all arguments start with _, casing is correct
@@ -105,7 +99,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
         aelinFeeModule = _aelinFeeModule;
 
         vestAmmMultiRewards = Clones.clone(_aelinMultiRewards);
-        VestAMMMultiRewards(vestAmmMultiRewards).initialize(address(this));
+        VestAMMMultiRewards(vestAmmMultiRewards).initialize(vAmmInfo.mainHolder);
         emit MultiRewardsCreated(vestAmmMultiRewards);
 
         // TODO when a new pool is for a token that has liquidity elsewhere
@@ -153,12 +147,11 @@ contract VestAMM is VestVestingToken, IVestAMM {
 
     function depositSingle(DepositToken[] calldata _depositTokens) external depositIncomplete dealOpen {
         for (uint i = 0; i < _depositTokens.length; i++) {
-            SingleVestingSchedule singleVestingSchedule = vAmmInfo
-                .lpVestingSchedules[_depositTokens[i].lpScheduleIndex]
-                .singleVestingSchedules[_depositTokens[i].singleRewardIndex];
+            SingleVestingSchedule singleVestingSchedule = vAmmInfo.singleVestingSchedules[
+                _depositTokens[i].singleRewardIndex
+            ];
             Validate.singleHolder(singleVestingSchedule.singleHolder == msg.sender);
             Validate.singleToken(_depositTokens[i].token == singleVestingSchedule.rewardToken);
-            Validate.singleTokenBalance(_depositTokens[i].amount <= IERC20(_depositTokens[i].token).balanceOf(msg.sender));
             Validate.singleDepositNotFinalized(!singleVestingSchedule.finalizedDeposit);
 
             uint256 balanceBeforeTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
@@ -174,7 +167,10 @@ contract VestAMM is VestVestingToken, IVestAMM {
                 _depositTokens[i].token,
                 amountPostTransfer
             );
-            if (holderDeposits[msg.sender][_depositTokens[i].singleRewardIndex] >= singleVestingSchedule.totalSingleTokens) {
+            if (
+                !singleVestingSchedule.finalizedDeposit &&
+                holderDeposits[msg.sender][_depositTokens[i].singleRewardIndex] >= singleVestingSchedule.totalSingleTokens
+            ) {
                 singleRewardsComplete += 1;
                 singleVestingSchedule.finalizedDeposit = true;
                 emit SingleDepositComplete(_depositTokens[i].token, _depositTokens[i].singleRewardIndex);
@@ -251,15 +247,12 @@ contract VestAMM is VestVestingToken, IVestAMM {
         Validate.baseDepositNotCompleted(!baseComplete);
         address baseToken = vAmmInfo.ammData.baseToken;
 
-        // TODO add new validation for the base amount that they have enough
-        Validate.baseTokenBalance(IERC20(baseToken).balanceOf(msg.sender) >= totalBaseTokens);
-
         uint256 balanceBeforeTransfer = IERC20(baseToken).balanceOf(address(this));
         IERC20(baseToken).safeTransferFrom(msg.sender, address(this), totalBaseTokens);
         uint256 balanceAfterTransfer = IERC20(baseToken).balanceOf(address(this));
         uint256 amountPostTransfer = balanceAfterTransfer - balanceBeforeTransfer;
         amountBaseDeposited += amountPostTransfer;
-        emit BaseDepositComplete(baseToken, msg.sender, amountPostTransfer);
+        emit BaseDeposited(baseToken, msg.sender, amountPostTransfer, amountBaseDeposited);
         if (amountBaseDeposited >= totalBaseTokens) {
             baseComplete = true;
         }
@@ -293,7 +286,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
         // NOTE no deallocation allowed for v1
         require(totalInvTokensDeposited >= maxInvTokens, "investment cap exceeded");
 
-        VestAMMMultiRewards.stake(depositTokenAmount, msg.sender);
+        VestAMMMultiRewards(vestAmmMultiRewards).stake(depositTokenAmount, msg.sender);
         _mintVestingToken(msg.sender, depositTokenAmount, 0);
 
         emit AcceptVestDeal(msg.sender, depositTokenAmount);
@@ -558,6 +551,12 @@ contract VestAMM is VestVestingToken, IVestAMM {
         return (0, depositData.lpToken);
     }
 
+    // NOTE we need to update the multi rewards contract when a NFT transfer happens
+    function claimMultiRewards(uint256 _tokenId) {
+        Validate.owner(ownerOf(_tokenId));
+        getReward(msg.sender);
+    }
+
     /**
      * @dev allows a user to claim their all their vested tokens across a single NFT
      */
@@ -589,7 +588,8 @@ contract VestAMM is VestVestingToken, IVestAMM {
     ) internal {
         Validate.hasClaimBalance(_claimableAmount);
         totalLPClaimed += _claimableAmount;
-        VestAMMMultiRewards.withdraw(_claimableAmount, depositData.lpTokenAmount);
+        uint256 withdrawAmount = (totalInvTokensDeposited * _claimableAmount) / depositData.lpTokenAmount;
+        VestAMMMultiRewards(vestAmmMultiRewards).amountExit(withdrawAmount, msg.sender);
         IERC20(_token).safeTransfer(msg.sender, _claimableAmount);
         emit ClaimedToken(_token, msg.sender, _claimableAmount, ClaimType.LP, -1);
     }
@@ -631,6 +631,23 @@ contract VestAMM is VestVestingToken, IVestAMM {
             Validate.singleHolderNotNull(_singleVestingSchedules[i].singleHolder != address(0));
             Validate.depositNotFinalized(_singleVestingSchedules[i].finalizedDeposit);
         }
+    }
+
+    function transferVestingShare(
+        address _to,
+        uint256 _tokenId,
+        uint256 _shareAmount
+    ) {
+        VestAMMMultiRewards(vestAmmMultiRewards).amountExit(_shareAmount, msg.sender);
+        VestAMMMultiRewards(vestAmmMultiRewards).stake(_shareAmount, _to);
+        _transferVestingShare(_to, _tokenId, _shareAmount);
+    }
+
+    function transfer(_to, _tokenId) {
+        VestVestingToken memory schedule = vestingDetails[_tokenId];
+        VestAMMMultiRewards(vestAmmMultiRewards).amountExit(schedule.amountDeposited, msg.sender);
+        VestAMMMultiRewards(vestAmmMultiRewards).stake(schedule.amountDeposited, _to);
+        _transfer(_to, _tokenId, []);
     }
 
     function singleRewardsToDeposit(address _holder) external view returns (DepositToken[] memory) {
@@ -692,14 +709,14 @@ contract VestAMM is VestVestingToken, IVestAMM {
     }
 
     modifier acceptDealOpen() {
-        Validate.notCancelled(isCancelled == false);
+        Validate.notCancelled(!isCancelled);
         // TODO double check < vs <= matches everywhere
         Validate.inDepositWindow(depositComplete && block.timestamp <= depositExpiry);
         _;
     }
 
     modifier lock() {
-        Validate.contractUnlocked(locked == false);
+        Validate.contractUnlocked(!locked);
         locked = true;
         _;
         locked = false;
