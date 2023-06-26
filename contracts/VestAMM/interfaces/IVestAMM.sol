@@ -127,7 +127,7 @@ interface IVestAMM {
 
     event SingleDepositComplete(address indexed token, uint8 singleRewardIndex);
 
-    event BaseDepositComplete(address indexed token, address indexed depositor, uint256 amount);
+    event BaseDeposited(address indexed token, address indexed depositor, uint256 amount, uint256 totalAmount);
 
     event DepositComplete(uint256 depositExpiry, uint256 lpFundingExpiry);
 

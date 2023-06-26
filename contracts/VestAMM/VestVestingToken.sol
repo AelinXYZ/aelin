@@ -24,11 +24,11 @@ contract VestVestingToken is VestERC721, IVestVestingToken {
         tokenCount += 1;
     }
 
-    function transferVestingShare(
+    function _transferVestingShare(
         address _to,
         uint256 _tokenId,
         uint256 _shareAmount
-    ) public nonReentrant {
+    ) internal nonReentrant {
         VestVestingToken memory schedule = vestVestingToken[_tokenId];
         require(schedule.amountDeposited > 0, "schedule does not exist");
         require(_shareAmount > 0, "share amount should be > 0");
@@ -38,11 +38,11 @@ contract VestVestingToken is VestERC721, IVestVestingToken {
     }
 
     // NOTE I am not sure we can just leave transfer like this. Circle back later when have time
-    function transfer(
+    function _transfer(
         address _to,
         uint256 _tokenId,
         bytes memory _data
-    ) public {
+    ) internal {
         _safeTransfer(msg.sender, _to, _tokenId, _data);
     }
 }
