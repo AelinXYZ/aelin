@@ -34,7 +34,9 @@ contract AelinVestingToken is AelinERC721, IAelinVestingToken {
         for (uint256 i = 0; i < _fullTransferTokenIds.length; i++) {
             transfer(_to, _fullTransferTokenIds[i], bytes(""));
         }
-        transferVestingShare(_to, _partialTransferID, _partialShareAmount);
+        if (_partialShareAmount > 0) {
+            transferVestingShare(_to, _partialTransferID, _partialShareAmount);
+        }
     }
 
     function transferVestingShare(
