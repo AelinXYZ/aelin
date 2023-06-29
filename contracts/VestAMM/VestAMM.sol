@@ -31,7 +31,13 @@ interface IERC20Decimals {
  * @title VestAMM logic contract
  * @author Aelin CCs
  * @notice This contract holds the VestAMM logic. It will be deployed once and all
- * VestAMM instances will be deployed at Minimal Proxy contracts pointing to this logic
+ * VestAMM instances will be deployed at Minimal Proxy contracts pointing to this logic.
+ * @dev there are 5 phases to VestAMM:
+ *   1. holders deposit base asset (e.g. SNX) and single sided rewards (e.g. OP, BAL)
+ *   2. community provides liquidity (e.g. sUSD)
+ *   3. protocol adds liquidity to selected AMM (e.g. sUSD/SNX 50/50 pair on Balancer)
+ *   4. vesting phase (optional for LP tokens and single sided rewards)
+ *   5. deal complete (LP tokens and single sided rewards fully vested)
  */
 contract VestAMM is VestVestingToken, IVestAMM {
     using SafeERC20 for IERC20;
@@ -186,6 +192,10 @@ contract VestAMM is VestVestingToken, IVestAMM {
         setDepositComplete();
     }
 
+    /**
+     * @dev this function cancels VestAMM and can be called by the base asset holder before the deposit
+     * phase is complete. It will auto refund any deposits that have been sent in so far
+     */
     function cancelAndRefundVestAMM() external onlyHolder depositIncomplete {
         if (amountBaseDeposited > 0) {
             IERC20(vAmmInfo.ammData.baseToken).safeTransferFrom(address(this), vAmmInfo.mainHolder, amountBaseDeposited);
