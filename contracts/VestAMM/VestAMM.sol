@@ -206,6 +206,11 @@ contract VestAMM is VestVestingToken, IVestAMM {
         isCancelled = true;
     }
 
+    /**
+     * @dev this function allows for the base asset holder to add new single sided rewards so long
+     * as the holder deposit window is still open and the community deposit window has not started yet
+     * @param _newSingleRewards an array of new single vesting schedules up to 6 in total for the entire VestAMM instance
+     */
     function addSingle(SingleVestingSchedule[] calldata _newSingleRewards) external onlyHolder depositIncomplete dealOpen {
         Validate.maxSingleRewards(maxSingleRewards <= vAmmInfo.singleVestingSchedules.length + _newSingleRewards.length);
         _validateSingleSchedules(_newSingleRewards);
@@ -214,6 +219,11 @@ contract VestAMM is VestVestingToken, IVestAMM {
         }
     }
 
+    /**
+     * @dev this function allows the single sided rewards holders or the base asset holder to remove any single sided reward
+     * all the deposited tokens will be refunded when a single sided reward is cancelled
+     * @param _depositTokens an array of single reward indexes to remove and refund
+     */
     function removeSingle(RemoveSingle[] calldata _removeSingleList) external depositIncomplete {
         for (uint8 i = 0; i < _removeSingleList.length; i++) {
             SingleVestingSchedule singleVestingSchedule = vAmmInfo.singleVestingSchedules[
@@ -254,12 +264,10 @@ contract VestAMM is VestVestingToken, IVestAMM {
         delete holderDeposits[singleVestingSchedule.singleHolder][vAmmInfo.singleVestingSchedules.length - 1];
     }
 
-    function removeSingles(RemoveSingle[] calldata _removeSingleList) external {
-        for (uint8 i = 0; i < _removeSingleList.length; i++) {
-            removeSingle(_removeSingleList[i]);
-        }
-    }
-
+    /**
+     * @dev this function is for the base asset holder to deposit their token. once the base asset
+     * and all single sided rewards have been deposited the community can start adding liquidity
+     */
     function depositBase() external onlyHolder depositIncomplete dealOpen {
         Validate.baseDepositNotCompleted(!baseComplete);
         address baseToken = vAmmInfo.ammData.baseToken;
@@ -277,6 +285,14 @@ contract VestAMM is VestVestingToken, IVestAMM {
         setDepositComplete();
     }
 
+    /**
+     * @dev this function is for the community to add in liquidity in the paired asset decided by the
+     * base asset holder. e.g. if the base asset holder is Synthetix Protocol and the base asset is SNX
+     * the paired asset might be wETH or sUSD, which the community will provide in this method
+     * @param _nftPurchaseList is the NFT gated deal info from the community member denoting which NFTs they will use
+     * @param _merkleData is the merkle tree data for a user who is allowed to invest in a large allow list deal
+     * @param _investmentTokenAmount is the amount of the paired asset a community member wants to deposit
+     */
     function acceptDeal(
         AelinNftGating.NftPurchaseList[] calldata _nftPurchaseList,
         MerkleTree.UpFrontMerkleData calldata _merkleData,
