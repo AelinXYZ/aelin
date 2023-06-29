@@ -325,6 +325,14 @@ contract VestAMM is VestVestingToken, IVestAMM {
         emit AcceptVestDeal(msg.sender, depositTokenAmount);
     }
 
+    /**
+     * @dev after the base assets and single sided rewards have been deposited by holders,
+     * and the community has added their side, it is time for the protocol to fund the LP position
+     * on the external AMM they selected. In this case the price was determined in advance since
+     * there is no liquidity in the AMM for this pairing yet
+     * TODO consider a new pair that has liquidity on another AMM which would function more like the
+     * other createLiquidity method
+     */
     function createInitialLiquidity() external onlyHolder lpFundingWindow {
         Validate.liquidityLaunch(vAmmInfo.hasLaunchPhase);
 
@@ -336,6 +344,17 @@ contract VestAMM is VestVestingToken, IVestAMM {
         aelinFees(numInvTokensFee, numBaseTokensFee);
     }
 
+    /**
+     * @dev after the base assets and single sided rewards have been deposited by holders,
+     * and the community has added their side, it is time for the protocol to fund the LP position
+     * on the external AMM they selected. In this case the price was not determined in advance since
+     * there is liquidity in the AMM for this pairing
+     * @param _extraBaseTokens is when the price of a token goes down and there are not enough tokens
+     * in the contract to match the paired asset e.g. SNX/sUSD is at 5:1 when the pool is created but
+     * goes down to 1:1. A pool raising 500K sUSD only needed 100K SNX but now it can take up to 500K
+     * so the _extraBaseTokens is eligible from 0 to 400K, whatever additional amount the protocol wants
+     * to deposit and match at this time. Leftover sUSD is sent back to community members pro-rata
+     */
     function createLiquidity(uint256 _extraBaseTokens) external onlyHolder lpFundingWindow {
         address baseToken = vAmmInfo.ammData.baseToken;
         Validate.notLiquidityLaunch(vAmmInfo.hasLiquidityLaunch);
@@ -376,6 +395,9 @@ contract VestAMM is VestVestingToken, IVestAMM {
         aelinFees(numInvTokensFee, numBaseTokensFee);
     }
 
+    /**
+     * @dev a helper function... TODO work on wording this later
+     */
     function _getExcessBaseTokensData(uint256 _currentRatio) internal view returns (uint256, uint256, uint256) {
         uint256 investmentTokenTarget = vAmmInfo.lpVestingSchedule.totalBaseTokens * vAmmInfo.investmentPerBase;
         uint256 investmentTokenRaised = IERC20(vAmmInfo.ammData.investmentToken).balanceOf(address(this));
@@ -391,11 +413,17 @@ contract VestAMM is VestVestingToken, IVestAMM {
         return (excessBaseTokens, currentBaseTokensInLP, baseTokenDeposited);
     }
 
+    /**
+     * @dev saving the important LP deposit data such as pool address, balance of LP and time deposited
+     */
     function saveDepositData(address _poolAddress) internal {
         // We might have to add a method to the librariers IVestAMMLibrary.balanceOf
         depositData = DepositData(_poolAddress, IERC20(_poolAddress).balanceOf(address(this)), block.timestamp);
     }
 
+    /**
+     * @dev a helper function to create a struct for adding liquidiy that lives in memory
+     */
     function createAddLiquidity(address _poolAddress) internal view returns (IVestAMMLibrary.AddLiquidity memory) {
         // TODO add in the other variables needed to deploy a pool and return these values
         uint256 investmentTokenAmount = totalInvTokensDeposited < maxInvTokens ? totalInvTokensDeposited : maxInvTokens;
@@ -414,7 +442,9 @@ contract VestAMM is VestVestingToken, IVestAMM {
         return IVestAMMLibrary.AddLiquidity(_poolAddress, tokensAmtsIn, tokens);
     }
 
-    // NOTE: Is this really needed?? I we only need this to add liquidity
+    /**
+     * @dev a helper function to create a struct for deploying a pool that lives in memory
+     */
     function createDeployPool() internal view returns (DeployPool memory) {
         // TODO add in the other variables needed to deploy a pool and return these values
         uint256 investmentTokenAmount = totalInvTokensDeposited < maxInvTokens ? totalInvTokensDeposited : maxInvTokens;
@@ -425,6 +455,9 @@ contract VestAMM is VestVestingToken, IVestAMM {
         return DeployPool(investmentTokenAmount, baseTokenAmount);
     }
 
+    /**
+     * @dev a helper function to send fees to Aelin DAO Multisig and AELIN stakers
+     */
     function aelinFees(uint256 _invTokenFeeAmt, uint256 _baseTokenFeeAmt) internal {
         sendFeesToAelin(ammData.baseToken, _baseTokenFeeAmt);
         sendFeesToAelin(ammData.investmentAsset, _baseTokenFeeAmt);
@@ -437,6 +470,15 @@ contract VestAMM is VestVestingToken, IVestAMM {
             uint256 feeAmount = (singleRewardsUsed * VEST_ASSET_FEE) / VEST_BASE_FEE;
             sendFeesToAelin(_singleRewards[i].token, feeAmount);
         }
+    }
+
+    /**
+     * @dev a helper function to send fees to Aelin DAO Multisig and AELIN stakers
+     */
+    function sendFeesToAelin(address _token, uint256 _amount) public {
+        IERC20(_token).approve(aelinFeeModule, _amount);
+        AelinFeeModule(aelinFeeModule).sendFees(_token, _amount);
+        emit SentFees(_token, _amount);
     }
 
     function withdrawExcessFunding() public lpComplete {
@@ -619,12 +661,6 @@ contract VestAMM is VestVestingToken, IVestAMM {
         totalSingleClaimed[_token] += _claimableAmount;
         IERC20(_token).safeTransfer(msg.sender, _claimableAmount);
         emit ClaimedToken(_token, msg.sender, _claimableAmount, ClaimType.Single, _singleRewardsIndex);
-    }
-
-    function sendFeesToAelin(address _token, uint256 _amount) public {
-        IERC20(_token).approve(aelinFeeModule, _amount);
-        AelinFeeModule(aelinFeeModule).sendFees(_token, _amount);
-        emit SentFees(_token, _amount);
     }
 
     function _validateLPSchedule(LPVestingSchedule _vestingSchedule) internal {
