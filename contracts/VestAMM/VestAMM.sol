@@ -396,7 +396,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
     }
 
     /**
-     * @dev a helper function... TODO work on wording this later
+     * @dev a helper function to calculate the max number of excess base tokens allowed based on price changes
      */
     function _getExcessBaseTokensData(uint256 _currentRatio) internal view returns (uint256, uint256, uint256) {
         uint256 investmentTokenTarget = vAmmInfo.lpVestingSchedule.totalBaseTokens * vAmmInfo.investmentPerBase;
@@ -481,6 +481,9 @@ contract VestAMM is VestVestingToken, IVestAMM {
         emit SentFees(_token, _amount);
     }
 
+    /**
+     * @dev a helper function to send fees to Aelin DAO Multisig and AELIN stakers
+     */
     function withdrawExcessFunding() public lpComplete {
         uint256 excessBaseAmount = vAmmInfo.lpVestingSchedule.totalBaseTokens -
             ((vAmmInfo.lpVestingSchedule.totalBaseTokens * totalInvTokensDeposited) / maxInvTokens);
@@ -502,7 +505,11 @@ contract VestAMM is VestVestingToken, IVestAMM {
         }
     }
 
-    // for when the lp is not funded in time
+    /**
+     * @dev a helper function for community depositors who want to withdraw their funds when
+     * the LP tokens are never deposited within the LP funding window
+     * @param _tokenIds an array of NFT IDs that represent the community deposits minted when calling acceptDeal
+     */
     function depositorWithdraw(uint256[] _tokenIds) external neverDeposited {
         for (uint256 i; i < _tokenIds.length; i++) {
             Validate.owner(ownerOf(_tokenIds[i]));
@@ -512,7 +519,10 @@ contract VestAMM is VestVestingToken, IVestAMM {
         }
     }
 
-    // collect the fees from AMMs and send them to the Fee Module
+    // TODO a function to collect external rewards and send them to locked LPs to claim such as weekly Balancer rewards
+    function collectExternalRewards() external {}
+
+    // TODO a function to collect the swap/trading fees from AMMs and send them to the Fee Module
     function collectAllFees(uint256 tokenId) public returns (uint256 amount0, uint256 amount1) {
         // you have 50 LP tokens owned by our contract for one year
         // a few ways an AMM might implement swap fees.
@@ -547,6 +557,9 @@ contract VestAMM is VestVestingToken, IVestAMM {
         // NOTE will collect the fees and then call the method sendAelinFees(amounts...)
     }
 
+    /**
+     * @dev a helper function to retrieve and calculate vesting schedule related times for claiming functions
+     */
     function calcVestTimes(
         uint256 _tokenId
     ) internal view returns (uint256 vestingCliff, uint256 vestingExpiry, uint256 maxTime) {
@@ -558,6 +571,13 @@ contract VestAMM is VestVestingToken, IVestAMM {
         maxTime = block.timestamp > vestingExpiry ? vestingExpiry : block.timestamp;
     }
 
+    /**
+     * @dev a view function to determine how many single sided rewards are available to claim by a NFT holder
+     * @param _tokenId the ID of the NFT which holds the rewards
+     * @param _singleRewardIndex the index of the single reward to determine how much to claim
+     * @return amount number of tokens claimable at this index in the single sided reward array
+     * @return tokenAddress address of the token to claim at this index in the single sided reward array
+     */
     function claimableSingleTokens(uint256 _tokenId, uint256 _singleRewardIndex) public view returns (uint256, address) {
         if (depositData.lpDepositTime == 0 || _singleRewardIndex >= vAmmInfo.singleVestingSchedules.length) {
             return (0, address(0));
@@ -589,6 +609,12 @@ contract VestAMM is VestVestingToken, IVestAMM {
         return (0, singleVestingSchedule.token);
     }
 
+    /**
+     * @dev a view function to determine how many LP tokens are available to claim by a NFT holder
+     * @param _tokenId the ID of the NFT which holds the rewards
+     * @return amount number of LP tokens claimable
+     * @return tokenAddress address of the LP token to claim
+     */
     function claimableLPTokens(uint256 _tokenId) public view returns (uint256, address) {
         if (depositData.lpDepositTime == 0) {
             return (0, depositData.lpToken);
@@ -612,14 +638,20 @@ contract VestAMM is VestVestingToken, IVestAMM {
         return (0, depositData.lpToken);
     }
 
-    // NOTE we need to update the multi rewards contract when a NFT transfer happens
-    function claimMultiRewards(uint256 _tokenId) {
+    /**
+     * @dev allows a user to claim their all their rewards from the VestAMMMultiRewards contract
+     * the VestAMMMultiRewards contract allows a protocol to continue sending rewards of various tokens
+     * and amounts to LPs who are locked in the contract.
+     * @param _tokenId the ID of the NFT to claim for
+     */
+    function claimMultiRewards(uint256 _tokenId) external {
         Validate.owner(ownerOf(_tokenId));
         getReward(msg.sender);
     }
 
     /**
      * @dev allows a user to claim their all their vested tokens across a single NFT
+     * @param _tokenId the ID of the NFT to claim for
      */
     function claimAllTokens(uint256 _tokenId) public {
         Validate.owner(ownerOf(_tokenId));
@@ -635,6 +667,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
 
     /**
      * @dev allows a user to claim their all their vested tokens across many NFTs
+     * @param _tokenIds the array of NFT IDs to claim for
      */
     function claimAllTokensManyNFTs(uint256[] _tokenIds) external {
         for (uint256 i; i < _tokenIds.length; i++) {
@@ -642,6 +675,12 @@ contract VestAMM is VestVestingToken, IVestAMM {
         }
     }
 
+    /**
+     * @dev a helper function to claim LP tokens
+     * @param _tokenId the  NFT ID to claim for
+     * @param _claimableAmount the amount to claim
+     * @param _token the address of the token to claim
+     */
     function _claimLPTokens(uint256 _tokenId, uint256 _claimableAmount, address _token) internal {
         Validate.hasClaimBalance(_claimableAmount);
         totalLPClaimed += _claimableAmount;
@@ -651,6 +690,13 @@ contract VestAMM is VestVestingToken, IVestAMM {
         emit ClaimedToken(_token, msg.sender, _claimableAmount, ClaimType.LP, -1);
     }
 
+    /**
+     * @dev a helper function to claim single sided rewards
+     * @param _tokenId the  NFT ID to claim for
+     * @param _claimableAmount the amount to claim
+     * @param _token the address of the token to claim
+     * @param _singleRewardsIndex the index of the token to claim in the single sided reward array
+     */
     function _claimSingleTokens(
         uint256 _tokenId,
         uint256 _claimableAmount,
@@ -663,6 +709,10 @@ contract VestAMM is VestVestingToken, IVestAMM {
         emit ClaimedToken(_token, msg.sender, _claimableAmount, ClaimType.Single, _singleRewardsIndex);
     }
 
+    /**
+     * @dev a helper function to validate LP vesting schedule data
+     * @param _vestingSchedule data for the LP vesting schedule
+     */
     function _validateLPSchedule(LPVestingSchedule _vestingSchedule) internal {
         Validate.vestingCliff(1825 days >= _vestingSchedule.vestingCliffPeriod);
         Validate.vestingPeriod(1825 days >= _vestingSchedule.vestingPeriod);
@@ -673,6 +723,10 @@ contract VestAMM is VestVestingToken, IVestAMM {
         Validate.maxSingleReward(maxSingleRewards >= _vestingSchedule.singleVestingSchedules.length);
     }
 
+    /**
+     * @dev a helper function to validate single reward vesting schedule data
+     * @param _singleVestingSchedules data for the array of single vesting schedules
+     */
     function _validateSingleSchedules(SingleVestingSchedule[] _singleVestingSchedules) internal {
         for (uint256 i; i < _singleVestingSchedules.length; ++i) {
             Validate.hasTotalSingleTokens(_singleVestingSchedules[i].totalSingleTokens > 0);
@@ -682,24 +736,44 @@ contract VestAMM is VestVestingToken, IVestAMM {
         }
     }
 
-    function transferVestingShare(address _to, uint256 _tokenId, uint256 _shareAmount) {
+    /**
+     * @dev a helper function to transfer vesting shares tied to a NFT.
+     * NOTE since there is the VestAMMMultiRewards contract, it needs to be updated so that locked
+     * LPs who are rewarded by protocols are updated accordingly inside the rewards contract as well
+     * @param _to the receiving address
+     * @param _tokenId the NFT which is sending a share of its vesting schedule
+     * @param _shareAmount the amount of the share to send
+     */
+    function transferVestingShare(address _to, uint256 _tokenId, uint256 _shareAmount) external {
         VestAMMMultiRewards(vestAmmMultiRewards).amountExit(_shareAmount, msg.sender);
         VestAMMMultiRewards(vestAmmMultiRewards).stake(_shareAmount, _to);
         _transferVestingShare(_to, _tokenId, _shareAmount);
     }
 
-    function transfer(_to, _tokenId) {
+    /**
+     * @dev a helper function to transfer all the vesting shares tied to a NFT.
+     * NOTE since there is the VestAMMMultiRewards contract, it needs to be updated so that locked
+     * LPs who are rewarded by protocols are updated accordingly inside the rewards contract as well
+     * @param _to the receiving address
+     * @param _tokenId the NFT which is sending all shares of its vesting schedule
+     */
+    function transfer(_to, _tokenId) external {
         VestVestingToken memory schedule = vestingDetails[_tokenId];
         VestAMMMultiRewards(vestAmmMultiRewards).amountExit(schedule.amountDeposited, msg.sender);
         VestAMMMultiRewards(vestAmmMultiRewards).stake(schedule.amountDeposited, _to);
         _transfer(_to, _tokenId, []);
     }
 
-    function singleRewardsToDeposit(address _holder) external view returns (DepositToken[] memory) {
+    /**
+     * @dev a helper function telling a single rewards holder which rewards
+     * they still needs to deposit in the initial phase of the VestAMM deal
+     * @param _singleHolder the single sided reward holder
+     */
+    function singleRewardsToDeposit(address _singleHolder) external view returns (DepositToken[] memory) {
         DepositToken[] memory rewardsToDeposit = new DepositToken[]();
         for (uint8 i = 0; i < vAmmInfo.singleVestingSchedules.length; i++) {
             address singleHolder = vAmmInfo.singleVestingSchedules[i].singleHolder;
-            if (_holder == singleHolder && !vAmmInfo.singleVestingSchedules[i].finalizedDeposit) {
+            if (_singleHolder == singleHolder && !vAmmInfo.singleVestingSchedules[i].finalizedDeposit) {
                 uint256 amountDeposited = holderDeposits[singleHolder][i];
                 DepositToken memory rewardToDeposit = DepositToken(
                     i,
