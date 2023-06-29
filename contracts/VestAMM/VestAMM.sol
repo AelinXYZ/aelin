@@ -27,12 +27,18 @@ interface IERC20Decimals {
     function decimals() external view returns (uint8);
 }
 
+/**
+ * @title VestAMM logic contract
+ * @author Aelin CCs
+ * @notice This contract holds the VestAMM logic. It will be deployed once and all
+ * VestAMM instances will be deployed at Minimal Proxy contracts pointing to this logic
+ */
 contract VestAMM is VestVestingToken, IVestAMM {
     using SafeERC20 for IERC20;
 
-    uint256 constant VEST_ASSET_FEE = 1 * 10**18;
-    uint256 constant VEST_SWAP_FEE = 20 * 10**18;
-    uint256 constant VEST_BASE_FEE = 100 * 10**18;
+    uint256 constant VEST_ASSET_FEE = 1 * 10 ** 18;
+    uint256 constant VEST_SWAP_FEE = 20 * 10 ** 18;
+    uint256 constant VEST_BASE_FEE = 100 * 10 ** 18;
     uint256 public depositExpiry;
     uint256 public lpFundingExpiry;
     uint256 public totalLPClaimed;
@@ -104,7 +110,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
 
         totalBaseTokens = vAmmInfo.lpVestingSchedule.totalBaseTokens;
 
-        maxInvTokens = (totalBaseTokens * invPerBase) / 10**IERC20(vAmmInfo.ammData.baseToken).decimals();
+        maxInvTokens = (totalBaseTokens * invPerBase) / 10 ** IERC20(vAmmInfo.ammData.baseToken).decimals();
 
         // NOTE can just approve later before we provide liquidity. this is probably better
         IERC20(vAmmInfo.ammData.baseToken).approve(address(vestAMMLibrary), totalBaseTokens);
@@ -126,6 +132,11 @@ contract VestAMM is VestVestingToken, IVestAMM {
         Validate.merkleHasIPFSHash(!(bytes(_dealAccess.ipfsHash).length == 0 && _dealAccess.merkleRoot != 0));
     }
 
+    /**
+     * @dev this function is called at the end of a deposit method. Either for the base
+     * token or single sided reward deposit. If all the tokens have been deposited
+     * this function will begin the deposit window for community members to provide liquidity
+     */
     function setDepositComplete() internal {
         if (baseComplete == true && singleRewardsComplete == vAmmInfo.singleVestingSchedules.length) {
             depositComplete = true;
@@ -135,6 +146,12 @@ contract VestAMM is VestVestingToken, IVestAMM {
         }
     }
 
+    /**
+     * @dev this function allows the single sided rewards holders to deposit their token which must
+     * happen before any community members can deposit liquidity
+     * @param _depositTokens an array of token, amount and index of single sided reward. The depositor
+     * must be the appointed single sided rewards holder and must do it before the deal is fully funded and not cancelled
+     */
     function depositSingle(DepositToken[] calldata _depositTokens) external depositIncomplete dealOpen {
         for (uint i = 0; i < _depositTokens.length; i++) {
             SingleVestingSchedule singleVestingSchedule = vAmmInfo.singleVestingSchedules[
@@ -333,15 +350,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
         aelinFees(numInvTokensFee, numBaseTokensFee);
     }
 
-    function _getExcessBaseTokensData(uint256 _currentRatio)
-        internal
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function _getExcessBaseTokensData(uint256 _currentRatio) internal view returns (uint256, uint256, uint256) {
         uint256 investmentTokenTarget = vAmmInfo.lpVestingSchedule.totalBaseTokens * vAmmInfo.investmentPerBase;
         uint256 investmentTokenRaised = IERC20(vAmmInfo.ammData.investmentToken).balanceOf(address(this));
         uint256 baseTokenDeposited = IERC20(vAmmInfo.ammData.baseToken).balanceOf(address(this));
@@ -470,15 +479,9 @@ contract VestAMM is VestVestingToken, IVestAMM {
         // NOTE will collect the fees and then call the method sendAelinFees(amounts...)
     }
 
-    function calcVestTimes(uint256 _tokenId)
-        internal
-        view
-        returns (
-            uint256 vestingCliff,
-            uint256 vestingExpiry,
-            uint256 maxTime
-        )
-    {
+    function calcVestTimes(
+        uint256 _tokenId
+    ) internal view returns (uint256 vestingCliff, uint256 vestingExpiry, uint256 maxTime) {
         VestVestingToken memory schedule = vestingDetails[_tokenId];
         LPVestingSchedule lpVestingSchedule = vAmmInfo.lpVestingSchedule;
 
@@ -571,11 +574,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
         }
     }
 
-    function _claimLPTokens(
-        uint256 _tokenId,
-        uint256 _claimableAmount,
-        address _token
-    ) internal {
+    function _claimLPTokens(uint256 _tokenId, uint256 _claimableAmount, address _token) internal {
         Validate.hasClaimBalance(_claimableAmount);
         totalLPClaimed += _claimableAmount;
         uint256 withdrawAmount = (totalInvTokensDeposited * _claimableAmount) / depositData.lpTokenAmount;
@@ -605,7 +604,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
     function _validateLPSchedule(LPVestingSchedule _vestingSchedule) internal {
         Validate.vestingCliff(1825 days >= _vestingSchedule.vestingCliffPeriod);
         Validate.vestingPeriod(1825 days >= _vestingSchedule.vestingPeriod);
-        Validate.investorShare(100 * 10**18 >= _vestingSchedule.investorLPShare && 0 <= _vestingSchedule.investorLPShare);
+        Validate.investorShare(100 * 10 ** 18 >= _vestingSchedule.investorLPShare && 0 <= _vestingSchedule.investorLPShare);
         Validate.hasTotalBaseTokens(_vestingSchedule.totalBaseTokens > 0);
         Validate.lpNotZero(_vestingSchedule.totalLPTokens > 0);
         Validate.nothingClaimed(_vestingSchedule.claimed == 0);
@@ -621,11 +620,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
         }
     }
 
-    function transferVestingShare(
-        address _to,
-        uint256 _tokenId,
-        uint256 _shareAmount
-    ) {
+    function transferVestingShare(address _to, uint256 _tokenId, uint256 _shareAmount) {
         VestAMMMultiRewards(vestAmmMultiRewards).amountExit(_shareAmount, msg.sender);
         VestAMMMultiRewards(vestAmmMultiRewards).stake(_shareAmount, _to);
         _transferVestingShare(_to, _tokenId, _shareAmount);
