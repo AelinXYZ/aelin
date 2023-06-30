@@ -23,7 +23,6 @@ library Validate {
     error LpVestingAndSingleArrayLengthError();
     error MaxSingleRewardError();
     error BaseDepositNotCompletedError();
-    error InvestmentTokenBalanceError();
     error InvestorAllocationError();
     error LiquidityLaunchError();
     error SingleHolderNotNullError();
@@ -35,8 +34,6 @@ library Validate {
     error SingleVestingPeriodError();
     error HasTotalSingleTokensError();
     error LpNotZeroError();
-    error NothingClaimedError();
-    error SingleNothingClaimedError();
     error SingleDepositNotCompleted();
     error DepositNotFinalizedError();
     error MaxVestingPeriodsError();
@@ -144,18 +141,6 @@ library Validate {
         }
     }
 
-    function nothingClaimed(bool _conditionMet) external pure {
-        if (!_conditionMet) {
-            revert NothingClaimedError();
-        }
-    }
-
-    function singleNothingClaimed(bool _conditionMet) external pure {
-        if (!_conditionMet) {
-            revert SingleNothingClaimedError();
-        }
-    }
-
     function maxSingleReward(bool _conditionMet) external pure {
         if (!_conditionMet) {
             revert MaxSingleRewardError();
@@ -225,12 +210,6 @@ library Validate {
     function baseDepositNotCompleted(bool _conditionMet) external pure {
         if (!_conditionMet) {
             revert BaseDepositNotCompletedError();
-        }
-    }
-
-    function investmentTokenBalance(bool _conditionMet) external pure {
-        if (!_conditionMet) {
-            revert InvestmentTokenBalanceError();
         }
     }
 

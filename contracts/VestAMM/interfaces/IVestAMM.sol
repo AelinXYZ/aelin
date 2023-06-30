@@ -20,7 +20,6 @@ interface IVestAMM {
         address rewardToken;
         address singleHolder;
         uint256 totalSingleTokens;
-        uint256 claimed;
         bool finalizedDeposit;
         bool isLiquid;
     }
@@ -31,7 +30,6 @@ interface IVestAMM {
         uint256 totalBaseTokens;
         // TODO add validation this is set to 0
         uint256 totalLPTokens;
-        uint256 claimed;
         bool finalizedDeposit;
         uint8 investorLPShare; // 0 - 100
     }
@@ -69,7 +67,6 @@ interface IVestAMM {
         uint256 depositWindow;
         uint256 lpFundingWindow;
         address mainHolder;
-        Deallocation deallocation;
         LPVestingSchedule lpVestingSchedule;
         SingleVestingSchedule[] singleVestingSchedules;
         // NOTE: if hasLaunchPhase is true, then there must be a amm pool identifier we can use.
