@@ -298,9 +298,6 @@ contract VestAMM is VestVestingToken, IVestAMM {
         MerkleTree.UpFrontMerkleData calldata _merkleData,
         uint256 _investmentTokenAmount
     ) external lock acceptDealOpen {
-        Validate.investmentTokenBalance(
-            IERC20(vAmmInfo.ammData.investmentToken).balanceOf(msg.sender) >= _investmentTokenAmount
-        );
         if (nftGating.hasNftList || _nftPurchaseList.length > 0) {
             AelinNftGating.purchaseDealTokensWithNft(_nftPurchaseList, nftGating, _investmentTokenAmount);
         } else if (allowList.hasAllowList) {
@@ -317,7 +314,9 @@ contract VestAMM is VestVestingToken, IVestAMM {
         uint256 depositTokenAmount = balanceAfterTransfer - balanceBeforeTransfer;
         totalInvTokensDeposited += depositTokenAmount;
         // NOTE no deallocation allowed for v1
-        require(totalInvTokensDeposited >= maxInvTokens, "investment cap exceeded");
+        require(totalInvTokensDeposited <= maxInvTokens, "investment cap exceeded");
+        // TODO if the cap is hit we can move it to the next phase without waiting
+        // NOTE change the deposit expiry and lp funding window to now when cap is hit
 
         VestAMMMultiRewards(vestAmmMultiRewards).stake(depositTokenAmount, msg.sender);
         _mintVestingToken(msg.sender, depositTokenAmount, 0);
@@ -655,6 +654,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
      */
     function claimAllTokens(uint256 _tokenId) public {
         Validate.owner(ownerOf(_tokenId));
+        // NOTE placeholder to manage the swap fees
         collectAllFees();
         vestingDetails[_tokenId].lastClaimedAt = block.timestamp;
         (uint256 lpAmount, address lpAddress) = claimableLPTokens(_tokenId);
@@ -719,7 +719,6 @@ contract VestAMM is VestVestingToken, IVestAMM {
         Validate.investorShare(100 * 10 ** 18 >= _vestingSchedule.investorLPShare && 0 <= _vestingSchedule.investorLPShare);
         Validate.hasTotalBaseTokens(_vestingSchedule.totalBaseTokens > 0);
         Validate.lpNotZero(_vestingSchedule.totalLPTokens > 0);
-        Validate.nothingClaimed(_vestingSchedule.claimed == 0);
         Validate.maxSingleReward(maxSingleRewards >= _vestingSchedule.singleVestingSchedules.length);
     }
 
@@ -730,7 +729,6 @@ contract VestAMM is VestVestingToken, IVestAMM {
     function _validateSingleSchedules(SingleVestingSchedule[] _singleVestingSchedules) internal {
         for (uint256 i; i < _singleVestingSchedules.length; ++i) {
             Validate.hasTotalSingleTokens(_singleVestingSchedules[i].totalSingleTokens > 0);
-            Validate.singleNothingClaimed(_singleVestingSchedules[i].claimed == 0);
             Validate.singleHolderNotNull(_singleVestingSchedules[i].singleHolder != address(0));
             Validate.depositNotFinalized(_singleVestingSchedules[i].finalizedDeposit);
         }
@@ -829,7 +827,6 @@ contract VestAMM is VestVestingToken, IVestAMM {
 
     modifier acceptDealOpen() {
         Validate.notCancelled(!isCancelled);
-        // TODO double check < vs <= matches everywhere
         Validate.inDepositWindow(depositComplete && block.timestamp <= depositExpiry);
         _;
     }
