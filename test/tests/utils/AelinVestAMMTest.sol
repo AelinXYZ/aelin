@@ -55,6 +55,8 @@ contract AelinVestAMMTest is Test {
         IVestAMM.AmmData memory ammData = IVestAMM.AmmData(ammLibrary, investmentToken, baseToken);
 
         IVestAMM.SingleVestingSchedule[] memory single = new IVestAMM.SingleVestingSchedule[](1);
+
+        /*
         single[0] = IVestAMM.SingleVestingSchedule(
             aaveToken, // rewardToken
             0, //vestingPeriod
@@ -64,8 +66,10 @@ contract AelinVestAMMTest is Test {
             0, //claimed;
             false //finalizedDeposit;
         );
+        */
 
         IVestAMM.LPVestingSchedule[] memory lpSchedules = new IVestAMM.LPVestingSchedule[](1);
+        /*
         lpSchedules[0] = IVestAMM.LPVestingSchedule(
             single, //singleVestingSchedules[]
             0, //vestingPeriod;
@@ -76,9 +80,11 @@ contract AelinVestAMMTest is Test {
             false, //finalizedDeposit;
             10 //investorLPShare; // 0 - 100
         );
+        */
 
         IVestAMMLibrary.CreateNewPool memory newPool = getCreatePoolData();
-
+        IVestAMM.VAmmInfo memory info;
+        /*
         IVestAMM.VAmmInfo memory info = IVestAMM.VAmmInfo(
             ammData,
             true, //bool hasLaunchPhase;
@@ -92,6 +98,7 @@ contract AelinVestAMMTest is Test {
             poolId,
             newPool
         );
+        */
 
         return info;
     }

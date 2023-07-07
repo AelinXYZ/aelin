@@ -20,7 +20,7 @@ interface IAelinLibraryList {
 contract VestAMMDealFactory is IVestAMM {
     address public immutable VEST_AMM_LOGIC;
     address public immutable AELIN_FEE_MODULE;
-    address public immutable AELIN_MULTI_REWARDS;
+    address public immutable AELIN_MULTI_REWARDS = address(0);
     address public immutable VEST_DAO_FEES = 0x0000000000000000000000000000000000000000;
     IAelinLibraryList public immutable AELIN_LIBRARY_LIST;
 
