@@ -53,10 +53,9 @@ contract BalancerVestAMM {
             );
     }
 
-    function _parseNewPoolParams(IVestAMMLibrary.CreateNewPool calldata _newPool)
-        internal
-        returns (IBalancerPool.CreateNewPool memory)
-    {
+    function _parseNewPoolParams(
+        IVestAMMLibrary.CreateNewPool calldata _newPool
+    ) internal returns (IBalancerPool.CreateNewPool memory) {
         address[] memory sortedTokens = _sortTokensArray(_newPool.tokens);
 
         return
@@ -70,27 +69,15 @@ contract BalancerVestAMM {
             });
     }
 
-    function addInitialLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData)
-        external
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function addInitialLiquidity(
+        IVestAMMLibrary.AddLiquidity calldata _addLiquidityData
+    ) external returns (uint256, uint256, uint256, uint256) {
         return _addLiquidity(_addLiquidityData.poolAddress, _addLiquidityData.tokensAmtsIn, true);
     }
 
-    function addLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData)
-        external
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function addLiquidity(
+        IVestAMMLibrary.AddLiquidity calldata _addLiquidityData
+    ) external returns (uint256, uint256, uint256, uint256) {
         return _addLiquidity(_addLiquidityData.poolAddress, _addLiquidityData.tokensAmtsIn, false);
     }
 
@@ -98,15 +85,7 @@ contract BalancerVestAMM {
         address _poolAddress,
         uint256[] calldata _tokensAmtsIn,
         bool _initialLiquidity
-    )
-        internal
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    ) internal returns (uint256, uint256, uint256, uint256) {
         bytes32 poolId = IBalancerPool(_poolAddress).getPoolId();
 
         // Some pools can change which tokens they hold so we need to tell the Vault what we expect to be adding.
@@ -157,10 +136,9 @@ contract BalancerVestAMM {
         return (_tokensAmtsIn[0], _tokensAmtsIn[1], 0, 0);
     }
 
-    function removeLiquidity(IVestAMMLibrary.RemoveLiquidity calldata _removeLiquidityData)
-        external
-        returns (uint256, uint256)
-    {
+    function removeLiquidity(
+        IVestAMMLibrary.RemoveLiquidity calldata _removeLiquidityData
+    ) external returns (uint256, uint256) {
         bytes32 poolId = IBalancerPool(_removeLiquidityData.poolAddress).getPoolId();
 
         // First approve Vault to use vAMM LP tokens
@@ -239,11 +217,13 @@ contract BalancerVestAMM {
 
         (, uint256[] memory balances, ) = balancerVault.getPoolTokens(poolId);
 
+        /*
         uint256[] memory normilizedWeights = IBalancerPool(_vammInfo.poolAddress).getPoolIdgetNormilizedWeights();
 
         uint256 A = balances[0] / normilizedWeights[0];
         uint256 B = balances[1] / normilizedWeights[1];
 
         return A / B;
+        */
     }
 }

@@ -1,4 +1,4 @@
-pragma solidity 0.5.17;
+pragma solidity 0.8.6;
 
 library Address {
     /**
@@ -79,11 +79,7 @@ interface IERC20 {
      *
      * Emits a `Transfer` event.
      */
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) external returns (bool);
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
 
     /**
      * @dev Emitted when `value` tokens are moved from one account (`from`) to
@@ -129,7 +125,7 @@ contract Owned {
     address public owner;
     address public nominatedOwner;
 
-    constructor(address _owner) public {
+    constructor(address _owner) {
         require(_owner != address(0), "Owner address cannot be 0");
         owner = _owner;
         emit OwnerChanged(address(0), _owner);
@@ -160,11 +156,11 @@ contract Owned {
     event OwnerChanged(address oldOwner, address newOwner);
 }
 
-contract Pausable is Owned {
+abstract contract Pausable is Owned {
     uint public lastPauseTime;
     bool public paused;
 
-    constructor() internal {
+    constructor() {
         // This contract is abstract, and thus cannot be instantiated directly
         require(owner != address(0), "Owner must be set");
         // Paused will be false, and lastPauseTime will be 0 upon initialisation
@@ -185,7 +181,7 @@ contract Pausable is Owned {
 
         // If applicable, set the last pause time.
         if (paused) {
-            lastPauseTime = now;
+            lastPauseTime = block.timestamp;
         }
 
         // Let everyone know that our pause state has changed.
@@ -200,11 +196,11 @@ contract Pausable is Owned {
     }
 }
 
-contract ReentrancyGuard {
+abstract contract ReentrancyGuard {
     /// @dev counter to allow mutex lock with only one SSTORE operation
     uint256 private _guardCounter;
 
-    constructor() internal {
+    constructor() {
         // The counter starts at one to prevent changing it from zero to a non-zero
         // value, which is a more expensive operation.
         _guardCounter = 1;
@@ -229,28 +225,15 @@ library SafeERC20 {
     using SafeMath for uint256;
     using Address for address;
 
-    function safeTransfer(
-        IERC20 token,
-        address to,
-        uint256 value
-    ) internal {
+    function safeTransfer(IERC20 token, address to, uint256 value) internal {
         callOptionalReturn(token, abi.encodeWithSelector(token.transfer.selector, to, value));
     }
 
-    function safeTransferFrom(
-        IERC20 token,
-        address from,
-        address to,
-        uint256 value
-    ) internal {
+    function safeTransferFrom(IERC20 token, address from, address to, uint256 value) internal {
         callOptionalReturn(token, abi.encodeWithSelector(token.transferFrom.selector, from, to, value));
     }
 
-    function safeApprove(
-        IERC20 token,
-        address spender,
-        uint256 value
-    ) internal {
+    function safeApprove(IERC20 token, address spender, uint256 value) internal {
         // safeApprove should only be called when setting an initial allowance,
         // or when resetting it to zero. To increase and decrease it, use
         // 'safeIncreaseAllowance' and 'safeDecreaseAllowance'
@@ -262,20 +245,12 @@ library SafeERC20 {
         callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, value));
     }
 
-    function safeIncreaseAllowance(
-        IERC20 token,
-        address spender,
-        uint256 value
-    ) internal {
+    function safeIncreaseAllowance(IERC20 token, address spender, uint256 value) internal {
         uint256 newAllowance = token.allowance(address(this), spender).add(value);
         callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
     }
 
-    function safeDecreaseAllowance(
-        IERC20 token,
-        address spender,
-        uint256 value
-    ) internal {
+    function safeDecreaseAllowance(IERC20 token, address spender, uint256 value) internal {
         uint256 newAllowance = token.allowance(address(this), spender).sub(value);
         callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
     }
@@ -402,7 +377,7 @@ library SafeMath {
     }
 }
 
-contract MultiRewards is ReentrancyGuard, Pausable {
+abstract contract VestAMMMultiRewards is ReentrancyGuard, Pausable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -430,21 +405,17 @@ contract MultiRewards is ReentrancyGuard, Pausable {
 
     /* ========== CONSTRUCTOR ========== */
 
-    constructor() public {}
+    constructor() {}
 
     /* =========== INITIALIZE ========== */
     // the owner is the VestAMM minimal proxy instance
     // the holder is the main asset holder creating the instance
-    function initialize(address _holder) public initOnce Owned(msg.sender) {
-        holder = _holder
+    function initialize(address _holder) public initOnce {
+        holder = _holder;
     }
 
     // we are making it so that only the holder can call this method instead of the owner
-    function addReward(
-        address _rewardsToken,
-        address _rewardsDistributor,
-        uint256 _rewardsDuration
-    ) public onlyHolder {
+    function addReward(address _rewardsToken, address _rewardsDistributor, uint256 _rewardsDuration) public onlyHolder {
         require(rewardData[_rewardsToken].rewardsDuration == 0);
         rewardTokens.push(_rewardsToken);
         rewardData[_rewardsToken].rewardsDistributor = _rewardsDistributor;
@@ -589,7 +560,6 @@ contract MultiRewards is ReentrancyGuard, Pausable {
         calledInitialize = true;
         _;
     }
-
 
     modifier onlyHolder() {
         require(msg.sender == holder, "Only the holder may access");

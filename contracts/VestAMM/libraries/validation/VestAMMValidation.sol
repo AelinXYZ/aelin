@@ -38,6 +38,7 @@ library Validate {
     error DepositNotFinalizedError();
     error MaxVestingPeriodsError();
     error MaxExcessBaseTokensError();
+    error BaseTokenBalanceError();
 
     function singleHolderNotNull(bool _conditionMet) external pure {
         if (!_conditionMet) {

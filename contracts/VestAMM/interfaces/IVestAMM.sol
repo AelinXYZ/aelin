@@ -133,7 +133,7 @@ interface IVestAMM {
         address indexed owner,
         uint256 claimableAmount,
         ClaimType claimType,
-        uint8 singleRewardsIndex
+        uint256 singleRewardsIndex
     );
 
     event SingleRemoved(uint8 singleIndex, address indexed token, uint256 tokenTotal, uint256 singleHolderRefund);
