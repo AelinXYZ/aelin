@@ -20,11 +20,9 @@ contract CurveVestAMM {
         return _createPool(newPoolParsed);
     }
 
-    function _parseNewPoolParams(IVestAMMLibrary.CreateNewPool calldata _newPool)
-        internal
-        pure
-        returns (ICurvePool.CreateNewPool memory)
-    {
+    function _parseNewPoolParams(
+        IVestAMMLibrary.CreateNewPool calldata _newPool
+    ) internal pure returns (ICurvePool.CreateNewPool memory) {
         address[2] memory tokens = [_newPool.tokens[0], _newPool.tokens[1]];
 
         return
@@ -74,39 +72,22 @@ contract CurveVestAMM {
         return curvePool;
     }
 
-    function addInitialLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData)
-        external
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function addInitialLiquidity(
+        IVestAMMLibrary.AddLiquidity calldata _addLiquidityData
+    ) external returns (uint256, uint256, uint256, uint256) {
         return _addLiquidity(_addLiquidityData, true);
     }
 
-    function addLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData)
-        external
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function addLiquidity(
+        IVestAMMLibrary.AddLiquidity calldata _addLiquidityData
+    ) external returns (uint256, uint256, uint256, uint256) {
         return _addLiquidity(_addLiquidityData, false);
     }
 
-    function _addLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData, bool _isInitialLiquidity)
-        internal
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function _addLiquidity(
+        IVestAMMLibrary.AddLiquidity calldata _addLiquidityData,
+        bool _isInitialLiquidity
+    ) internal returns (uint256, uint256, uint256, uint256) {
         // NOTE: should add validation to check that tokensAmtsIn match initial_price
 
         ICurvePool curvePool = ICurvePool(_addLiquidityData.poolAddress);
@@ -127,10 +108,9 @@ contract CurveVestAMM {
         return (_addLiquidityData.tokensAmtsIn[0], _addLiquidityData.tokensAmtsIn[1], 0, 0);
     }
 
-    function removeLiquidity(IVestAMMLibrary.RemoveLiquidity calldata _removeLiquidityData)
-        external
-        returns (uint256, uint256)
-    {
+    function removeLiquidity(
+        IVestAMMLibrary.RemoveLiquidity calldata _removeLiquidityData
+    ) external returns (uint256, uint256) {
         ICurvePool curvePool = ICurvePool(_removeLiquidityData.poolAddress);
 
         IERC20(_removeLiquidityData.lpToken).transferFrom(msg.sender, address(this), _removeLiquidityData.lpTokenAmtIn);
@@ -172,5 +152,109 @@ contract CurveVestAMM {
         ICurvePool curvePool = ICurvePool(pool);
 
         return curvePool.get_dy(0, 1, 1 ether);
+    }
+
+    ////////////////////////////////////
+    // Virtual Price Estimation Logic //
+    ////////////////////////////////////
+
+    /**
+     * @dev A snapshot of a liquidity pool at a given time - perhaps integrate into Struct used above?
+     */
+    struct Pooldata {
+        uint256 amountA; // Raw amounts of each token in the pool - assuming only two tokens in the pool
+        uint256 amountB;
+        uint256 ratioA; // (amountA * 1e18) / amountB
+        uint256 ratioB; // (amountB * 1e18) / amountA
+        uint256 lpTotal; // Total supply of LP Tokens
+        uint256 lpAmount; // Amount of LP tokens owned
+    }
+
+    Pooldata public firstPoolData;
+    Pooldata public secondPoolData;
+
+    function getPoolData(
+        IERC20 _tokenA,
+        IERC20 _tokenB,
+        IERC20 _lpContract,
+        IERC20 _lpToken
+    ) internal returns (Pooldata memory) {
+        Pooldata memory newPoolData;
+
+        // NOTE Pass the zero address to token A in order to specify ETH instead of an ERC20
+        // Might not be the best solution to this problem, not sure
+        if (address(_tokenA) == address(0)) {
+            newPoolData.amountA = address(_lpContract).balance;
+        } else {
+            newPoolData.amountA = _tokenA.balanceOf(address(_lpContract));
+        }
+
+        newPoolData.amountB = _tokenB.balanceOf(address(_lpContract));
+
+        newPoolData.ratioA = (newPoolData.amountA * 1e18) / newPoolData.amountB;
+        newPoolData.ratioB = (newPoolData.amountB * 1e18) / newPoolData.amountA;
+
+        newPoolData.lpTotal = _lpToken.totalSupply();
+        newPoolData.lpAmount = _lpToken.balanceOf(address(this));
+
+        return newPoolData;
+    }
+
+    /**
+     * @dev Returns an estimate of lpVirtualPriceAtTime1 - lpVirtualPriceAtTime0
+     */
+    function getEstimatedVirtualPriceDelta(
+        IERC20 _tokenA,
+        IERC20 _tokenB,
+        IERC20 _lpContract,
+        IERC20 _lpToken
+    ) internal returns (uint256) {
+        // NOTE First Pool data should already have been determined when liquidity was deposited
+        //require(firstPoolData.lpAmount > 0);
+
+        //First gets initial projected amounts at time 0
+        uint256 projectedAmountA0 = (firstPoolData.amountA * firstPoolData.lpAmount) / firstPoolData.lpTotal;
+        uint256 projectedAmountB0 = (firstPoolData.amountB * firstPoolData.lpAmount) / firstPoolData.lpTotal;
+
+        //Get updated pool data
+        secondPoolData = getPoolData(_tokenA, _tokenB, _lpContract, _lpToken);
+
+        //Account for the relative change in ratios (i.e. price) between the two tokens
+        uint256 changeInRatioA = (secondPoolData.ratioA * 1e18) / firstPoolData.ratioA;
+        uint256 changeInRatioB = (secondPoolData.ratioB * 1e18) / firstPoolData.ratioB;
+
+        //Gets the projected amount at time 1, assuming no internalised fees
+        uint256 projectedAmountA1 = (projectedAmountA0 * changeInRatioA) / 1e18;
+        uint256 projectedAmountB1 = (projectedAmountB0 * changeInRatioB) / 1e18;
+
+        //Gets the actual amounts at time 1
+        uint256 actualAmountA1 = (secondPoolData.amountA * secondPoolData.lpAmount) / secondPoolData.lpTotal;
+        uint256 actualAmountB1 = (secondPoolData.amountB * secondPoolData.lpAmount) / secondPoolData.lpTotal;
+
+        //Gets the ratio between the projected and the actual amounts at time 1
+        uint256 deltaA = (actualAmountA1 * 1e18) / projectedAmountA1;
+        uint256 deltaB = (actualAmountB1 * 1e18) / projectedAmountB1;
+
+        //Gets the estimated delta in virtual price given the average sum of deltaA and deltaB above
+        uint256 estimatedDeltaOfVirtualPrice = deltaA * deltaB;
+        if (estimatedDeltaOfVirtualPrice > 1e36) {
+            estimatedDeltaOfVirtualPrice = (estimatedDeltaOfVirtualPrice - 1e36) / 2e18;
+        } else {
+            return 0;
+        }
+
+        // NOTE The virtual price estimate, especially for balanced stablecoin pools, tends to be unreliable
+        //      when a low amount of fees have been generated - This is due to compounding precision loss but
+        //      is less acute as more fees are earned.
+        if (estimatedDeltaOfVirtualPrice > 1e15) {
+            //Updates and resets pool data variables
+            firstPoolData = secondPoolData;
+            Pooldata memory newPoolData;
+            secondPoolData = newPoolData;
+
+            return estimatedDeltaOfVirtualPrice;
+        } else {
+            return 0;
+        }
     }
 }
