@@ -15,8 +15,7 @@ import "contracts/VestAMM/interfaces/balancer/IAsset.sol";
 import "contracts/VestAMM/interfaces/IVestAMMLibrary.sol";
 import "contracts/VestAMM/interfaces/IVestAMM.sol";
 
-// NOTE: This should be a lirbary. But atmm it's not possible to test the whole process with a library.
-contract BalancerVestAMM {
+library BalancerVestAMM {
     IWeightedPoolFactory internal constant weightedPoolFactory =
         IWeightedPoolFactory(address(0x897888115Ada5773E02aA29F775430BFB5F34c51));
     IVault internal constant balancerVault = IVault(address(0xBA12222222228d8Ba445958a75a0704d566BF2C8));

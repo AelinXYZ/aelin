@@ -8,8 +8,7 @@ import "contracts/VestAMM/interfaces/curve/ICurvePool.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-// NOTE: This should be a lirbary. But atmm it's not possible to test the whole process with a library.
-contract CurveVestAMM {
+library CurveVestAMM {
     using SafeERC20 for IERC20;
 
     address constant curveFactoryAddress = address(0xF18056Bbd320E96A48e3Fbf8bC061322531aac99);
@@ -20,11 +19,9 @@ contract CurveVestAMM {
         return _createPool(newPoolParsed);
     }
 
-    function _parseNewPoolParams(IVestAMMLibrary.CreateNewPool calldata _newPool)
-        internal
-        pure
-        returns (ICurvePool.CreateNewPool memory)
-    {
+    function _parseNewPoolParams(
+        IVestAMMLibrary.CreateNewPool calldata _newPool
+    ) internal pure returns (ICurvePool.CreateNewPool memory) {
         address[2] memory tokens = [_newPool.tokens[0], _newPool.tokens[1]];
 
         return
@@ -74,39 +71,22 @@ contract CurveVestAMM {
         return curvePool;
     }
 
-    function addInitialLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData)
-        external
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function addInitialLiquidity(
+        IVestAMMLibrary.AddLiquidity calldata _addLiquidityData
+    ) external returns (uint256, uint256, uint256, uint256) {
         return _addLiquidity(_addLiquidityData, true);
     }
 
-    function addLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData)
-        external
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function addLiquidity(
+        IVestAMMLibrary.AddLiquidity calldata _addLiquidityData
+    ) external returns (uint256, uint256, uint256, uint256) {
         return _addLiquidity(_addLiquidityData, false);
     }
 
-    function _addLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData, bool _isInitialLiquidity)
-        internal
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function _addLiquidity(
+        IVestAMMLibrary.AddLiquidity calldata _addLiquidityData,
+        bool _isInitialLiquidity
+    ) internal returns (uint256, uint256, uint256, uint256) {
         // NOTE: should add validation to check that tokensAmtsIn match initial_price
 
         ICurvePool curvePool = ICurvePool(_addLiquidityData.poolAddress);
@@ -127,10 +107,9 @@ contract CurveVestAMM {
         return (_addLiquidityData.tokensAmtsIn[0], _addLiquidityData.tokensAmtsIn[1], 0, 0);
     }
 
-    function removeLiquidity(IVestAMMLibrary.RemoveLiquidity calldata _removeLiquidityData)
-        external
-        returns (uint256, uint256)
-    {
+    function removeLiquidity(
+        IVestAMMLibrary.RemoveLiquidity calldata _removeLiquidityData
+    ) external returns (uint256, uint256) {
         ICurvePool curvePool = ICurvePool(_removeLiquidityData.poolAddress);
 
         IERC20(_removeLiquidityData.lpToken).transferFrom(msg.sender, address(this), _removeLiquidityData.lpTokenAmtIn);

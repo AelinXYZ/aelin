@@ -9,6 +9,7 @@ import "./VestVestingToken.sol";
 import {VestVestingToken} from "./VestVestingToken.sol";
 import {VestAMMMultiRewards} from "./VestAMMMultiRewards.sol";
 
+import {IERC20Decimals} from "./interfaces/IERC20Decimals.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
@@ -22,10 +23,6 @@ import "./interfaces/IVestAMM.sol";
 import "./interfaces/IVestAMMLibrary.sol";
 
 import "./libraries/validation/VestAMMValidation.sol";
-
-interface IERC20Decimals {
-    function decimals() external view returns (uint8);
-}
 
 /**
  * @title VestAMM logic contract

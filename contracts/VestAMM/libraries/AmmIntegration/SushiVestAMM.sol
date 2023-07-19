@@ -8,15 +8,9 @@ import "contracts/VestAMM/interfaces/sushi/ISushiRouter.sol";
 import "contracts/VestAMM/interfaces/sushi/IUniswapV2Pair.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20Decimals} from "../../interfaces/IERC20Decimals.sol";
 
-import "forge-std/console.sol";
-
-interface IERC20Decimals {
-    function decimals() external view returns (uint8);
-}
-
-// NOTE: This should be a lirbary. But atmm it's not possible to test the whole process with a library.
-contract SushiVestAMM {
+library SushiVestAMM {
     using SafeERC20 for IERC20;
 
     address constant sushiFactoryV2Address = address(0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac);
@@ -40,15 +34,9 @@ contract SushiVestAMM {
         return sushiPool;
     }
 
-    function addInitialLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData)
-        external
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function addInitialLiquidity(
+        IVestAMMLibrary.AddLiquidity calldata _addLiquidityData
+    ) external returns (uint256, uint256, uint256, uint256) {
         // NOTE The price ratio is set when adding liquidity for the first time.
         // Once that is set, the following liquidity additions must use the same ratio.
         uint[] memory minAmtsToLp = new uint[](2); // minAmtsToLp = [0,0] for the first liquidity addition. The amount to LP will always be the desired amount
@@ -56,15 +44,9 @@ contract SushiVestAMM {
     }
 
     // NOTE Have to add token addresses to IVestAMMLibrary.AddLiquidity
-    function addLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData)
-        external
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function addLiquidity(
+        IVestAMMLibrary.AddLiquidity calldata _addLiquidityData
+    ) external returns (uint256, uint256, uint256, uint256) {
         ISushiRouter sushiRouterV2 = ISushiRouter(sushiRouterV2Address);
         ISushiFactory sushiFactory = ISushiFactory(sushiFactoryV2Address);
 
@@ -81,15 +63,10 @@ contract SushiVestAMM {
         return _addLiquidity(_addLiquidityData, minAmtsToLp);
     }
 
-    function _addLiquidity(IVestAMMLibrary.AddLiquidity calldata _addLiquidityData, uint[] memory _minAmtsToLp)
-        internal
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
+    function _addLiquidity(
+        IVestAMMLibrary.AddLiquidity calldata _addLiquidityData,
+        uint[] memory _minAmtsToLp
+    ) internal returns (uint256, uint256, uint256, uint256) {
         //NOTE Some pools have staking available. For this version we will not support staking.
         for (uint256 i; i < _addLiquidityData.tokens.length; i++) {
             IERC20(_addLiquidityData.tokens[i]).transferFrom(msg.sender, address(this), _addLiquidityData.tokensAmtsIn[i]);
@@ -117,10 +94,9 @@ contract SushiVestAMM {
         return (numInvTokensInLP, numBaseTokensInLP, 0, 0);
     }
 
-    function removeLiquidity(IVestAMMLibrary.RemoveLiquidity calldata _removeLiquidityData)
-        external
-        returns (uint256, uint256)
-    {
+    function removeLiquidity(
+        IVestAMMLibrary.RemoveLiquidity calldata _removeLiquidityData
+    ) external returns (uint256, uint256) {
         ISushiRouter sushiRouterV2 = ISushiRouter(sushiRouterV2Address);
 
         IERC20(_removeLiquidityData.lpToken).transferFrom(msg.sender, address(this), _removeLiquidityData.lpTokenAmtIn);
@@ -153,7 +129,7 @@ contract SushiVestAMM {
     }
 
     function _convertTokenToLP(uint256 _tokenAmount, uint256 _investmentTokenDecimals) internal pure returns (uint256) {
-        return _tokenAmount * 10**(18 - _investmentTokenDecimals);
+        return _tokenAmount * 10 ** (18 - _investmentTokenDecimals);
     }
 
     function getPriceRatio(IVestAMM.VAmmInfo calldata _vammInfo) external view returns (uint256) {
@@ -163,7 +139,7 @@ contract SushiVestAMM {
         path[0] = _vammInfo.ammData.baseToken;
         path[1] = _vammInfo.ammData.investmentToken;
 
-        uint256[] memory ratio = sushiRouterV2.getAmountsOut(10**18, path);
+        uint256[] memory ratio = sushiRouterV2.getAmountsOut(10 ** 18, path);
 
         return ratio[1];
     }
