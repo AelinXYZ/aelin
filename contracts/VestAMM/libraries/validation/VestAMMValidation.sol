@@ -2,6 +2,7 @@
 pragma solidity 0.8.6;
 
 library Validate {
+    error BaseTokenBalanceError();
     error ContractUnlockedError();
     error NotInitializedError();
     error CallerIsHolderError();

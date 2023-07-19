@@ -33,7 +33,7 @@ contract AelinVestAMMTest is Test {
         mainnetFork = vm.createFork(MAINNET_RPC_URL);
     }
 
-    function getCreatePoolData() public returns (IVestAMMLibrary.CreateNewPool memory data) {
+    function getCreatePoolData() public returns (IVestAMMLibrary.CreateNewPool memory) {
         IVestAMMLibrary.CreateNewPool memory data;
         address[] memory tokens = new address[](2);
 
@@ -106,7 +106,7 @@ contract AelinVestAMMTest is Test {
         address pool,
         uint256 amount0,
         uint256 amount1
-    ) public returns (IVestAMMLibrary.AddLiquidity memory data) {
+    ) public returns (IVestAMMLibrary.AddLiquidity memory) {
         IVestAMMLibrary.AddLiquidity memory data;
         address[] memory tokens = new address[](2);
         uint[] memory tokensAmtsIn = new uint[](2);
@@ -127,7 +127,7 @@ contract AelinVestAMMTest is Test {
         address pool,
         address lpToken,
         uint lpTokenAmtIn
-    ) public returns (IVestAMMLibrary.RemoveLiquidity memory data) {
+    ) public returns (IVestAMMLibrary.RemoveLiquidity memory) {
         IVestAMMLibrary.RemoveLiquidity memory data;
         address[] memory tokens = new address[](2);
 
