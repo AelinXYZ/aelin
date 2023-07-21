@@ -64,40 +64,4 @@ interface IVestAMMLibrary {
         uint256 lpTokenAmtIn;
         address[] tokens;
     }
-
-    function addInitialLiquidity(AddLiquidity calldata)
-        external
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        );
-
-    function addLiquidity(AddLiquidity calldata)
-        external
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        );
-
-    function removeLiquidity(RemoveLiquidity calldata) external returns (uint256, uint256);
-
-    function collectFees() external returns (bool);
-
-    // TODO figure out which views we might want.
-    // maybe a view for APY and fees earned or something
-    function getPriceRatio(
-        address,
-        address,
-        address
-    ) external view returns (uint256);
-
-    function feesEarned() external view returns (uint256, uint256);
-
-    function checkPoolExists(IVestAMM.VAmmInfo calldata) external view returns (bool);
-
-    function deployPool(CreateNewPool calldata) external returns (address);
 }

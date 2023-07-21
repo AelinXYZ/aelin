@@ -1,8 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
-pragma experimental ABIEncoderV2;
-
-import "forge-std/console.sol";
 
 import {WeightedPoolUserData} from "@balancer-labs/v2-interfaces/contracts/pool-weighted/WeightedPoolUserData.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -12,21 +9,24 @@ import "contracts/VestAMM/interfaces/balancer/IWeightedPoolFactory.sol";
 import "contracts/VestAMM/interfaces/balancer/IVault.sol";
 import "contracts/VestAMM/interfaces/balancer/IBalancerPool.sol";
 import "contracts/VestAMM/interfaces/balancer/IAsset.sol";
-import "contracts/VestAMM/interfaces/IVestAMMLibrary.sol";
 import "contracts/VestAMM/interfaces/IVestAMM.sol";
 
-library BalancerVestAMM {
+import {IVestAMMLibrary} from "contracts/VestAMM/interfaces/IVestAMMLibrary.sol";
+
+library BalancerLibrary {
     IWeightedPoolFactory internal constant weightedPoolFactory =
         IWeightedPoolFactory(address(0x897888115Ada5773E02aA29F775430BFB5F34c51));
     IVault internal constant balancerVault = IVault(address(0xBA12222222228d8Ba445958a75a0704d566BF2C8));
 
     // NOTE: This function will be called frop VestAMM contract to create a new
     // balancer pool and add liquidity to it for the first time
+    /*
     function deployPool(IVestAMMLibrary.CreateNewPool calldata _newPool) public returns (address) {
         IBalancerPool.CreateNewPool memory newPoolParsed = _parseNewPoolParams(_newPool);
 
         return _createPool(newPoolParsed);
     }
+    */
 
     function _createPool(IBalancerPool.CreateNewPool memory _newPool) internal returns (address) {
         // Approve Balancer vault to spend tokens

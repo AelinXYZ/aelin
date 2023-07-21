@@ -2,8 +2,7 @@
 pragma solidity 0.8.6;
 
 import {AelinVestAMMTest} from "./utils/AelinVestAMMTest.sol";
-import {VestAMMDealFactory} from "contracts/VestAMM/VestAMMFactory.sol";
-import "contracts/VestAMM/AelinLibraryList.sol";
+import {VestAMMFactory} from "contracts/VestAMM/VestAMMFactory.sol";
 import "contracts/VestAMM/interfaces/IVestAMM.sol";
 
 contract VestAMMFactoryTest is AelinVestAMMTest {

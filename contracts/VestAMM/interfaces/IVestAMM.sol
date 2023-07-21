@@ -3,7 +3,7 @@ pragma solidity 0.8.6;
 
 import "../../libraries/AelinNftGating.sol";
 import "../../libraries/AelinAllowList.sol";
-import "./IVestAMMLibrary.sol";
+import {IRateProvider} from "@balancer-labs/v2-interfaces/contracts/pool-utils/IRateProvider.sol";
 
 interface IVestAMM {
     enum Deallocation {
@@ -16,12 +16,35 @@ interface IVestAMM {
         LP
     }
 
-    struct SingleVestingSchedule {
-        address rewardToken;
-        address singleHolder;
-        uint256 totalSingleTokens;
-        bool finalizedDeposit;
-        bool isLiquid;
+    //////////////
+    // vAMMInfo //
+    //////////////
+
+    /// @dev clean this up, this is very confusing
+    struct VAmmInfo {
+        string name;
+        string symbol;
+        AmmData ammData; // investment and base toke
+        bool hasLaunchPhase;
+        uint256 investmentPerBase; // TODO use this as a slippage parameter when the pool already exists
+        uint256 depositWindow;
+        uint256 lpFundingWindow;
+        address mainHolder; // The DAO
+        LPVestingSchedule lpVestingSchedule;
+        SingleVestingSchedule[] singleVestingSchedules;
+        // NOTE: if hasLaunchPhase is true, then there must be a amm pool identifier we can use.
+        // In most cases, the poolAddress will be enough, but some times (balancer) we need to use the poolId
+        address poolAddress;
+        bytes32 poolId;
+
+        // If hasLaunchPhase is true, then we need all data needed to create a new pool
+        //IVestAMMLibrary.CreateNewPool newPoolData;
+    }
+
+    // assume 50/50 to deposit ratio to start
+    struct AmmData {
+        address investmentToken;
+        address baseToken;
     }
 
     struct LPVestingSchedule {
@@ -34,11 +57,23 @@ interface IVestAMM {
         uint8 investorLPShare; // 0 - 100
     }
 
-    // assume 50/50 to deposit ratio to start
-    struct AmmData {
-        address ammLibrary; // could be null if no liquidity yet
-        address investmentToken;
-        address baseToken;
+    struct SingleVestingSchedule {
+        address rewardToken;
+        address singleHolder;
+        uint256 totalSingleTokens;
+        bool finalizedDeposit;
+        bool isLiquid;
+    }
+
+    ////////////////
+    // DealAccess //
+    ////////////////
+
+    struct DealAccess {
+        bytes32 merkleRoot;
+        string ipfsHash;
+        AelinNftGating.NftCollectionRules[] nftCollectionRules;
+        AelinAllowList.InitData allowListInit;
     }
 
     struct DepositData {
@@ -46,6 +81,25 @@ interface IVestAMM {
         uint256 lpTokenAmount;
         uint256 lpDepositTime;
     }
+
+    ///////////////
+    // Liquidity //
+    ///////////////
+
+    struct AddLiquidity {
+        address poolAddress;
+        uint256[] tokensAmtsIn;
+        address[] tokens;
+    }
+
+    struct RemoveLiquidity {
+        address poolAddress;
+        address lpToken;
+        uint256 lpTokenAmtIn;
+        address[] tokens;
+    }
+
+    /*
 
     struct DeployPool {
         uint256 investmentTokenAmount;
@@ -57,37 +111,11 @@ interface IVestAMM {
         uint256 baseTokenAmount;
     }
 
-    struct VAmmInfo {
-        string name;
-        string symbol;
-        AmmData ammData;
-        bool hasLaunchPhase;
-        // TODO use this as a slippage parameter when the pool already exists
-        uint256 investmentPerBase;
-        uint256 depositWindow;
-        uint256 lpFundingWindow;
-        address mainHolder;
-        LPVestingSchedule lpVestingSchedule;
-        SingleVestingSchedule[] singleVestingSchedules;
-        // NOTE: if hasLaunchPhase is true, then there must be a amm pool identifier we can use.
-        // In most cases, the poolAddress will be enough, but some times (balancer) we need to use the poolId
-        address poolAddress;
-        bytes32 poolId;
-        // If hasLaunchPhase is true, then we need all data needed to create a new pool
-        IVestAMMLibrary.CreateNewPool newPoolData;
-    }
-
     struct MigrationRules {
         bool canMigrate;
         uint256 rewardPerQuote;
     }
-
-    struct DealAccess {
-        bytes32 merkleRoot;
-        string ipfsHash;
-        AelinNftGating.NftCollectionRules[] nftCollectionRules;
-        AelinAllowList.InitData allowListInit;
-    }
+    */
 
     struct DepositToken {
         uint8 singleRewardIndex;
@@ -95,6 +123,7 @@ interface IVestAMM {
         uint256 amount;
     }
 
+    /// @dev either delete or expand, a struct with only one variable is confusing
     struct RemoveSingle {
         uint8 singleRewardIndex;
     }

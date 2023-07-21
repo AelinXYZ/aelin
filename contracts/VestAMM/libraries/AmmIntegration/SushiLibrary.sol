@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import "contracts/VestAMM/interfaces/IVestAMMLibrary.sol";
 import "contracts/VestAMM/interfaces/IVestAMM.sol";
 import "contracts/VestAMM/interfaces/sushi/ISushiFactory.sol";
 import "contracts/VestAMM/interfaces/sushi/ISushiRouter.sol";
@@ -9,6 +8,8 @@ import "contracts/VestAMM/interfaces/sushi/IUniswapV2Pair.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Decimals} from "../../interfaces/IERC20Decimals.sol";
+
+import {IVestAMMLibrary} from "contracts/VestAMM/interfaces/IVestAMMLibrary.sol";
 
 library SushiVestAMM {
     using SafeERC20 for IERC20;
