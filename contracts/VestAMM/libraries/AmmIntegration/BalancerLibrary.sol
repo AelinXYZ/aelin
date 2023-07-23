@@ -20,13 +20,12 @@ library BalancerLibrary {
 
     // NOTE: This function will be called frop VestAMM contract to create a new
     // balancer pool and add liquidity to it for the first time
-    /*
     function deployPool(IVestAMMLibrary.CreateNewPool calldata _newPool) public returns (address) {
         IBalancerPool.CreateNewPool memory newPoolParsed = _parseNewPoolParams(_newPool);
 
         return _createPool(newPoolParsed);
     }
-    */
+    
 
     function _createPool(IBalancerPool.CreateNewPool memory _newPool) internal returns (address) {
         // Approve Balancer vault to spend tokens

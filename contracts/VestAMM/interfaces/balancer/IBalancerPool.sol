@@ -10,7 +10,7 @@ interface IBalancerPool {
         string symbol;
         address[] tokens;
         uint256[] weights;
-        // TODO Investigate what this is for and if we need it (leave if as optional/arg)
+        // Provides price data
         // https://docs.balancer.fi/reference/contracts/rate-providers.html
         IRateProvider[] rateProviders;
         uint256 swapFeePercentage;

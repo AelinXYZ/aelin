@@ -14,6 +14,7 @@ import {Validate} from "contracts/VestAMM/libraries/validation/VestAMMValidation
 contract CurveVestAMM is VestAMM {
     using SafeERC20 for IERC20;
 
+    /// @dev check this hardcoded var
     ICurveFactory constant curveFactory = ICurveFactory(address(0xF18056Bbd320E96A48e3Fbf8bC061322531aac99));
     ICurvePool public curvePool;
     IERC20 public lpToken;
@@ -25,6 +26,7 @@ contract CurveVestAMM is VestAMM {
     ////////////////////
 
     /// @dev unideal 'cos it requires a seperate function to add the pool data
+    ///      but this isn't easily generalisable for all pool types
     function setInitialPoolData(
         ICurveFactory.CreateNewPool memory _newPooldata
     ) external onlyHolder lpFundingWindow returns (bool) {
@@ -59,6 +61,7 @@ contract CurveVestAMM is VestAMM {
     function deployPool() internal override returns (address) {
         //Check that pool data is set
 
+        /// @dev stack too deep issue here
         address newCurvePool = curveFactory.deploy_pool(
             "test",
             "TEST",
@@ -112,6 +115,8 @@ contract CurveVestAMM is VestAMM {
     }
 
     function removeLiquidity(uint256 _tokensAmtsIn) internal override returns (uint256, uint256) {
+        /// @dev double check some of this logic
+
         RemoveLiquidity memory _removeLiquidityData = createRemoveLiquidity(_tokensAmtsIn);
 
         IERC20(_removeLiquidityData.lpToken).transferFrom(msg.sender, address(this), _removeLiquidityData.lpTokenAmtIn);

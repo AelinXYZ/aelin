@@ -49,6 +49,7 @@ contract VestAMMUtils is Test, IVestAMM {
         return info;
     }
 
+    /// @dev same here
     function getDealAccess() internal view returns (DealAccess memory) {
         AelinNftGating.NftCollectionRules[] memory nftCollectionRules;
         AelinAllowList.InitData memory allowListInit;
