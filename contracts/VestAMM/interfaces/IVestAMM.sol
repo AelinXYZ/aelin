@@ -6,6 +6,7 @@ import "../../libraries/AelinAllowList.sol";
 import {IRateProvider} from "@balancer-labs/v2-interfaces/contracts/pool-utils/IRateProvider.sol";
 
 interface IVestAMM {
+    /// @dev check where these are used?
     enum Deallocation {
         None,
         Proportional
@@ -20,7 +21,6 @@ interface IVestAMM {
     // vAMMInfo //
     //////////////
 
-    /// @dev clean this up, this is very confusing
     struct VAmmInfo {
         string name;
         string symbol;
@@ -29,16 +29,13 @@ interface IVestAMM {
         uint256 investmentPerBase; // TODO use this as a slippage parameter when the pool already exists
         uint256 depositWindow;
         uint256 lpFundingWindow;
-        address mainHolder; // The DAO
+        address mainHolder; // The DAO creating the VestAMM
         LPVestingSchedule lpVestingSchedule;
         SingleVestingSchedule[] singleVestingSchedules;
         // NOTE: if hasLaunchPhase is true, then there must be a amm pool identifier we can use.
         // In most cases, the poolAddress will be enough, but some times (balancer) we need to use the poolId
         address poolAddress;
         bytes32 poolId;
-
-        // If hasLaunchPhase is true, then we need all data needed to create a new pool
-        //IVestAMMLibrary.CreateNewPool newPoolData;
     }
 
     // assume 50/50 to deposit ratio to start
@@ -99,6 +96,10 @@ interface IVestAMM {
         address[] tokens;
     }
 
+    //////////////
+    // Unsorted //
+    //////////////
+
     /*
 
     struct DeployPool {
@@ -127,6 +128,10 @@ interface IVestAMM {
     struct RemoveSingle {
         uint8 singleRewardIndex;
     }
+
+    ////////////
+    // Events //
+    ////////////
 
     event MultiRewardsCreated(address indexed rewardsContract);
 

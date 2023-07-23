@@ -7,7 +7,9 @@ import {ICurveFactory} from "contracts/VestAMM/interfaces/curve/ICurveFactory.so
 import {ICurvePool} from "contracts/VestAMM/interfaces/curve/ICurvePool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Validate} from "contracts/vestAMM/libraries/validation/VestAMMValidation.sol";
+import {Validate} from "contracts/VestAMM/libraries/validation/VestAMMValidation.sol";
+
+/// @dev Ensure against Curve Read-only reentrancy - https://twitter.com/danielvf/status/1682496333540741121
 
 contract CurveVestAMM is VestAMM {
     using SafeERC20 for IERC20;
@@ -18,21 +20,11 @@ contract CurveVestAMM is VestAMM {
 
     ICurveFactory.CreateNewPool public newPoolData;
 
-    //////////
-    // Init //
-    //////////
-
-    function init() internal override returns (bool) {
-        curvePool = ICurvePool(vAmmInfo.poolAddress);
-        lpToken = IERC20(curvePool.token());
-
-        return true;
-    }
-
     ////////////////////
     // Curve Specific //
     ////////////////////
 
+    /// @dev unideal 'cos it requires a seperate function to add the pool data
     function setInitialPoolData(
         ICurveFactory.CreateNewPool memory _newPooldata
     ) external onlyHolder lpFundingWindow returns (bool) {
@@ -46,6 +38,13 @@ contract CurveVestAMM is VestAMM {
     ///////////
     // Hooks //
     ///////////
+
+    function init() internal override returns (bool) {
+        curvePool = ICurvePool(vAmmInfo.poolAddress);
+        lpToken = IERC20(curvePool.token());
+
+        return true;
+    }
 
     function checkPoolExists() internal override returns (bool) {
         address pool = curveFactory.find_pool_for_coins(vAmmInfo.ammData.investmentToken, vAmmInfo.ammData.baseToken, 0);

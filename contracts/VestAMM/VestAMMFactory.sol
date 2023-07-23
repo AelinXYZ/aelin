@@ -33,6 +33,8 @@ contract VestAMMFactory is IVestAMM, VestAMMRegistry {
 
         vAmmAddress = Clones.clone(_vestAMMInstance);
 
+        /// @dev storage for the deployed vestAMM instances?
+
         VestAMM(vAmmAddress).initialize(_vAmmInfo, _dealAccess, AELIN_FEE_MODULE, AELIN_MULTI_REWARDS);
 
         // TODO

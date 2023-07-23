@@ -12,6 +12,8 @@ contract VestAMMRegistry is Ownable {
 
     function addVestAMM(address _newVestAMM) external onlyOwner {
         vestAMMExists[_newVestAMM] = true;
+
+        /// @dev add events?
     }
 
     function removeVestAMM(address _removedVestAMM) external onlyOwner {

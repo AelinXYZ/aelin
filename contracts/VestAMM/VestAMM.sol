@@ -126,13 +126,10 @@ contract VestAMM is VestVestingToken, IVestAMM {
             // we prob want to have another price check somehow
             // maybe both now and when the liquidity is added. we can ask for the
             // address and AMM where liquidity is already or check it ourselves in the contract
-
-            //vestAMMLibrary.checkPoolExists(vAmmInfo)
             Validate.poolExists(checkPoolExists());
 
-            /// @dev fix later;
             init();
-            //investmentTokenPerBase = vestAMMLibrary.getPriceRatio(vAmmInfo);
+
             invPerBase = getPriceRatio();
         }
 
@@ -430,7 +427,6 @@ contract VestAMM is VestVestingToken, IVestAMM {
      */
     function createLiquidity(uint256 _extraBaseTokens) external onlyHolder lpFundingWindow {
         address baseToken = vAmmInfo.ammData.baseToken;
-        /// @dev All of this needs fixing also
 
         //Validate.notLiquidityLaunch(vAmmInfo.hasLaunchPhase);
         uint256 currentRatio = getPriceRatio();
@@ -495,8 +491,6 @@ contract VestAMM is VestVestingToken, IVestAMM {
         // We might have to add a method to the librariers IVestAMMLibrary.balanceOf
         depositData = DepositData(_poolAddress, IERC20(_poolAddress).balanceOf(address(this)), block.timestamp);
     }
-
-    /// @dev might not need
 
     /////////////////////
     // Withdraw Excess //
