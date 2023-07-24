@@ -59,7 +59,7 @@ contract CurveVestAMM is VestAMM {
     }
 
     function deployPool() internal override returns (address) {
-        //Check that pool data is set
+        //Check that pool data is set with above function
 
         /// @dev stack too deep issue here
         address newCurvePool = curveFactory.deploy_pool(
@@ -150,7 +150,6 @@ contract CurveVestAMM is VestAMM {
      * @dev a helper function to create a struct for adding liquidiy that lives in memory
      */
     function createAddLiquidity() internal view returns (AddLiquidity memory) {
-        // TODO add in the other variables needed to deploy a pool and return these values
         uint256 investmentTokenAmount = totalInvTokensDeposited < maxInvTokens ? totalInvTokensDeposited : maxInvTokens;
         uint256 baseTokenAmount = totalInvTokensDeposited < maxInvTokens
             ? (totalBaseTokens * totalInvTokensDeposited) / maxInvTokens

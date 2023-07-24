@@ -22,6 +22,7 @@ contract SushiVestAMM is VestAMM {
     // Hooks //
     ///////////
 
+    /// @dev double-check a lot of this logic below
     function init() internal override returns (bool) {
         sushiPool = IUniswapV2Pair(vAmmInfo.poolAddress);
 
@@ -137,8 +138,8 @@ contract SushiVestAMM is VestAMM {
         return _tokenAmount * 10 ** (18 - _investmentTokenDecimals);
     }
 
+    /// @dev Move these back to VestAMM given the repition across kinds?
     function createAddLiquidity() internal view returns (AddLiquidity memory) {
-        // TODO add in the other variables needed to deploy a pool and return these values
         uint256 investmentTokenAmount = totalInvTokensDeposited < maxInvTokens ? totalInvTokensDeposited : maxInvTokens;
         uint256 baseTokenAmount = totalInvTokensDeposited < maxInvTokens
             ? (totalBaseTokens * totalInvTokensDeposited) / maxInvTokens
