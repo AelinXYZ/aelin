@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Decimals} from "../interfaces/IERC20Decimals.sol";
 import {VestAMM} from "../VestAMM.sol";
+import {Validate} from "contracts/VestAMM/libraries/VestAMMValidation.sol";
 
 contract SushiVestAMM is VestAMM {
     using SafeERC20 for IERC20;

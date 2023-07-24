@@ -11,7 +11,7 @@ import "contracts/VestAMM/interfaces/balancer/IVault.sol";
 import "contracts/VestAMM/interfaces/balancer/IBalancerPool.sol";
 import "contracts/VestAMM/interfaces/balancer/IAsset.sol";
 import "contracts/VestAMM/interfaces/IVestAMM.sol";
-import {Validate} from "contracts/VestAMM/libraries/validation/VestAMMValidation.sol";
+import {Validate} from "contracts/VestAMM/libraries/VestAMMValidation.sol";
 
 contract BalancerVestAMM is VestAMM {
     /// @dev check hardcoding here???

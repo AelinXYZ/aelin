@@ -96,6 +96,16 @@ interface IVestAMM {
         address[] tokens;
     }
 
+    ////////////////////
+    // Deposit Reward //
+    ////////////////////
+
+    struct DepositToken {
+        uint8 singleRewardIndex; /// @dev what does this do?
+        address token;
+        uint256 amount;
+    }
+
     //////////////
     // Unsorted //
     //////////////
@@ -117,12 +127,6 @@ interface IVestAMM {
         uint256 rewardPerQuote;
     }
     */
-
-    struct DepositToken {
-        uint8 singleRewardIndex;
-        address token;
-        uint256 amount;
-    }
 
     /// @dev either delete or expand, a struct with only one variable is confusing
     struct RemoveSingle {

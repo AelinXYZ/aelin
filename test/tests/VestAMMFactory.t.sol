@@ -111,7 +111,7 @@ contract VestAMMFactoryTest is VestAMMUtils {
         assertEq(factory.vestAMMExists(address(newVestAMM)), true);
 
         //Gets init vest data
-        VAmmInfo memory info = getVAmmInfo(address(aaveToken), address(usdcToken), user);
+        VAmmInfo memory info = getVAmmInfo(address(aaveToken), address(usdcToken), user, address(aaveToken));
         DealAccess memory access = getDealAccess();
 
         //First fails to clone vestAMM that hasn't been added to the registry

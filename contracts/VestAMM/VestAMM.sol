@@ -15,7 +15,7 @@ import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Recei
 import {AelinNftGating} from "../libraries/AelinNftGating.sol";
 import {AelinAllowList} from "../libraries/AelinAllowList.sol";
 import {MerkleTree} from "../libraries/MerkleTree.sol";
-import {Validate} from "./libraries/validation/VestAMMValidation.sol";
+import {Validate} from "./libraries/VestAMMValidation.sol";
 
 /**
  * @title VestAMM logic contract
@@ -44,7 +44,9 @@ contract VestAMM is VestVestingToken, IVestAMM {
     uint256 public amountBaseDeposited;
     uint256 public lpClaimed;
     mapping(address => uint256) totalSingleClaimed;
-    mapping(uint8 => mapping(uint8 => uint256)) public holderDeposits;
+
+    // depositor => depositIndex => amount
+    mapping(address => mapping(uint8 => uint256)) public holderDeposits;
 
     uint8 private singleRewardsComplete;
     uint8 maxSingleRewards = 6;
@@ -174,7 +176,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
         for (uint256 i; i < _singleVestingSchedules.length; ++i) {
             Validate.hasTotalSingleTokens(_singleVestingSchedules[i].totalSingleTokens > 0);
             Validate.singleHolderNotNull(_singleVestingSchedules[i].singleHolder != address(0));
-            Validate.depositNotFinalized(_singleVestingSchedules[i].finalizedDeposit);
+            Validate.depositNotFinalized(!_singleVestingSchedules[i].finalizedDeposit);
         }
     }
 
@@ -223,12 +225,11 @@ contract VestAMM is VestVestingToken, IVestAMM {
             Validate.singleDepositNotFinalized(!singleVestingSchedule.finalizedDeposit);
 
             uint256 balanceBeforeTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
-            IERC20(_depositTokens[i].token).safeTransferFrom(msg.sender, address(this), _depositTokens[i].amount);
+            IERC20(_depositTokens[i].token).transferFrom(msg.sender, address(this), _depositTokens[i].amount);
             uint256 balanceAfterTransfer = IERC20(_depositTokens[i].token).balanceOf(address(this));
             uint256 amountPostTransfer = balanceAfterTransfer - balanceBeforeTransfer;
 
-            /// @dev replace 0 with a msg.sender identifier, or change mapping
-            holderDeposits[0][_depositTokens[i].singleRewardIndex] += amountPostTransfer;
+            holderDeposits[msg.sender][_depositTokens[i].singleRewardIndex] += amountPostTransfer;
 
             emit SingleRewardDeposited(
                 msg.sender,
@@ -237,9 +238,8 @@ contract VestAMM is VestVestingToken, IVestAMM {
                 amountPostTransfer
             );
             if (
-                /// @dev replace 0 with a msg.sender identifier, or change mapping
                 !singleVestingSchedule.finalizedDeposit &&
-                holderDeposits[0][_depositTokens[i].singleRewardIndex] >= singleVestingSchedule.totalSingleTokens
+                holderDeposits[msg.sender][_depositTokens[i].singleRewardIndex] >= singleVestingSchedule.totalSingleTokens
             ) {
                 singleRewardsComplete += 1;
                 singleVestingSchedule.finalizedDeposit = true;
@@ -306,7 +306,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
                 _removeSingleList[i].singleRewardIndex
             ];
             Validate.singleHolder(vAmmInfo.mainHolder == msg.sender || singleVestingSchedule.singleHolder == msg.sender);
-            uint256 singleHolderAmount = holderDeposits[0][_removeSingleList[i].singleRewardIndex];
+            uint256 singleHolderAmount = holderDeposits[msg.sender][_removeSingleList[i].singleRewardIndex];
 
             /// @dev all of this logic is broken and needs re-doing
             ///      starting from sratch probs easier

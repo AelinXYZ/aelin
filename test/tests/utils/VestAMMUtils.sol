@@ -8,8 +8,17 @@ import "contracts/VestAMM/interfaces/IVestAMM.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract VestAMMUtils is Test, IVestAMM {
+    function randomiseVestAMMInstance(address[] memory _vestAMMInstances, uint256 _seed) internal returns (address) {
+        return _vestAMMInstances[_seed % _vestAMMInstances.length];
+    }
+
     /// @dev will need to allow for further customisation for more rigorous testing later
-    function getVAmmInfo(address _tokenA, address _tokenB, address _holder) internal view returns (VAmmInfo memory) {
+    function getVAmmInfo(
+        address _tokenA,
+        address _tokenB,
+        address _holder,
+        address _rewardToken
+    ) internal view returns (VAmmInfo memory) {
         AmmData memory ammData = AmmData({investmentToken: _tokenA, baseToken: _tokenB});
 
         LPVestingSchedule memory lpVestingSchedules = LPVestingSchedule({
@@ -23,10 +32,10 @@ contract VestAMMUtils is Test, IVestAMM {
 
         SingleVestingSchedule[] memory singleVestingSchedules = new SingleVestingSchedule[](1);
         SingleVestingSchedule memory singleVestingSchedule = SingleVestingSchedule({
-            rewardToken: address(1),
+            rewardToken: _rewardToken,
             singleHolder: _holder,
             totalSingleTokens: 1 ether,
-            finalizedDeposit: true,
+            finalizedDeposit: false,
             isLiquid: true
         });
         singleVestingSchedules[0] = singleVestingSchedule;

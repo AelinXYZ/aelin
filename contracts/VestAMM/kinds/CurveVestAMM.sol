@@ -7,7 +7,7 @@ import {ICurveFactory} from "contracts/VestAMM/interfaces/curve/ICurveFactory.so
 import {ICurvePool} from "contracts/VestAMM/interfaces/curve/ICurvePool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Validate} from "contracts/VestAMM/libraries/validation/VestAMMValidation.sol";
+import {Validate} from "contracts/VestAMM/libraries/VestAMMValidation.sol";
 
 /// @dev Ensure against Curve Read-only reentrancy - https://twitter.com/danielvf/status/1682496333540741121
 
