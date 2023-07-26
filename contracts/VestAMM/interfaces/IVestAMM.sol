@@ -6,7 +6,6 @@ import "../../libraries/AelinAllowList.sol";
 import {IRateProvider} from "@balancer-labs/v2-interfaces/contracts/pool-utils/IRateProvider.sol";
 
 interface IVestAMM {
-    /// @dev check where these are used?
     enum Deallocation {
         None,
         Proportional
@@ -101,36 +100,9 @@ interface IVestAMM {
     ////////////////////
 
     struct DepositToken {
-        uint8 singleRewardIndex; /// @dev what does this do?
+        uint8 singleRewardIndex;
         address token;
         uint256 amount;
-    }
-
-    //////////////
-    // Unsorted //
-    //////////////
-
-    /*
-
-    struct DeployPool {
-        uint256 investmentTokenAmount;
-        uint256 baseTokenAmount;
-    }
-
-    struct AddLiquidity {
-        uint256 investmentTokenAmount;
-        uint256 baseTokenAmount;
-    }
-
-    struct MigrationRules {
-        bool canMigrate;
-        uint256 rewardPerQuote;
-    }
-    */
-
-    /// @dev either delete or expand, a struct with only one variable is confusing
-    struct RemoveSingle {
-        uint8 singleRewardIndex;
     }
 
     ////////////

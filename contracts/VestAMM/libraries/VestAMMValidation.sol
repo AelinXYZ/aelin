@@ -39,6 +39,9 @@ library Validate {
     error DepositNotFinalizedError();
     error MaxVestingPeriodsError();
     error MaxExcessBaseTokensError();
+    error DealHasLiquidityLaunch();
+    error IsNotOwner();
+    error DoesNotHaveClaimableBalance();
 
     function singleHolderNotNull(bool _conditionMet) external pure {
         if (!_conditionMet) {
@@ -247,6 +250,24 @@ library Validate {
     function maxExcessBaseTokens(bool _conditionMet) external pure {
         if (!_conditionMet) {
             revert MaxExcessBaseTokensError();
+        }
+    }
+
+    function notLiquidityLaunch(bool _conditionMet) external pure {
+        if (!_conditionMet) {
+            revert DealHasLiquidityLaunch();
+        }
+    }
+
+    function isOwner(bool _conditionMet) external pure {
+        if (!_conditionMet) {
+            revert IsNotOwner();
+        }
+    }
+
+    function hasClaimBalance(bool _conditionMet) external pure {
+        if (!_conditionMet) {
+            revert DoesNotHaveClaimableBalance();
         }
     }
 }
