@@ -28,6 +28,9 @@ import {Validate} from "./libraries/VestAMMValidation.sol";
  *   3. protocol adds liquidity to selected AMM (e.g. sUSD/SNX 50/50 pair on Balancer)
  *   4. vesting phase (optional for LP tokens and single sided rewards)
  *   5. deal complete (LP tokens and single sided rewards fully vested)
+ *
+ * NOTE This contract still requires extensive testing and refining before deploying to
+ * a live network.
  */
 contract VestAMM is VestVestingToken, IVestAMM {
     using SafeERC20 for IERC20;
@@ -71,16 +74,8 @@ contract VestAMM is VestVestingToken, IVestAMM {
 
     bool public locked = false;
 
-    //////////////////
-    // Needs fixing //
-    //////////////////
-
-    // Suspect that these are duplicates
-
-    /// @dev figure out what's going on here too
+    /// @dev These need integrating into the initialise function
     VestVestingToken[] public vestingDetails;
-
-    /// @dev Unclear what these are meant to be also.
     uint256 public tokensClaimable;
     uint256 public vestingPeriod;
 
@@ -282,7 +277,12 @@ contract VestAMM is VestVestingToken, IVestAMM {
             IERC20(vAmmInfo.ammData.baseToken).safeTransferFrom(address(this), vAmmInfo.mainHolder, amountBaseDeposited);
         }
         for (uint8 i = 0; i < vAmmInfo.singleVestingSchedules.length; i++) {
-            /// @dev fix
+            /// @dev double check this logic
+            IERC20(vAmmInfo.singleVestingSchedules[i].rewardToken).safeTransferFrom(
+                address(this),
+                vAmmInfo.singleVestingSchedules[i].singleHolder,
+                vAmmInfo.singleVestingSchedules[i].totalSingleTokens
+            );
         }
         isCancelled = true;
     }
@@ -293,45 +293,29 @@ contract VestAMM is VestVestingToken, IVestAMM {
      * @param _removeSingleList an array of single reward indexes to remove and refund
      */
     function removeSingle(SingleVestingSchedule[] calldata _removeSingleList) external depositIncomplete {
+        /// @dev it might be better to pass an array of indices here???
         for (uint8 i = 0; i < _removeSingleList.length; i++) {
             SingleVestingSchedule memory singleVestingSchedule = vAmmInfo.singleVestingSchedules[i];
             Validate.singleHolder(vAmmInfo.mainHolder == msg.sender || singleVestingSchedule.singleHolder == msg.sender);
-            //uint256 singleHolderAmount = holderDeposits[msg.sender][_removeSingleList[i].singleRewardIndex];
 
-            /// @dev all of this logic is broken and needs re-doing
-            ///      starting from sratch probs easier
-
-            /*
-            if (singleHolderAmount > 0) {
-                IERC20(singleRewards[_removeSingleList[i]].token).safeTransferFrom(
-                    address(this),
-                    singleRewards[_removeSingleList[i]].singleHolder,
-                    singleHolderAmount
-                );
-            }
-            emit SingleRemoved(
-                _removeSingleList[i].singleRewardIndex,
-                singleRewards[_removeSingleList[i]].token,
-                singleRewards[_removeSingleList[i]].rewardTokenTotal,
-                singleHolderAmount
-            );
+            /// NOTE Triple-check this logic, not sure it works as initially intended
+            uint8 singleHolderAmount = uint8(holderDeposits[msg.sender][uint8(_removeSingleList[i].totalSingleTokens)]);
 
             if (singleVestingSchedule.finalizedDeposit) {
                 singleRewardsComplete -= 1;
             }
 
-            if (_removeSingleList[i].singleRewardIndex != vAmmInfo.singleVestingSchedules.length - 1) {
-                vAmmInfo.singleVestingSchedules[_removeSingleList[i].singleRewardIndex] = vAmmInfo.singleVestingSchedules[
+            if (_removeSingleList.length != vAmmInfo.singleVestingSchedules.length - 1) {
+                vAmmInfo.singleVestingSchedules[singleHolderAmount] = vAmmInfo.singleVestingSchedules[
                     vAmmInfo.singleVestingSchedules.length - 1
                 ];
-                holderDeposits[singleVestingSchedule.singleHolder][_removeSingleList[i].singleRewardIndex] = holderDeposits[
+                holderDeposits[singleVestingSchedule.singleHolder][singleHolderAmount] = holderDeposits[
                     singleVestingSchedule.singleHolder
-                ][vAmmInfo.singleVestingSchedules.length - 1];
+                ][uint8(vAmmInfo.singleVestingSchedules.length - 1)];
             }
 
             delete vAmmInfo.singleVestingSchedules[vAmmInfo.singleVestingSchedules.length - 1];
-            delete holderDeposits[singleVestingSchedule.singleHolder][vAmmInfo.singleVestingSchedules.length - 1];
-            */
+            delete holderDeposits[singleVestingSchedule.singleHolder][uint8(vAmmInfo.singleVestingSchedules.length - 1)];
         }
     }
 
@@ -556,7 +540,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
      * @param _token the address of the token to claim
      */
     function _claimLPTokens(uint256 _tokenId, uint256 _claimableAmount, address _token) internal {
-        //Validate.hasClaimBalance(_claimableAmount);
+        // TODO Validate has claimable balance
         totalLPClaimed += _claimableAmount;
         uint256 withdrawAmount = (totalInvTokensDeposited * _claimableAmount) / depositData.lpTokenAmount;
         VestAMMMultiRewards(vestAmmMultiRewards).amountExit(withdrawAmount, msg.sender);
@@ -652,8 +636,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
      * @param _tokenId the ID of the NFT to claim for
      */
     function claimMultiRewards(uint256 _tokenId) external {
-        Validate.isOwner(ownerOf(_tokenId) == msg.sender);
-        // TODO build out claim mult functionality
+        // TODO build out claim multi functionality
         //_claimSingleTokens(_tokenId, );
     }
 
@@ -670,7 +653,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
         address _token,
         uint256 _singleRewardsIndex
     ) internal {
-        // TODO validate ownership of tokenId?
+        Validate.isOwner(ownerOf(_tokenId) == msg.sender);
         Validate.hasClaimBalance(_claimableAmount > 0);
         totalSingleClaimed[_token] += _claimableAmount;
         IERC20(_token).safeTransfer(msg.sender, _claimableAmount);
