@@ -74,7 +74,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
 
     bool public locked = false;
 
-    /// @dev These need integrating into the initialise function
+    /// @dev These either need integrating into the initialise function
     VestVestingToken[] public vestingDetails;
     uint256 public tokensClaimable;
     uint256 public vestingPeriod;
@@ -298,21 +298,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
             SingleVestingSchedule memory singleVestingSchedule = vAmmInfo.singleVestingSchedules[i];
             Validate.singleHolder(vAmmInfo.mainHolder == msg.sender || singleVestingSchedule.singleHolder == msg.sender);
 
-            /// NOTE Triple-check this logic, not sure it works as initially intended
-            uint8 singleHolderAmount = uint8(holderDeposits[msg.sender][uint8(_removeSingleList[i].totalSingleTokens)]);
-
-            if (singleVestingSchedule.finalizedDeposit) {
-                singleRewardsComplete -= 1;
-            }
-
-            if (_removeSingleList.length != vAmmInfo.singleVestingSchedules.length - 1) {
-                vAmmInfo.singleVestingSchedules[singleHolderAmount] = vAmmInfo.singleVestingSchedules[
-                    vAmmInfo.singleVestingSchedules.length - 1
-                ];
-                holderDeposits[singleVestingSchedule.singleHolder][singleHolderAmount] = holderDeposits[
-                    singleVestingSchedule.singleHolder
-                ][uint8(vAmmInfo.singleVestingSchedules.length - 1)];
-            }
+            /// NOTE This logic needs more building out
 
             delete vAmmInfo.singleVestingSchedules[vAmmInfo.singleVestingSchedules.length - 1];
             delete holderDeposits[singleVestingSchedule.singleHolder][uint8(vAmmInfo.singleVestingSchedules.length - 1)];
@@ -767,7 +753,7 @@ contract VestAMM is VestVestingToken, IVestAMM {
 
     function removeLiquidity(uint256 _tokensAmtsIn) internal virtual returns (uint256, uint256) {}
 
-    // TODO Add claim unique LP rewards also
+    // TODO Add claim unique LP rewards and fees
 
     ///////////////
     // Modifiers //
