@@ -1,37 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import "./VestAMM.sol";
-import "./AelinFeeModule.sol";
-import "../libraries/AelinNftGating.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
-import "../libraries/AelinAllowList.sol";
+import {VestAMM} from "./VestAMM.sol";
+import {AelinFeeModule} from "./AelinFeeModule.sol";
+import {AelinNftGating} from "../libraries/AelinNftGating.sol";
+import {AelinAllowList} from "../libraries/AelinAllowList.sol";
 import {IVestAMM} from "./interfaces/IVestAMM.sol";
+import {VestAMMRegistry} from "./VestAMMRegistry.sol";
 
-interface IAelinLibraryList {
-    function libraryList(address _library) external view returns (bool);
-}
-
-/**
- * @title VestAMM factory contract
- * @author Aelin CCs
- * @notice This contract creates new VestAMM instances. Protocols interact with it.
- */
-contract VestAMMDealFactory is IVestAMM {
-    address public immutable VEST_AMM_LOGIC;
+contract VestAMMFactory is IVestAMM, VestAMMRegistry {
     address public immutable AELIN_FEE_MODULE;
-    address public immutable AELIN_MULTI_REWARDS;
-    address public immutable VEST_DAO_FEES = 0x0000000000000000000000000000000000000000;
-    IAelinLibraryList public immutable AELIN_LIBRARY_LIST;
 
-    /**
-     * @param _aelinLibraryList the contract address where the list of
-     * Council approved AMM libraries for VestAMM exist onchain
-     */
-    constructor(address _aelinLibraryList) {
-        VEST_AMM_LOGIC = address(new VestAMM());
+    /// @dev fix later if keeping
+    address public immutable AELIN_MULTI_REWARDS = address(420);
+    address public immutable VEST_DAO_FEES = 0x0000000000000000000000000000000000000000;
+
+    constructor(address _aelinCouncil) VestAMMRegistry(_aelinCouncil) {
         AELIN_FEE_MODULE = address(new AelinFeeModule());
-        AELIN_LIBRARY_LIST = IAelinLibraryList(_aelinLibraryList);
     }
 
     /**
@@ -40,12 +26,14 @@ contract VestAMMDealFactory is IVestAMM {
      */
     function createVestAMM(
         VAmmInfo calldata _vAmmInfo,
-        DealAccess calldata _dealAccess
+        DealAccess calldata _dealAccess,
+        address _vestAMMInstance
     ) external returns (address vAmmAddress) {
-        // Use customs errors
-        require(AELIN_LIBRARY_LIST.libraryList(_vAmmInfo.ammData.ammLibrary), "invalid AMM library");
+        require(vestAMMExists[_vestAMMInstance], "Invalid AMM");
 
-        vAmmAddress = Clones.clone(VEST_AMM_LOGIC);
+        vAmmAddress = Clones.clone(_vestAMMInstance);
+
+        /// @dev storage for the deployed vestAMM instances?
 
         VestAMM(vAmmAddress).initialize(_vAmmInfo, _dealAccess, AELIN_FEE_MODULE, AELIN_MULTI_REWARDS);
 

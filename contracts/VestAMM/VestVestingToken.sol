@@ -4,6 +4,7 @@ pragma solidity 0.8.6;
 import "./VestERC721.sol";
 import "./interfaces/IVestVestingToken.sol";
 
+// NEED pausing and management features
 contract VestVestingToken is VestERC721, IVestVestingToken {
     mapping(uint256 => VestVestingToken) public vestVestingToken;
     uint256 public tokenCount;
@@ -13,22 +14,14 @@ contract VestVestingToken is VestERC721, IVestVestingToken {
         delete vestVestingToken[_tokenId];
     }
 
-    function _mintVestingToken(
-        address _to,
-        uint256 _amount,
-        uint256 _lastClaimed
-    ) internal {
+    function _mintVestingToken(address _to, uint256 _amount, uint256 _lastClaimed) internal {
         _mint(_to, tokenCount);
         vestVestingToken[tokenCount] = VestVestingToken(_amount, _lastClaimed);
         emit VestingTokenMinted(_to, tokenCount, _amount, _lastClaimed);
         tokenCount += 1;
     }
 
-    function _transferVestingShare(
-        address _to,
-        uint256 _tokenId,
-        uint256 _shareAmount
-    ) internal nonReentrant {
+    function _transferVestingShare(address _to, uint256 _tokenId, uint256 _shareAmount) internal nonReentrant {
         VestVestingToken memory schedule = vestVestingToken[_tokenId];
         require(schedule.amountDeposited > 0, "schedule does not exist");
         require(_shareAmount > 0, "share amount should be > 0");
@@ -38,11 +31,7 @@ contract VestVestingToken is VestERC721, IVestVestingToken {
     }
 
     // NOTE I am not sure we can just leave transfer like this. Circle back later when have time
-    function _transfer(
-        address _to,
-        uint256 _tokenId,
-        bytes memory _data
-    ) internal {
+    function _transfer(address _to, uint256 _tokenId, bytes memory _data) internal {
         _safeTransfer(msg.sender, _to, _tokenId, _data);
     }
 }

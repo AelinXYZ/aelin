@@ -440,8 +440,7 @@ contract AelinPoolPurchase is Test {
 
     // scenario 2 - purchase multiple times with same nft - fail
     function testFailScenario2Multiple(uint256 purchaseAmount) public {
-        vm.assume(purchaseAmount >= 5e21);
-        vm.assume(purchaseAmount <= 1e22);
+        purchaseAmount = bound(purchaseAmount, 5e21, 1e22);
 
         MockERC721(collectionAddress2).mint(address(this), 1);
 
@@ -867,7 +866,7 @@ contract AelinPoolPurchase is Test {
 
     // punks - purchase with the tokenId
     function testPunksPurchasePool(uint256 purchaseAmount) public {
-        vm.assume(purchaseAmount <= 1e22);
+        purchaseAmount = bound(purchaseAmount, 1, 1e22);
         assertTrue(AelinPool(poolAddressWithPunks).hasNftList());
         // owner of cryptopunks tokenId - 100
         address tokenOwner = address(0xA858DDc0445d8131daC4d1DE01f834ffcbA52Ef1);

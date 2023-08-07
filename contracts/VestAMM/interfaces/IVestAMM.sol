@@ -3,7 +3,7 @@ pragma solidity 0.8.6;
 
 import "../../libraries/AelinNftGating.sol";
 import "../../libraries/AelinAllowList.sol";
-import "./IVestAMMLibrary.sol";
+import {IRateProvider} from "@balancer-labs/v2-interfaces/contracts/pool-utils/IRateProvider.sol";
 
 interface IVestAMM {
     enum Deallocation {
@@ -16,12 +16,31 @@ interface IVestAMM {
         LP
     }
 
-    struct SingleVestingSchedule {
-        address rewardToken;
-        address singleHolder;
-        uint256 totalSingleTokens;
-        bool finalizedDeposit;
-        bool isLiquid;
+    //////////////
+    // vAMMInfo //
+    //////////////
+
+    struct VAmmInfo {
+        string name;
+        string symbol;
+        AmmData ammData; // investment and base toke
+        bool hasLaunchPhase;
+        uint256 investmentPerBase; // TODO use this as a slippage parameter when the pool already exists
+        uint256 depositWindow;
+        uint256 lpFundingWindow;
+        address mainHolder; // The DAO creating the VestAMM
+        LPVestingSchedule lpVestingSchedule;
+        SingleVestingSchedule[] singleVestingSchedules;
+        // NOTE: if hasLaunchPhase is true, then there must be a amm pool identifier we can use.
+        // In most cases, the poolAddress will be enough, but some times (balancer) we need to use the poolId
+        address poolAddress;
+        bytes32 poolId;
+    }
+
+    // assume 50/50 to deposit ratio to start
+    struct AmmData {
+        address investmentToken;
+        address baseToken;
     }
 
     struct LPVestingSchedule {
@@ -34,53 +53,17 @@ interface IVestAMM {
         uint8 investorLPShare; // 0 - 100
     }
 
-    // assume 50/50 to deposit ratio to start
-    struct AmmData {
-        address ammLibrary; // could be null if no liquidity yet
-        address investmentToken;
-        address baseToken;
+    struct SingleVestingSchedule {
+        address rewardToken;
+        address singleHolder;
+        uint256 totalSingleTokens;
+        bool finalizedDeposit;
+        bool isLiquid;
     }
 
-    struct DepositData {
-        address lpToken;
-        uint256 lpTokenAmount;
-        uint256 lpDepositTime;
-    }
-
-    struct DeployPool {
-        uint256 investmentTokenAmount;
-        uint256 baseTokenAmount;
-    }
-
-    struct AddLiquidity {
-        uint256 investmentTokenAmount;
-        uint256 baseTokenAmount;
-    }
-
-    struct VAmmInfo {
-        string name;
-        string symbol;
-        AmmData ammData;
-        bool hasLaunchPhase;
-        // TODO use this as a slippage parameter when the pool already exists
-        uint256 investmentPerBase;
-        uint256 depositWindow;
-        uint256 lpFundingWindow;
-        address mainHolder;
-        LPVestingSchedule lpVestingSchedule;
-        SingleVestingSchedule[] singleVestingSchedules;
-        // NOTE: if hasLaunchPhase is true, then there must be a amm pool identifier we can use.
-        // In most cases, the poolAddress will be enough, but some times (balancer) we need to use the poolId
-        address poolAddress;
-        bytes32 poolId;
-        // If hasLaunchPhase is true, then we need all data needed to create a new pool
-        IVestAMMLibrary.CreateNewPool newPoolData;
-    }
-
-    struct MigrationRules {
-        bool canMigrate;
-        uint256 rewardPerQuote;
-    }
+    ////////////////
+    // DealAccess //
+    ////////////////
 
     struct DealAccess {
         bytes32 merkleRoot;
@@ -89,15 +72,42 @@ interface IVestAMM {
         AelinAllowList.InitData allowListInit;
     }
 
+    struct DepositData {
+        address lpToken;
+        uint256 lpTokenAmount;
+        uint256 lpDepositTime;
+    }
+
+    ///////////////
+    // Liquidity //
+    ///////////////
+
+    struct AddLiquidity {
+        address poolAddress;
+        uint256[] tokensAmtsIn;
+        address[] tokens;
+    }
+
+    struct RemoveLiquidity {
+        address poolAddress;
+        address lpToken;
+        uint256 lpTokenAmtIn;
+        address[] tokens;
+    }
+
+    ////////////////////
+    // Deposit Reward //
+    ////////////////////
+
     struct DepositToken {
         uint8 singleRewardIndex;
         address token;
         uint256 amount;
     }
 
-    struct RemoveSingle {
-        uint8 singleRewardIndex;
-    }
+    ////////////
+    // Events //
+    ////////////
 
     event MultiRewardsCreated(address indexed rewardsContract);
 
