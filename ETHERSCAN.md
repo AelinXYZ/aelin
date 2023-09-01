@@ -14,7 +14,7 @@ There are 5 main sections in this document
 
 **Contracts**:<br>
 
-1. Claiming NFT Minting contract - https://optimistic.etherscan.io/address/<TBD><br>
+1. Claiming NFT Minting contract - https://optimistic.etherscan.io/address/0x19305fa7b4832b7f7545cc752c71f8cdf9f60226<br>
 
 2. AELIN token contract - https://optimistic.etherscan.io/address/0x61baadcf22d2565b0f471b291c475db5555e0b76<br>
 
@@ -22,7 +22,7 @@ There are 5 main sections in this document
 
 **Steps**:<br>
 
-1. To retrieve your share of treasury assets you must first mint a NFT agreeing to a waiver. Go to the “Claiming NFT Minting contract” (see #1 above) and call the “mint()” method from the address you will claim treasury funds with using no arguments.
+1. To retrieve your share of treasury assets, <b>you must first agree to a waiver, a copy of which you can read here: https://v2.akord.com/public/vaults/active/2KzfEiio_umg2tFNymCwSp6qt7Yu4phwvqlsQ1b9u4s/gallery#public/df629071-3d77-4538-af9f-c9a6df2897dc. By minting the NFT pursuant to the instructions on this page, you will be agreeing to the terms of the waiver.</b> To do so, go to the “Claiming NFT Minting contract” (see #1 above) and call the “mint()” method from the address you will claim treasury funds with using no arguments.
 
 2. Go to the “AELIN token contract” (see #2 above) and call the “approve()” method, passing in the “Treasury exchange contract” address as the “spender” and the full balance of tokens you want to exchange as the “amount (uint256)”. Note to get the correct “amount (uint256)” to pass into this field, simply read the “balanceOf” method on the same “AELIN token contract”, passing in your address. Take the value you see here in your balance and paste it into the “amount (uint256)” field.
 
