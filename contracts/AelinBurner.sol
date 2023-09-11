@@ -18,10 +18,9 @@ contract AelinBurner is Ownable {
 
     uint256 public immutable start;
 
-    // TODO update with exact numbers before deployment
     uint256 public constant AELIN_SUPPLY = 2212 * 1e18;
     uint256 public constant USDC_SUPPLY = 740000 * 1e6;
-    uint256 public constant VEKWENTA_SUPPLY = 54 * 1e18;
+    uint256 public constant VEKWENTA_SUPPLY = 6299925 * 1e14;
 
     address public constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
     address public constant AELIN = 0x61BAADcF22d2565B0F471b291C475db5555e0b76;
@@ -31,29 +30,20 @@ contract AelinBurner is Ownable {
     uint256 public constant WITHDRAW_WINDOW = 1 weeks;
 
     address public swapNFT;
-    bool public nftSet;
 
-    // TODO create the contract from the deployer and call transferOwnership to the multisig
-    // before sending the assets to the contract
     constructor() {
         start = block.timestamp;
     }
 
     function setNft(address _swapNFT) external onlyOwner {
-        if (nftSet) revert NftAlreadySet();
+        if (swapNFT != address(0)) revert NftAlreadySet();
         if (_swapNFT == address(0)) revert ZeroAddress();
         swapNFT = _swapNFT;
-        nftSet = true;
-    }
-
-    function getSwapAmount(uint256 _amount) public pure returns (uint256, uint256) {
-        uint256 share = _amount / AELIN_SUPPLY;
-        return (share * USDC_SUPPLY, share * VEKWENTA_SUPPLY);
     }
 
     function burn(uint256 _amount) external {
         if (_amount == 0) revert ZeroAmount();
-        if (!nftSet) revert NftNotSet();
+        if (swapNFT == address(0)) revert NftNotSet();
         if (IERC721(swapNFT).balanceOf(msg.sender) == 0) revert NoSwapNFT();
 
         (uint256 usdcAmount, uint256 veKwentaAmount) = getSwapAmount(_amount);
@@ -71,6 +61,11 @@ contract AelinBurner is Ownable {
         if (block.timestamp > start + WITHDRAW_WINDOW) revert WithdrawWindowClosed();
 
         IERC20(_token).safeTransfer(owner(), _amount);
+    }
+
+    function getSwapAmount(uint256 _amount) public pure returns (uint256, uint256) {
+        uint256 share = _amount / AELIN_SUPPLY;
+        return (share * USDC_SUPPLY, share * VEKWENTA_SUPPLY);
     }
 
     event TokenSwapped(address indexed sender, uint256 aelinAmount, uint256 usdcAmount, uint256 veKwentaAmount);
