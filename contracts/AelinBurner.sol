@@ -10,57 +10,50 @@ error ZeroAddress();
 error ZeroAmount();
 error WithdrawWindowClosed();
 error NoSwapNFT();
-error AlreadyDeposited();
+error NftNotSet();
+error NftAlreadySet();
 
 contract AelinBurner is Ownable {
     using SafeERC20 for IERC20;
 
-    uint256 public immutable aelinSupply;
-    address public immutable swapNFT;
     uint256 public immutable start;
 
-    uint256 public usdcSupply;
-    uint256 public veKwentaSupply;
+    // TODO update with exact numbers before deployment
+    uint256 public constant AELIN_SUPPLY = 2212 * 1e18;
+    uint256 public constant USDC_SUPPLY = 740000 * 1e6;
+    uint256 public constant VEKWENTA_SUPPLY = 54 * 1e18;
 
     address public constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
-
     address public constant AELIN = 0x61BAADcF22d2565B0F471b291C475db5555e0b76;
     address public constant USDC = 0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85;
     address public constant VEKWENTA = 0x678d8f4Ba8DFE6bad51796351824DcCECeAefF2B;
 
-    uint256 public constant WITHDRAW_WINDOW = 4 weeks;
+    uint256 public constant WITHDRAW_WINDOW = 1 weeks;
 
-    bool public deposited;
+    address public swapNFT;
+    bool public nftSet;
 
-    constructor(uint256 _aelinSupply, address _swapNFT) {
-        if (_aelinSupply == 0) revert ZeroAmount();
-        if (_swapNFT == address(0)) revert ZeroAddress();
-        aelinSupply = _aelinSupply;
-        swapNFT = _swapNFT;
+    // TODO create the contract from the deployer and call transferOwnership to the multisig
+    // before sending the assets to the contract
+    constructor() {
         start = block.timestamp;
     }
 
-    function depositTokens() external onlyOwner {
-        if (deposited) revert AlreadyDeposited();
-
-        uint256 usdcBalance = IERC20(USDC).balanceOf(owner());
-        uint256 veKwentaBalance = IERC20(VEKWENTA).balanceOf(owner());
-
-        IERC20(USDC).safeTransferFrom(owner(), address(this), usdcBalance);
-        IERC20(VEKWENTA).safeTransferFrom(owner(), address(this), veKwentaBalance);
-
-        usdcSupply = usdcBalance;
-        veKwentaSupply = veKwentaBalance;
-        deposited = true;
+    function setNft(address _swapNFT) external onlyOwner {
+        if (nftSet) revert NftAlreadySet();
+        if (_swapNFT == address(0)) revert ZeroAddress();
+        swapNFT = _swapNFT;
+        nftSet = true;
     }
 
-    function getSwapAmount(uint256 _amount) public view returns (uint256, uint256) {
-        uint256 share = _amount / aelinSupply;
-        return (share * usdcSupply, share * veKwentaSupply);
+    function getSwapAmount(uint256 _amount) public pure returns (uint256, uint256) {
+        uint256 share = _amount / AELIN_SUPPLY;
+        return (share * USDC_SUPPLY, share * VEKWENTA_SUPPLY);
     }
 
     function burn(uint256 _amount) external {
         if (_amount == 0) revert ZeroAmount();
+        if (!nftSet) revert NftNotSet();
         if (IERC721(swapNFT).balanceOf(msg.sender) == 0) revert NoSwapNFT();
 
         (uint256 usdcAmount, uint256 veKwentaAmount) = getSwapAmount(_amount);
