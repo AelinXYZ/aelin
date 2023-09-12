@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.9;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -18,13 +18,13 @@ contract AelinBurner is Ownable {
 
     uint256 public immutable start;
 
-    uint256 public constant AELIN_SUPPLY = 2212 * 1e18;
-    uint256 public constant USDC_SUPPLY = 740000 * 1e6;
-    uint256 public constant VEKWENTA_SUPPLY = 6299925 * 1e14;
+    uint256 public constant AELIN_SUPPLY = 2196874238168313483771;
+    uint256 public constant USDC_SUPPLY = 747739907449;
+    uint256 public constant VEKWENTA_SUPPLY = 629992504160932582911;
 
     address public constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
     address public constant AELIN = 0x61BAADcF22d2565B0F471b291C475db5555e0b76;
-    address public constant USDC = 0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85;
+    address public constant USDC = 0x7F5c764cBc14f9669B88837ca1490cCa17c31607;
     address public constant VEKWENTA = 0x678d8f4Ba8DFE6bad51796351824DcCECeAefF2B;
 
     uint256 public constant WITHDRAW_WINDOW = 1 weeks;
@@ -64,8 +64,7 @@ contract AelinBurner is Ownable {
     }
 
     function getSwapAmount(uint256 _amount) public pure returns (uint256, uint256) {
-        uint256 share = _amount / AELIN_SUPPLY;
-        return (share * USDC_SUPPLY, share * VEKWENTA_SUPPLY);
+        return (_amount * USDC_SUPPLY / AELIN_SUPPLY, _amount * VEKWENTA_SUPPLY / AELIN_SUPPLY);
     }
 
     event TokenSwapped(address indexed sender, uint256 aelinAmount, uint256 usdcAmount, uint256 veKwentaAmount);
