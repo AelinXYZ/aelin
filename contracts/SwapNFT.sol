@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.6;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.9;
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
@@ -8,7 +8,7 @@ import {ISwapNFT} from "./interfaces/ISwapNFT.sol";
 contract SwapNFT is ERC721, ISwapNFT {
     uint256 public tokenCount;
     string public constant BASE_URI =
-        "https://v2.akord.com/public/vaults/active/2KzfEiio_umg2tFNymCwSp6qt7Yu4phwvqlsQ1b9u4s/gallery#public/df629071-3d77-4538-af9f-c9a6df2897dc";
+        "https://v2.akord.com/vaults/active/boPGU8ShKj0KAcud8BLrzFGEkaIx5WlnBsVVhETG4ME/gallery#public/896532a7-b257-4997-8cf8-302435a915bb";
 
     mapping(address => bool) public hasMinted;
 
@@ -18,10 +18,10 @@ contract SwapNFT is ERC721, ISwapNFT {
         if (hasMinted[msg.sender]) revert CannotMintTwice();
 
         emit SwapNFTMinted(msg.sender, tokenCount);
-
-        _mint(msg.sender, tokenCount);
+        
         hasMinted[msg.sender] = true;
         tokenCount += 1;
+        _mint(msg.sender, tokenCount);
     }
 
     function _baseURI() internal pure override returns (string memory) {
