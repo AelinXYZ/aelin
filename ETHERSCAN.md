@@ -26,7 +26,7 @@ There are 5 main sections in this document
 
 2. Go to the “AELIN token contract” (see #2 above) and call the “approve()” method, passing in the “Treasury exchange contract” address as the “spender” and the full balance of tokens you want to exchange as the “amount (uint256)”. Note to get the correct “amount (uint256)” to pass into this field, simply read the “balanceOf” method on the same “AELIN token contract”, passing in your address. Take the value you see here in your balance and paste it into the “amount (uint256)” field.
 
-3. Go to the “Treasury exchange contract” (see #3 above) and call the “exchangeAndBurn()” method with no arguments.
+3. Go to the “Treasury exchange contract” (see #3 above) and call the “burn()” method passing in your AELIN balance in the _amount (uint256) field.
 
 ## <u>Section 2: Upfront deals contract list:</u>
 
