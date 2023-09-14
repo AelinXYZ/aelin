@@ -2,7 +2,6 @@
 pragma solidity 0.8.6;
 
 import "./AelinVestingToken.sol";
-import "./MinimalProxyFactory.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
@@ -13,7 +12,7 @@ import "./libraries/AelinNftGating.sol";
 import "./libraries/AelinAllowList.sol";
 import "./libraries/MerkleTree.sol";
 
-contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestingToken {
+contract AelinUpFrontDeal is IAelinUpFrontDeal, AelinVestingToken {
     using SafeERC20 for IERC20;
 
     uint256 constant BASE = 100 * 10 ** 18;
@@ -382,8 +381,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
             address _underlyingDealToken = dealData.underlyingDealToken;
             uint256 _underlyingDealTokenTotal = dealConfig.underlyingDealTokenTotal;
 
-            address aelinEscrowStorageProxy = _cloneAsMinimalProxy(aelinEscrowLogicAddress, "Could not create new escrow");
-            aelinFeeEscrow = AelinFeeEscrow(aelinEscrowStorageProxy);
+            aelinFeeEscrow = new AelinFeeEscrow();
             aelinFeeEscrow.initialize(aelinTreasuryAddress, _underlyingDealToken);
 
             uint256 totalSold;
@@ -395,7 +393,7 @@ contract AelinUpFrontDeal is MinimalProxyFactory, IAelinUpFrontDeal, AelinVestin
             uint256 aelinFeeAmt = (totalSold * AELIN_FEE) / BASE;
             IERC20(_underlyingDealToken).safeTransfer(address(aelinFeeEscrow), aelinFeeAmt);
 
-            emit FeeEscrowClaim(aelinEscrowStorageProxy, _underlyingDealToken, aelinFeeAmt);
+            emit FeeEscrowClaim(address(aelinFeeEscrow), _underlyingDealToken, aelinFeeAmt);
         }
     }
 
