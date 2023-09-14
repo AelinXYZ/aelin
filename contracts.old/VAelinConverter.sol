@@ -16,11 +16,7 @@ contract VAelinConverter is Owned {
     address public immutable AELIN;
     uint256 public startTime;
 
-    constructor(
-        address _owner,
-        address _vAelin,
-        address _aelin
-    ) Owned(_owner) {
+    constructor(address _owner, address _vAelin, address _aelin) Owned(_owner) {
         vAELIN = _vAelin;
         AELIN = _aelin;
         startTime = block.timestamp;

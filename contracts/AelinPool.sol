@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
+import "./AelinERC20.sol";
 import "./AelinDeal.sol";
 import "./interfaces/IAelinPool.sol";
 import "./interfaces/ICryptoPunks.sol";
@@ -9,9 +10,9 @@ import "./libraries/NftCheck.sol";
 contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     using SafeERC20 for IERC20;
     address constant CRYPTO_PUNKS = address(0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB);
-    uint256 constant BASE = 100 * 10**18;
-    uint256 constant MAX_SPONSOR_FEE = 15 * 10**18;
-    uint256 constant AELIN_FEE = 2 * 10**18;
+    uint256 constant BASE = 100 * 10 ** 18;
+    uint256 constant MAX_SPONSOR_FEE = 15 * 10 ** 18;
+    uint256 constant AELIN_FEE = 2 * 10 ** 18;
     uint8 constant MAX_DEALS = 5;
 
     uint8 public numberOfDeals;
@@ -31,8 +32,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     uint256 public totalAmountAccepted;
     uint256 public totalAmountWithdrawn;
     uint256 public purchaseTokenTotalForDeal;
+    uint256 public totalSponsorFeeAmount;
 
     bool private calledInitialize;
+    bool private sponsorClaimed;
 
     address public aelinTreasuryAddress;
     address public aelinDealLogicAddress;
@@ -46,9 +49,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
     mapping(address => uint256) public allowList;
     // collectionAddress -> NftCollectionRules struct
     mapping(address => NftCollectionRules) public nftCollectionDetails;
-    // collectionAddress -> walletAddress -> bool
-    mapping(address => mapping(address => bool)) public nftWalletUsedForPurchase;
-    // collectionAddress -> tokenId -> bool
+
     /**
      * @dev For 721, it is used for blacklisting the tokenId of a collection
      * and for 1155, it is used for identifying the eligible tokenIds for
@@ -141,11 +142,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
                         "can only contain 721"
                     );
                     nftCollectionDetails[nftCollectionRules[i].collectionAddress] = nftCollectionRules[i];
-                    emit PoolWith721(
-                        nftCollectionRules[i].collectionAddress,
-                        nftCollectionRules[i].purchaseAmount,
-                        nftCollectionRules[i].purchaseAmountPerToken
-                    );
+                    emit PoolWith721(nftCollectionRules[i].collectionAddress, nftCollectionRules[i].purchaseAmount);
                 }
                 hasNftList = true;
             }
@@ -153,6 +150,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
             else if (NftCheck.supports1155(nftCollectionRules[0].collectionAddress)) {
                 for (uint256 i; i < nftCollectionRules.length; ++i) {
                     require(NftCheck.supports1155(nftCollectionRules[i].collectionAddress), "can only contain 1155");
+                    require(nftCollectionRules[i].purchaseAmount == 0, "purchase amt must be 0 for 1155");
                     nftCollectionDetails[nftCollectionRules[i].collectionAddress] = nftCollectionRules[i];
 
                     for (uint256 j; j < nftCollectionRules[i].tokenIds.length; ++j) {
@@ -161,7 +159,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
                     emit PoolWith1155(
                         nftCollectionRules[i].collectionAddress,
                         nftCollectionRules[i].purchaseAmount,
-                        nftCollectionRules[i].purchaseAmountPerToken,
                         nftCollectionRules[i].tokenIds,
                         nftCollectionRules[i].minTokensEligible
                     );
@@ -175,41 +172,167 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         emit SetSponsor(_sponsor);
     }
 
-    modifier dealReady() {
-        if (holderFundingExpiry > 0) {
-            require(!aelinDeal.depositComplete() && block.timestamp >= holderFundingExpiry, "cant create new deal");
+    /**
+     * @dev allows anyone to become a purchaser by sending purchase tokens
+     * in exchange for pool tokens
+     *
+     * Requirements:
+     * - the deal is in the purchase expiry window
+     * - the cap has not been exceeded
+     */
+    function purchasePoolTokens(uint256 _purchaseTokenAmount) external nonReentrant {
+        require(block.timestamp < purchaseExpiry, "not in purchase window");
+        require(!hasNftList, "has NFT list");
+        if (hasAllowList) {
+            require(_purchaseTokenAmount <= allowList[msg.sender], "more than allocation");
+            allowList[msg.sender] -= _purchaseTokenAmount;
         }
-        _;
-    }
+        uint256 currentBalance = IERC20(purchaseToken).balanceOf(address(this));
+        IERC20(purchaseToken).safeTransferFrom(msg.sender, address(this), _purchaseTokenAmount);
+        uint256 balanceAfterTransfer = IERC20(purchaseToken).balanceOf(address(this));
+        uint256 purchaseTokenAmount = balanceAfterTransfer - currentBalance;
+        if (purchaseTokenCap > 0) {
+            uint256 totalPoolAfter = totalSupply() + purchaseTokenAmount;
+            require(totalPoolAfter <= purchaseTokenCap, "cap has been exceeded");
+            if (totalPoolAfter == purchaseTokenCap) {
+                purchaseExpiry = block.timestamp;
+            }
+        }
 
-    modifier initOnce() {
-        require(!calledInitialize, "can only initialize once");
-        calledInitialize = true;
-        _;
-    }
-
-    modifier onlySponsor() {
-        require(msg.sender == sponsor, "only sponsor can access");
-        _;
-    }
-
-    modifier dealFunded() {
-        require(holderFundingExpiry > 0 && aelinDeal.depositComplete(), "deal not yet funded");
-        _;
+        _mint(msg.sender, purchaseTokenAmount);
+        emit PurchasePoolToken(msg.sender, purchaseTokenAmount);
     }
 
     /**
-     * @dev the sponsor may change addresses
+     * @dev allows anyone to become a purchaser with a qualified erc721
+     * nft in the pool depending on the scenarios
+     *
+     * Scenarios:
+     * 1. each wallet holding a qualified NFT to deposit an unlimited amount of purchase tokens
+     * 2. certain amount of purchase tokens per wallet regardless of the number of qualified NFTs held
+     * 3. certain amount of Investment tokens per qualified NFT held
      */
-    function setSponsor(address _sponsor) external onlySponsor {
-        require(_sponsor != address(0));
-        futureSponsor = _sponsor;
+
+    function purchasePoolTokensWithNft(
+        NftPurchaseList[] calldata _nftPurchaseList,
+        uint256 _purchaseTokenAmount
+    ) external nonReentrant {
+        require(hasNftList, "pool does not have an NFT list");
+        require(block.timestamp < purchaseExpiry, "not in purchase window");
+
+        uint256 maxPurchaseTokenAmount;
+
+        for (uint256 i; i < _nftPurchaseList.length; ++i) {
+            NftPurchaseList memory nftPurchaseList = _nftPurchaseList[i];
+            address collectionAddress = nftPurchaseList.collectionAddress;
+            uint256[] memory tokenIds = nftPurchaseList.tokenIds;
+
+            require(collectionAddress != address(0), "collection should not be null");
+
+            NftCollectionRules memory nftCollectionRules = nftCollectionDetails[collectionAddress];
+            require(nftCollectionRules.collectionAddress == collectionAddress, "collection not in the pool");
+
+            if (nftCollectionRules.purchaseAmount > 0) {
+                maxPurchaseTokenAmount += nftCollectionRules.purchaseAmount * tokenIds.length;
+            }
+
+            if (nftCollectionRules.purchaseAmount == 0) {
+                maxPurchaseTokenAmount = _purchaseTokenAmount;
+            }
+
+            if (NftCheck.supports721(collectionAddress)) {
+                _blackListCheck721(collectionAddress, tokenIds);
+            }
+            if (NftCheck.supports1155(collectionAddress)) {
+                _eligibilityCheck1155(collectionAddress, tokenIds, nftCollectionRules);
+            }
+            if (collectionAddress == CRYPTO_PUNKS) {
+                _blackListCheckPunks(collectionAddress, tokenIds);
+            }
+        }
+
+        require(_purchaseTokenAmount <= maxPurchaseTokenAmount, "purchase amount should be less the max allocation");
+
+        uint256 amountBefore = IERC20(purchaseToken).balanceOf(address(this));
+        IERC20(purchaseToken).safeTransferFrom(msg.sender, address(this), _purchaseTokenAmount);
+        uint256 amountAfter = IERC20(purchaseToken).balanceOf(address(this));
+        uint256 purchaseTokenAmount = amountAfter - amountBefore;
+
+        if (purchaseTokenCap > 0) {
+            uint256 totalPoolAfter = totalSupply() + purchaseTokenAmount;
+            require(totalPoolAfter <= purchaseTokenCap, "cap has been exceeded");
+            if (totalPoolAfter == purchaseTokenCap) {
+                purchaseExpiry = block.timestamp;
+            }
+        }
+
+        _mint(msg.sender, purchaseTokenAmount);
+        emit PurchasePoolToken(msg.sender, purchaseTokenAmount);
     }
 
-    function acceptSponsor() external {
-        require(msg.sender == futureSponsor, "only future sponsor can access");
-        sponsor = futureSponsor;
-        emit SetSponsor(futureSponsor);
+    function _blackListCheck721(address _collectionAddress, uint256[] memory _tokenIds) internal {
+        for (uint256 i; i < _tokenIds.length; ++i) {
+            require(IERC721(_collectionAddress).ownerOf(_tokenIds[i]) == msg.sender, "has to be the token owner");
+            require(!nftId[_collectionAddress][_tokenIds[i]], "tokenId already used");
+            nftId[_collectionAddress][_tokenIds[i]] = true;
+            emit BlacklistNFT(_collectionAddress, _tokenIds[i]);
+        }
+    }
+
+    function _eligibilityCheck1155(
+        address _collectionAddress,
+        uint256[] memory _tokenIds,
+        NftCollectionRules memory _nftCollectionRules
+    ) internal view {
+        for (uint256 i; i < _tokenIds.length; ++i) {
+            require(nftId[_collectionAddress][_tokenIds[i]], "tokenId not in the pool");
+            require(
+                IERC1155(_collectionAddress).balanceOf(msg.sender, _tokenIds[i]) >= _nftCollectionRules.minTokensEligible[i],
+                "erc1155 balance too low"
+            );
+        }
+    }
+
+    function _blackListCheckPunks(address _punksAddress, uint256[] memory _tokenIds) internal {
+        for (uint256 i; i < _tokenIds.length; ++i) {
+            require(ICryptoPunks(_punksAddress).punkIndexToAddress(_tokenIds[i]) == msg.sender, "not the owner");
+            require(!nftId[_punksAddress][_tokenIds[i]], "tokenId already used");
+            nftId[_punksAddress][_tokenIds[i]] = true;
+            emit BlacklistNFT(_punksAddress, _tokenIds[i]);
+        }
+    }
+
+    /**
+     * @dev the withdraw and partial withdraw methods allow a purchaser to take their
+     * purchase tokens back in exchange for pool tokens if they do not accept a deal
+     *
+     * Requirements:
+     * - the pool has expired either due to the creation of a deal or the end of the duration
+     */
+    function withdrawMaxFromPool() external {
+        _withdraw(balanceOf(msg.sender));
+    }
+
+    function withdrawFromPool(uint256 _purchaseTokenAmount) external {
+        _withdraw(_purchaseTokenAmount);
+    }
+
+    /**
+     * @dev purchasers can withdraw at the end of the pool expiry period if
+     * no deal was presented or they can withdraw after the holder funding period
+     * if they do not like a deal
+     */
+    function _withdraw(uint256 _purchaseTokenAmount) internal {
+        require(_purchaseTokenAmount <= balanceOf(msg.sender), "input larger than balance");
+        require(block.timestamp >= poolExpiry, "not yet withdraw period");
+        if (holderFundingExpiry > 0) {
+            require(block.timestamp > holderFundingExpiry || aelinDeal.depositComplete(), "cant withdraw in funding period");
+        }
+        amountWithdrawn[msg.sender] += _purchaseTokenAmount;
+        totalAmountWithdrawn += _purchaseTokenAmount;
+        _burn(msg.sender, _purchaseTokenAmount);
+        IERC20(purchaseToken).safeTransfer(msg.sender, _purchaseTokenAmount);
+        emit WithdrawFromPool(msg.sender, _purchaseTokenAmount);
     }
 
     /**
@@ -321,6 +444,64 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         _acceptDealTokens(msg.sender, _poolTokenAmount, false);
     }
 
+    function _acceptDealTokens(address _recipient, uint256 _poolTokenAmount, bool _useMax) internal dealFunded nonReentrant {
+        (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
+        (, uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
+
+        if (block.timestamp >= proRataRedemptionStart && block.timestamp < proRataRedemptionExpiry) {
+            _acceptDealTokensProRata(_recipient, _poolTokenAmount, _useMax);
+        } else if (openRedemptionStart > 0 && block.timestamp < openRedemptionExpiry) {
+            _acceptDealTokensOpen(_recipient, _poolTokenAmount, _useMax);
+        } else {
+            revert("outside of redeem window");
+        }
+    }
+
+    function _acceptDealTokensProRata(address _recipient, uint256 _poolTokenAmount, bool _useMax) internal {
+        uint256 maxProRata = maxProRataAmount(_recipient);
+        uint256 maxAccept = maxProRata > balanceOf(_recipient) ? balanceOf(_recipient) : maxProRata;
+        if (!_useMax) {
+            require(
+                _poolTokenAmount <= maxProRata && balanceOf(_recipient) >= _poolTokenAmount,
+                "accepting more than share"
+            );
+        }
+        uint256 acceptAmount = _useMax ? maxAccept : _poolTokenAmount;
+        amountAccepted[_recipient] += acceptAmount;
+        totalAmountAccepted += acceptAmount;
+        _mintDealTokens(_recipient, acceptAmount);
+        if (proRataConversion != 1e18 && maxProRataAmount(_recipient) == 0) {
+            openPeriodEligible[_recipient] = true;
+        }
+    }
+
+    function _acceptDealTokensOpen(address _recipient, uint256 _poolTokenAmount, bool _useMax) internal {
+        require(openPeriodEligible[_recipient], "ineligible: didn't max pro rata");
+        uint256 maxOpen = _maxOpenAvail(_recipient);
+        require(maxOpen > 0, "nothing left to accept");
+        uint256 acceptAmount = _useMax ? maxOpen : _poolTokenAmount;
+        if (!_useMax) {
+            require(acceptAmount <= maxOpen, "accepting more than share");
+        }
+        totalAmountAccepted += acceptAmount;
+        amountAccepted[_recipient] += acceptAmount;
+        _mintDealTokens(_recipient, acceptAmount);
+    }
+
+    function sponsorClaim() external {
+        require(address(aelinDeal) != address(0), "no deal yet");
+        (, , uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
+        (uint256 openRedemptionPeriod, , ) = aelinDeal.openRedemption();
+        require(block.timestamp >= proRataRedemptionExpiry + openRedemptionPeriod, "still in redemption period");
+        require(sponsorClaimed != true, "sponsor already claimed");
+        require(totalSponsorFeeAmount > 0, "no sponsor fees");
+
+        sponsorClaimed = true;
+        aelinDeal.createSponsorVestingSchedule(sponsor, totalSponsorFeeAmount);
+
+        emit SponsorClaim(sponsor, totalSponsorFeeAmount);
+    }
+
     /**
      * @dev the if statement says if you have no balance or if the deal is not funded
      * or if the pro rata period is not active, then you have 0 available for this period
@@ -349,62 +530,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
                 : purchaseTokenTotalForDeal - totalAmountAccepted;
     }
 
-    function _acceptDealTokens(
-        address _recipient,
-        uint256 _poolTokenAmount,
-        bool _useMax
-    ) internal dealFunded lock {
-        (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
-        (, uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
-
-        if (block.timestamp >= proRataRedemptionStart && block.timestamp < proRataRedemptionExpiry) {
-            _acceptDealTokensProRata(_recipient, _poolTokenAmount, _useMax);
-        } else if (openRedemptionStart > 0 && block.timestamp < openRedemptionExpiry) {
-            _acceptDealTokensOpen(_recipient, _poolTokenAmount, _useMax);
-        } else {
-            revert("outside of redeem window");
-        }
-    }
-
-    function _acceptDealTokensProRata(
-        address _recipient,
-        uint256 _poolTokenAmount,
-        bool _useMax
-    ) internal {
-        uint256 maxProRata = maxProRataAmount(_recipient);
-        uint256 maxAccept = maxProRata > balanceOf(_recipient) ? balanceOf(_recipient) : maxProRata;
-        if (!_useMax) {
-            require(
-                _poolTokenAmount <= maxProRata && balanceOf(_recipient) >= _poolTokenAmount,
-                "accepting more than share"
-            );
-        }
-        uint256 acceptAmount = _useMax ? maxAccept : _poolTokenAmount;
-        amountAccepted[_recipient] += acceptAmount;
-        totalAmountAccepted += acceptAmount;
-        _mintDealTokens(_recipient, acceptAmount);
-        if (proRataConversion != 1e18 && maxProRataAmount(_recipient) == 0) {
-            openPeriodEligible[_recipient] = true;
-        }
-    }
-
-    function _acceptDealTokensOpen(
-        address _recipient,
-        uint256 _poolTokenAmount,
-        bool _useMax
-    ) internal {
-        require(openPeriodEligible[_recipient], "ineligible: didn't max pro rata");
-        uint256 maxOpen = _maxOpenAvail(_recipient);
-        require(maxOpen > 0, "nothing left to accept");
-        uint256 acceptAmount = _useMax ? maxOpen : _poolTokenAmount;
-        if (!_useMax) {
-            require(acceptAmount <= maxOpen, "accepting more than share");
-        }
-        totalAmountAccepted += acceptAmount;
-        amountAccepted[_recipient] += acceptAmount;
-        _mintDealTokens(_recipient, acceptAmount);
-    }
-
     /**
      * @dev the holder will receive less purchase tokens than the amount
      * transferred if the purchase token burns or takes a fee during transfer
@@ -415,178 +540,13 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256 aelinFeeAmt = (poolTokenDealFormatted * AELIN_FEE) / BASE;
         uint256 sponsorFeeAmt = (poolTokenDealFormatted * sponsorFee) / BASE;
 
-        aelinDeal.mint(sponsor, sponsorFeeAmt);
-        aelinDeal.protocolMint(aelinFeeAmt);
-        aelinDeal.mint(_recipient, poolTokenDealFormatted - (sponsorFeeAmt + aelinFeeAmt));
+        totalSponsorFeeAmount += sponsorFeeAmt;
+
+        aelinDeal.transferProtocolFee(aelinFeeAmt);
+        aelinDeal.createVestingSchedule(_recipient, poolTokenDealFormatted, sponsorFeeAmt, aelinFeeAmt);
+
         IERC20(purchaseToken).safeTransfer(holder, _poolTokenAmount);
         emit AcceptDeal(_recipient, address(aelinDeal), _poolTokenAmount, sponsorFeeAmt, aelinFeeAmt);
-    }
-
-    /**
-     * @dev allows anyone to become a purchaser by sending purchase tokens
-     * in exchange for pool tokens
-     *
-     * Requirements:
-     * - the deal is in the purchase expiry window
-     * - the cap has not been exceeded
-     */
-    function purchasePoolTokens(uint256 _purchaseTokenAmount) external lock {
-        require(block.timestamp < purchaseExpiry, "not in purchase window");
-        require(!hasNftList, "has NFT list");
-        if (hasAllowList) {
-            require(_purchaseTokenAmount <= allowList[msg.sender], "more than allocation");
-            allowList[msg.sender] -= _purchaseTokenAmount;
-        }
-        uint256 currentBalance = IERC20(purchaseToken).balanceOf(address(this));
-        IERC20(purchaseToken).safeTransferFrom(msg.sender, address(this), _purchaseTokenAmount);
-        uint256 balanceAfterTransfer = IERC20(purchaseToken).balanceOf(address(this));
-        uint256 purchaseTokenAmount = balanceAfterTransfer - currentBalance;
-        if (purchaseTokenCap > 0) {
-            uint256 totalPoolAfter = totalSupply() + purchaseTokenAmount;
-            require(totalPoolAfter <= purchaseTokenCap, "cap has been exceeded");
-            if (totalPoolAfter == purchaseTokenCap) {
-                purchaseExpiry = block.timestamp;
-            }
-        }
-
-        _mint(msg.sender, purchaseTokenAmount);
-        emit PurchasePoolToken(msg.sender, purchaseTokenAmount);
-    }
-
-    /**
-     * @dev allows anyone to become a purchaser with a qualified erc721
-     * nft in the pool depending on the scenarios
-     *
-     * Scenarios:
-     * 1. each wallet holding a qualified NFT to deposit an unlimited amount of purchase tokens
-     * 2. certain amount of purchase tokens per wallet regardless of the number of qualified NFTs held
-     * 3. certain amount of Investment tokens per qualified NFT held
-     */
-
-    function purchasePoolTokensWithNft(NftPurchaseList[] calldata _nftPurchaseList, uint256 _purchaseTokenAmount)
-        external
-        lock
-    {
-        require(hasNftList, "pool does not have an NFT list");
-        require(block.timestamp < purchaseExpiry, "not in purchase window");
-
-        uint256 maxPurchaseTokenAmount;
-
-        for (uint256 i; i < _nftPurchaseList.length; ++i) {
-            NftPurchaseList memory nftPurchaseList = _nftPurchaseList[i];
-            address collectionAddress = nftPurchaseList.collectionAddress;
-            uint256[] memory tokenIds = nftPurchaseList.tokenIds;
-
-            NftCollectionRules memory nftCollectionRules = nftCollectionDetails[collectionAddress];
-            require(nftCollectionRules.collectionAddress == collectionAddress, "collection not in the pool");
-
-            if (nftCollectionRules.purchaseAmountPerToken) {
-                maxPurchaseTokenAmount += nftCollectionRules.purchaseAmount * tokenIds.length;
-            }
-
-            if (!nftCollectionRules.purchaseAmountPerToken && nftCollectionRules.purchaseAmount > 0) {
-                require(!nftWalletUsedForPurchase[collectionAddress][msg.sender], "wallet already used for nft set");
-                nftWalletUsedForPurchase[collectionAddress][msg.sender] = true;
-                maxPurchaseTokenAmount += nftCollectionRules.purchaseAmount;
-            }
-
-            if (nftCollectionRules.purchaseAmount == 0) {
-                maxPurchaseTokenAmount = _purchaseTokenAmount;
-            }
-
-            if (NftCheck.supports721(collectionAddress)) {
-                _blackListCheck721(collectionAddress, tokenIds);
-            }
-            if (NftCheck.supports1155(collectionAddress)) {
-                _eligibilityCheck1155(collectionAddress, tokenIds, nftCollectionRules);
-            }
-            if (collectionAddress == CRYPTO_PUNKS) {
-                _blackListCheckPunks(collectionAddress, tokenIds);
-            }
-        }
-
-        require(_purchaseTokenAmount <= maxPurchaseTokenAmount, "purchase amount should be less the max allocation");
-
-        uint256 amountBefore = IERC20(purchaseToken).balanceOf(address(this));
-        IERC20(purchaseToken).safeTransferFrom(msg.sender, address(this), _purchaseTokenAmount);
-        uint256 amountAfter = IERC20(purchaseToken).balanceOf(address(this));
-        uint256 purchaseTokenAmount = amountAfter - amountBefore;
-
-        if (purchaseTokenCap > 0) {
-            uint256 totalPoolAfter = totalSupply() + purchaseTokenAmount;
-            require(totalPoolAfter <= purchaseTokenCap, "cap has been exceeded");
-            if (totalPoolAfter == purchaseTokenCap) {
-                purchaseExpiry = block.timestamp;
-            }
-        }
-
-        _mint(msg.sender, purchaseTokenAmount);
-        emit PurchasePoolToken(msg.sender, purchaseTokenAmount);
-    }
-
-    function _blackListCheck721(address _collectionAddress, uint256[] memory _tokenIds) internal {
-        for (uint256 i; i < _tokenIds.length; ++i) {
-            require(IERC721(_collectionAddress).ownerOf(_tokenIds[i]) == msg.sender, "has to be the token owner");
-            require(!nftId[_collectionAddress][_tokenIds[i]], "tokenId already used");
-            nftId[_collectionAddress][_tokenIds[i]] = true;
-            emit BlacklistNFT(_collectionAddress, _tokenIds[i]);
-        }
-    }
-
-    function _eligibilityCheck1155(
-        address _collectionAddress,
-        uint256[] memory _tokenIds,
-        NftCollectionRules memory _nftCollectionRules
-    ) internal view {
-        for (uint256 i; i < _tokenIds.length; ++i) {
-            require(nftId[_collectionAddress][_tokenIds[i]], "tokenId not in the pool");
-            require(
-                IERC1155(_collectionAddress).balanceOf(msg.sender, _tokenIds[i]) >= _nftCollectionRules.minTokensEligible[i],
-                "erc1155 balance too low"
-            );
-        }
-    }
-
-    function _blackListCheckPunks(address _punksAddress, uint256[] memory _tokenIds) internal {
-        for (uint256 i; i < _tokenIds.length; ++i) {
-            require(ICryptoPunks(_punksAddress).punkIndexToAddress(_tokenIds[i]) == msg.sender, "not the owner");
-            require(!nftId[_punksAddress][_tokenIds[i]], "tokenId already used");
-            nftId[_punksAddress][_tokenIds[i]] = true;
-            emit BlacklistNFT(_punksAddress, _tokenIds[i]);
-        }
-    }
-
-    /**
-     * @dev the withdraw and partial withdraw methods allow a purchaser to take their
-     * purchase tokens back in exchange for pool tokens if they do not accept a deal
-     *
-     * Requirements:
-     * - the pool has expired either due to the creation of a deal or the end of the duration
-     */
-    function withdrawMaxFromPool() external {
-        _withdraw(balanceOf(msg.sender));
-    }
-
-    function withdrawFromPool(uint256 _purchaseTokenAmount) external {
-        _withdraw(_purchaseTokenAmount);
-    }
-
-    /**
-     * @dev purchasers can withdraw at the end of the pool expiry period if
-     * no deal was presented or they can withdraw after the holder funding period
-     * if they do not like a deal
-     */
-    function _withdraw(uint256 _purchaseTokenAmount) internal {
-        require(_purchaseTokenAmount <= balanceOf(msg.sender), "input larger than balance");
-        require(block.timestamp >= poolExpiry, "not yet withdraw period");
-        if (holderFundingExpiry > 0) {
-            require(block.timestamp > holderFundingExpiry || aelinDeal.depositComplete(), "cant withdraw in funding period");
-        }
-        amountWithdrawn[msg.sender] += _purchaseTokenAmount;
-        totalAmountWithdrawn += _purchaseTokenAmount;
-        _burn(msg.sender, _purchaseTokenAmount);
-        IERC20(purchaseToken).safeTransfer(msg.sender, _purchaseTokenAmount);
-        emit WithdrawFromPool(msg.sender, _purchaseTokenAmount);
     }
 
     /**
@@ -619,19 +579,6 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         }
     }
 
-    modifier transferWindow() {
-        (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
-        (, uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
-
-        require(
-            proRataRedemptionStart == 0 ||
-                (block.timestamp >= proRataRedemptionExpiry && openRedemptionStart == 0) ||
-                (block.timestamp >= openRedemptionExpiry && openRedemptionStart != 0),
-            "no transfers in redeem window"
-        );
-        _;
-    }
-
     function transfer(address _dst, uint256 _amount) public virtual override transferWindow returns (bool) {
         return super.transfer(_dst, _amount);
     }
@@ -649,7 +596,21 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
      * NOTE that a purchase token must not be greater than 18 decimals
      */
     function _convertPoolToDeal(uint256 _poolTokenAmount, uint256 _poolTokenDecimals) internal pure returns (uint256) {
-        return _poolTokenAmount * 10**(18 - _poolTokenDecimals);
+        return _poolTokenAmount * 10 ** (18 - _poolTokenDecimals);
+    }
+
+    /**
+     * @dev the sponsor may change addresses
+     */
+    function setSponsor(address _sponsor) external onlySponsor {
+        require(_sponsor != address(0));
+        futureSponsor = _sponsor;
+    }
+
+    function acceptSponsor() external {
+        require(msg.sender == futureSponsor, "only future sponsor can access");
+        sponsor = futureSponsor;
+        emit SetSponsor(futureSponsor);
     }
 
     /**
@@ -666,6 +627,38 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         emit Disavow(msg.sender);
     }
 
+    modifier initOnce() {
+        require(!calledInitialize, "can only initialize once");
+        calledInitialize = true;
+        _;
+    }
+    modifier onlySponsor() {
+        require(msg.sender == sponsor, "only sponsor can access");
+        _;
+    }
+    modifier dealReady() {
+        if (holderFundingExpiry > 0) {
+            require(!aelinDeal.depositComplete() && block.timestamp >= holderFundingExpiry, "cant create new deal");
+        }
+        _;
+    }
+    modifier dealFunded() {
+        require(holderFundingExpiry > 0 && aelinDeal.depositComplete(), "deal not yet funded");
+        _;
+    }
+    modifier transferWindow() {
+        (, uint256 proRataRedemptionStart, uint256 proRataRedemptionExpiry) = aelinDeal.proRataRedemption();
+        (, uint256 openRedemptionStart, uint256 openRedemptionExpiry) = aelinDeal.openRedemption();
+
+        require(
+            proRataRedemptionStart == 0 ||
+                (block.timestamp >= proRataRedemptionExpiry && openRedemptionStart == 0) ||
+                (block.timestamp >= openRedemptionExpiry && openRedemptionStart != 0),
+            "no transfers in redeem window"
+        );
+        _;
+    }
+
     event SetSponsor(address indexed sponsor);
     event PurchasePoolToken(address indexed purchaser, uint256 purchaseTokenAmount);
     event WithdrawFromPool(address indexed purchaser, uint256 purchaseTokenAmount);
@@ -676,6 +669,7 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256 sponsorFee,
         uint256 aelinFee
     );
+    event SponsorClaim(address indexed sponsor, uint256 sponsorFeeAmount);
     event CreateDeal(string name, string symbol, address indexed sponsor, address indexed dealContract);
     event DealDetail(
         address indexed dealContract,
@@ -690,11 +684,10 @@ contract AelinPool is AelinERC20, MinimalProxyFactory, IAelinPool {
         uint256 holderFundingDuration
     );
     event AllowlistAddress(address indexed purchaser, uint256 allowlistAmount);
-    event PoolWith721(address indexed collectionAddress, uint256 purchaseAmount, bool purchaseAmountPerToken);
+    event PoolWith721(address indexed collectionAddress, uint256 purchaseAmount);
     event PoolWith1155(
         address indexed collectionAddress,
         uint256 purchaseAmount,
-        bool purchaseAmountPerToken,
         uint256[] tokenIds,
         uint256[] minTokensEligible
     );

@@ -11,11 +11,7 @@ contract OptimismTreasury is Owned {
 
     constructor(address _owner) Owned(_owner) {}
 
-    function transferToken(
-        address token,
-        address to,
-        uint256 amount
-    ) external onlyOwner {
+    function transferToken(address token, address to, uint256 amount) external onlyOwner {
         IERC20(token).transfer(to, amount);
     }
 }

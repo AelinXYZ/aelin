@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.6;
 
-import "./interfaces/IMerkleDistributor.sol";
+import "./IMerkleDistributor.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Owned.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
@@ -15,11 +15,7 @@ contract MerkleDistributor is Owned, Pausable, IMerkleDistributor {
     // This is a packed array of booleans.
     mapping(uint256 => uint256) private claimedBitMap;
 
-    constructor(
-        address owner_,
-        address token_,
-        bytes32 merkleRoot_
-    ) Owned(owner_) Pausable() {
+    constructor(address owner_, address token_, bytes32 merkleRoot_) Owned(owner_) Pausable() {
         token = token_;
         merkleRoot = merkleRoot_;
         startTime = block.timestamp;
@@ -39,16 +35,12 @@ contract MerkleDistributor is Owned, Pausable, IMerkleDistributor {
         claimedBitMap[claimedWordIndex] = claimedBitMap[claimedWordIndex] | (1 << claimedBitIndex);
     }
 
-    function claim(
-        uint256 index,
-        address account,
-        uint256 amount,
-        bytes32[] calldata merkleProof
-    ) external override {
+    function claim(uint256 index, address account, uint256 amount, bytes32[] calldata merkleProof) external override {
         require(!isClaimed(index), "MerkleDistributor: Drop already claimed.");
 
         // Verify the merkle proof.
-        bytes32 node = keccak256(abi.encodePacked(index, account, amount));
+        bytes32 node = keccak256(bytes.concat(keccak256(abi.encode(index, account, amount))));
+
         require(MerkleProof.verify(merkleProof, merkleRoot, node), "MerkleDistributor: Invalid proof.");
 
         // Mark it claimed and send the token.

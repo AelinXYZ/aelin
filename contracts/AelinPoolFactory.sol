@@ -13,12 +13,7 @@ contract AelinPoolFactory is MinimalProxyFactory {
     address public immutable AELIN_DEAL_LOGIC;
     address public immutable AELIN_ESCROW_LOGIC;
 
-    constructor(
-        address _aelinPoolLogic,
-        address _aelinDealLogic,
-        address _aelinTreasury,
-        address _aelinEscrow
-    ) {
+    constructor(address _aelinPoolLogic, address _aelinDealLogic, address _aelinTreasury, address _aelinEscrow) {
         require(_aelinPoolLogic != address(0), "cant pass null pool address");
         require(_aelinDealLogic != address(0), "cant pass null deal address");
         require(_aelinTreasury != address(0), "cant pass null treasury address");

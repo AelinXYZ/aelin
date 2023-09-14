@@ -34,6 +34,10 @@ v5
 ╟────────────────────┼────────────────────────────────────────────╢
 ║ upFrontDealFactory │ 0x97EfdB29C0D6daCDc0BB334Cc227AE03A1a7c01E ║
 
+v6 just has a new upFrontDealLogic contract and a new factory contract
+UpFrontDeal:0x3618938a8734f05eb16B8c0C0c4186088b1e4B0E
+AelinNftGating:0x7096e34e27688b7db4a1dab0146531e5b0cec5a2
+UpFrontDealFactory:0x82bccfa913db473147e5274c7821bc13ffbabe17
 
 Optimism:
 AelinTokenV1 (deprecated from first Aelin pool) - 0x04432a6fd94e8bC8559d10AC1D98f15Cd9C08363
@@ -112,7 +116,7 @@ AelinPoolFactory - 0xf73869004CfbEfba49d56931cb871Da53258Bc8f (latest)
 AelinToken - 0xca21a836936Dd9D46772E8fCB1284A7A3AE13fd2
 VirtualAelinToken - 0xb7ABB959Def630d1402F202b8BC31BbaCBcDafBA
 
-Goerli: 
+Goerli:
 AelinDeal - 0xBE68F3E4B5CEbaAB155582a4220cDf8E439861A5 (latest)
 AelinPool - 0xE46d449924A74D3155B2605E12399D22401f16E4 (latest)
 AelinPoolFactory - 0xCA4d64B67486867a9E867D0E38E1F1e99B718EEb (latest)
@@ -123,3 +127,23 @@ npx hardhat verify --network kovan <address> ...args
 # NOTE these commands are also needed for verifying either AELIN or vAELIN
 -- contract contracts/AelinToken.sol:AelinToken
 -- contract contracts/VirtualAelinToken.sol:VirtualAelinToken
+
+
+Polygon:
+AelinFeeEscrow - https://polygonscan.com/address/0x5541da82549d732878c4104c9887c408790397af
+MerkleTree - https://polygonscan.com/address/0x806ec726fc022525a478608e162f528b5deee788
+AelinAllowList - https://polygonscan.com/address/0x3c312abcef37e63e8ca3ac0c370fb1f8e74c0cec
+AelinNftGating - https://polygonscan.com/address/0xfa0de0e65292c12ed22c80da331ca2806a84215d
+NftCheck - https://polygonscan.com/address/0xa7a86ec3c266435c580354d8c9a33b1bc91697a7
+AelinUpFrontDeal - https://polygonscan.com/address/0x24fa2b48178f4acd577230b3ac30b935195dcaf3
+AelinUpFrontDealFactory - https://polygonscan.com/address/0x82eaa001029d4686b343b53ce6e7f1823725e736
+AelinDeal - https://polygonscan.com/address/0x3da77794534c072ded3014ca139390b704c5d8c1
+AelinPool - https://polygonscan.com/address/0x864f82ddb6850dd480936ffa104bdaf3a1ca8afd
+AelinPoolFactory - https://polygonscan.com/address/0xbf7c0fd0d31bc377f861d11d4aac15296c0405b6
+
+
+Aelin Multisigs:
+- Ethereum: https://gnosis-safe.io/app/eth:0x51b0332E1b3349bcF01689E63e34d8859595e376/home
+- Optimism: https://gnosis-safe.io/app/oeth:0x5B8F3fb479571Eca6A06240b21926Db586Cdf10f/home
+- Arbitrum: https://gnosis-safe.io/app/arb1:0x1977b7A0a1a8904C66803a887a55e2D26dd837c4/home
+- Polygon: https://app.safe.global/matic:0x27E9e1e5d7c03cEB5FB5768145126373d0b57B60/home
